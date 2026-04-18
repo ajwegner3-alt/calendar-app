@@ -39,6 +39,13 @@ Critical pitfalls (double-booking race, timezone/DST, service-role misuse, RLS g
 
 **Research flag:** None (standard Next 15 + `@supabase/ssr` scaffolding, STACK research sufficient). Verify pg_cron availability on Supabase Free tier opportunistically here.
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-PLAN-01-scaffold-and-deploy.md — Next 16 scaffold, GitHub repo, first Vercel deploy before schema
+- [ ] 01-PLAN-02-schema-migrations.md — Supabase CLI + migrations (6 tables, RLS, storage bucket, seed)
+- [ ] 01-PLAN-03-tests-and-readme.md — Vitest harness + race-guard + RLS tests, README, final deploy
+
 ---
 
 ### Phase 2: Owner Auth + Dashboard Shell
