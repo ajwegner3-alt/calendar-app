@@ -6,7 +6,7 @@
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 2 in progress — Plan 01 (login + auth actions) complete; Plan 02 (proxy gate + shell) next.
+**Current focus:** Phase 2 near complete — Plans 01 / 02 / 03 all shipped; orchestrator will run phase verifier next.
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,15 +14,15 @@
 
 ## Current Position
 
-**Phase:** 2 (Owner Auth + Dashboard Shell) — in progress
-**Plan:** 02-01 complete; 02-02 next (proxy gate + dashboard shell)
-**Status:** Plan 02-01 executed + pushed (3 atomic commits). Orchestrator will run phase verifier after all plans complete.
-**Last activity:** 2026-04-19 — Completed 02-PLAN-01-login-and-auth-actions.md
-**Progress:** [█░░░░░░░░] 1 / 9 phases complete (Phase 2: 1 / 3 plans done)
+**Phase:** 2 (Owner Auth + Dashboard Shell) — plans complete, awaiting phase verifier
+**Plan:** 02-01, 02-02, 02-03 all complete; orchestrator runs phase verifier next
+**Status:** All 3 Phase-2 plans executed + pushed. Orchestrator will run phase verifier after all plans complete.
+**Last activity:** 2026-04-19 — Completed 02-PLAN-02-dashboard-shell.md
+**Progress:** [█░░░░░░░░] 1 / 9 phases complete (Phase 2: 3 / 3 plans done, awaiting verifier)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
-Phase 2  [~] Owner Auth + Dashboard Shell            ← in progress (1/3 plans)
+Phase 2  [~] Owner Auth + Dashboard Shell            ← plans done (3/3), awaiting verifier
 Phase 3  [ ] Event Types CRUD
 Phase 4  [ ] Availability Engine
 Phase 5  [ ] Public Booking Flow + Email + .ics
@@ -39,7 +39,7 @@ Phase 9  [ ] Manual QA & Verification
 | Phases planned | 2 / 9 |
 | Phases complete | 1 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 6 / 73 (FOUND-01..06); AUTH-01 and AUTH-02 happy-path shipped (Plan 02-01) — full phase sign-off pending 02-02 + 02-03 |
+| Requirements complete | 6 / 73 (FOUND-01..06); AUTH-01, AUTH-02, AUTH-04, DASH-01 UI surfaces shipped (Plans 02-01/02/03); AUTH-03 linking pending Plan 04 user provisioning — full phase sign-off pending phase verifier |
 
 ## Accumulated Context
 
@@ -63,6 +63,9 @@ Phase 9  [ ] Manual QA & Verification
 - **NSI brand tokens in Tailwind v4 `@theme`** (Plan 02-01) — `--color-primary: #0A2540` (deep navy), `--color-accent: #F97316` (warm orange), full `--color-sidebar-*` NSI set. Phase 7 swaps these to per-account DB lookup via inline CSS vars on a wrapping element — trivial migration.
 - **Proxy gate pattern** (Plan 02-03) — `pathname.startsWith("/app") && pathname !== "/app/login"` → `NextResponse.redirect("/app/login")`. Tight equality carve-out (faster than `!startsWith("/app/login")`). Future phases' gates should NOT add carve-outs under `/app/*`; other URL trees (`/embed/*`, `/[account]/[slug]`) are not matched by this guard.
 - **SELECT-only contract for authenticated-owner tests** (Plan 02-03) — `signInAsNsiOwner()` Vitest helper signs in as Andrew against the REAL `nsi` account; tests that use it MUST NOT INSERT/UPDATE/DELETE. Writes use `adminClient()` + `nsi-test` slug (existing Phase 1 pattern). Locked in helper JSDoc for future phase authors.
+- **Shell layout + sidebar cookie literal** (Plan 02-02) — installed shadcn sidebar (plan 02-01 via `shadcn@4.3.0`) defines `SIDEBAR_COOKIE_NAME = "sidebar_state"` (underscore). Layout reads `cookies().get("sidebar_state")` — hard-assertion grep in Task 1 verifies the literal matches. Future layout edits MUST keep the underscore form.
+- **Unlinked-user check placement** (Plan 02-02) — `current_owner_account_ids()` linkage check lives ONLY on `/app/page.tsx`, NOT in the shell layout or proxy. Intentional layering (RESEARCH §5): layouts can't read pathname cleanly; per-route RPC adds round-trips for no gain. Stub pages at `/app/event-types|availability|branding|bookings` inherit the check naturally when Phases 3/4/7/8 start querying tenant data.
+- **Dashboard nav icon set** (Plan 02-02) — Lucide `CalendarDays` / `Clock` / `Palette` / `Inbox` / `LogOut` in the sidebar; `Inbox` for Bookings deviates from RESEARCH §3c's `List` example (stylistic choice, no functional impact). Swap trivially post-phase if preferred.
 
 ### Carried Concerns / Todos
 
@@ -88,13 +91,13 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-19 — Plan 02-01 executed autonomously (3 atomic commits, pushed to `main`). shadcn v4 CLI drift + auto-commit noted as deviations and resolved cleanly.
+**Last session:** 2026-04-19 — Plans 02-02 and 02-03 executed autonomously in parallel, pushed to `main`. No merge conflicts on overlapping files (STATE.md coordinated via fresh-read + surgical edits). Plan 02-02 shipped the dashboard shell (3 atomic commits); plan 02-03 shipped the proxy gate + authenticated RLS helper + test (3 atomic commits).
 
-**Next action:** Orchestrator continues Phase 2 execution. Next plan in wave: `/gsd:execute-phase 2` will spawn Plan 02-02 (proxy gate + dashboard shell layout) and Plan 02-03 (linking + authenticated RLS test).
+**Next action:** Orchestrator runs the Phase 2 verifier. After green verify → Phase 2 complete and Phase 3 (Event Types CRUD) unblocks.
 
 **Phase 2 plan status:**
-- ✅ Plan 02-01 (login + auth actions) — complete, pushed
-- ⬜ Plan 02-02 (proxy gate + shell layout) — pending
+- ✅ Plan 02-01 (login + auth actions) — complete, pushed (3 atomic commits)
+- ✅ Plan 02-02 (dashboard shell + nav stubs) — complete, pushed (3 atomic commits: `bde2ed1` shell layout + AppSidebar, `ec56540` landing + welcome card + unlinked, `25a3c2c` 4 stub pages). DASH-01 shipped; AUTH-02 UI wiring complete.
 - ✅ Plan 02-03 (proxy gate + authenticated RLS Vitest scaffold) — complete, pushed (3 atomic commits: `d92becb` proxy gate, `b4bce59` helper+env, `bfc8dc5` test suite+TS fix). AUTH-04 shipped. Test authored but NOT yet run — Plan 04 will execute after Andrew's auth user is provisioned.
 
 **Files of record:**
@@ -103,8 +106,8 @@ None.
 - `.planning/ROADMAP.md` — 9 phases, progress updated through Phase 1
 - `.planning/research/` — domain-level research (STACK/FEATURES/ARCHITECTURE/PITFALLS/SUMMARY)
 - `.planning/phases/01-foundation/` — Phase 1 CONTEXT, RESEARCH, 3 PLANs, 3 SUMMARYs, VERIFICATION
-- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 3 PLANs, 02-01-SUMMARY, 02-03-SUMMARY
+- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 3 PLANs, 02-01-SUMMARY, 02-02-SUMMARY, 02-03-SUMMARY
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
-*State updated: 2026-04-19 after Plan 02-01 execution*
+*State updated: 2026-04-19 after Plans 02-02 and 02-03 execution*
