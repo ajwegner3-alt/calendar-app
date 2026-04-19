@@ -23,7 +23,7 @@ must_haves:
     - "Sidebar collapses to a hamburger below 768px (shadcn Sidebar built-in)"
     - "User-menu at the bottom of the sidebar shows email + Log out button that POSTs to /auth/signout (AUTH-02)"
     - "Stub pages for /app/event-types, /app/availability, /app/branding, /app/bookings each render a heading + 'Coming in Phase N' placeholder (DASH-01)"
-    - "Authenticated user whose account has no linked account_id is redirected to /app/unlinked, which shows an error card + Log out button"
+    - "Authenticated user whose account has no linked account_id is redirected to /app/unlinked when visiting /app (the landing page). Stub pages at /app/event-types, /app/availability, /app/branding, /app/bookings do not perform the check in Phase 2 — they are empty placeholders and will inherit the check when they start querying tenant data in Phases 3/4/7/8."
   artifacts:
     - path: "app/(shell)/layout.tsx"
       provides: "Shell layout with shadcn Sidebar, auth guard, cookie-based SSR state"
@@ -73,6 +73,8 @@ Ship the authenticated dashboard shell: a route-group layout (`app/(shell)/`) th
 Purpose: Covers DASH-01 (nav between event types, availability, branding, bookings) and completes the UI wiring for AUTH-02 (logout button). Sets the layout foundation every subsequent phase (3–8) builds inside.
 
 Output: An authenticated user lands on `/app`, sees a branded sidebar with 4 working nav links, clicks through to stub pages for each, and can log out from the user-menu at the bottom of the sidebar.
+
+Scoping note (BLOCKER 1 from plan checker): The `current_owner_account_ids()` linkage check lives ONLY on `/app/page.tsx` per RESEARCH §5's intentional layering decision. Authenticated-but-unlinked users hitting `/app/event-types`, `/app/availability`, `/app/branding`, or `/app/bookings` directly (via URL or bookmark) will see the empty stub, NOT a redirect to `/app/unlinked`. This is acceptable in Phase 2 because the stubs render zero tenant data. Phases 3/4/7/8 inherit the check naturally: the moment each page starts querying event_types/availability_rules/branding/bookings scoped by `current_owner_account_ids()`, an unlinked user will get an empty result and the phase will either render empty-state UX or add its own `/app/unlinked` redirect — whichever fits that phase's UX. Do NOT add a layout-level check in Phase 2 (RESEARCH §5 rejected it: layouts can't read pathname cleanly, and running the RPC on every `/app/*` navigation adds a round-trip for no gain).
 </objective>
 
 <execution_context>
@@ -220,8 +222,11 @@ export default async function ShellLayout({
 
   // Cookie-based SSR state for shadcn Sidebar (prevents flicker).
   // Next 16 cookies() is async — await is required (RESEARCH §7.8).
+  // Cookie name is "sidebar:state" (colon) per shadcn convention (RESEARCH §3d/§7.8).
+  // MUST match the literal used inside the installed components/ui/sidebar.tsx —
+  // the verify step hard-asserts this.
   const cookieStore = await cookies();
-  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
+  const sidebarOpen = cookieStore.get("sidebar:state")?.value !== "false";
 
   const email = (claimsData.claims.email as string | undefined) ?? "";
 
@@ -242,16 +247,16 @@ export default async function ShellLayout({
 
 Key rules:
 - The layout's `redirect("/app/login")` must be outside try/catch (RESEARCH §7.1).
-- The cookie name used by shadcn sidebar is `sidebar_state` (underscore). **Verify at implementation time** by grepping the installed `components/ui/sidebar.tsx` for the exact cookie name string. If the installed file uses a different name (e.g., `sidebar:state` with a colon), update the `get()` call to match. Log the discovered name in the plan summary.
+- The cookie name used by shadcn sidebar is `"sidebar:state"` (colon) per RESEARCH §3d/§7.8. **The verify block below hard-asserts the literal in `layout.tsx` matches the literal in the installed `components/ui/sidebar.tsx`.** If shadcn's installed version happens to ship `"sidebar_state"` (underscore) instead, update the layout's literal to match — the assertion will fail and point to the mismatch. Do NOT guess; make the two sides agree exactly.
 - `collapsible="icon"` gives the Linear/Vercel admin feel — desktop icon-rail + mobile offcanvas. Do not use `collapsible="offcanvas"` or `"none"`.
 - The `SidebarTrigger` header strip is wrapped in `md:hidden` so hamburger only appears below 768px. Above that, the persistent sidebar + rail handle the collapse UX.
 - The logout `<form action="/auth/signout" method="POST">` wraps a `SidebarMenuButton` with `type="submit"` — no client JS, just HTML form posting to the Route Handler from Plan 01.
-- Use Lucide icons: `CalendarDays`, `Clock`, `Palette`, `Inbox`, `LogOut` (CONTEXT.md Claude's Discretion — these are idiomatic choices).
+- Use Lucide icons: `CalendarDays`, `Clock`, `Palette`, `Inbox`, `LogOut` (CONTEXT.md Claude's Discretion — these are idiomatic choices). Note that RESEARCH §3c's example uses `List` for Bookings; we use `Inbox` (MAJOR 4 plan-checker deviation note — trivial stylistic choice, swap post-Phase-2 if preferred).
 - `group-data-[collapsible=icon]:hidden` is a shadcn Sidebar convention — hides text labels when the sidebar collapses to the icon rail.
 - Do NOT read per-account branding from DB here. NSI-hardcoded via CSS vars in `app/globals.css` (Plan 01); Phase 7 swaps to DB lookup.
 
 DO NOT:
-- Do not add the `current_owner_account_ids` RPC check in the layout — that lives on the `/app` page only (RESEARCH §5 placement decision: layouts can't read pathname cleanly, and running the RPC on every `/app/*` navigation adds a round-trip for no gain).
+- Do not add the `current_owner_account_ids` RPC check in the layout — that lives on the `/app` page only (RESEARCH §5 placement decision: layouts can't read pathname cleanly, and running the RPC on every `/app/*` navigation adds a round-trip for no gain). See the objective's "Scoping note" for the full coverage story.
 - Do not add a "Settings" link to the sidebar (deferred per CONTEXT.md).
 - Do not read `accounts.brand_primary` or `accounts.logo_url`.
   </action>
@@ -272,14 +277,18 @@ grep -q 'action="/auth/signout"' components/app-sidebar.tsx && echo "logout form
 grep -q "usePathname" components/app-sidebar.tsx && echo "active highlight ok"
 grep -qE "CalendarDays|Clock|Palette|Inbox" components/app-sidebar.tsx && echo "lucide icons ok"
 
-# Confirm installed sidebar cookie name — update layout if different
-grep -oE '"sidebar[_:]state"' components/ui/sidebar.tsx | head -1
+# BLOCKER 2 — HARD ASSERTION: cookie literal in layout.tsx MUST match the literal
+# inside the installed components/ui/sidebar.tsx. Fail loudly if they diverge.
+INSTALLED=$(grep -oE '"sidebar[_:]state"' components/ui/sidebar.tsx | head -1)
+LAYOUT=$(grep -oE '"sidebar[_:]state"' "app/(shell)/layout.tsx" | head -1)
+[ -n "$INSTALLED" ] && [ "$INSTALLED" = "$LAYOUT" ] || { echo "Sidebar cookie name mismatch: installed=$INSTALLED, layout=$LAYOUT"; exit 1; }
+echo "sidebar cookie literal matches installed shadcn sidebar: $INSTALLED"
 
 npm run build
 ```
   </verify>
   <done>
-`app/(shell)/layout.tsx` auth-guards on `getClaims`, redirects to `/app/login` when unauthenticated, reads the shadcn sidebar state cookie (verified name in the installed sidebar.tsx), renders `<SidebarProvider><AppSidebar /><SidebarInset>{children}</SidebarInset></SidebarProvider>`. `components/app-sidebar.tsx` renders NSI branding in the header, 4 nav items with Lucide icons + `isActive` highlighting, and a logout form in the footer that POSTs to `/auth/signout`. `npm run build` exits 0.
+`app/(shell)/layout.tsx` auth-guards on `getClaims`, redirects to `/app/login` when unauthenticated, reads the shadcn sidebar state cookie using the `"sidebar:state"` literal (verified against the installed `components/ui/sidebar.tsx` via hard-assertion grep — if the installed shadcn version ships a different literal, the assertion fails and the executor must update the layout to match), renders `<SidebarProvider><AppSidebar /><SidebarInset>{children}</SidebarInset></SidebarProvider>`. `components/app-sidebar.tsx` renders NSI branding in the header, 4 nav items with Lucide icons + `isActive` highlighting, and a logout form in the footer that POSTs to `/auth/signout`. `npm run build` exits 0.
 
 Commit: `feat(02-02): add shell layout and app-sidebar component`. Push.
   </done>
@@ -380,7 +389,11 @@ export default async function DashboardHome() {
   //     .select("id")
   //     .eq("owner_user_id", claims.sub);
   //
-  // Log the actual shape on first run and document in the plan summary.
+  // Plan 04 Task 3 inspects this shape end-to-end with a transient console.log
+  // and documents the observed form in the plan-04 SUMMARY. If wrapped, the
+  // length check below should become:
+  //   data.filter(r => r.current_owner_account_ids).length === 0
+  // Do NOT ship the console.log — it's transient, removed in the same commit.
   const { data, error } = await supabase.rpc("current_owner_account_ids");
 
   if (error) {
@@ -438,6 +451,7 @@ Key rules:
 - The welcome card uses shadcn `Card` + `CardContent` primitives. Grid is `md:grid-cols-3` (stacks on mobile).
 - Next-step callouts: 3 items only (Event Types / Availability / Branding). Bookings is a separate sidebar link, not a callout — per CONTEXT.md the callouts mirror setup-order phases.
 - Copy is short and friendly (CONTEXT.md Claude's Discretion).
+- Unlinked coverage (BLOCKER 1): this check fires ONLY when the user hits `/app`. Direct hits to `/app/event-types`, `/app/availability`, `/app/branding`, `/app/bookings` will NOT bounce unlinked users to `/app/unlinked` in Phase 2. This is intentional per RESEARCH §5 and the objective's "Scoping note" — Phases 3/4/7/8 inherit the check naturally when they start reading tenant data.
 
 DO NOT:
 - Do not add a fourth "Bookings" callout — not in scope for Phase 2 welcome copy.
@@ -528,6 +542,7 @@ Key rules:
 - No data fetching, no Supabase calls, no forms.
 - The Phase N reference must match the ROADMAP.md phase numbers (3, 4, 7, 8).
 - Each stub inherits the shell layout's sidebar + auth guard automatically (via `(shell)/layout.tsx`).
+- Unlinked users (BLOCKER 1): these stubs do NOT perform the `current_owner_account_ids()` check. Phase 2 ships them as empty placeholders; the check becomes free when Phases 3/4/7/8 start querying tenant data. This is the intentional scoping — do not try to add the check here.
 
 DO NOT:
 - Do not scaffold placeholder forms or tables "for Phase 3".
@@ -586,6 +601,7 @@ Manual end-to-end smoke (visual check; will fully verify in Plan 04):
 
 <success_criteria>
 - [ ] `app/(shell)/layout.tsx` exists, auth-guards via `getClaims`, reads shadcn sidebar cookie state, renders `SidebarProvider + AppSidebar + SidebarInset`
+- [ ] Hard-assertion grep in Task 1 verify confirms the layout's sidebar cookie literal matches the literal inside installed `components/ui/sidebar.tsx` (no more "guess and hope")
 - [ ] `components/app-sidebar.tsx` exists, renders NSI brand header, 4 nav items (Event Types / Availability / Branding / Bookings) with Lucide icons + `isActive` highlight, and a footer with email + logout form POSTing to `/auth/signout`
 - [ ] `app/(shell)/app/page.tsx` calls `supabase.rpc("current_owner_account_ids")`, redirects to `/app/unlinked` on empty result, renders `<WelcomeCard />` otherwise
 - [ ] `components/welcome-card.tsx` renders 3 callouts linking to `/app/event-types`, `/app/availability`, `/app/branding`
@@ -598,7 +614,10 @@ Manual end-to-end smoke (visual check; will fully verify in Plan 04):
 
 <output>
 After completion, create `.planning/phases/02-owner-auth-and-dashboard-shell/02-02-SUMMARY.md` documenting:
-- Confirmed shadcn sidebar cookie name (whatever the installed `components/ui/sidebar.tsx` uses)
-- Observed shape of `current_owner_account_ids` RPC result on first run (raw UUID array vs wrapped objects) — for Phase 3 reuse reference
-- Any deviation from RESEARCH §3c / §5 (expected: none)
+- Confirmed shadcn sidebar cookie name (whatever the installed `components/ui/sidebar.tsx` uses; hard-asserted in Task 1 verify)
+- Observed shape of `current_owner_account_ids` RPC result on first run (raw UUID array vs wrapped objects) — for Phase 3 reuse reference (Plan 04 Task 3 is the actual shape-proof)
+- Scoping note on unlinked-user coverage (BLOCKER 1 from plan checker): check lives only on `/app` (the landing page). Stubs at `/app/event-types`, `/app/availability`, `/app/branding`, `/app/bookings` do NOT perform the check in Phase 2 — they are empty placeholders and inherit the check when they start querying tenant data in Phases 3/4/7/8. This matches RESEARCH §5's intentional layering (layouts can't read pathname cleanly; per-route RPC adds round-trips for no gain). Document this clearly so a future reader doesn't mistake it for a coverage bug.
+- Icon choice deviation (MAJOR 4 from plan checker): Bookings nav icon uses `Inbox` (discretionary); RESEARCH §3c's example used `List`. Swap trivially post-Phase-2 if preferred. No functional impact.
+- Any other deviation from RESEARCH §3c / §5 (expected: none beyond the two above).
+</output>
 </output>

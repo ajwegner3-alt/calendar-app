@@ -239,6 +239,7 @@ Key rules:
 - `persistSession: false` + `autoRefreshToken: false` are BOTH required (RESEARCH §6 session-leak defense).
 - Function name is exactly `signInAsNsiOwner` — the Vitest test in Task 3 imports by this name.
 - Documentation comment calls out the SELECT-only contract explicitly (future Phase tests will import this helper; the contract must be loud).
+- The helper imports `createClient` from `@supabase/supabase-js` (already present in the Phase 1 version of this file via the `anonClient`/`adminClient` factories — do NOT add a second import; reuse the existing one at the top of the file).
 
 DO NOT:
 - Do not remove or modify `anonClient`, `adminClient`, `getOrCreateTestAccount`, or `getOrCreateTestEventType` — Phase 1 tests depend on them.
@@ -248,6 +249,12 @@ DO NOT:
   </action>
   <verify>
 ```bash
+# MAJOR 5 — assert @supabase/supabase-js is actually installed (Phase 1 should
+# have brought it in either explicitly or transitively via @supabase/ssr).
+# Fail loudly if the dep isn't resolvable before touching the helper.
+node -e "require('@supabase/supabase-js')" || { echo "Missing dep: @supabase/supabase-js"; exit 1; }
+echo "@supabase/supabase-js present"
+
 # Existing exports unchanged
 grep -q "export function anonClient" tests/helpers/supabase.ts && echo "anonClient ok"
 grep -q "export function adminClient" tests/helpers/supabase.ts && echo "adminClient ok"
@@ -271,7 +278,7 @@ npm test
 ```
   </verify>
   <done>
-`tests/helpers/supabase.ts` exports `signInAsNsiOwner` alongside the original Phase 1 helpers (no existing exports removed). The helper uses `persistSession: false` + `autoRefreshToken: false` and throws a clear error if env vars are missing. `.env.example` documents `TEST_OWNER_EMAIL` and `TEST_OWNER_PASSWORD` as empty placeholders. `.env.local` is gitignored. Existing Vitest tests (race-guard, rls-anon-lockout) still pass.
+`@supabase/supabase-js` resolves via `node -e "require('@supabase/supabase-js')"` (no missing-dep surprise). `tests/helpers/supabase.ts` exports `signInAsNsiOwner` alongside the original Phase 1 helpers (no existing exports removed). The helper uses `persistSession: false` + `autoRefreshToken: false` and throws a clear error if env vars are missing. `.env.example` documents `TEST_OWNER_EMAIL` and `TEST_OWNER_PASSWORD` as empty placeholders. `.env.local` is gitignored. Existing Vitest tests (race-guard, rls-anon-lockout) still pass.
 
 Commit: `test(02-03): add signInAsNsiOwner helper and document test env vars`. Push.
   </done>
@@ -435,6 +442,7 @@ Expected smoke results:
 - [ ] `lib/supabase/proxy.ts` contains the 3-line gate: `!user && startsWith("/app") && pathname !== "/app/login"` → `NextResponse.redirect(/app/login)`
 - [ ] No stray `middleware.ts` at repo root
 - [ ] `curl -sI /app` in dev returns 302 with `location: /app/login`; `/app/login` returns 200
+- [ ] `@supabase/supabase-js` is resolvable (`node -e "require('@supabase/supabase-js')"` exits 0 — added per plan-checker MAJOR 5)
 - [ ] `tests/helpers/supabase.ts` exports `signInAsNsiOwner` with `persistSession: false` + `autoRefreshToken: false`
 - [ ] `tests/helpers/supabase.ts` original exports (`anonClient`, `adminClient`, `TEST_ACCOUNT_SLUG`, `getOrCreateTestAccount`, `getOrCreateTestEventType`) unchanged
 - [ ] `.env.example` documents `TEST_OWNER_EMAIL` + `TEST_OWNER_PASSWORD` (empty placeholders only; no real credentials committed anywhere)
@@ -450,4 +458,5 @@ After completion, create `.planning/phases/02-owner-auth-and-dashboard-shell/02-
 - The SELECT-only contract decision + its rationale (cite the decision for future phases that add auth tests)
 - Any deviations from RESEARCH §4 or §6 (expected: none)
 - Note that this plan does NOT run the new authenticated-owner test — Plan 04 provisions Andrew's user and executes the test as part of its verification
+</output>
 </output>

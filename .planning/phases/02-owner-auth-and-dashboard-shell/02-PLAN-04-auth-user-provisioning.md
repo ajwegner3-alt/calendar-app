@@ -27,6 +27,7 @@ must_haves:
     - "accounts.owner_user_id for slug='nsi' equals Andrew's auth.users.id (RLS linkage; dashboard unlocks)"
     - "Vitest authenticated-owner RLS suite passes (AUTH-01/AUTH-04 + RLS proof)"
     - "Full end-to-end smoke passes: /app/* redirects to /app/login when logged out, login succeeds, /app renders welcome card, refresh keeps session, logout returns to /app/login (AUTH-01 through AUTH-04, DASH-01)"
+    - "The actual runtime shape of supabase.rpc('current_owner_account_ids') is observed end-to-end and documented in SUMMARY.md (closes RESEARCH Open Question #1 with evidence)"
   artifacts:
     - path: ".env.local"
       provides: "Real TEST_OWNER_EMAIL + TEST_OWNER_PASSWORD for Vitest helper (gitignored, NEVER committed)"
@@ -45,7 +46,7 @@ must_haves:
 <objective>
 Complete Phase 2 by provisioning Andrew's Supabase Auth user, linking it to the existing `nsi` account, running the authenticated-owner RLS test, and performing the end-to-end smoke of the full login flow. This is the only non-autonomous plan in Phase 2 — it has a single human checkpoint where Andrew does three things in the Supabase dashboard that Claude literally cannot do.
 
-Purpose: Converts the UI + auth surfaces from Plans 01-03 into a working, verified, end-to-end login flow. Without this plan, the login code compiles and the UI renders but no user can actually log in.
+Purpose: Converts the UI + auth surfaces from Plans 01-03 into a working, verified, end-to-end login flow. Without this plan, the login code compiles and the UI renders but no user can actually log in. Also closes RESEARCH Open Question #1 (RPC return-shape evidence — MAJOR 7 from plan checker) by capturing the observed shape during the first authenticated end-to-end hit.
 
 Output: A verified, documented, live-tested Phase 2 deliverable — Andrew can log in at https://calendar-app-xi-smoky.vercel.app/app/login (or dev equivalent), land on the dashboard, navigate, refresh, and log out.
 </objective>
@@ -143,10 +144,10 @@ TEST_OWNER_EMAIL=<andrew-email-from-task-1>
 TEST_OWNER_PASSWORD=<andrew-password-from-task-1>
 ```
 
-Before continuing, confirm:
+Before continuing, confirm the variables are both present AND non-empty (MAJOR 6 from plan checker — bare `TEST_OWNER_EMAIL=` with an empty value used to silently pass the old verification):
 ```bash
-grep -q "TEST_OWNER_EMAIL=" .env.local && echo "email set"
-grep -q "TEST_OWNER_PASSWORD=" .env.local && echo "password set"
+grep -qE "^TEST_OWNER_EMAIL=.+" .env.local || { echo "TEST_OWNER_EMAIL empty"; exit 1; }
+grep -qE "^TEST_OWNER_PASSWORD=.+" .env.local || { echo "TEST_OWNER_PASSWORD empty"; exit 1; }
 git check-ignore -q .env.local && echo ".env.local is gitignored — safe"
 ```
 
@@ -196,9 +197,10 @@ DO NOT:
   </action>
   <verify>
 ```bash
-# Env vars set (check existence, not values)
-grep -q "^TEST_OWNER_EMAIL=" .env.local && echo "email var set"
-grep -q "^TEST_OWNER_PASSWORD=" .env.local && echo "password var set"
+# MAJOR 6 — value-present (not just key-present) assertions
+grep -qE "^TEST_OWNER_EMAIL=.+" .env.local || { echo "TEST_OWNER_EMAIL empty"; exit 1; }
+grep -qE "^TEST_OWNER_PASSWORD=.+" .env.local || { echo "TEST_OWNER_PASSWORD empty"; exit 1; }
+echo "env vars present and non-empty"
 
 # .env.local not staged / not tracked
 git check-ignore -q .env.local && echo ".env.local still gitignored"
@@ -216,18 +218,32 @@ npm run lint
 ```
   </verify>
   <done>
-`.env.local` contains `TEST_OWNER_EMAIL` and `TEST_OWNER_PASSWORD` with real values. `.env.local` is gitignored and not tracked. `npm test -- tests/rls-authenticated-owner.test.ts` shows 4 passing tests. `npm test` (full suite) is green. `npm run lint` and `npm run build` exit 0. No commit from this task (env updates are local-only).
+`.env.local` contains `TEST_OWNER_EMAIL` and `TEST_OWNER_PASSWORD` with real, NON-EMPTY values (value-present grep, not just key-present — per plan-checker MAJOR 6). `.env.local` is gitignored and not tracked. `npm test -- tests/rls-authenticated-owner.test.ts` shows 4 passing tests. `npm test` (full suite) is green. `npm run lint` and `npm run build` exit 0. No commit from this task (env updates are local-only).
   </done>
 </task>
 
 <task type="checkpoint:human-verify" gate="blocking">
-  <name>Task 3: End-to-end smoke test the full login flow</name>
+  <name>Task 3: End-to-end smoke test the full login flow + capture RPC shape evidence</name>
   <what-built>
 The complete Phase 2 deliverable: login page, Server Action auth, dashboard shell with sidebar, 4 nav stubs, welcome card, unlinked error page, logout, and proxy redirect gate. Andrew's auth user is now created + linked; all infrastructure is in place.
 
-This checkpoint verifies the user experience matches what CONTEXT.md locked in.
+This checkpoint does two jobs:
+1. Verify the user experience matches what CONTEXT.md locked in.
+2. Close RESEARCH Open Question #1 with evidence — capture the observed runtime shape of `supabase.rpc("current_owner_account_ids")` during the first real authenticated hit to `/app` (plan-checker MAJOR 7).
   </what-built>
   <how-to-verify>
+
+**Step 0 — Add transient console.log for RPC shape evidence (plan-checker MAJOR 7).**
+
+Before starting the smoke, edit `app/(shell)/app/page.tsx`. Immediately after the `supabase.rpc("current_owner_account_ids")` call, add ONE line:
+
+```ts
+const { data, error } = await supabase.rpc("current_owner_account_ids");
+console.log("[RPC shape]", data);  // transient — removed in same commit
+```
+
+This log is INTENTIONALLY TRANSIENT. It gets removed in the same commit that ships the removal (see Step 13). Do not ship it to prod.
+
 **Option A (preferred) — Production smoke on Vercel:**
 
 Wait for Vercel auto-deploy to finish (it runs on every push to `main`; Plans 01-03 pushed multiple times, so the latest should be live). Check the deploy status:
@@ -237,13 +253,14 @@ Wait for Vercel auto-deploy to finish (it runs on every push to `main`; Plans 01
 echo "Visit: https://vercel.com/<your-team>/calendar-app/deployments"
 ```
 
-Then test at https://calendar-app-xi-smoky.vercel.app.
+Then test at https://calendar-app-xi-smoky.vercel.app. Tail logs with `vercel logs --follow` OR read from the Vercel dashboard's Runtime Logs tab during the `/app` visit in step 5 below.
 
 **Option B — Local dev smoke:**
 
 ```bash
 npm run dev
 # Visit http://localhost:3000 in a browser
+# The "[RPC shape]" log will print in the `npm run dev` terminal.
 ```
 
 **Run through this checklist (both environments should behave identically):**
@@ -267,10 +284,15 @@ npm run dev
    - [ ] Submit with empty email → inline "Enter a valid email address." appears under the email field
    - [ ] Submit with empty password → inline "Password is required." appears under the password field
 
-5. **Valid login (AUTH-01 happy path):**
+5. **Valid login (AUTH-01 happy path) + RPC shape capture:**
    - [ ] Enter correct email + password → button disables, spinner shows
    - [ ] Redirects to `/app`
    - [ ] Welcome card renders: "Welcome to NSI Bookings" with 3 callouts (Event Types, Availability, Branding)
+   - [ ] **In the `npm run dev` terminal (or Vercel Runtime Logs), locate the `[RPC shape]` log line emitted during this `/app` render. Copy it verbatim.**
+   - [ ] Paste into a scratch note for Step 13's SUMMARY entry. Expected shapes:
+     - If raw UUID array: `[RPC shape] ['ba8e712d-...']`
+     - If wrapped objects: `[RPC shape] [{ current_owner_account_ids: 'ba8e712d-...' }]`
+     - Anything else: record verbatim and flag.
 
 6. **Dashboard shell (DASH-01):**
    - [ ] Fixed left sidebar visible with 4 nav items (Event Types, Availability, Branding, Bookings)
@@ -306,11 +328,19 @@ npm run dev
     - Log in as that user → should redirect to `/app/unlinked` showing "Account not linked" card with Log out button.
     - This is a nice-to-have; skip if provisioning a second test user is annoying. The unit path (empty RPC result → redirect) is covered by code review + can be manually probed later.
 
-**Expected result:** All 11 required checks pass (12 is optional). Phase 2 is done.
+13. **Remove the transient console.log + record shape in SUMMARY (plan-checker MAJOR 7):**
+    - [ ] Open `app/(shell)/app/page.tsx` and remove the `console.log("[RPC shape]", data);` line added in Step 0.
+    - [ ] Run `npm run build` — should exit 0.
+    - [ ] Commit and push: `chore(02-04): remove transient RPC-shape debug log`
+    - [ ] In `.planning/phases/02-owner-auth-and-dashboard-shell/02-04-SUMMARY.md`, add a section "RPC shape evidence" with the verbatim log line you captured in Step 5.
+    - [ ] If the shape was WRAPPED (`[{ current_owner_account_ids: 'uuid' }, ...]`), add a follow-up note to SUMMARY: "Phase 3 MUST change the length check in `app/(shell)/app/page.tsx` from `data.length === 0` to `data.filter(r => r.current_owner_account_ids).length === 0` before Phase 3 starts querying tenant data. File a todo in STATE.md." This is the load-bearing reason the log exists — evidence, not assumption.
+    - [ ] If the shape was raw UUID strings (`['uuid', ...]`), no follow-up action needed — the existing length check is correct. Still record the evidence in SUMMARY.
+
+**Expected result:** All 11 required checks pass (12 is optional). Step 5's RPC shape line captured + pasted into SUMMARY. Step 13's console.log removal committed. Phase 2 is done.
 
 **If anything fails:** Note the specific failure in chat; the orchestrator will either file a gap or iterate on the relevant plan (01/02/03). Do NOT mark Phase 2 complete with any failed check.
   </how-to-verify>
-  <resume-signal>Type "approved — all checks pass" OR list any failures as "failed check: {N}: {description}".</resume-signal>
+  <resume-signal>Type "approved — all checks pass, RPC shape: [paste log line]" OR list any failures as "failed check: {N}: {description}".</resume-signal>
 </task>
 
 </tasks>
@@ -325,6 +355,9 @@ npm run build        # exit 0
 npm run lint         # exit 0
 git status           # clean working tree (plans + code committed)
 
+# Confirm transient console.log was removed (plan-checker MAJOR 7)
+! grep -q 'RPC shape' "app/(shell)/app/page.tsx" && echo "transient log removed"
+
 # Confirm Andrew's user is linked at the DB layer (orchestrator verifies via MCP)
 # SELECT owner_user_id FROM accounts WHERE slug = 'nsi'; -- expect UUID, not NULL
 ```
@@ -334,10 +367,13 @@ git status           # clean working tree (plans + code committed)
 - [ ] Andrew's Supabase Auth user exists (confirmed by successful `signInWithPassword` in the Vitest test)
 - [ ] `accounts.owner_user_id` for `slug='nsi'` equals Andrew's auth UUID (confirmed by `linkedCount === 1` on the `/app` page load)
 - [ ] "Confirm email" is OFF in Supabase Auth settings (so Andrew could log in immediately without a verification link)
-- [ ] `.env.local` contains `TEST_OWNER_EMAIL` + `TEST_OWNER_PASSWORD` with real values; file is gitignored and not tracked
+- [ ] `.env.local` contains `TEST_OWNER_EMAIL` + `TEST_OWNER_PASSWORD` with real, NON-EMPTY values (value-present grep — plan-checker MAJOR 6); file is gitignored and not tracked
 - [ ] `tests/rls-authenticated-owner.test.ts` — all 4 assertions pass
 - [ ] Full Vitest suite green (race-guard + rls-anon-lockout + rls-authenticated-owner)
 - [ ] End-to-end smoke (Task 3) — 11 required checks pass
+- [ ] RPC shape evidence captured: the `[RPC shape]` log line observed during the first authenticated `/app` hit is recorded verbatim in `02-04-SUMMARY.md` (plan-checker MAJOR 7 closure)
+- [ ] The transient `console.log("[RPC shape]", data)` has been REMOVED from `app/(shell)/app/page.tsx` and that removal is committed
+- [ ] If the RPC shape was wrapped objects, a follow-up todo is filed in STATE.md noting the length-check change required in Phase 3
 - [ ] No secrets committed to git history (double-check: `git log --all --full-history -- '.env.local'` returns nothing)
 - [ ] Phase 2 requirements AUTH-01, AUTH-02, AUTH-03, AUTH-04, DASH-01 all observably satisfied
 </success_criteria>
@@ -347,6 +383,9 @@ After completion, create `.planning/phases/02-owner-auth-and-dashboard-shell/02-
 - Andrew's auth UUID (for reference in future phases when linking additional users)
 - Confirmation the MCP UPDATE succeeded (timestamp + row-affected count)
 - Smoke-test checklist results (N/11 passed, any notes)
+- **RPC shape evidence** (plan-checker MAJOR 7): paste the verbatim `[RPC shape]` log line captured during the first authenticated `/app` hit. Classify it as raw UUID array or wrapped objects. If wrapped, link to the follow-up todo in STATE.md flagging the Phase 3 length-check change.
+- Confirmation that the transient `console.log` was removed from `app/(shell)/app/page.tsx` in a follow-up commit (hash + timestamp).
 - Final Phase 2 status: ready for `/gsd:verify-phase 2` + close-out
-- Carry-forward notes for Phase 3 (event types CRUD): Andrew's authenticated session is the RLS context; all Phase 3 dashboard routes can assume `current_owner_account_ids()` returns `[nsi.id]` for Andrew
+- Carry-forward notes for Phase 3 (event types CRUD): Andrew's authenticated session is the RLS context; all Phase 3 dashboard routes can assume `current_owner_account_ids()` returns `[nsi.id]` for Andrew (shape confirmed above)
+</output>
 </output>

@@ -490,6 +490,8 @@ kill %1 2>/dev/null || true
   <done>
 `/app/login` returns HTTP 200 in dev and renders a centered card with "NSI" branding, email and password fields, and a "Sign in" button. The page is a Server Component (no "use client" directive). `LoginForm` is a Client Component that uses `useActionState(loginAction, ...)` and `zodResolver(loginSchema)`. Submitting empty email/password shows inline RHF validation errors; submitting bad credentials (once Plan 04 creates the user) will show the "Invalid email or password." banner. `npm run build` exits 0.
 
+Deviation note (MAJOR 3 from plan checker): Login form uses raw `<form action={formAction}>` rather than RESEARCH §2b's `next/form <Form>` wrapper — stylistic choice, behavior identical for Server Action submission. No functional impact; flagged here so the executor summarizes it correctly rather than looking like unintended drift.
+
 Commit: `feat(02-01): add login page and client form`. Push.
   </done>
 </task>
@@ -543,5 +545,6 @@ After completion, create `.planning/phases/02-owner-auth-and-dashboard-shell/02-
 - Shadcn components installed + versions
 - NSI color token values (for Phase 7 reference)
 - Server Action shape (confirming `error.status` gating, `redirect` placement)
-- Any deviations from RESEARCH §1a/1b/2b (expected: none)
+- Any deviations from RESEARCH §1a/1b/2b (expected deviation: Task 3 uses raw `<form action={formAction}>` rather than RESEARCH §2b's `next/form <Form>` wrapper — stylistic choice, behavior identical for Server Action submission; flagged by plan checker MAJOR 3 and documented here so it reads as a planned choice, not drift).
+</output>
 </output>
