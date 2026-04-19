@@ -61,6 +61,8 @@ Phase 9  [ ] Manual QA & Verification
 - **Logout primitive** (Plan 02-01) — POST Route Handler at `/auth/signout` + `NextResponse.redirect` (Supabase canonical; avoids NEXT_REDIRECT try/catch gotchas). Sidebar-mounted logout form will post to this in Plan 02-02.
 - **shadcn v4 radix-nova style** (Plan 02-01) — init flags migrated from plan's `--base-color slate` to v4's `-d -b radix` (CLI changed between plan research and execution). Base color `neutral` in `components.json` is moot because NSI `@theme` overrides `--color-primary` etc. to NSI hex values.
 - **NSI brand tokens in Tailwind v4 `@theme`** (Plan 02-01) — `--color-primary: #0A2540` (deep navy), `--color-accent: #F97316` (warm orange), full `--color-sidebar-*` NSI set. Phase 7 swaps these to per-account DB lookup via inline CSS vars on a wrapping element — trivial migration.
+- **Proxy gate pattern** (Plan 02-03) — `pathname.startsWith("/app") && pathname !== "/app/login"` → `NextResponse.redirect("/app/login")`. Tight equality carve-out (faster than `!startsWith("/app/login")`). Future phases' gates should NOT add carve-outs under `/app/*`; other URL trees (`/embed/*`, `/[account]/[slug]`) are not matched by this guard.
+- **SELECT-only contract for authenticated-owner tests** (Plan 02-03) — `signInAsNsiOwner()` Vitest helper signs in as Andrew against the REAL `nsi` account; tests that use it MUST NOT INSERT/UPDATE/DELETE. Writes use `adminClient()` + `nsi-test` slug (existing Phase 1 pattern). Locked in helper JSDoc for future phase authors.
 
 ### Carried Concerns / Todos
 
@@ -93,7 +95,7 @@ None.
 **Phase 2 plan status:**
 - ✅ Plan 02-01 (login + auth actions) — complete, pushed
 - ⬜ Plan 02-02 (proxy gate + shell layout) — pending
-- ⬜ Plan 02-03 (account linking + authenticated RLS Vitest) — pending; needs Supabase Auth user created first
+- ✅ Plan 02-03 (proxy gate + authenticated RLS Vitest scaffold) — complete, pushed (3 atomic commits: `d92becb` proxy gate, `b4bce59` helper+env, `bfc8dc5` test suite+TS fix). AUTH-04 shipped. Test authored but NOT yet run — Plan 04 will execute after Andrew's auth user is provisioned.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
@@ -101,7 +103,7 @@ None.
 - `.planning/ROADMAP.md` — 9 phases, progress updated through Phase 1
 - `.planning/research/` — domain-level research (STACK/FEATURES/ARCHITECTURE/PITFALLS/SUMMARY)
 - `.planning/phases/01-foundation/` — Phase 1 CONTEXT, RESEARCH, 3 PLANs, 3 SUMMARYs, VERIFICATION
-- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 3 PLANs, 02-01-SUMMARY
+- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 3 PLANs, 02-01-SUMMARY, 02-03-SUMMARY
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
