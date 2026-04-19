@@ -6,7 +6,7 @@
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 1 complete ✓. Ready for Phase 2 (Owner Auth + Dashboard Shell).
+**Current focus:** Phase 2 in progress — Plan 01 (login + auth actions) complete; Plan 02 (proxy gate + shell) next.
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,14 +14,15 @@
 
 ## Current Position
 
-**Phase:** 1 complete; 2 up next
-**Plan:** —
-**Status:** Phase 1 verified + closed out. Run `/gsd:discuss-phase 2` next.
-**Progress:** [█░░░░░░░░] 1 / 9 phases complete
+**Phase:** 2 (Owner Auth + Dashboard Shell) — in progress
+**Plan:** 02-01 complete; 02-02 next (proxy gate + dashboard shell)
+**Status:** Plan 02-01 executed + pushed (3 atomic commits). Orchestrator will run phase verifier after all plans complete.
+**Last activity:** 2026-04-19 — Completed 02-PLAN-01-login-and-auth-actions.md
+**Progress:** [█░░░░░░░░] 1 / 9 phases complete (Phase 2: 1 / 3 plans done)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
-Phase 2  [ ] Owner Auth + Dashboard Shell            ← next
+Phase 2  [~] Owner Auth + Dashboard Shell            ← in progress (1/3 plans)
 Phase 3  [ ] Event Types CRUD
 Phase 4  [ ] Availability Engine
 Phase 5  [ ] Public Booking Flow + Email + .ics
@@ -35,10 +36,10 @@ Phase 9  [ ] Manual QA & Verification
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 1 / 9 |
+| Phases planned | 2 / 9 |
 | Phases complete | 1 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 6 / 73 (FOUND-01..06) |
+| Requirements complete | 6 / 73 (FOUND-01..06); AUTH-01 and AUTH-02 happy-path shipped (Plan 02-01) — full phase sign-off pending 02-02 + 02-03 |
 
 ## Accumulated Context
 
@@ -56,6 +57,10 @@ Phase 9  [ ] Manual QA & Verification
 - **Embeds** — script-injected iframe + raw iframe fallback; CSP `frame-ancestors *` only on `/embed/*`.
 - **Email** — all transactional via `@nsi/email-sender` (Resend); booker confirmation includes `.ics` (`METHOD:REQUEST`, stable UID).
 - **Phase parallelization** — Phase 3 || Phase 4 after Phase 1; Phases 6 || 7 || 8 after Phase 5.
+- **Login UX** (Plan 02-01) — Server Action (credentials off client bundle); RHF + zodResolver + `useActionState` bridge; raw `<form action={formAction}>` chosen over `next/form` for smaller surface area (behavior identical); error messages gated on `error.status` (not `.code` — upstream auth-js bug); generic "Invalid email or password." for all 400s (no user enumeration).
+- **Logout primitive** (Plan 02-01) — POST Route Handler at `/auth/signout` + `NextResponse.redirect` (Supabase canonical; avoids NEXT_REDIRECT try/catch gotchas). Sidebar-mounted logout form will post to this in Plan 02-02.
+- **shadcn v4 radix-nova style** (Plan 02-01) — init flags migrated from plan's `--base-color slate` to v4's `-d -b radix` (CLI changed between plan research and execution). Base color `neutral` in `components.json` is moot because NSI `@theme` overrides `--color-primary` etc. to NSI hex values.
+- **NSI brand tokens in Tailwind v4 `@theme`** (Plan 02-01) — `--color-primary: #0A2540` (deep navy), `--color-accent: #F97316` (warm orange), full `--color-sidebar-*` NSI set. Phase 7 swaps these to per-account DB lookup via inline CSS vars on a wrapping element — trivial migration.
 
 ### Carried Concerns / Todos
 
@@ -81,9 +86,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-19 — Phase 1 executed end-to-end across two interruptions (usage limit between Wave 1 scaffolding and Wave 1 commit; clean handoff at Wave 2/3 boundaries via resume-work).
+**Last session:** 2026-04-19 — Plan 02-01 executed autonomously (3 atomic commits, pushed to `main`). shadcn v4 CLI drift + auto-commit noted as deviations and resolved cleanly.
 
-**Next action:** Run `/gsd:discuss-phase 2` to gather implementation context for the Owner Auth + Dashboard Shell phase before planning.
+**Next action:** Orchestrator continues Phase 2 execution. Next plan in wave: `/gsd:execute-phase 2` will spawn Plan 02-02 (proxy gate + dashboard shell layout) and Plan 02-03 (linking + authenticated RLS test).
+
+**Phase 2 plan status:**
+- ✅ Plan 02-01 (login + auth actions) — complete, pushed
+- ⬜ Plan 02-02 (proxy gate + shell layout) — pending
+- ⬜ Plan 02-03 (account linking + authenticated RLS Vitest) — pending; needs Supabase Auth user created first
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
@@ -91,7 +101,8 @@ None.
 - `.planning/ROADMAP.md` — 9 phases, progress updated through Phase 1
 - `.planning/research/` — domain-level research (STACK/FEATURES/ARCHITECTURE/PITFALLS/SUMMARY)
 - `.planning/phases/01-foundation/` — Phase 1 CONTEXT, RESEARCH, 3 PLANs, 3 SUMMARYs, VERIFICATION
+- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 3 PLANs, 02-01-SUMMARY
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
-*State updated: 2026-04-19 after Phase 1 close-out*
+*State updated: 2026-04-19 after Plan 02-01 execution*
