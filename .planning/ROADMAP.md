@@ -65,6 +65,14 @@ Plans:
 
 **Research flag:** None.
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 02-PLAN-01-login-and-auth-actions.md — Install deps + shadcn + CSS vars + login page + Server Action + signout route (AUTH-01, AUTH-02)
+- [ ] 02-PLAN-02-dashboard-shell.md — Shell layout with sidebar + welcome card + 4 nav stubs + unlinked page (DASH-01, AUTH-02)
+- [ ] 02-PLAN-03-proxy-gate-and-rls-test.md — proxy.ts 3-line gate + signInAsNsiOwner helper + authenticated-owner RLS test (AUTH-04)
+- [ ] 02-PLAN-04-auth-user-provisioning.md — Andrew creates auth user + disables email confirm + orchestrator MCP-links UUID + end-to-end smoke (AUTH-01..04, DASH-01 live-verified)
+
 ---
 
 ### Phase 3: Event Types CRUD
