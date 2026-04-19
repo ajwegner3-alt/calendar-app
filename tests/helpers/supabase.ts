@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export function anonClient() {
   return createClient(
@@ -92,7 +92,7 @@ const TEST_OWNER_PASSWORD = process.env.TEST_OWNER_PASSWORD;
  *   separate throwaway auth user linked to nsi-test) because v1 has a single
  *   manually-provisioned auth user.
  */
-export async function signInAsNsiOwner(): Promise<ReturnType<typeof createClient>> {
+export async function signInAsNsiOwner(): Promise<SupabaseClient> {
   if (!TEST_OWNER_EMAIL || !TEST_OWNER_PASSWORD) {
     throw new Error(
       "TEST_OWNER_EMAIL / TEST_OWNER_PASSWORD missing in .env.local. " +
