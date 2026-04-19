@@ -211,7 +211,7 @@ Note: `EMBED-07` (live verification on a real Squarespace/WordPress site) is int
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 1 - Foundation | Multi-tenant Supabase + Next.js scaffold with race/TZ/RLS guards | Pending |
+| 1 - Foundation | Multi-tenant Supabase + Next.js scaffold with race/TZ/RLS guards | ✓ Complete (2026-04-19) |
 | 2 - Owner Auth + Dashboard Shell | Andrew can log in to a navigable dashboard | Pending |
 | 3 - Event Types CRUD | Andrew can define what people book | Pending |
 | 4 - Availability Engine | Slot API returns correct UTC slots, DST-safe | Pending |
