@@ -43,14 +43,17 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  // Phase 1 has no auth-gated routes yet; keep the user check commented out
-  // or scoped so anon public routes stay public. Phase 2 (auth) wires this up.
-  // if (!user && request.nextUrl.pathname.startsWith("/app")) {
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = "/login";
-  //   return NextResponse.redirect(url);
-  // }
-  void user;
+  // Phase 2: gate /app/* on authentication. Let /app/login through regardless.
+  const { pathname } = request.nextUrl;
+  if (
+    !user &&
+    pathname.startsWith("/app") &&
+    pathname !== "/app/login"
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/app/login";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
