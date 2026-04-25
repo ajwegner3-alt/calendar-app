@@ -36,10 +36,10 @@ Phase 9  [ ] Manual QA & Verification
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 3 / 9 |
-| Phases complete | 3 / 9 |
+| Phases planned | 4 / 9 |
+| Phases complete | 4 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 17 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06) |
+| Requirements complete | 26 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09) |
 
 ## Accumulated Context
 

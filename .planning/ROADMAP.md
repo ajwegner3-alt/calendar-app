@@ -123,12 +123,12 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
-- [ ] 04-PLAN-01-deps-and-accounts-migration.md — Install date-fns + @date-fns/tz + shadcn calendar; migration adds 4 settings columns to accounts (AVAIL-03..06 enabling)
-- [ ] 04-PLAN-02-slot-engine-and-dst-tests.md — Pure computeSlots() in lib/slots.ts + Vitest unit tests covering AVAIL-09 DST transitions (March 8 + Nov 1, 2026)
-- [ ] 04-PLAN-03-data-layer-and-server-actions.md — availability _lib: Zod schemas (overlap validation), server-only loader, 4 Server Actions (settings, weekly rules, override upsert/delete)
-- [ ] 04-PLAN-04-weekly-editor-and-settings-panel.md — /app/availability page + weekly rules per-row editor (Calendly-style) + Copy-from menu + global settings panel (AVAIL-01, 03-07)
-- [ ] 04-PLAN-05-date-overrides-ui.md — Calendar with red/blue dot markers + list view + override modal (Block / Custom hours) (AVAIL-02)
-- [ ] 04-PLAN-06-slots-api-route-and-integration-test.md — GET /api/slots route handler (no-cache) + integration test (AVAIL-08)
+- [x] 04-PLAN-01-deps-and-accounts-migration.md — Install date-fns + @date-fns/tz + shadcn calendar; migration adds 4 settings columns to accounts (AVAIL-03..06 enabling)
+- [x] 04-PLAN-02-slot-engine-and-dst-tests.md — Pure computeSlots() in lib/slots.ts + Vitest unit tests covering AVAIL-09 DST transitions (March 8 + Nov 1, 2026)
+- [x] 04-PLAN-03-data-layer-and-server-actions.md — availability _lib: Zod schemas (overlap validation), server-only loader, 4 Server Actions (settings, weekly rules, override upsert/delete)
+- [x] 04-PLAN-04-weekly-editor-and-settings-panel.md — /app/availability page + weekly rules per-row editor (Calendly-style) + Copy-from menu + global settings panel (AVAIL-01, 03-07)
+- [x] 04-PLAN-05-date-overrides-ui.md — Calendar with red/blue dot markers + list view + override modal (Block / Custom hours) (AVAIL-02)
+- [x] 04-PLAN-06-slots-api-route-and-integration-test.md — GET /api/slots route handler (no-cache) + integration test (AVAIL-08)
 
 ---
 
@@ -241,7 +241,7 @@ Note: `EMBED-07` (live verification on a real Squarespace/WordPress site) is int
 | 1 - Foundation | Multi-tenant Supabase + Next.js scaffold with race/TZ/RLS guards | ✓ Complete (2026-04-19) |
 | 2 - Owner Auth + Dashboard Shell | Andrew can log in to a navigable dashboard | ✓ Complete (2026-04-24) |
 | 3 - Event Types CRUD | Andrew can define what people book | ✓ Complete (2026-04-24) |
-| 4 - Availability Engine | Slot API returns correct UTC slots, DST-safe | Pending |
+| 4 - Availability Engine | Slot API returns correct UTC slots, DST-safe | ✓ Complete (2026-04-25) |
 | 5 - Public Booking Flow + Email + .ics | Visitor books a slot and gets a calendar invite | Pending |
 | 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | Pending |
 | 7 - Widget + Branding | Branded embeddable widget for client sites | Pending |

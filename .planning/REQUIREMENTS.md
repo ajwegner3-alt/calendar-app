@@ -34,15 +34,15 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Availability
 
-- [ ] **AVAIL-01**: Owner can set weekly recurring availability (per weekday: open/closed + start/end times, multiple windows per day allowed)
-- [ ] **AVAIL-02**: Owner can add per-date overrides (block a specific day, or replace rules for that day)
-- [ ] **AVAIL-03**: Owner can set buffer time (minutes) applied before and after each booking
-- [ ] **AVAIL-04**: Owner can set minimum notice (hours before a slot becomes bookable)
-- [ ] **AVAIL-05**: Owner can set maximum advance window (days into the future that slots are shown)
-- [ ] **AVAIL-06**: Owner can set a daily cap on bookings per day
-- [ ] **AVAIL-07**: Availability rules apply account-wide to all event types (per-event-type schedules deferred to v2)
-- [ ] **AVAIL-08**: Slot computation API (`/api/slots`) returns UTC slot list given an event type and date range, correctly subtracting existing bookings, applying buffers, and honoring min-notice/max-advance/daily-cap
-- [ ] **AVAIL-09**: Slot computation is verified correct across US DST transitions (March 8 2026, Nov 1 2026) via automated tests
+- [x] **AVAIL-01**: Owner can set weekly recurring availability (per weekday: open/closed + start/end times, multiple windows per day allowed)
+- [x] **AVAIL-02**: Owner can add per-date overrides (block a specific day, or replace rules for that day)
+- [x] **AVAIL-03**: Owner can set buffer time (minutes) applied before and after each booking
+- [x] **AVAIL-04**: Owner can set minimum notice (hours before a slot becomes bookable)
+- [x] **AVAIL-05**: Owner can set maximum advance window (days into the future that slots are shown)
+- [x] **AVAIL-06**: Owner can set a daily cap on bookings per day
+- [x] **AVAIL-07**: Availability rules apply account-wide to all event types (per-event-type schedules deferred to v2)
+- [x] **AVAIL-08**: Slot computation API (`/api/slots`) returns UTC slot list given an event type and date range, correctly subtracting existing bookings, applying buffers, and honoring min-notice/max-advance/daily-cap
+- [x] **AVAIL-09**: Slot computation is verified correct across US DST transitions (March 8 2026, Nov 1 2026) via automated tests
 
 ### Public Booking
 
@@ -199,15 +199,15 @@ Which phases cover which requirements. Populated during roadmap creation.
 | EVENT-04 | Phase 3 | Complete |
 | EVENT-05 | Phase 3 | Complete |
 | EVENT-06 | Phase 3 | Complete |
-| AVAIL-01 | Phase 4 | Pending |
-| AVAIL-02 | Phase 4 | Pending |
-| AVAIL-03 | Phase 4 | Pending |
-| AVAIL-04 | Phase 4 | Pending |
-| AVAIL-05 | Phase 4 | Pending |
-| AVAIL-06 | Phase 4 | Pending |
-| AVAIL-07 | Phase 4 | Pending |
-| AVAIL-08 | Phase 4 | Pending |
-| AVAIL-09 | Phase 4 | Pending |
+| AVAIL-01 | Phase 4 | Complete |
+| AVAIL-02 | Phase 4 | Complete |
+| AVAIL-03 | Phase 4 | Complete |
+| AVAIL-04 | Phase 4 | Complete |
+| AVAIL-05 | Phase 4 | Complete |
+| AVAIL-06 | Phase 4 | Complete |
+| AVAIL-07 | Phase 4 | Complete |
+| AVAIL-08 | Phase 4 | Complete |
+| AVAIL-09 | Phase 4 | Complete |
 | BOOK-01 | Phase 5 | Pending |
 | BOOK-02 | Phase 5 | Pending |
 | BOOK-03 | Phase 5 | Pending |
