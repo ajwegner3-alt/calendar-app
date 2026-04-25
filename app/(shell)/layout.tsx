@@ -6,6 +6,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/app-sidebar";
 
 export default async function ShellLayout({
@@ -32,15 +33,17 @@ export default async function ShellLayout({
   const email = (claimsData.claims.email as string | undefined) ?? "";
 
   return (
-    <SidebarProvider defaultOpen={sidebarOpen}>
-      <AppSidebar email={email} />
-      <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b px-4 md:hidden">
-          <SidebarTrigger />
-          <span className="text-sm font-medium text-primary">NSI</span>
-        </header>
-        <div className="p-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider defaultOpen={sidebarOpen}>
+        <AppSidebar email={email} />
+        <SidebarInset>
+          <header className="flex h-12 items-center gap-2 border-b px-4 md:hidden">
+            <SidebarTrigger />
+            <span className="text-sm font-medium text-primary">NSI</span>
+          </header>
+          <div className="p-6">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
