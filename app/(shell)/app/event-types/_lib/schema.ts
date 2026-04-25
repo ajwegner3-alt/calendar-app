@@ -1,0 +1,75 @@
+import { z } from "zod";
+
+/**
+ * Custom-question discriminated union.
+ *
+ * Zod v4: z.discriminatedUnion uses O(1) discriminator lookup.
+ * Each branch shares: id (uuid), label (1-200 chars), required (default false).
+ * Single-select adds an options array (1-20 strings, each 1-100 chars).
+ */
+const baseQuestion = z.object({
+  id: z.string().uuid({ message: "Internal error: missing question id." }),
+  label: z
+    .string()
+    .min(1, "Question label is required.")
+    .max(200, "Question label must be 200 characters or fewer."),
+  required: z.coerce.boolean().default(false),
+});
+
+const shortTextQuestion = baseQuestion.extend({ type: z.literal("short-text") });
+const longTextQuestion = baseQuestion.extend({ type: z.literal("long-text") });
+const yesNoQuestion = baseQuestion.extend({ type: z.literal("yes-no") });
+
+const singleSelectQuestion = baseQuestion.extend({
+  type: z.literal("single-select"),
+  options: z
+    .array(z.string().min(1, "Option label cannot be empty.").max(100))
+    .min(1, "Add at least one option.")
+    .max(20, "A single-select question can have at most 20 options."),
+});
+
+export const customQuestionSchema = z.discriminatedUnion("type", [
+  shortTextQuestion,
+  longTextQuestion,
+  yesNoQuestion,
+  singleSelectQuestion,
+]);
+
+/**
+ * Event-type schema for create + edit.
+ *
+ * - name: 1-100 chars
+ * - slug: 1-100 chars, must match /^[a-z0-9-]+$/ (matches slugify output)
+ * - duration_minutes: 1-480 (8 hours max — matches CONTEXT v1 scope)
+ * - description: optional, up to 500 chars; empty string normalized to undefined
+ * - is_active: defaults to true on create
+ * - custom_questions: array (default empty); each entry validated by customQuestionSchema
+ */
+export const eventTypeSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required.")
+    .max(100, "Name must be 100 characters or fewer."),
+  slug: z
+    .string()
+    .min(1, "URL slug is required.")
+    .max(100, "URL slug must be 100 characters or fewer.")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "URL slug may only contain lowercase letters, numbers, and hyphens.",
+    ),
+  duration_minutes: z.coerce
+    .number()
+    .int("Duration must be a whole number.")
+    .min(1, "Duration must be at least 1 minute.")
+    .max(480, "Duration cannot exceed 480 minutes (8 hours)."),
+  description: z
+    .string()
+    .max(500, "Description must be 500 characters or fewer.")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  is_active: z.coerce.boolean().default(true),
+  custom_questions: z.array(customQuestionSchema).default([]),
+});
+
+export type EventTypeInput = z.infer<typeof eventTypeSchema>;
