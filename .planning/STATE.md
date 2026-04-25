@@ -15,17 +15,17 @@
 ## Current Position
 
 **Phase:** 5 (Public Booking Flow + Email + .ics) — in progress
-**Plan:** 5 of 6 complete (05-05 done; 05-06 remaining)
-**Status:** Phase 5 in progress. Plans 05-01, 05-02, 05-03, 05-04, 05-05 done.
-**Last activity:** 2026-04-25 — Completed 05-05 (POST /api/bookings route handler + token helper; 3d3e0de, 7743869)
-**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress)
+**Plan:** 6 of 6 Wave-3 plans complete (05-06 done; Phase 5 Wave 4 pending: 05-07 confirmation page)
+**Status:** Phase 5 Wave 3 complete. Plans 05-01, 05-02, 05-03, 05-04, 05-05, 05-06 done.
+**Last activity:** 2026-04-25 — Completed 05-06 (BookingShell + SlotPicker + BookingForm + RaceLoserBanner + page.tsx swap; f803e43, b717c08)
+**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress — Wave 4: confirmation page + QA remaining)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
-Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01..05 done; 05-06 remaining)
+Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01..06 done; 05-07 confirmation page remaining)
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -116,7 +116,14 @@ Phase 9  [ ] Manual QA & Verification
 - **Calendar marker rendering uses local browser TZ for Date objects** (Plan 04-05)
 - **Public booking page loader pattern** (Plan 05-04) — `loadEventTypeForBookingPage(accountSlug, eventSlug)` in `app/[account]/[event-slug]/_lib/load-event-type.ts`: `server-only`, `createAdminClient()`, `RESERVED_SLUGS.has(accountSlug) → return null`, account by slug, event_type by `(account_id, slug)` filtered `.eq('is_active', true).is('deleted_at', null)`. Returns null on ANY miss; page calls `notFound()`. Same service-role pattern as /api/slots.
 - **Reserved-slug guard locked** (Plan 05-04) — `["app", "api", "_next", "auth"]` in `RESERVED_SLUGS` Set in `load-event-type.ts`. Phase 7 MAY add `"embed"` if `/embed/[account]/[slug]` route is introduced. Guard lives in loader (not in proxy.ts) so it fires for both `page.tsx` and `generateMetadata`.
-- **PLAN-05-06 patch markers** (Plan 05-04) — `page.tsx` has two marker pairs: `PLAN-05-06-REPLACE-IMPORT-START/END` (lines 68–70, JSX comment wrapping the future import) and `PLAN-05-06-REPLACE-INLINE-START/END` (lines 77–106, inline `BookingShell` stub function). Plan 05-06 creates `_components/booking-shell.tsx`, replaces import block, deletes stub.
+- **PLAN-05-06 patch markers** (Plan 05-04 → executed Plan 05-06) — Markers replaced: real `import { BookingShell } from "./_components/booking-shell"` added; inline stub function removed; `@ts-expect-error` directive removed. page.tsx is now clean.
+- **formOnlySchema.pick() split** (Plan 05-06) — `useForm<FormValues>` holds only `bookerName/bookerEmail/bookerPhone/answers`. Server-required fields (`eventTypeId/startAt/endAt/bookerTimezone/turnstileToken`) are injected at submit time from props/state. Full `bookingInputSchema` validates the assembled payload. Same `zodResolver(...) as any` cast as Phase 3 lock.
+- **Managed Turnstile widget (CONTEXT decision #4 revised)** (Plan 05-06) — `<Turnstile ref={turnstileRef} siteKey={...} />` with NO `size` prop. Cloudflare auto-decides between silent pass and visible checkbox. `turnstileRef.current?.reset()` called on EVERY error path (409/400/403/5xx/network) — RESEARCH Pitfall 5 (token is single-use).
+- **409 race-loser flow** (Plan 05-06) — RaceLoserBanner renders ABOVE SlotPicker (not a toast/modal). Form values (name/email/phone/answers) preserved. `refetchKey` bumped so SlotPicker immediately re-fetches /api/slots. Banner dismissed when user picks a new slot. CONTEXT decision #5 locked copy.
+- **refetchKey integer pattern** (Plan 05-06) — Parent owns `refetchKey: number` state; child's useEffect includes it in dependency array; parent bumps `k => k + 1` to trigger re-fetch without unmounting child. Reusable for any child that needs externally-triggered refetch.
+- **Browser TZ SSR safety** (Plan 05-06) — `useState(account.timezone)` for initial server render; `useEffect(() => setBookerTz(Intl.DateTimeFormat().resolvedOptions().timeZone), [])` replaces on mount. Server HTML uses owner TZ; hydration swaps to browser TZ.
+- **day-has-slots CSS marker** (Plan 05-06) — Added to `app/globals.css`: `.day-has-slots { position: relative }` + `.day-has-slots::after { background: var(--color-accent); ... }`. Mirrors Phase 4 `.day-blocked`/`.day-custom` pattern. `modifiersClassNames={{ hasSlots: "day-has-slots" }}` in SlotPicker Calendar.
+- **Radio custom questions: native input + Controller** (Plan 05-06) — No shadcn RadioGroup (not installed). Native `<input type="radio">` with RHF `Controller` render prop. Controller required because native radio doesn't forward ref to RHF. Phase 7 can swap to shadcn RadioGroup if installed.
 - **BookingShell prop contract (Wave 2 → Wave 3 LOCKED)** (Plan 05-04) — `{ account: AccountSummary; eventType: EventTypeSummary }` from `app/[account]/[event-slug]/_lib/types.ts`. Plan 05-06 MUST consume identical shape.
 - **generateMetadata double-load** (Plan 05-04) — Both `generateMetadata` and `BookingPage` call `loadEventTypeForBookingPage()` (two DB round-trips per request). Acceptable for v1; Phase 8 can add `import { cache } from 'react'` wrapper if latency becomes a concern.
 - **Client owns slot fetch** (Plan 05-04) — Server Component does NOT prefetch slots. `BookingShell` (Plan 05-06) calls `/api/slots` after browser TZ detection. Server-side prefetch would use server TZ → wrong slot times for non-Chicago visitors. Correctness constraint.
@@ -169,9 +176,9 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-05 complete. POST /api/bookings route handler + lib/bookings/tokens.ts token helper; npm run build exits 0 (3d3e0de + 7743869).
+**Last session:** 2026-04-25 — Phase 5 Plan 05-06 complete. BookingShell + SlotPicker + BookingForm + RaceLoserBanner + page.tsx swap; npm run build exits 0 (f803e43 + b717c08). Pushed to main.
 
-**Next action:** Phase 5 Plan 05-06 (BookingShell client component — calendar + slot picker + form). This is the final Wave 3 plan for Phase 5; wires into the page stub from Plan 05-04.
+**Next action:** Phase 5 Plan 05-07 (confirmation page at `/[account]/[event-slug]/confirmed/[booking-id]`). BookingForm already does `router.push(data.redirectTo)` pointing here; route currently 404s.
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
@@ -179,7 +186,7 @@ None.
 - ✅ Plan 05-03 (Zod bookingInputSchema + Turnstile verify + .ics builder + email senders + orchestrator) — complete, pushed (2026-04-25, 2d31d73 + 6bb45a5)
 - ✅ Plan 05-04 (public booking page Server Component shell) — complete, pushed (2026-04-25, bad6b2a + a608f9e)
 - ✅ Plan 05-05 (POST /api/bookings route handler + token helper) — complete (2026-04-25, 3d3e0de + 7743869)
-- [ ] Plan 05-06 (BookingShell client component — calendar + slot picker + form)
+- ✅ Plan 05-06 (BookingShell client components — calendar + slot picker + form + race-loser banner + page.tsx swap) — complete, pushed (2026-04-25, f803e43 + b717c08)
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
