@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 03 complete — Zod schema + Turnstile verify + .ics builder + email senders + orchestrator; 2 commits, npm run build exits 0; pushed to main)
+**Last updated:** 2026-04-25 (Phase 5 Plan 06 complete — BookingShell + SlotPicker + BookingForm + RaceLoserBanner + page.tsx swap; 2 commits f803e43+b717c08, npm run build exits 0; pushed to main)
 
 ## Project Reference
 
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 5 (Public Booking Flow + Email + .ics) — in progress
-**Plan:** 4 of 6 complete (05-04 done; 05-05 and 05-06 remaining)
-**Status:** Phase 5 in progress. Plans 05-01, 05-02, 05-03, 05-04 done.
-**Last activity:** 2026-04-25 — Completed 05-04 (public booking page Server Component shell; bad6b2a, a608f9e)
+**Plan:** 5 of 6 complete (05-05 done; 05-06 remaining)
+**Status:** Phase 5 in progress. Plans 05-01, 05-02, 05-03, 05-04, 05-05 done.
+**Last activity:** 2026-04-25 — Completed 05-05 (POST /api/bookings route handler + token helper; 3d3e0de, 7743869)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress)
 
 ```
@@ -25,7 +25,7 @@ Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
-Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01..04 done; 05-05 + 05-06 remaining)
+Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01..05 done; 05-06 remaining)
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -130,6 +130,12 @@ Phase 9  [ ] Manual QA & Verification
 - **Cancel/reschedule URL format LOCKED (Plan 05-03)** — `${appUrl}/cancel/${rawToken}` and `${appUrl}/reschedule/${rawToken}`. `rawToken` = pre-hash UUID; Phase 6 route handlers consume at these paths. Format must not change.
 - **appUrl passed as parameter to sendBookingConfirmation (Plan 05-03)** — Caller (Plan 05-05 Route Handler) resolves `process.env.NEXT_PUBLIC_APP_URL` with fallback to `https://calendar-app-xi-smoky.vercel.app` and passes as `appUrl`. Not read inside the module — keeps module testable and env resolution in one place.
 - **Fire-and-forget email contract (Plan 05-03)** — `sendBookingEmails()` uses `Promise.allSettled` + per-sender `.catch(console.error)`. Never throws. Route Handler calls `void sendBookingEmails(...)` after returning 201 — email failure MUST NOT roll back booking.
+- **POST /api/bookings is a Route Handler (NOT Server Action) (Plan 05-05)** — Server Actions cannot return 409; locked since RESEARCH Pitfall 1. `export async function POST(req: NextRequest)` in `app/api/bookings/route.ts`.
+- **Token generation pattern (Plan 05-05)** — `generateBookingTokens()` in `lib/bookings/tokens.ts` uses `crypto.randomUUID()` + Web Crypto `crypto.subtle.digest("SHA-256", ...)` → hex. Raw tokens passed ONLY to `sendBookingEmails()`; hashes stored in DB `cancel_token_hash`/`reschedule_token_hash`. 201 response body NEVER contains raw tokens.
+- **No pre-flight slot validity check (Plan 05-05)** — `bookings_no_double_book` partial unique index is the authoritative race gate. Pre-flight `computeSlots()` adds latency without closing the race window (gap between check and INSERT). Plan 05-08 integration tests verify the 409 path.
+- **Error code vocabulary (Plan 05-05)** — `BAD_REQUEST | VALIDATION | TURNSTILE | NOT_FOUND | SLOT_TAKEN | INTERNAL`. All error responses include machine-readable `{error, code}`. 409 body uses CONTEXT decision #5 verbatim: `"That time was just booked. Pick a new time below."`.
+- **redirectTo format LOCKED (Plan 05-05)** — `/${account.slug}/${eventType.slug}/confirmed/${booking.id}`. Matches Plan 05-04 + 05-07 confirmation route. Client (Plan 05-06 booking form) `router.push(redirectTo)` on 201.
+- **Rate limiting deferred to Phase 8 INFRA-01 (Plan 05-05)** — Turnstile provides bot protection in v1; full per-IP/per-email rate limiting is Phase 8 hardening.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
 
@@ -163,16 +169,16 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-03 complete. Zod bookingInputSchema + Turnstile verify helper + .ics builder + booker/owner email senders + fire-and-forget orchestrator; build exits 0; pushed to main (2d31d73 + 6bb45a5).
+**Last session:** 2026-04-25 — Phase 5 Plan 05-05 complete. POST /api/bookings route handler + lib/bookings/tokens.ts token helper; npm run build exits 0 (3d3e0de + 7743869).
 
-**Next action:** Phase 5 Plan 05-05 (POST /api/bookings route handler) — consumes all 6 modules built in 05-03. Plan 05-06 (BookingShell client component) can proceed in parallel.
+**Next action:** Phase 5 Plan 05-06 (BookingShell client component — calendar + slot picker + form). This is the final Wave 3 plan for Phase 5; wires into the page stub from Plan 05-04.
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
 - ✅ Plan 05-02 (vendor @nsi/email-sender + Gmail provider + deps) — complete, pushed (2026-04-25)
 - ✅ Plan 05-03 (Zod bookingInputSchema + Turnstile verify + .ics builder + email senders + orchestrator) — complete, pushed (2026-04-25, 2d31d73 + 6bb45a5)
 - ✅ Plan 05-04 (public booking page Server Component shell) — complete, pushed (2026-04-25, bad6b2a + a608f9e)
-- [ ] Plan 05-05 (POST /api/bookings route handler)
+- ✅ Plan 05-05 (POST /api/bookings route handler + token helper) — complete (2026-04-25, 3d3e0de + 7743869)
 - [ ] Plan 05-06 (BookingShell client component — calendar + slot picker + form)
 
 **Phase 4 plan status:**
@@ -219,4 +225,4 @@ None.
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
-*State updated: 2026-04-24 after Phase 3 close-out (verifier 20/20)*
+*State updated: 2026-04-25 after Phase 5 Plan 05-05 (POST /api/bookings + token helper)*
