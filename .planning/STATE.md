@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 07 complete — confirmation screen route /[account]/[event-slug]/confirmed/[booking-id]; commit 2320777, npm run build exits 0; pushed to main)
+**Last updated:** 2026-04-25 (Phase 5 Plan 08 complete — 9-test bookings-api integration suite; 2 commits 1e280aa+44df424, npm run build exits 0, 54/54 tests passing)
 
 ## Project Reference
 
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 5 (Public Booking Flow + Email + .ics) — COMPLETE (pending Phase 9 manual QA sign-off)
-**Plan:** 7 of 7 plans complete (05-07 done — confirmation screen)
-**Status:** Phase 5 fully shipped. All 7 plans done. Phase 9 QA pending.
-**Last activity:** 2026-04-25 — Completed 05-07 (confirmation screen route; 2320777)
+**Plan:** 8 of 8 plans complete (05-08 done — integration test suite for POST /api/bookings)
+**Status:** Phase 5 fully shipped + integration-tested. All 8 plans done. Phase 9 QA pending.
+**Last activity:** 2026-04-25 — Completed 05-08 (bookings-api integration suite; 1e280aa, 44df424)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phases 6/7/8 ready to start)
 
 ```
@@ -148,6 +148,9 @@ Phase 9  [ ] Manual QA & Verification
 - **generateMetadata only (no module-level metadata export) (Plan 05-07)** — Next.js 16 build fails if both are exported from the same `page.tsx`. `generateMetadata` is the correct pattern for dynamic titles. `robots: { index: false, follow: false }` returned from every branch including 404 fallback.
 - **is_active + deleted_at filter on event_type in confirmation loader (Plan 05-07)** — Archived event types' old booking confirmations 404 on revisit (acceptable v1 behavior; booker has all details in email). Privacy: soft-deleted event types' bookings should not be browsable.
 - **Rate limiting deferred to Phase 8 INFRA-01 (Plan 05-05)** — Turnstile provides bot protection in v1; full per-IP/per-email rate limiting is Phase 8 hardening.
+- **vitest.config.ts alias-level mock interception (Plan 05-08)** — `@/lib/turnstile` and `@/lib/email-sender` aliased to `tests/__mocks__/` via `path.resolve(__dirname, ...)`. Alias-level is preferred over `vi.mock()` for route-handler integration tests (avoids ESM hoisting issues). Pattern reusable for any future server-only module needing mock interception.
+- **`sendEmail` spy asserts `>= 1` (not `== 2`) (Plan 05-08)** — Both `send-booking-confirmation.ts` and `send-owner-notification.ts` call `sendEmail`. Owner notification is conditional on `accounts.owner_email` being non-null. Assert `>= 1` to stay env-tolerant; assert `[0].to === bookerEmail` to confirm the booker confirmation fired.
+- **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
 
@@ -181,9 +184,9 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-07 complete. Confirmation screen route at /[account]/[event-slug]/confirmed/[booking-id]; npm run build exits 0 (2320777). Pushed to main. Phase 5 code complete.
+**Last session:** 2026-04-25 — Phase 5 Plan 05-08 complete. 9-test bookings-api integration suite; 54/54 tests passing; npm run build exits 0 (1e280aa, 44df424). Phase 5 fully complete.
 
-**Next action:** Phase 5 is code-complete. Options (all parallel, no dependencies between them):
+**Next action:** Phase 5 is code-complete + integration-tested. Options (all parallel, no dependencies between them):
 1. Phase 6 (Cancel + Reschedule Lifecycle) — cancel/reschedule tokens already generated in bookings table
 2. Phase 7 (Widget + Branding) — embed iframe + per-account brand tokens
 3. Phase 8 (Reminders + Hardening + Dashboard Bookings List) — Vercel Cron reminders, rate limiting, dashboard
@@ -197,6 +200,7 @@ None.
 - ✅ Plan 05-05 (POST /api/bookings route handler + token helper) — complete (2026-04-25, 3d3e0de + 7743869)
 - ✅ Plan 05-06 (BookingShell client components — calendar + slot picker + form + race-loser banner + page.tsx swap) — complete, pushed (2026-04-25, f803e43 + b717c08)
 - ✅ Plan 05-07 (confirmation screen route /[account]/[event-slug]/confirmed/[booking-id]) — complete, pushed (2026-04-25, 2320777)
+- ✅ Plan 05-08 (integration tests for POST /api/bookings — 9 cases: race-safe 409, Turnstile mock, email spy, no raw tokens) — complete, pushed (2026-04-25, 1e280aa + 44df424; 54/54 tests passing)
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
