@@ -16,7 +16,7 @@ must_haves:
     - "Route returns flat-array response shape: {slots: Array<{start_at: string, end_at: string}>} where start_at/end_at are UTC ISO strings (Phase 5 forward contract — locked)"
     - "Empty result for a date that is closed, blocked, or cap-reached → that date contributes zero slots; the response array can be entirely empty for fully-blocked ranges"
     - "Route file declares export const dynamic = 'force-dynamic' (NEVER cache the response — RESEARCH §2 + Pitfall 4) AND sets Cache-Control: no-store on the response (defense in depth)"
-    - "Route does NOT use admin client (RLS-scoped reads via createClient() from @/lib/supabase/server suffice; the seed account's policies allow public read of accounts.timezone+settings; if RLS blocks, fallback to admin client is acceptable but document why)"
+    - "/api/slots uses the admin (service-role) Supabase client because the endpoint is public (anon callers from Phase 5 booking pages have no auth session); reads are explicitly scoped to the requested event_type_id's account_id and only select needed columns. Service-role usage is gated server-only by lib/supabase/admin.ts (`import 'server-only'`); no writes happen here; inputs are Zod/regex-validated before any query runs."
     - "tests/slots-api.test.ts covers: (a) happy-path round trip with seeded nsi data — creates a temp event_type + availability_rules row + over-range bookings, hits /api/slots via fetch (or via direct route handler import), asserts UTC ISO shape; (b) param validation — missing event_type_id → 400, malformed date → 400; (c) deleted event_type → 404; (d) non-existent event_type → 404"
     - "Test uses adminClient() to seed test data (Phase 1+ pattern) and cleans up after; uses signInAsNsiOwner OR direct adminClient SELECT to verify response — never uses real production data"
   artifacts:
@@ -132,7 +132,7 @@ import type {
   BookingRow,
   AccountSettings,
 } from "@/lib/slots.types";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -174,7 +174,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
+  // Admin (service-role) client: /api/slots is a PUBLIC endpoint hit by
+  // unauthenticated booking-page visitors (Phase 5). RLS would silently return
+  // 0 rows for anon callers and break booking. We scope every query below to
+  // the resolved account_id and select only the columns the engine consumes.
+  const supabase = createAdminClient();
 
   // ── Step 1: load event_type to get duration + account_id ─────────────────
   const { data: eventType, error: etError } = await supabase
@@ -287,7 +291,7 @@ Key rules:
 - File declares both `export const dynamic = "force-dynamic"` AND `export const revalidate = 0`. Either alone suffices on Next 16; declaring both is belt-and-suspenders against future Next.js default changes (RESEARCH §2 + Pitfall 4).
 - Response `Cache-Control: no-store` header set on EVERY response (200/400/404/500). Single `NO_STORE` constant prevents drift.
 - Param validation gates: UUID format on `event_type_id`, `YYYY-MM-DD` regex on `from`/`to`, `from <= to` ordering. Missing or malformed → 400 with `{error}` JSON.
-- Uses `createClient()` from `@/lib/supabase/server` — RLS-scoped client. The owner's RLS policies allow reads of their own data; for v1 single-tenant, this works because a public booker would also be hitting this endpoint and existing RLS allows anon SELECT on `accounts.timezone` etc. (Phase 1 lock).
+- Uses `createAdminClient()` from `@/lib/supabase/admin` — service-role client (RLS-bypass). Required because this is a PUBLIC endpoint hit by anonymous Phase 5 booking-page visitors with no session cookie; the RLS-scoped `createClient()` would silently return 0 rows for anon callers. Server-side gating: `@/lib/supabase/admin` declares `import "server-only"` so a misuse from a `"use client"` file would fail at bundle time. Each of the 5 queries below is explicitly scoped to the resolved `account_id`.
 - 5 queries:
   1. event_type (sequential, since account_id needed for the rest).
   2. account, rules, overrides, bookings — parallel via Promise.all.
@@ -297,7 +301,7 @@ Key rules:
 
 DO NOT:
 - Do not POST/PATCH/DELETE on this route — slots are computed, not stored. Plan 04-03's actions handle writes; Phase 5 will add `/api/bookings` (POST) for booking creation.
-- Do not use admin client unless RLS read fails for anon. The seeded account's RLS policies allow anon SELECT on accounts/event_types/availability_rules/date_overrides — confirmed via Phase 1 RLS tests. If discovered otherwise during smoke, document it in the SUMMARY and switch to `lib/supabase/admin.ts` (and update the rationale in this PLAN's must_haves).
+- Use `createAdminClient()` from `@/lib/supabase/admin` (NOT the cookie/RLS-scoped `createClient()` from `@/lib/supabase/server`). Rationale: this endpoint is PUBLIC — Phase 5 booking pages call it without an auth session, so RLS would silently return 0 rows for the unauthenticated caller and break the entire booking flow. Service-role is acceptable here because (a) the route is read-only, (b) inputs are validated (UUID + date regex) before any query, (c) every query is explicitly scoped to the resolved `account_id`, (d) `@/lib/supabase/admin` is gated `import "server-only"` so it cannot leak into a client bundle. Document the decision in the SUMMARY.
 - Do not implement caching at any layer. RESEARCH Pitfall 4 explicitly forbids it.
 - Do not include a `cap_reached` flag in the response — CONTEXT defers it; Phase 5 renders empty-state for any zero-slot day.
 - Do not return slots out of UTC-ascending order — `computeSlots` already sorts; the route is a passthrough.
@@ -366,7 +370,10 @@ import { GET } from "@/app/api/slots/route";
  * and cleans up).
  */
 
-const NSI_ACCOUNT_ID = "ba8e712d-28b7-4071-b3d4-361fb6fb7a60";
+// NSI_ACCOUNT_ID is resolved at runtime in beforeAll (see below) by looking
+// up the seeded `nsi` account by slug. Hardcoding the UUID would couple the
+// test to a specific seed run and break on re-seed.
+let NSI_ACCOUNT_ID = "";
 const TEST_SLUG = "phase4-slots-test";
 const TEST_DURATION = 30;
 const TEST_DOW = 1; // Monday
@@ -380,10 +387,40 @@ function makeRequest(url: string): Request {
   return new Request(url, { method: "GET" });
 }
 
+// Saved settings on the nsi account so we can restore in afterAll.
+let originalMaxAdvanceDays: number | null = null;
+
 beforeAll(async () => {
   const admin = adminClient();
 
-  // Insert a temp event type for testing.
+  // 1. Resolve the seeded nsi account UUID at runtime by slug. Hardcoding the
+  //    UUID would couple this test to a specific Phase 1 seed run; looking it
+  //    up makes the test resilient to re-seeds.
+  const { data: acct, error: acctError } = await admin
+    .from("accounts")
+    .select("id, max_advance_days")
+    .eq("slug", "nsi")
+    .single();
+  if (acctError || !acct) {
+    throw new Error(
+      "Seeded nsi account missing — run supabase migrations + seed before testing.",
+    );
+  }
+  NSI_ACCOUNT_ID = acct.id;
+  originalMaxAdvanceDays = acct.max_advance_days;
+
+  // 2. Bump max_advance_days to a large window for the duration of the test
+  //    so the happy-path "next Monday 7+ days from now" assertion is
+  //    deterministic regardless of which weekday the suite runs on. The
+  //    default of 14 means certain run days land near the cliff and yield
+  //    slots=[]. afterAll restores the original value.
+  const { error: updError } = await admin
+    .from("accounts")
+    .update({ max_advance_days: 365 })
+    .eq("id", NSI_ACCOUNT_ID);
+  if (updError) throw updError;
+
+  // 3. Insert a temp event type for testing.
   const { data: et, error: etError } = await admin
     .from("event_types")
     .insert({
@@ -398,14 +435,15 @@ beforeAll(async () => {
   if (etError || !et) throw etError ?? new Error("event_type insert failed");
   testEventTypeId = et.id;
 
-  // Insert a Monday 9-5 rule. The action layer guards against duplicate rows;
-  // we accept that the seeded nsi account may or may not already have rules
-  // for the test day_of_week. To stay isolated, we DON'T touch existing rules.
-  // The test simply uses whatever the account has + our specific event_type.
-  // BUT: the Phase 4 spec is "all weekdays Closed by default" — assume nsi has
-  // no weekly rules yet. If it does, this test still works (the engine will
-  // generate slots from those rules); we just can't assert exact counts.
-  // Therefore we INSERT a single Monday rule we own and clean it up.
+  // 4. Insert a Monday 9-5 rule. The action layer guards against duplicate
+  //    rows; we accept that the seeded nsi account may or may not already
+  //    have rules for the test day_of_week. To stay isolated, we DON'T touch
+  //    existing rules. The test simply uses whatever the account has + our
+  //    specific event_type. BUT: the Phase 4 spec is "all weekdays Closed by
+  //    default" — assume nsi has no weekly rules yet. If it does, this test
+  //    still works (the engine will generate slots from those rules); we just
+  //    can't assert exact counts. Therefore we INSERT a single Monday rule
+  //    we own and clean it up.
   const { data: rule, error: ruleError } = await admin
     .from("availability_rules")
     .insert({
@@ -431,6 +469,15 @@ afterAll(async () => {
     // Hard delete (not soft) since this is test-only data and the slug-reuse
     // unique index doesn't matter for cleanup.
     await admin.from("event_types").delete().eq("id", testEventTypeId);
+  }
+
+  // Restore the original max_advance_days on the nsi account so we don't
+  // leak a 365-day window into other tests or live dashboard state.
+  if (NSI_ACCOUNT_ID && originalMaxAdvanceDays !== null) {
+    await admin
+      .from("accounts")
+      .update({ max_advance_days: originalMaxAdvanceDays })
+      .eq("id", NSI_ACCOUNT_ID);
   }
 });
 
@@ -662,7 +709,7 @@ npm test
 - [ ] Reads 5 tables: event_types (filtered by `.is("deleted_at", null)`), accounts, availability_rules, date_overrides (filtered by override_date in [from, to]), bookings (filtered by `.neq("status", "cancelled")` and start_at in/around [from, to])
 - [ ] Calls `computeSlots` from `@/lib/slots` with the SlotInput shape from `@/lib/slots.types`
 - [ ] No raw Date math anywhere on the slot path (engine handles all DST-sensitive arithmetic)
-- [ ] No admin client import unless RLS reads fail (must be documented in SUMMARY if used)
+- [ ] Uses `createAdminClient()` from `@/lib/supabase/admin` (NOT the RLS-scoped `createClient()`); rationale documented in plan + SUMMARY (public endpoint, anon callers, RLS would silently return 0 rows)
 - [ ] No caching at any layer
 - [ ] `tests/slots-api.test.ts` covers: missing `event_type_id` → 400, bad UUID → 400, bad date → 400, from > to → 400, valid-UUID-not-found → 404, soft-deleted event_type → 404, happy path 200 with `{slots}` UTC ISO shape + duration check, Cache-Control header on success + error responses
 - [ ] Test seeds + cleans up via `adminClient()` (no production-data mutation)
@@ -675,7 +722,7 @@ npm test
 <output>
 After completion, create `.planning/phases/04-availability-engine/04-06-SUMMARY.md` documenting:
 - Final response shape (`{slots: Array<{start_at, end_at}>}`) — locked Phase 5 contract
-- Confirmed RLS-vs-admin-client decision (RLS-scoped client used by default; document if admin client was needed and why)
+- Confirmed admin-client-vs-RLS decision (admin client used; rationale: public endpoint hit by anon Phase 5 callers — RLS would silently return 0 rows. Reads scoped explicitly to resolved account_id; service-role gated server-only by `lib/supabase/admin.ts`.)
 - Bookings range padding ±1 UTC day rationale
 - The 5 query reads + the parallel-fetch optimization
 - Forward contract for Phase 5: empty slots array == "no times available"

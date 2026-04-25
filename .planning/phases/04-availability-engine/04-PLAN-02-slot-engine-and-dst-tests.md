@@ -12,7 +12,7 @@ autonomous: true
 
 must_haves:
   truths:
-    - "lib/slots.ts exports a pure computeSlots(input) function with NO Supabase imports — accepts pre-fetched rules/overrides/bookings/account/eventType arrays and returns Array<{start_at, end_at}> UTC ISO strings (AVAIL-08 core)"
+    - "lib/slots.ts exports a pure computeSlots(input) function with NO Supabase imports — accepts pre-fetched rules/overrides/bookings/account/eventType arrays. computeSlots() (the pure function) returns Array<{start_at, end_at}> UTC ISO strings (AVAIL-08 core); Plan 04-06 wraps this in {slots: [...]} at the HTTP layer."
     - "Slot generation uses TZDate from @date-fns/tz + addMinutes/addDays/getDay from date-fns; NO raw new Date() arithmetic, NO fixed-millisecond offsets, NO formatInTimeZone (which doesn't exist in v4)"
     - "Slot iteration step size equals the event-type duration_minutes (CONTEXT-locked: 30-min event = 30-min steps)"
     - "Algorithm applies in order: (a) load weekly rules for the local-date day-of-week; (b) override always wins (is_closed = blocked, custom hours = replace; mixing handled by checking is_closed first); (c) min-notice filter (slot.start >= now + min_notice_hours); (d) max-advance filter (slot.start <= now + max_advance_days); (e) daily cap check (count confirmed bookings per local-date in account TZ; cap reached = skip whole day); (f) buffer-overlap exclusion against existing bookings"
@@ -590,6 +590,10 @@ describe("computeSlots — AVAIL-09 spring forward (March 8, 2026)", () => {
     expect(result[1].start_at).toBe("2026-03-08T07:30:00.000Z");
     // 3:00 CDT (after spring forward) = UTC-5 → 08:00 UTC (the "missing"
     // 2:00 wall-clock is skipped — addMinutes jumps the gap).
+    // NOTE: RESEARCH.md §5 Scenario B was previously written as "T09:00:00.000Z"
+    // (a typo — that value would imply CST/UTC-6, but post-spring-forward is CDT/
+    // UTC-5). RESEARCH.md was corrected on 2026-04-25 to T08:00Z; this assertion
+    // is the source of truth.
     expect(result[2].start_at).toBe("2026-03-08T08:00:00.000Z");
     expect(result[3].start_at).toBe("2026-03-08T08:30:00.000Z");
   });

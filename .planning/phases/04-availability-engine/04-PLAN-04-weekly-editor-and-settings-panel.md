@@ -171,7 +171,7 @@ export default async function AvailabilityPage() {
 
       <section aria-label="Weekly availability">
         <h2 className="mb-4 text-lg font-medium">Weekly hours</h2>
-        <WeeklyRulesEditor rules={state.rules} accountTimezone={state.account.timezone} />
+        <WeeklyRulesEditor rules={state.rules} />
       </section>
 
       <Separator />
@@ -647,8 +647,6 @@ const ALL_DAYS: DayOfWeek[] = [1, 2, 3, 4, 5, 6, 0]; // Mon-first display order
 
 export interface WeeklyRulesEditorProps {
   rules: AvailabilityRuleRow[];
-  /** Currently unused — reserved for displaying account TZ next to the editor in a future polish pass. */
-  accountTimezone?: string;
 }
 
 export function WeeklyRulesEditor({ rules }: WeeklyRulesEditorProps) {

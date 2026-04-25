@@ -539,7 +539,7 @@ Input: localDate="2026-03-08", startMinute=60, endMinute=240, duration=30, tz="A
 // Normal non-DST day: 6 slots (1:00, 1:30, 2:00, 2:30, 3:00, 3:30)
 // DST day: 2:00 and 2:30 don't exist → 4 slots (1:00, 1:30, 3:00, 3:30)
 Expected slot count: 4
-Expected start_at[2]: "2026-03-08T09:00:00.000Z"  // 3:00 CDT
+Expected start_at[2]: "2026-03-08T08:00:00.000Z"  // 3:00 CDT (UTC-5; corrected 2026-04-25 — was T09:00Z which would imply CST/UTC-6)
 ```
 
 **Scenario C: Window only in the missing hour (zero slots)**
