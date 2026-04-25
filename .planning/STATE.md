@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 01 complete — accounts.owner_email migration + nsi seed)
+**Last updated:** 2026-04-25 (Phase 5 Plan 02 Task 1 complete — vendor email-sender + npm deps; CHECKPOINT: Andrew must set 4 env vars before 05-03)
 
 ## Project Reference
 
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 5 (Public Booking Flow + Email + .ics) — in progress
-**Plan:** 1 of 6 complete (05-01)
-**Status:** Phase 5 in progress. Plan 05-01 (migration) complete; accounts.owner_email live on mogfnutxrrbtvnaupoun.
-**Last activity:** 2026-04-25 — Completed 05-01-PLAN (accounts.owner_email migration + seed nsi; dcbe764)
+**Plan:** 2 of 6 in progress (05-02 Task 1 done; Task 2 CHECKPOINT pending)
+**Status:** Phase 5 in progress. Plan 05-01 done. Plan 05-02 Task 1 done (6efa13f); CHECKPOINT awaiting Andrew to set 4 env vars (Turnstile + Resend) in .env.local + Vercel Production before 05-03 can proceed.
+**Last activity:** 2026-04-25 — Completed 05-02 Task 1 (vendor @nsi/email-sender + install ical/turnstile/resend deps; 6efa13f)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress)
 
 ```
@@ -25,7 +25,7 @@ Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
-Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01 done)
+Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01 done; 05-02 Task 1 done, checkpoint pending)
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -117,6 +117,8 @@ Phase 9  [ ] Manual QA & Verification
 - **`accounts.owner_email` denormalized (not joined from auth.users)** (Plan 05-01) — nullable TEXT column on accounts; simpler for admin-client public route handlers (`/api/bookings` has no auth session); survives auth provider migrations. nsi seeded with `ajwegner3@gmail.com`. Plain `text` (not `citext`) — no lookup or uniqueness need. Downstream code MUST handle null gracefully (skip owner notification, omit .ics ORGANIZER).
 - **`supabase db query --linked` link confirmed working** (Plan 05-01) — `supabase link --project-ref mogfnutxrrbtvnaupoun` was already established; STATE.md concern resolved. CLI fallback is viable for future migrations without needing MCP. — shadcn Calendar (react-day-picker v9) requires JavaScript `Date` objects for modifiers prop. Override dates are YYYY-MM-DD in account-local TZ. Using `new Date(y, m-1, d)` (browser-local midnight) is an acceptable simplification — visual markers only; the string identity passed to the action is always correct. Threading account.timezone to this component would be over-engineering.
 - **OverridesList groups DateOverrideRow[] by override_date** (Plan 04-05) — Multiple window rows for one date (custom_hours) are consolidated into a single Card with comma-separated window strings. `groupOverrides()` utility function sorts dates ascending and sorts each group's windows by start_minute.
+- **Vendor @nsi/email-sender into lib/email-sender/ (Plan 05-02)** — CONTEXT decision #11 LOCKED: vendoring (NOT `npm install ../email-sender`) because Vercel build cannot resolve sibling-relative `file:../` paths. Future updates require manual re-copy from sibling. Minimal set: index.ts + types.ts + providers/resend.ts + utils.ts (utils required by resend provider for stripHtml). Gmail provider and templates not copied — Phase 5 is Resend-only.
+- **server-only on lib/email-sender/index.ts (Plan 05-02)** — `import "server-only"` as line 1 (mirrors lib/supabase/admin.ts pattern). RESEND_API_KEY is a server secret; module must never leak into client bundles.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
 
@@ -129,7 +131,8 @@ Phase 9  [ ] Manual QA & Verification
 - Phase 5 needs `/gsd:research-phase` (.ics across clients + `@nsi/email-sender` attachment API).
 - Phase 7 needs `/gsd:research-phase` (Next 16 per-route CSP + static `widget.js` on Vercel — note: Next 16 not 15).
 - Phase 8 needs `/gsd:research-phase` (Vercel Cron hobby-tier limits + Resend DNS format).
-- Confirm `@nsi/email-sender` attachment signature before Phase 5 plan.
+- ~~Confirm `@nsi/email-sender` attachment signature before Phase 5 plan.~~ RESOLVED: vendored in Plan 05-02; attachment API in EmailAttachment interface (filename, content, contentType).
+- **CHECKPOINT PENDING (Plan 05-02 Task 2):** Andrew must set TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL in both .env.local AND Vercel Production env before Plans 05-03+ can proceed. Resume signal: "env vars set".
 - **Phase 8 backlog: render-test harness** — Vitest + React Testing Library coverage for shell layout. The TooltipProvider regression in Plan 02-04 would have been caught at CI instead of user smoke. Add a render test that mounts `ShellLayout` and asserts no missing context providers.
 - **Phase 8 backlog: ESLint flat-config migration** — pre-existing circular-JSON error in `npm run lint` carries forward from Phase 1. Doesn't block phases 2-7 builds, but blocks lint hygiene.
 - **v2 backlog: `/auth/callback` route** — Supabase recovery / magic-link flows currently 404. Blocks password reset for end users; deferred to v2.
