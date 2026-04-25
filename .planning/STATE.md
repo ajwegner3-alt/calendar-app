@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-24 (Phase 3 verifier passed 20/20)
+**Last updated:** 2026-04-25 (Phase 4 Plan 01 complete)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 3 complete ✓ (verifier passed 20/20 must-haves). Ready for Phase 4 (Availability Engine).
+**Current focus:** Phase 4 (Availability Engine) in progress — Plan 01 (deps + migration) complete.
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 3 complete; 4 up next
-**Plan:** —
-**Status:** Phase 3 verified + closed out (20/20 must-haves passed). Phase 4 needs `/gsd:research-phase` (date-fns/tz v4 + slot algorithm).
-**Last activity:** 2026-04-24 — Phase 3 verifier passed; ROADMAP + REQUIREMENTS updated
-**Progress:** [███░░░░░░] 3 / 9 phases complete
+**Phase:** 4 in progress (Availability Engine)
+**Plan:** 01 of N complete
+**Status:** Plan 04-01 complete. date-fns v4 + @date-fns/tz + shadcn Calendar installed; accounts table extended with 4 availability-settings columns, applied live.
+**Last activity:** 2026-04-25 — Completed 04-01-PLAN (deps and accounts migration)
+**Progress:** [███░░░░░░] 3 / 9 phases complete (Phase 4 in progress)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -89,6 +89,9 @@ Phase 9  [ ] Manual QA & Verification
 - **slugManuallyEdited flag** (Plan 03-05) — Create mode: slug auto-fills from name via `slugify()` until user edits slug (detected by typed slug diverging from `slugify(name)`). Edit mode: starts `true` so saved slug is never auto-overwritten. Future forms with slug auto-fill MUST implement this pattern.
 - **UrlPreview domain placeholder** (Plan 03-05) — `yoursite.com/nsi/[slug]` is hardcoded. Phase 7 swaps the domain to per-account branded domain. Do NOT bind to live Vercel URL (`calendar-app-xi-smoky.vercel.app`) — Phase 7 needs atomic domain swap.
 - **Controller required for Switch and Select (confirmed Plan 03-05)** — Both `is_active` (EventTypeForm) and question `required` + `type` (QuestionList) use `Controller`. Radix UI primitives do not forward DOM refs; `register()` silently no-ops. All future forms MUST use Controller for Switch and Select.
+- **date-fns v4 + @date-fns/tz v1 runtime deps** (Plan 04-01) — `date-fns@4.1.0` + `@date-fns/tz@1.4.1` installed as runtime (not dev) deps. `formatInTimeZone` does NOT exist in `@date-fns/tz`; use `TZDate` and `tz()` instead. Any future npm install of `date-fns-tz` (the v2/v3-era package) is a mistake. Sanity guard: `tz.formatInTimeZone === undefined`.
+- **shadcn CLI v4.5.0 installs calendar + react-day-picker@9.14.0** (Plan 04-01) — CLI auto-upgraded from 4.4.0 (Phase 3) to 4.5.0; no breaking changes; `radix-ui` monorepo package pattern still holds. `components/ui/calendar.tsx` wraps `DayPicker`. `.day-blocked`/`.day-custom` CSS classes in `app/globals.css` used via `modifiersClassNames` prop in Plan 04-05.
+- **accounts availability settings columns** (Plan 04-01) — `buffer_minutes INT NOT NULL DEFAULT 0`, `min_notice_hours INT NOT NULL DEFAULT 24`, `max_advance_days INT NOT NULL DEFAULT 14`, `daily_cap INT NULL`. `daily_cap NULL` = no cap. CHECK: `daily_cap IS NULL OR daily_cap > 0`. Migration idempotent (IF NOT EXISTS). Applied live 2026-04-25. nsi row: (0, 24, 14, NULL).
 
 ### Carried Concerns / Todos
 
@@ -119,9 +122,12 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-24 — Phase 3 closed out. Verifier passed 20/20 must-haves on first run. ROADMAP, STATE, REQUIREMENTS updated. EVENT-01..06 marked Complete (17/73 requirements done).
+**Last session:** 2026-04-25 — Phase 4 Plan 01 executed. date-fns + @date-fns/tz + shadcn Calendar installed; accounts settings columns applied live. 3 commits pushed.
 
-**Next action:** Phase 4 (Availability Engine) is next. Needs `/gsd:research-phase 4` first (date-fns/tz v4 + slot algorithm — biggest bug-hotspot research in the project per ROADMAP). Phase 4 can run in parallel with no other phase since Phase 3 was its only sibling-eligible peer.
+**Next action:** Phase 4 Plan 02 (slot engine + computeSlots) — Wave 2. date-fns/tz foundation now in place. accounts columns exist. Continue with 04-PLAN-02.
+
+**Phase 4 plan status:**
+- ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
 
 **Phase 3 plan status (final):**
 - ✅ Plan 03-01 (schema migration: deleted_at + partial unique index) — complete, pushed
