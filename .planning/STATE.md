@@ -6,7 +6,7 @@
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 2 plans all complete (4/4) — orchestrator running phase verifier next, then routing to Phase 3.
+**Current focus:** Phase 2 complete ✓ (verifier passed 19/19 must-haves). Ready for Phase 3 (Event Types CRUD).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,16 +14,16 @@
 
 ## Current Position
 
-**Phase:** 2 (Owner Auth + Dashboard Shell) — all plans complete, phase verifier next
-**Plan:** 02-01, 02-02, 02-03, 02-04 all complete
-**Status:** Andrew's auth user provisioned + linked; authenticated-owner RLS suite green (4/4); dashboard renders end-to-end. Awaiting phase verifier.
-**Last activity:** 2026-04-24 — Completed 02-PLAN-04-auth-user-provisioning.md including TooltipProvider runtime fix
-**Progress:** [█░░░░░░░░] 1 / 9 phases complete (Phase 2: 4 / 4 plans done, awaiting verifier)
+**Phase:** 2 complete; 3 up next
+**Plan:** —
+**Status:** Phase 2 verified + closed out (19/19 must-haves passed). Run `/gsd:discuss-phase 3` next.
+**Last activity:** 2026-04-24 — Phase 2 verifier passed; ROADMAP + REQUIREMENTS updated
+**Progress:** [██░░░░░░░] 2 / 9 phases complete
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
-Phase 2  [~] Owner Auth + Dashboard Shell            ← plans done (4/4), awaiting verifier
-Phase 3  [ ] Event Types CRUD
+Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
+Phase 3  [ ] Event Types CRUD                        ← next
 Phase 4  [ ] Availability Engine
 Phase 5  [ ] Public Booking Flow + Email + .ics
 Phase 6  [ ] Cancel + Reschedule Lifecycle
@@ -37,9 +37,9 @@ Phase 9  [ ] Manual QA & Verification
 | Metric | Value |
 |--------|-------|
 | Phases planned | 2 / 9 |
-| Phases complete | 1 / 9 |
+| Phases complete | 2 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 6 / 73 (FOUND-01..06); AUTH-01, AUTH-02, AUTH-03, AUTH-04, DASH-01 observably satisfied — pending phase verifier confirmation |
+| Requirements complete | 11 / 73 (FOUND-01..06; AUTH-01..04; DASH-01) |
 
 ## Accumulated Context
 
@@ -100,13 +100,14 @@ None.
 
 **Last session:** 2026-04-24 — Plan 02-04 executed across two checkpoints. Andrew provisioned auth user via Supabase Dashboard (recreated once after first attempt was passwordless). Orchestrator MCP-linked the new UUID and fixed `email_confirmed_at` via SQL. Plan 02-04 Task 3 smoke surfaced a runtime bug — shadcn `SidebarMenuButton` requires a `TooltipProvider` ancestor that the installed sidebar primitive does NOT bundle. Fixed in `app/(shell)/layout.tsx`. RPC shape evidence captured via Postgres introspection + empirical /app redirect path.
 
-**Next action:** Orchestrator runs the Phase 2 verifier. After green verify → Phase 2 complete and Phase 3 (Event Types CRUD) unblocks.
+**Next action:** Run `/gsd:discuss-phase 3` to gather implementation context for Event Types CRUD before planning.
 
-**Phase 2 plan status:**
-- ✅ Plan 02-01 (login + auth actions) — complete, pushed (4 commits including metadata)
-- ✅ Plan 02-02 (dashboard shell + nav stubs) — complete, pushed (4 commits including metadata)
-- ✅ Plan 02-03 (proxy gate + authenticated RLS Vitest scaffold) — complete, pushed (4 commits including metadata)
-- ✅ Plan 02-04 (auth user provisioning + smoke + TooltipProvider fix) — complete, pushed (commits `dc2ac71`, `264bdd4`, `762b3c8`; metadata commit pending)
+**Phase 2 plan status (final):**
+- ✅ Plan 02-01 (login + auth actions) — complete, pushed (4 commits)
+- ✅ Plan 02-02 (dashboard shell + nav stubs) — complete, pushed (4 commits)
+- ✅ Plan 02-03 (proxy gate + authenticated RLS Vitest scaffold) — complete, pushed (4 commits)
+- ✅ Plan 02-04 (auth user provisioning + smoke + TooltipProvider fix) — complete, pushed (4 commits)
+- ✅ Phase verifier (2026-04-24) — 19/19 must-haves passed, no gaps
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
@@ -114,8 +115,8 @@ None.
 - `.planning/ROADMAP.md` — 9 phases
 - `.planning/research/` — domain-level research (STACK/FEATURES/ARCHITECTURE/PITFALLS/SUMMARY)
 - `.planning/phases/01-foundation/` — Phase 1 CONTEXT, RESEARCH, 3 PLANs, 3 SUMMARYs, VERIFICATION
-- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 4 PLANs, 02-01-SUMMARY, 02-02-SUMMARY, 02-03-SUMMARY, 02-04-SUMMARY
+- `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 4 PLANs, 4 SUMMARYs, VERIFICATION
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
-*State updated: 2026-04-24 after Plan 02-04 execution*
+*State updated: 2026-04-24 after Phase 2 close-out*

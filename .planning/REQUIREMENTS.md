@@ -18,10 +18,10 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Authentication
 
-- [ ] **AUTH-01**: Owner can log in to the dashboard with email and password via Supabase Auth
-- [ ] **AUTH-02**: Owner can log out from the dashboard
-- [ ] **AUTH-03**: Owner session persists across browser refresh
-- [ ] **AUTH-04**: All `/app/*` routes redirect to the login page when the owner is not authenticated
+- [x] **AUTH-01**: Owner can log in to the dashboard with email and password via Supabase Auth
+- [x] **AUTH-02**: Owner can log out from the dashboard
+- [x] **AUTH-03**: Owner session persists across browser refresh
+- [x] **AUTH-04**: All `/app/*` routes redirect to the login page when the owner is not authenticated
 
 ### Event Types
 
@@ -93,7 +93,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Dashboard
 
-- [ ] **DASH-01**: Owner dashboard has navigation between event types, availability, branding, and bookings
+- [x] **DASH-01**: Owner dashboard has navigation between event types, availability, branding, and bookings
 - [ ] **DASH-02**: Bookings list shows all upcoming and past bookings with booker name, email, phone, event type, start time, status, and answers to custom questions
 - [ ] **DASH-03**: Bookings list is filterable by status (confirmed/cancelled) and date range
 - [ ] **DASH-04**: Owner can view full details of a single booking
@@ -189,10 +189,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Complete |
 | FOUND-06 | Phase 1 | Complete |
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Complete |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 2 | Complete |
+| AUTH-04 | Phase 2 | Complete |
 | EVENT-01 | Phase 3 | Pending |
 | EVENT-02 | Phase 3 | Pending |
 | EVENT-03 | Phase 3 | Pending |
@@ -240,7 +240,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | EMBED-06 | Phase 7 | Pending |
 | EMBED-07 | Phase 9 | Pending |
 | EMBED-08 | Phase 7 | Pending |
-| DASH-01 | Phase 2 | Pending |
+| DASH-01 | Phase 2 | Complete |
 | DASH-02 | Phase 8 | Pending |
 | DASH-03 | Phase 8 | Pending |
 | DASH-04 | Phase 8 | Pending |
@@ -265,4 +265,4 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-19 after Phase 1 completion — FOUND-01..06 marked Complete*
+*Last updated: 2026-04-24 after Phase 2 completion — AUTH-01..04 + DASH-01 marked Complete*
