@@ -167,3 +167,19 @@
 .day-custom::after {
   background: hsl(var(--primary));
 }
+
+/* Public booking calendar: accent dot under dates with open slots (Phase 5 Plan 05-06) */
+.day-has-slots {
+  position: relative;
+}
+.day-has-slots::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+}
