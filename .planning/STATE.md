@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 06 complete — BookingShell + SlotPicker + BookingForm + RaceLoserBanner + page.tsx swap; 2 commits f803e43+b717c08, npm run build exits 0; pushed to main)
+**Last updated:** 2026-04-25 (Phase 5 Plan 07 complete — confirmation screen route /[account]/[event-slug]/confirmed/[booking-id]; commit 2320777, npm run build exits 0; pushed to main)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 4 (Availability Engine) COMPLETE — all 6 plans done. Ready for Phase 5 (Public Booking Flow).
+**Current focus:** Phase 5 (Public Booking Flow) COMPLETE — all 7 plans done. Booking flow end-to-end: visitor → page → form → POST → redirect → confirmation screen. Ready for Phase 6 (Cancel + Reschedule Lifecycle) || Phase 7 (Widget + Branding) || Phase 8 (Reminders + Hardening).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,18 +14,18 @@
 
 ## Current Position
 
-**Phase:** 5 (Public Booking Flow + Email + .ics) — in progress
-**Plan:** 6 of 6 Wave-3 plans complete (05-06 done; Phase 5 Wave 4 pending: 05-07 confirmation page)
-**Status:** Phase 5 Wave 3 complete. Plans 05-01, 05-02, 05-03, 05-04, 05-05, 05-06 done.
-**Last activity:** 2026-04-25 — Completed 05-06 (BookingShell + SlotPicker + BookingForm + RaceLoserBanner + page.tsx swap; f803e43, b717c08)
-**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress — Wave 4: confirmation page + QA remaining)
+**Phase:** 5 (Public Booking Flow + Email + .ics) — COMPLETE (pending Phase 9 manual QA sign-off)
+**Plan:** 7 of 7 plans complete (05-07 done — confirmation screen)
+**Status:** Phase 5 fully shipped. All 7 plans done. Phase 9 QA pending.
+**Last activity:** 2026-04-25 — Completed 05-07 (confirmation screen route; 2320777)
+**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phases 6/7/8 ready to start)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
-Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01..06 done; 05-07 confirmation page remaining)
+Phase 5  [✓] Public Booking Flow + Email + .ics      (code complete 2026-04-25; Phase 9 manual QA pending)
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -142,6 +142,11 @@ Phase 9  [ ] Manual QA & Verification
 - **No pre-flight slot validity check (Plan 05-05)** — `bookings_no_double_book` partial unique index is the authoritative race gate. Pre-flight `computeSlots()` adds latency without closing the race window (gap between check and INSERT). Plan 05-08 integration tests verify the 409 path.
 - **Error code vocabulary (Plan 05-05)** — `BAD_REQUEST | VALIDATION | TURNSTILE | NOT_FOUND | SLOT_TAKEN | INTERNAL`. All error responses include machine-readable `{error, code}`. 409 body uses CONTEXT decision #5 verbatim: `"That time was just booked. Pick a new time below."`.
 - **redirectTo format LOCKED (Plan 05-05)** — `/${account.slug}/${eventType.slug}/confirmed/${booking.id}`. Matches Plan 05-04 + 05-07 confirmation route. Client (Plan 05-06 booking form) `router.push(redirectTo)` on 201.
+- **Confirmation route: UUID-as-soft-auth + cross-tenant defense-in-depth (Plan 05-07)** — Route keyed by `booking.id` UUID v4 (122-bit entropy ≈ unguessable). Service-role read bypasses RLS. Defense-in-depth: URL account-slug and event-slug verified against DB-resolved booking parents. Any mismatch → `notFound()`. Page exposes only what's already in booker's email (date/time, owner name, masked email stub) — acceptable PII surface at this auth level.
+- **Email masking pattern LOCKED (Plan 05-07)** — `maskEmail("andrew@example.com")` → `"andrew@e***.com"`. Local part shown in full; domain-name replaced with first-char + `max(2, len-1)` stars; TLD shown in full. Function exported from `page.tsx`; reusable for any public PII display surface.
+- **Confirmation route status-branch (Plan 05-07)** — `status === "confirmed"` → happy-path card; any other status → friendly "no longer active" fallback. Phase 6 cancel/reschedule may flip status to `"cancelled"` or `"rescheduled"` — this URL remains stable and graceful. No code change needed in this route when Phase 6 ships.
+- **generateMetadata only (no module-level metadata export) (Plan 05-07)** — Next.js 16 build fails if both are exported from the same `page.tsx`. `generateMetadata` is the correct pattern for dynamic titles. `robots: { index: false, follow: false }` returned from every branch including 404 fallback.
+- **is_active + deleted_at filter on event_type in confirmation loader (Plan 05-07)** — Archived event types' old booking confirmations 404 on revisit (acceptable v1 behavior; booker has all details in email). Privacy: soft-deleted event types' bookings should not be browsable.
 - **Rate limiting deferred to Phase 8 INFRA-01 (Plan 05-05)** — Turnstile provides bot protection in v1; full per-IP/per-email rate limiting is Phase 8 hardening.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
@@ -176,9 +181,13 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-06 complete. BookingShell + SlotPicker + BookingForm + RaceLoserBanner + page.tsx swap; npm run build exits 0 (f803e43 + b717c08). Pushed to main.
+**Last session:** 2026-04-25 — Phase 5 Plan 05-07 complete. Confirmation screen route at /[account]/[event-slug]/confirmed/[booking-id]; npm run build exits 0 (2320777). Pushed to main. Phase 5 code complete.
 
-**Next action:** Phase 5 Plan 05-07 (confirmation page at `/[account]/[event-slug]/confirmed/[booking-id]`). BookingForm already does `router.push(data.redirectTo)` pointing here; route currently 404s.
+**Next action:** Phase 5 is code-complete. Options (all parallel, no dependencies between them):
+1. Phase 6 (Cancel + Reschedule Lifecycle) — cancel/reschedule tokens already generated in bookings table
+2. Phase 7 (Widget + Branding) — embed iframe + per-account brand tokens
+3. Phase 8 (Reminders + Hardening + Dashboard Bookings List) — Vercel Cron reminders, rate limiting, dashboard
+4. Phase 9 (Manual QA) — end-to-end booking flow live test (book → confirm screen → noindex check → cross-tenant 404)
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
@@ -187,6 +196,7 @@ None.
 - ✅ Plan 05-04 (public booking page Server Component shell) — complete, pushed (2026-04-25, bad6b2a + a608f9e)
 - ✅ Plan 05-05 (POST /api/bookings route handler + token helper) — complete (2026-04-25, 3d3e0de + 7743869)
 - ✅ Plan 05-06 (BookingShell client components — calendar + slot picker + form + race-loser banner + page.tsx swap) — complete, pushed (2026-04-25, f803e43 + b717c08)
+- ✅ Plan 05-07 (confirmation screen route /[account]/[event-slug]/confirmed/[booking-id]) — complete, pushed (2026-04-25, 2320777)
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
