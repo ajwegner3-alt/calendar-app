@@ -120,6 +120,16 @@ Plans:
 
 **Research flag:** YES - needs `/gsd:research-phase` on `@date-fns/tz` v4 API and slot-generation algorithm before plan-phase. Biggest bug hotspot in the project. Can run in parallel with Phase 3.
 
+**Plans:** 6 plans
+
+Plans:
+- [ ] 04-PLAN-01-deps-and-accounts-migration.md — Install date-fns + @date-fns/tz + shadcn calendar; migration adds 4 settings columns to accounts (AVAIL-03..06 enabling)
+- [ ] 04-PLAN-02-slot-engine-and-dst-tests.md — Pure computeSlots() in lib/slots.ts + Vitest unit tests covering AVAIL-09 DST transitions (March 8 + Nov 1, 2026)
+- [ ] 04-PLAN-03-data-layer-and-server-actions.md — availability _lib: Zod schemas (overlap validation), server-only loader, 4 Server Actions (settings, weekly rules, override upsert/delete)
+- [ ] 04-PLAN-04-weekly-editor-and-settings-panel.md — /app/availability page + weekly rules per-row editor (Calendly-style) + Copy-from menu + global settings panel (AVAIL-01, 03-07)
+- [ ] 04-PLAN-05-date-overrides-ui.md — Calendar with red/blue dot markers + list view + override modal (Block / Custom hours) (AVAIL-02)
+- [ ] 04-PLAN-06-slots-api-route-and-integration-test.md — GET /api/slots route handler (no-cache) + integration test (AVAIL-08)
+
 ---
 
 ### Phase 5: Public Booking Flow + Confirmation Email + .ics
