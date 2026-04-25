@@ -13,6 +13,18 @@ export default defineConfig({
       // safety guarantee (bundle-time error in client components) is irrelevant
       // in a Node test runner context. See tests/__mocks__/server-only.ts.
       "server-only": path.resolve(__dirname, "tests/__mocks__/server-only.ts"),
+
+      // Turnstile mock — intercepts verifyTurnstile() so tests don't hit
+      // the real Cloudflare siteverify endpoint. Per-test control via
+      // __setTurnstileResult(). Plan 04-06 STATE.md lock: use path.resolve
+      // (NOT new URL().pathname) — Windows spaces encode as %20 and break
+      // module resolution.
+      "@/lib/turnstile": path.resolve(__dirname, "tests/__mocks__/turnstile.ts"),
+
+      // Email-sender mock — intercepts sendEmail() called by
+      // send-booking-confirmation.ts + send-owner-notification.ts so no
+      // real Gmail SMTP calls are made in tests. Spy via __mockSendCalls.
+      "@/lib/email-sender": path.resolve(__dirname, "tests/__mocks__/email-sender.ts"),
     },
   },
   test: {
