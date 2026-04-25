@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 04 complete — public booking page Server Component shell; 2 commits, npm run build exits 0)
+**Last updated:** 2026-04-25 (Phase 5 Plan 03 complete — Zod schema + Turnstile verify + .ics builder + email senders + orchestrator; 2 commits, npm run build exits 0; pushed to main)
 
 ## Project Reference
 
@@ -125,6 +125,11 @@ Phase 9  [ ] Manual QA & Verification
 - **OverridesList groups DateOverrideRow[] by override_date** (Plan 04-05) — Multiple window rows for one date (custom_hours) are consolidated into a single Card with comma-separated window strings. `groupOverrides()` utility function sorts dates ascending and sorts each group's windows by start_minute.
 - **Vendor @nsi/email-sender into lib/email-sender/ (Plan 05-02)** — CONTEXT decision #11 LOCKED: vendoring (NOT `npm install ../email-sender`) because Vercel build cannot resolve sibling-relative `file:../` paths. Future updates require manual re-copy from sibling. Minimal set: index.ts + types.ts + providers/resend.ts + utils.ts (utils required by resend provider for stripHtml). Gmail provider and templates not copied — Phase 5 is Resend-only.
 - **server-only on lib/email-sender/index.ts (Plan 05-02)** — `import "server-only"` as line 1 (mirrors lib/supabase/admin.ts pattern). RESEND_API_KEY is a server secret; module must never leak into client bundles.
+- **ical-generator v10 ICalEventData uses `id` not `uid` field (Plan 05-03)** — `createEvent({ id: booking.id, ... })` not `{ uid: booking.id, ... }`. The getter/setter method on the returned event object is `uid()` but the input data field is `id`. TypeScript catches the mismatch at build time. Output in .ics is `UID:<value>` — semantically identical.
+- **No explicit `from` field in any email send call (Plan 05-03)** — `sendEmail` singleton constructs `defaultFrom = "${GMAIL_FROM_NAME} <${GMAIL_USER}>"` from env vars automatically. Passing explicit `from` overrides the singleton and breaks Gmail SMTP auth. Modules pass only `to`, `subject`, `html`, optionally `replyTo` (owner notification) and `attachments` (booker confirmation).
+- **Cancel/reschedule URL format LOCKED (Plan 05-03)** — `${appUrl}/cancel/${rawToken}` and `${appUrl}/reschedule/${rawToken}`. `rawToken` = pre-hash UUID; Phase 6 route handlers consume at these paths. Format must not change.
+- **appUrl passed as parameter to sendBookingConfirmation (Plan 05-03)** — Caller (Plan 05-05 Route Handler) resolves `process.env.NEXT_PUBLIC_APP_URL` with fallback to `https://calendar-app-xi-smoky.vercel.app` and passes as `appUrl`. Not read inside the module — keeps module testable and env resolution in one place.
+- **Fire-and-forget email contract (Plan 05-03)** — `sendBookingEmails()` uses `Promise.allSettled` + per-sender `.catch(console.error)`. Never throws. Route Handler calls `void sendBookingEmails(...)` after returning 201 — email failure MUST NOT roll back booking.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
 
@@ -158,14 +163,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-04 complete. Public booking page Server Component shell at /[account]/[event-slug]; build exits 0; pushed to main (bad6b2a, a608f9e).
+**Last session:** 2026-04-25 — Phase 5 Plan 05-03 complete. Zod bookingInputSchema + Turnstile verify helper + .ics builder + booker/owner email senders + fire-and-forget orchestrator; build exits 0; pushed to main (2d31d73 + 6bb45a5).
 
-**Next action:** Phase 5 Plan 05-05 (POST /api/bookings route handler) or Plan 05-06 (BookingShell client component) — both can proceed; 05-04 shell is the Wave 2 anchor.
+**Next action:** Phase 5 Plan 05-05 (POST /api/bookings route handler) — consumes all 6 modules built in 05-03. Plan 05-06 (BookingShell client component) can proceed in parallel.
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
 - ✅ Plan 05-02 (vendor @nsi/email-sender + Gmail provider + deps) — complete, pushed (2026-04-25)
-- ✅ Plan 05-03 (booking Zod schema + Turnstile verify helper) — complete, pushed (2026-04-25, 2d31d73)
+- ✅ Plan 05-03 (Zod bookingInputSchema + Turnstile verify + .ics builder + email senders + orchestrator) — complete, pushed (2026-04-25, 2d31d73 + 6bb45a5)
 - ✅ Plan 05-04 (public booking page Server Component shell) — complete, pushed (2026-04-25, bad6b2a + a608f9e)
 - [ ] Plan 05-05 (POST /api/bookings route handler)
 - [ ] Plan 05-06 (BookingShell client component — calendar + slot picker + form)
