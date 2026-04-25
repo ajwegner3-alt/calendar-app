@@ -144,3 +144,26 @@
   --color-sidebar-border: #E2E8F0;
   --color-sidebar-ring: #0A2540;
 }
+
+/* Date-override markers on the availability calendar (Phase 4 Plan 04-05) */
+.day-blocked,
+.day-custom {
+  position: relative;
+}
+.day-blocked::after,
+.day-custom::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+}
+.day-blocked::after {
+  background: hsl(var(--destructive));
+}
+.day-custom::after {
+  background: hsl(var(--primary));
+}
