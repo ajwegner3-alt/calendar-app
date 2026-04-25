@@ -143,9 +143,9 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 4 Plans 04-04 (weekly editor + settings panel) + 04-06 (/api/slots) both complete.
+**Last session:** 2026-04-25 — Phase 4 Plans 04-04 + 04-06 both complete. /api/slots GET handler + 13-test integration suite (server-only alias fix); 45/45 tests passing; pushed to main.
 
-**Next action:** Phase 4 Plan 04-05 (date overrides UI) — final Wave 3 plan. Imports TimeWindowPicker from 04-04. page.tsx PLAN-04-05-REPLACE-START/END markers ready.
+**Next action:** Phase 4 Plan 04-05 (date overrides UI) — final Wave 3 plan. Imports TimeWindowPicker from 04-04. page.tsx PLAN-04-05-REPLACE-START/END markers ready. /api/slots is live on Vercel and ready for Phase 5 consumption.
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
@@ -153,7 +153,7 @@ None.
 - ✅ Plan 04-03 (data layer + server actions) — complete, pushed (2026-04-25)
 - ✅ Plan 04-04 (weekly editor + settings panel UI) — complete, pushed (2026-04-25)
 - ⬜ Plan 04-05 (date overrides UI: calendar + list + modal) — next
-- ✅ Plan 04-06 (/api/slots GET handler) — complete, pushed (2026-04-25, Wave 3 parallel)
+- ✅ Plan 04-06 (/api/slots GET handler + 13-test integration suite) — complete, pushed (2026-04-25, Wave 3 parallel)
 
 **Phase 3 plan status (final):**
 - ✅ Plan 03-01 (schema migration: deleted_at + partial unique index) — complete, pushed
