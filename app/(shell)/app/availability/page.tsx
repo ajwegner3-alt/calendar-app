@@ -6,10 +6,7 @@ import { loadAvailabilityState } from "./_lib/queries";
 import { AvailabilityEmptyBanner } from "./_components/availability-empty-banner";
 import { WeeklyRulesEditor } from "./_components/weekly-rules-editor";
 import { SettingsPanel } from "./_components/settings-panel";
-// Plan 04-05 ships this component (DateOverridesSection). Until 04-05 lands,
-// we fall back to a comment-only placeholder section. The import below is
-// intentional and stable — 04-05 only needs to add the file.
-// import { DateOverridesSection } from "./_components/date-overrides-section";
+import { DateOverridesSection } from "./_components/date-overrides-section";
 
 export default async function AvailabilityPage() {
   const state = await loadAvailabilityState();
@@ -39,19 +36,9 @@ export default async function AvailabilityPage() {
 
       <Separator />
 
-      {/* DATE OVERRIDES SECTION — Plan 04-05 placeholder
-          Plan 04-05 will:
-          1. Create _components/date-overrides-section.tsx
-          2. Uncomment the import above (DateOverridesSection)
-          3. Replace the paragraph below with: <DateOverridesSection overrides={state.overrides} />
-      */}
       <section aria-label="Date overrides">
         <h2 className="mb-4 text-lg font-medium">Date overrides</h2>
-        {/* PLAN-04-05-REPLACE-START */}
-        <p className="text-muted-foreground text-sm">
-          Date-specific overrides will appear here.
-        </p>
-        {/* PLAN-04-05-REPLACE-END */}
+        <DateOverridesSection overrides={state.overrides} />
       </section>
 
       <Separator />
