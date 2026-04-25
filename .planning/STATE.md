@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 4 Plan 03 complete)
+**Last updated:** 2026-04-25 (Phase 4 Plans 02 + 03 complete)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 4 (Availability Engine) in progress — Plans 01 + 03 complete; Plan 02 running in parallel (Wave 2).
+**Current focus:** Phase 4 (Availability Engine) in progress — Plans 01 + 02 + 03 complete (Wave 2 parallel done).
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 4 in progress (Availability Engine)
-**Plan:** 03 of N complete (Plan 02 parallel)
-**Status:** Plan 04-03 complete. Full data layer for /app/availability: shared types, Zod schemas with HH:MM overlap validation, server-only data loader, 4 Server Actions (settings, weekly rules, date overrides).
-**Last activity:** 2026-04-25 — Completed 04-03-PLAN (data layer + server actions)
+**Plan:** 03 of N complete (Plans 02 + 03 were Wave 2 parallel, both done)
+**Status:** Plans 04-01, 04-02, 04-03 complete. Pure slot engine + 15 AVAIL-09 DST tests (02) and full data layer (03) both done.
+**Last activity:** 2026-04-25 — Completed 04-02-PLAN (slot engine + DST tests)
 **Progress:** [███░░░░░░] 3 / 9 phases complete (Phase 4 in progress)
 
 ```
@@ -98,6 +98,11 @@ Phase 9  [ ] Manual QA & Verification
 - **No transaction wrapper for delete+insert pairs** (Plan 04-03) — supabase-js has no explicit tx API. Worst case (delete ok, insert fails): day/date shows Closed until retry. Acceptable for v1 single-tenant. Fix path if needed: Postgres RPC wrapping the pair.
 - **AvailabilityActionState** (Plan 04-03) — `{ fieldErrors?: Record<string, string[]>; formError?: string }`. Empty object `{}` = success. Plans 04-04 + 04-05 check `result.formError`/`result.fieldErrors` and call `router.refresh()` after success (Phase 3 lock: required after non-redirecting actions).
 - **Window overlap validation** (Plan 04-03) — `findOverlap`: sort windows by `start_minute`, check `end_minute > next.start_minute`. Touching boundaries (end == next.start) are NOT overlaps — adjacent windows valid. Error message names conflicting pair in HH:MM format. Validated on save, not on blur (RESEARCH §6 lock).
+- **`addMinutes(midnight, startMinute)` is DST-UNSAFE for window endpoints** (Plan 04-02) — adds elapsed UTC milliseconds, not wall-clock minutes. On spring-forward day, `addMinutes(midnight_CST, 540)` = 10:00 CDT not 9:00 CDT. Fix: `new TZDate(y, m-1, d, Math.floor(min/60), min%60, 0, TZ)`. Use `addMinutes` ONLY for cursor advancement inside the slot loop (elapsed-time between slots is intended).
+- **`TZDate.toISOString()` returns offset format, not UTC Z** (Plan 04-02) — @date-fns/tz v1.4.1 `TZDate.toISOString()` returns `T09:00:00-05:00` not `T14:00:00.000Z`. Use `new Date(tzDate.getTime()).toISOString()` for UTC Z output. RESEARCH.md was wrong on this point.
+- **`TZDate.getDay()` (method call) is TZ-aware** (Plan 04-02) — confirmed by AVAIL-09 spring-forward Sunday tests (day_of_week=0). Use `tzDate.getDay()` not `getDay(tzDate)` from date-fns.
+- **Buffer-overlap removes upstream adjacent slot** (Plan 04-02) — with buffer=15min and booking 10:00-10:30, slots 9:30, 10:00, AND 10:30 are removed (3 total, not 2). The 10:30 slot's buffered range overlaps the booking tail. Plans consuming computeSlots should expect aggressive buffering.
+- **`computeSlots()` pure function contract** (Plan 04-02) — NO `new Date()` inside; `now` MUST be injected via `SlotInput.now`. Caller (Plan 04-06 route handler) pre-fetches all data. Step size = `durationMinutes` (no separate step param). Daily cap: caller MUST filter cancelled bookings before passing `bookings` array. Returns sorted `Slot[]`; empty for blocked/cap-reached/no-rules days (no `cap_reached` flag).
 
 ### Carried Concerns / Todos
 
@@ -128,14 +133,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 4 Plan 03 executed. _lib/ data layer complete: types.ts, schema.ts, queries.ts, actions.ts. 3 task commits + 1 docs commit pushed.
+**Last session:** 2026-04-25 — Phase 4 Plans 02 + 03 both complete. Slot engine + 15 AVAIL-09 DST tests (02) and _lib/ data layer (03) both pushed.
 
-**Next action:** Phase 4 Plans 04-04 (weekly editor + settings panel) and 04-05 (overrides UI) — Wave 3. Data layer ready to consume.
+**Next action:** Phase 4 Plans 04-04 (weekly editor + settings panel) and 04-05 (overrides UI) — Wave 3. Slot engine + data layer both ready.
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
+- ✅ Plan 04-02 (slot engine + computeSlots + AVAIL-09 DST tests) — complete, pushed (2026-04-25)
 - ✅ Plan 04-03 (data layer + server actions) — complete, pushed (2026-04-25)
-- Plan 04-02 (slot engine + computeSlots) — Wave 2, running in parallel
 
 **Phase 3 plan status (final):**
 - ✅ Plan 03-01 (schema migration: deleted_at + partial unique index) — complete, pushed
