@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 02 Task 1 complete — vendor email-sender + npm deps; CHECKPOINT: Andrew must set 4 env vars before 05-03)
+**Last updated:** 2026-04-25 (Phase 5 Plan 04 complete — public booking page Server Component shell; 2 commits, npm run build exits 0)
 
 ## Project Reference
 
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 5 (Public Booking Flow + Email + .ics) — in progress
-**Plan:** 2 of 6 in progress (05-02 Task 1 done; Task 2 CHECKPOINT pending)
-**Status:** Phase 5 in progress. Plan 05-01 done. Plan 05-02 Task 1 done (6efa13f); CHECKPOINT awaiting Andrew to set 4 env vars (Turnstile + Resend) in .env.local + Vercel Production before 05-03 can proceed.
-**Last activity:** 2026-04-25 — Completed 05-02 Task 1 (vendor @nsi/email-sender + install ical/turnstile/resend deps; 6efa13f)
+**Plan:** 4 of 6 complete (05-04 done; 05-05 and 05-06 remaining)
+**Status:** Phase 5 in progress. Plans 05-01, 05-02, 05-03, 05-04 done.
+**Last activity:** 2026-04-25 — Completed 05-04 (public booking page Server Component shell; bad6b2a, a608f9e)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress)
 
 ```
@@ -25,7 +25,7 @@ Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
-Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01 done; 05-02 Task 1 done, checkpoint pending)
+Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01..04 done; 05-05 + 05-06 remaining)
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -114,6 +114,12 @@ Phase 9  [ ] Manual QA & Verification
 - **Two-button mode toggle for Block/Custom-hours in OverrideModal** (Plan 04-05) — shadcn Tabs not installed. Two `<Button>` elements (variant="default" active, variant="outline" inactive) handle the 2-option Block/Custom-hours toggle without an extra dep (~80 LOC saved). Pattern reusable for any 2-option toggle that doesn't justify full Tab nav.
 - **Date input disabled in Edit mode (OverrideModal)** (Plan 04-05) — Changing the date in Edit mode would require tracking original date to delete it before inserting at new date. Forcing remove+add is simpler and explicit. The action's delete-all-for-date semantic assumes date is stable during an upsert.
 - **Calendar marker rendering uses local browser TZ for Date objects** (Plan 04-05)
+- **Public booking page loader pattern** (Plan 05-04) — `loadEventTypeForBookingPage(accountSlug, eventSlug)` in `app/[account]/[event-slug]/_lib/load-event-type.ts`: `server-only`, `createAdminClient()`, `RESERVED_SLUGS.has(accountSlug) → return null`, account by slug, event_type by `(account_id, slug)` filtered `.eq('is_active', true).is('deleted_at', null)`. Returns null on ANY miss; page calls `notFound()`. Same service-role pattern as /api/slots.
+- **Reserved-slug guard locked** (Plan 05-04) — `["app", "api", "_next", "auth"]` in `RESERVED_SLUGS` Set in `load-event-type.ts`. Phase 7 MAY add `"embed"` if `/embed/[account]/[slug]` route is introduced. Guard lives in loader (not in proxy.ts) so it fires for both `page.tsx` and `generateMetadata`.
+- **PLAN-05-06 patch markers** (Plan 05-04) — `page.tsx` has two marker pairs: `PLAN-05-06-REPLACE-IMPORT-START/END` (lines 68–70, JSX comment wrapping the future import) and `PLAN-05-06-REPLACE-INLINE-START/END` (lines 77–106, inline `BookingShell` stub function). Plan 05-06 creates `_components/booking-shell.tsx`, replaces import block, deletes stub.
+- **BookingShell prop contract (Wave 2 → Wave 3 LOCKED)** (Plan 05-04) — `{ account: AccountSummary; eventType: EventTypeSummary }` from `app/[account]/[event-slug]/_lib/types.ts`. Plan 05-06 MUST consume identical shape.
+- **generateMetadata double-load** (Plan 05-04) — Both `generateMetadata` and `BookingPage` call `loadEventTypeForBookingPage()` (two DB round-trips per request). Acceptable for v1; Phase 8 can add `import { cache } from 'react'` wrapper if latency becomes a concern.
+- **Client owns slot fetch** (Plan 05-04) — Server Component does NOT prefetch slots. `BookingShell` (Plan 05-06) calls `/api/slots` after browser TZ detection. Server-side prefetch would use server TZ → wrong slot times for non-Chicago visitors. Correctness constraint.
 - **`accounts.owner_email` denormalized (not joined from auth.users)** (Plan 05-01) — nullable TEXT column on accounts; simpler for admin-client public route handlers (`/api/bookings` has no auth session); survives auth provider migrations. nsi seeded with `ajwegner3@gmail.com`. Plain `text` (not `citext`) — no lookup or uniqueness need. Downstream code MUST handle null gracefully (skip owner notification, omit .ics ORGANIZER).
 - **`supabase db query --linked` link confirmed working** (Plan 05-01) — `supabase link --project-ref mogfnutxrrbtvnaupoun` was already established; STATE.md concern resolved. CLI fallback is viable for future migrations without needing MCP. — shadcn Calendar (react-day-picker v9) requires JavaScript `Date` objects for modifiers prop. Override dates are YYYY-MM-DD in account-local TZ. Using `new Date(y, m-1, d)` (browser-local midnight) is an acceptable simplification — visual markers only; the string identity passed to the action is always correct. Threading account.timezone to this component would be over-engineering.
 - **OverridesList groups DateOverrideRow[] by override_date** (Plan 04-05) — Multiple window rows for one date (custom_hours) are consolidated into a single Card with comma-separated window strings. `groupOverrides()` utility function sorts dates ascending and sorts each group's windows by start_minute.
@@ -152,17 +158,17 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-01 complete. accounts.owner_email migration applied live; nsi.owner_email = ajwegner3@gmail.com confirmed; pushed to main (dcbe764).
+**Last session:** 2026-04-25 — Phase 5 Plan 05-04 complete. Public booking page Server Component shell at /[account]/[event-slug]; build exits 0; pushed to main (bad6b2a, a608f9e).
 
-**Next action:** Phase 5 Plan 05-02 (public booking page UI) — accounts.owner_email now populated; downstream plans can proceed.
+**Next action:** Phase 5 Plan 05-05 (POST /api/bookings route handler) or Plan 05-06 (BookingShell client component) — both can proceed; 05-04 shell is the Wave 2 anchor.
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
-- [ ] Plan 05-02 (public booking page UI)
-- [ ] Plan 05-03 (booking form + Zod + Turnstile)
-- [ ] Plan 05-04 (POST /api/bookings route handler)
-- [ ] Plan 05-05 (confirmation email + .ics attachment)
-- [ ] Plan 05-06 (confirmation screen)
+- ✅ Plan 05-02 (vendor @nsi/email-sender + Gmail provider + deps) — complete, pushed (2026-04-25)
+- ✅ Plan 05-03 (booking Zod schema + Turnstile verify helper) — complete, pushed (2026-04-25, 2d31d73)
+- ✅ Plan 05-04 (public booking page Server Component shell) — complete, pushed (2026-04-25, bad6b2a + a608f9e)
+- [ ] Plan 05-05 (POST /api/bookings route handler)
+- [ ] Plan 05-06 (BookingShell client component — calendar + slot picker + form)
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
