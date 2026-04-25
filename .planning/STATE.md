@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Plan 03-03 complete)
+**Last updated:** 2026-04-25 (Plans 03-04 and 03-05 complete)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 3 in progress (Wave 2 plan 03-03 complete; Wave 3 plans 03-04 and 03-05 next).
+**Current focus:** Phase 3 in progress (Wave 3 plans 03-04 and 03-05 complete; Phase 3 pending Phase 9 manual QA).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 3 — Event Types CRUD (in progress)
-**Plan:** 03-03 complete; 03-04 (list page) and 03-05 (form pages) next
-**Status:** Plans 03-01, 03-02, and 03-03 complete and pushed.
-**Last activity:** 2026-04-25 — Plan 03-03 executed: slugify utility, Zod schemas, all 5 Server Actions
-**Progress:** [██░░░░░░░] 2 / 9 phases complete (Phase 3 in progress)
+**Phase:** 3 — Event Types CRUD (in progress — all 5 plans complete; pending Phase 9 manual QA)
+**Plan:** 03-05 complete (03-04 completed in parallel Wave 3)
+**Status:** Plans 03-01 through 03-05 complete and pushed.
+**Last activity:** 2026-04-25 — Plan 03-05 executed: create/edit route shells, URL preview, QuestionList sub-form, EventTypeForm component
+**Progress:** [██░░░░░░░] 2 / 9 phases complete (Phase 3 all plans done; Phase 4 next)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -80,6 +80,11 @@ Phase 9  [ ] Manual QA & Verification
 - **RestoreResult discriminated union** (Plan 03-03) — `{ ok: true } | { slugCollision: true; currentSlug: string } | { error: string }`. Client opens slug-prompt Dialog on `slugCollision`. Restored rows come back with `is_active: false` (Inactive, not Active).
 - **No try/catch in actions.ts** (Plan 03-03) — All error paths use early `return { ... }`. redirect() is the last statement in createEventTypeAction and updateEventTypeAction, never inside a try block. All future actions in this file MUST maintain this invariant.
 - **Slug pre-flight pattern** (Plan 03-03) — `.eq("slug", x).is("deleted_at", null).maybeSingle()` for create; add `.neq("id", id)` for update. This is the SINGLE source of truth for slug uniqueness among active rows. Race-defense: catch `error.code === "23505"` (Postgres unique_violation) and return slug fieldError.
+- **useTransition + direct-call + NEXT_REDIRECT re-throw** (Plan 03-05) — EventTypeForm's `onSubmit` calls `await createEventTypeAction(values)` inside `startTransition(async () => { ... })`. The `try/catch` MUST re-throw errors whose `digest` starts with `"NEXT_REDIRECT"` so Next.js navigation succeeds. This pattern replaces `useActionState` for actions using structured input (not FormData).
+- **zodResolver `as any` cast for z.coerce fields** (Plan 03-05) — Zod v4 `z.coerce.number()` and `z.coerce.boolean()` have `unknown` input types. `@hookform/resolvers v5` infers from the schema input type, conflicting with `useForm<OutputType>`. Cast `zodResolver(schema) as any` to resolve — type-level only, runtime correct.
+- **slugManuallyEdited flag** (Plan 03-05) — Create mode: slug auto-fills from name via `slugify()` until user edits slug (detected by typed slug diverging from `slugify(name)`). Edit mode: starts `true` so saved slug is never auto-overwritten. Future forms with slug auto-fill MUST implement this pattern.
+- **UrlPreview domain placeholder** (Plan 03-05) — `yoursite.com/nsi/[slug]` is hardcoded. Phase 7 swaps the domain to per-account branded domain. Do NOT bind to live Vercel URL (`calendar-app-xi-smoky.vercel.app`) — Phase 7 needs atomic domain swap.
+- **Controller required for Switch and Select (confirmed Plan 03-05)** — Both `is_active` (EventTypeForm) and question `required` + `type` (QuestionList) use `Controller`. Radix UI primitives do not forward DOM refs; `register()` silently no-ops. All future forms MUST use Controller for Switch and Select.
 
 ### Carried Concerns / Todos
 
@@ -110,16 +115,16 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Plan 03-03 executed. slugify utility, Zod schemas (customQuestionSchema discriminatedUnion + eventTypeSchema), all 5 Server Actions. npm run build exits 0. All 17 Vitest tests still green. Pushed to main.
+**Last session:** 2026-04-25 — Plan 03-05 executed. Create/edit route shells, URL preview, QuestionList (useFieldArray + reorder + inline single-select options), EventTypeForm (RHF + zodResolver + slug auto-fill + edit warning + atomic direct-call action submit). npm run build exits 0. All 17 Vitest tests still green. Pushed to main.
 
-**Next action:** Plans 03-04 (list page) and 03-05 (form pages) — Wave 3.
+**Next action:** Phase 3 is complete (all 5 plans done). Phase 4 (Availability Engine) needs `/gsd:research-phase` before planning.
 
 **Phase 3 plan status:**
 - ✅ Plan 03-01 (schema migration) — complete, pushed (1 commit + docs)
 - ✅ Plan 03-02 (shadcn primitives + Sonner Toaster) — complete, pushed (2 commits + docs)
 - ✅ Plan 03-03 (slugify + Zod schemas + 5 Server Actions) — complete, pushed (3 commits + docs)
-- [ ] Plan 03-04 (list page) — Wave 3
-- [ ] Plan 03-05 (form pages) — Wave 3
+- ✅ Plan 03-04 (list page + table + dialogs) — complete, pushed (Wave 3 parallel)
+- ✅ Plan 03-05 (create/edit form pages + QuestionList + URL preview) — complete, pushed (Wave 3 parallel)
 
 **Phase 2 plan status (final):**
 - ✅ Plan 02-01 (login + auth actions) — complete, pushed (4 commits)
@@ -138,4 +143,4 @@ None.
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
-*State updated: 2026-04-24 after Phase 2 close-out*
+*State updated: 2026-04-25 after Plan 03-05 complete (Wave 3)*
