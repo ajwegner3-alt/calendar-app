@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25
+**Last updated:** 2026-04-25 (Plan 03-02 complete)
 
 ## Project Reference
 
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 3 — Event Types CRUD (in progress)
-**Plan:** 03-01 complete; 03-02+ executing in parallel (Wave 1)
-**Status:** Plan 03-01 (schema migration) complete and verified.
-**Last activity:** 2026-04-25 — Plan 03-01 executed: deleted_at column + partial index applied to live Supabase project
+**Plan:** 03-02 complete; 03-03 and 03-04 executing in parallel (Wave 1)
+**Status:** Plans 03-01 and 03-02 complete and verified.
+**Last activity:** 2026-04-25 — Plan 03-02 executed: 9 shadcn primitives installed; Sonner Toaster mounted in root layout
 **Progress:** [██░░░░░░░] 2 / 9 phases complete (Phase 3 in progress)
 
 ```
@@ -73,6 +73,9 @@ Phase 9  [ ] Manual QA & Verification
 - **Postgres CTEs run concurrently** (Plan 03-01 smoke test) — Within a single CTE query, all data-modifying CTEs see the same snapshot; an UPDATE in one CTE branch is not visible to an INSERT in another branch of the same query. Smoke tests requiring INSERT → UPDATE → INSERT must be sequential statements, not a single CTE.
 - **`supabase db query --linked` as MCP fallback** (Plan 03-01) — When Supabase MCP `apply_migration`/`execute_sql` tools are not in scope (Claude Code CLI sessions), use `supabase db query --linked -f <migration.sql>`. Requires `supabase link --project-ref mogfnutxrrbtvnaupoun` first. Same Management API path; fully equivalent.
 - **TEST_OWNER_PASSWORD dotenv quoting** (Plan 03-01 bug fix) — Fixed `#plaNNing4succ3ss!` → `"#plaNNing4succ3ss!"` in `.env.local`. dotenvx treats unquoted `#` as comment character. Value starting with `#` MUST be double-quoted. Updated locally (.env.local gitignored). Andrew must apply same fix to any other environments.
+- **shadcn v4 uses radix-ui monorepo package** (Plan 03-02) — `npx shadcn@latest add` (v4.4.0) installs a single `radix-ui` package (`^1.4.3`) rather than individual `@radix-ui/react-*` packages. Generated `components/ui/*.tsx` import from `radix-ui` directly. Future plans verifying Radix deps should check for `radix-ui` key in package.json, not individual `@radix-ui/react-*` keys.
+- **Sonner Toaster in root layout, not shell layout** (Plan 03-02) — `<Toaster />` mounted in `app/layout.tsx` (root) so toasts fire on `/app/login` and future public booking routes (`/[account]/[slug]`) which are outside the shell. Shell layout (`app/(shell)/layout.tsx`) intentionally has no Toaster. Any future layout work must preserve single-mount invariant.
+- **next-themes added as Sonner peer dep, no ThemeProvider** (Plan 03-02) — shadcn's `sonner.tsx` wrapper calls `useTheme()` from `next-themes`. No `<ThemeProvider>` was added — Sonner defaults to `"system"` theme (acceptable v1 behavior; app has no dark mode). Phase 7 or 8 can add ThemeProvider if dark mode is ever desired.
 
 ### Carried Concerns / Todos
 
@@ -103,14 +106,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Plan 03-01 executed. Schema migration applied to live Supabase project. deleted_at column + partial unique index verified via Postgres introspection. Slug-reuse smoke test passed (sequential statements). All 17 Vitest tests pass after fixing dotenv # quoting bug in .env.local.
+**Last session:** 2026-04-25 — Plan 03-02 executed. 9 shadcn primitives installed (table, dropdown-menu, alert-dialog, switch, badge, select, textarea, sonner, dialog). Sonner Toaster mounted in root layout. npm run build exits 0. All 17 Vitest tests still green. Pushed to main.
 
-**Next action:** Plans 03-02 through 03-04 executing in Wave 1 (parallel).
+**Next action:** Plans 03-03 (list + detail UI) and 03-04 (archive + restore UI) — Wave 1 continuation.
 
 **Phase 3 plan status:**
 - ✅ Plan 03-01 (schema migration) — complete, pushed (1 commit + docs)
-- [ ] Plan 03-02 (server actions) — in progress / Wave 1
-- [ ] Plan 03-03 (list + detail UI) — in progress / Wave 1
+- ✅ Plan 03-02 (shadcn primitives + Sonner Toaster) — complete, pushed (2 commits + docs)
+- [ ] Plan 03-03 (list + detail UI) — Wave 1
 - [ ] Plan 03-04 (archive + restore UI) — Wave 1
 
 **Phase 2 plan status (final):**
