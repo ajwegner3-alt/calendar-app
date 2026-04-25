@@ -150,6 +150,18 @@ Plans:
 
 **Research flag:** YES - needs `/gsd:research-phase` on `.ics` `METHOD:REQUEST`/VTIMEZONE handling across mail clients and the current `@nsi/email-sender` attachment API shape before plan-phase.
 
+**Plans:** 8 plans
+
+Plans:
+- [ ] 05-PLAN-01-migration-and-account-owner-email.md — Add nullable owner_email column to accounts; seed nsi row
+- [ ] 05-PLAN-02-vendor-email-sender-and-deps.md — Vendor @nsi/email-sender into lib/email-sender/; install ical-generator + timezones-ical-library + @marsidev/react-turnstile + resend; .env.example + Andrew env-var checkpoint
+- [ ] 05-PLAN-03-schema-turnstile-ics-email-modules.md — Zod bookingInputSchema + verifyTurnstile + buildIcsBuffer + booker/owner email senders + fire-and-forget orchestrator
+- [ ] 05-PLAN-04-public-booking-page-shell.md — Server Component at /[account]/[event-slug]; reserved-slug guard; loader + types + not-found.tsx
+- [ ] 05-PLAN-05-bookings-api-route-handler.md — POST /api/bookings race-safe (23505→409 SLOT_TAKEN); Turnstile gate; token gen+hash; fire-and-forget emails
+- [ ] 05-PLAN-06-booking-page-client-components.md — BookingShell + SlotPicker + BookingForm + RaceLoserBanner; Turnstile invisible mode; 409 inline-banner UX
+- [ ] 05-PLAN-07-confirmation-screen-route.md — /[account]/[event-slug]/confirmed/[booking-id] Server Component; service-role read + cross-tenant verification; booker-TZ formatting; noindex
+- [ ] 05-PLAN-08-bookings-api-integration-tests.md — Vitest suite mocking Turnstile + email-sender; race-safe 409 end-to-end via partial unique index
+
 ---
 
 ### Phase 6: Cancel + Reschedule Lifecycle
