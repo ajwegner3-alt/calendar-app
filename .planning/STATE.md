@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Plan 03-02 complete)
+**Last updated:** 2026-04-25 (Plan 03-03 complete)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 3 in progress (Wave 1 plans executing in parallel).
+**Current focus:** Phase 3 in progress (Wave 2 plan 03-03 complete; Wave 3 plans 03-04 and 03-05 next).
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 3 — Event Types CRUD (in progress)
-**Plan:** 03-02 complete; 03-03 and 03-04 executing in parallel (Wave 1)
-**Status:** Plans 03-01 and 03-02 complete and verified.
-**Last activity:** 2026-04-25 — Plan 03-02 executed: 9 shadcn primitives installed; Sonner Toaster mounted in root layout
+**Plan:** 03-03 complete; 03-04 (list page) and 03-05 (form pages) next
+**Status:** Plans 03-01, 03-02, and 03-03 complete and pushed.
+**Last activity:** 2026-04-25 — Plan 03-03 executed: slugify utility, Zod schemas, all 5 Server Actions
 **Progress:** [██░░░░░░░] 2 / 9 phases complete (Phase 3 in progress)
 
 ```
@@ -76,6 +76,10 @@ Phase 9  [ ] Manual QA & Verification
 - **shadcn v4 uses radix-ui monorepo package** (Plan 03-02) — `npx shadcn@latest add` (v4.4.0) installs a single `radix-ui` package (`^1.4.3`) rather than individual `@radix-ui/react-*` packages. Generated `components/ui/*.tsx` import from `radix-ui` directly. Future plans verifying Radix deps should check for `radix-ui` key in package.json, not individual `@radix-ui/react-*` keys.
 - **Sonner Toaster in root layout, not shell layout** (Plan 03-02) — `<Toaster />` mounted in `app/layout.tsx` (root) so toasts fire on `/app/login` and future public booking routes (`/[account]/[slug]`) which are outside the shell. Shell layout (`app/(shell)/layout.tsx`) intentionally has no Toaster. Any future layout work must preserve single-mount invariant.
 - **next-themes added as Sonner peer dep, no ThemeProvider** (Plan 03-02) — shadcn's `sonner.tsx` wrapper calls `useTheme()` from `next-themes`. No `<ThemeProvider>` was added — Sonner defaults to `"system"` theme (acceptable v1 behavior; app has no dark mode). Phase 7 or 8 can add ThemeProvider if dark mode is ever desired.
+- **Direct-call Server Action contract for event types** (Plan 03-03) — Actions in `_lib/actions.ts` accept structured `EventTypeInput` directly from RHF `handleSubmit`, NOT `FormData`. Avoids FormData-can't-serialize-nested-arrays pitfall for `custom_questions`. Plans 04 + 05 MUST call `await createEventTypeAction(values)` not use `<form action={action}>` pattern.
+- **RestoreResult discriminated union** (Plan 03-03) — `{ ok: true } | { slugCollision: true; currentSlug: string } | { error: string }`. Client opens slug-prompt Dialog on `slugCollision`. Restored rows come back with `is_active: false` (Inactive, not Active).
+- **No try/catch in actions.ts** (Plan 03-03) — All error paths use early `return { ... }`. redirect() is the last statement in createEventTypeAction and updateEventTypeAction, never inside a try block. All future actions in this file MUST maintain this invariant.
+- **Slug pre-flight pattern** (Plan 03-03) — `.eq("slug", x).is("deleted_at", null).maybeSingle()` for create; add `.neq("id", id)` for update. This is the SINGLE source of truth for slug uniqueness among active rows. Race-defense: catch `error.code === "23505"` (Postgres unique_violation) and return slug fieldError.
 
 ### Carried Concerns / Todos
 
@@ -106,15 +110,16 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Plan 03-02 executed. 9 shadcn primitives installed (table, dropdown-menu, alert-dialog, switch, badge, select, textarea, sonner, dialog). Sonner Toaster mounted in root layout. npm run build exits 0. All 17 Vitest tests still green. Pushed to main.
+**Last session:** 2026-04-25 — Plan 03-03 executed. slugify utility, Zod schemas (customQuestionSchema discriminatedUnion + eventTypeSchema), all 5 Server Actions. npm run build exits 0. All 17 Vitest tests still green. Pushed to main.
 
-**Next action:** Plans 03-03 (list + detail UI) and 03-04 (archive + restore UI) — Wave 1 continuation.
+**Next action:** Plans 03-04 (list page) and 03-05 (form pages) — Wave 3.
 
 **Phase 3 plan status:**
 - ✅ Plan 03-01 (schema migration) — complete, pushed (1 commit + docs)
 - ✅ Plan 03-02 (shadcn primitives + Sonner Toaster) — complete, pushed (2 commits + docs)
-- [ ] Plan 03-03 (list + detail UI) — Wave 1
-- [ ] Plan 03-04 (archive + restore UI) — Wave 1
+- ✅ Plan 03-03 (slugify + Zod schemas + 5 Server Actions) — complete, pushed (3 commits + docs)
+- [ ] Plan 03-04 (list page) — Wave 3
+- [ ] Plan 03-05 (form pages) — Wave 3
 
 **Phase 2 plan status (final):**
 - ✅ Plan 02-01 (login + auth actions) — complete, pushed (4 commits)
