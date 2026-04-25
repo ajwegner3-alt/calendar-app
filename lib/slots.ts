@@ -49,8 +49,36 @@ function localDateString(d: Date): string {
 }
 
 /**
+ * Convert a "minutes since local midnight" value to a TZDate at that wall-clock
+ * time on the given local date, in the named timezone.
+ *
+ * WHY NOT addMinutes(midnight, n)?
+ *   addMinutes adds elapsed UTC milliseconds, not wall-clock minutes. On a
+ *   spring-forward day, addMinutes(midnight_CST, 540) = 10:00 CDT (not 9:00 CDT)
+ *   because 9 elapsed hours from midnight CST crosses the DST boundary. Direct
+ *   TZDate construction with explicit hour/minute is the only DST-safe way to
+ *   express "9:00 AM on this calendar date in this timezone" — proved by
+ *   AVAIL-09 test suite iteration.
+ */
+function minuteToTZDate(
+  year: number,
+  month: number, // 1-indexed
+  day: number,
+  minutesSinceMidnight: number,
+  timeZone: string,
+): TZDate {
+  const h = Math.floor(minutesSinceMidnight / 60);
+  const m = minutesSinceMidnight % 60;
+  return new TZDate(year, month - 1, day, h, m, 0, timeZone);
+}
+
+/**
  * Generate slots inside a single window on a single local date.
- * Slot end is computed in the account TZ via addMinutes — DST-safe.
+ *
+ * Window start and end use direct TZDate construction (not addMinutes from
+ * midnight) for DST-correct wall-clock interpretation. The cursor inside the
+ * loop advances by addMinutes because elapsed-time stepping is correct once
+ * we have a concrete UTC starting epoch.
  */
 function* generateWindowSlots(
   localDate: string,        // "2026-03-08"
@@ -60,21 +88,30 @@ function* generateWindowSlots(
   timeZone: string,
 ): Generator<Slot> {
   const [year, month, day] = localDate.split("-").map(Number);
-  // Construct local midnight in the account TZ (NOT new Date()).
-  const midnight = new TZDate(year, month - 1, day, 0, 0, 0, timeZone);
-  const windowStart = addMinutes(midnight, startMinute);
-  const windowEnd = addMinutes(midnight, endMinute);
 
-  let cursor = windowStart;
+  // Direct TZDate construction: "9:00 AM on this date in this TZ" resolves
+  // correctly to the DST-aware UTC epoch. addMinutes(midnight, 540) would give
+  // the wrong epoch on DST-transition days (RESEARCH Pitfall deviation — v4
+  // addMinutes adds elapsed ms, not wall-clock minutes).
+  const windowStart = minuteToTZDate(year, month, day, startMinute, timeZone);
+  const windowEnd = minuteToTZDate(year, month, day, endMinute, timeZone);
+
+  let cursor: Date = windowStart;
   while (true) {
     const slotEnd = addMinutes(cursor, durationMinutes);
     // Slot must fit entirely within the window (use isAfter, not >).
     if (isAfter(slotEnd, windowEnd)) break;
+    // Use new Date(x.getTime()).toISOString() to get UTC "Z" format.
+    // TZDate.toISOString() returns offset-format (e.g. "T09:00:00-05:00"), NOT
+    // UTC "Z" format. getTime() returns the UTC epoch ms; native Date always
+    // formats as UTC "Z".
     yield {
-      start_at: cursor.toISOString(),
-      end_at: slotEnd.toISOString(),
+      start_at: new Date(cursor.getTime()).toISOString(),
+      end_at: new Date(slotEnd.getTime()).toISOString(),
     };
     // Step size = duration. CONTEXT-locked: 30-min event → 30-min steps.
+    // addMinutes on elapsed-time is correct here: we want 30 real minutes
+    // between consecutive slot starts, not 30 wall-clock minutes.
     cursor = slotEnd;
   }
 }
