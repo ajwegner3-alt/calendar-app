@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 4 Plan 01 complete)
+**Last updated:** 2026-04-25 (Phase 4 Plan 03 complete)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 4 (Availability Engine) in progress — Plan 01 (deps + migration) complete.
+**Current focus:** Phase 4 (Availability Engine) in progress — Plans 01 + 03 complete; Plan 02 running in parallel (Wave 2).
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 4 in progress (Availability Engine)
-**Plan:** 01 of N complete
-**Status:** Plan 04-01 complete. date-fns v4 + @date-fns/tz + shadcn Calendar installed; accounts table extended with 4 availability-settings columns, applied live.
-**Last activity:** 2026-04-25 — Completed 04-01-PLAN (deps and accounts migration)
+**Plan:** 03 of N complete (Plan 02 parallel)
+**Status:** Plan 04-03 complete. Full data layer for /app/availability: shared types, Zod schemas with HH:MM overlap validation, server-only data loader, 4 Server Actions (settings, weekly rules, date overrides).
+**Last activity:** 2026-04-25 — Completed 04-03-PLAN (data layer + server actions)
 **Progress:** [███░░░░░░] 3 / 9 phases complete (Phase 4 in progress)
 
 ```
@@ -92,6 +92,12 @@ Phase 9  [ ] Manual QA & Verification
 - **date-fns v4 + @date-fns/tz v1 runtime deps** (Plan 04-01) — `date-fns@4.1.0` + `@date-fns/tz@1.4.1` installed as runtime (not dev) deps. `formatInTimeZone` does NOT exist in `@date-fns/tz`; use `TZDate` and `tz()` instead. Any future npm install of `date-fns-tz` (the v2/v3-era package) is a mistake. Sanity guard: `tz.formatInTimeZone === undefined`.
 - **shadcn CLI v4.5.0 installs calendar + react-day-picker@9.14.0** (Plan 04-01) — CLI auto-upgraded from 4.4.0 (Phase 3) to 4.5.0; no breaking changes; `radix-ui` monorepo package pattern still holds. `components/ui/calendar.tsx` wraps `DayPicker`. `.day-blocked`/`.day-custom` CSS classes in `app/globals.css` used via `modifiersClassNames` prop in Plan 04-05.
 - **accounts availability settings columns** (Plan 04-01) — `buffer_minutes INT NOT NULL DEFAULT 0`, `min_notice_hours INT NOT NULL DEFAULT 24`, `max_advance_days INT NOT NULL DEFAULT 14`, `daily_cap INT NULL`. `daily_cap NULL` = no cap. CHECK: `daily_cap IS NULL OR daily_cap > 0`. Migration idempotent (IF NOT EXISTS). Applied live 2026-04-25. nsi row: (0, 24, 14, NULL).
+- **Availability data layer: direct-call action contract** (Plan 04-03) — 4 Server Actions in `app/(shell)/app/availability/_lib/actions.ts` accept structured TS objects (`WeeklyRulesInput`, `DateOverrideFormInput`, `AccountSettingsInput`), NOT FormData. Plans 04-04 + 04-05 call `await saveWeeklyRulesAction({...})` from RHF `onSubmit`. Mirrors Phase 3 lock.
+- **Empty windows = closed weekday** (Plan 04-03) — `saveWeeklyRulesAction({ day_of_week, windows: [] })` deletes all rules for that day (= Closed). No `is_open` column. Presence/absence of rows IS the open/closed state (CONTEXT lock). UI toggle to Closed sends empty array.
+- **Date override mutual exclusion in action layer** (Plan 04-03) — `upsertDateOverrideAction` always deletes ALL rows for `(account_id, override_date)` FIRST, then inserts the new shape. Prevents mixed is_closed+windows state (RESEARCH Pitfall 5). DB schema allows both; action is the enforcement point.
+- **No transaction wrapper for delete+insert pairs** (Plan 04-03) — supabase-js has no explicit tx API. Worst case (delete ok, insert fails): day/date shows Closed until retry. Acceptable for v1 single-tenant. Fix path if needed: Postgres RPC wrapping the pair.
+- **AvailabilityActionState** (Plan 04-03) — `{ fieldErrors?: Record<string, string[]>; formError?: string }`. Empty object `{}` = success. Plans 04-04 + 04-05 check `result.formError`/`result.fieldErrors` and call `router.refresh()` after success (Phase 3 lock: required after non-redirecting actions).
+- **Window overlap validation** (Plan 04-03) — `findOverlap`: sort windows by `start_minute`, check `end_minute > next.start_minute`. Touching boundaries (end == next.start) are NOT overlaps — adjacent windows valid. Error message names conflicting pair in HH:MM format. Validated on save, not on blur (RESEARCH §6 lock).
 
 ### Carried Concerns / Todos
 
@@ -122,12 +128,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 4 Plan 01 executed. date-fns + @date-fns/tz + shadcn Calendar installed; accounts settings columns applied live. 3 commits pushed.
+**Last session:** 2026-04-25 — Phase 4 Plan 03 executed. _lib/ data layer complete: types.ts, schema.ts, queries.ts, actions.ts. 3 task commits + 1 docs commit pushed.
 
-**Next action:** Phase 4 Plan 02 (slot engine + computeSlots) — Wave 2. date-fns/tz foundation now in place. accounts columns exist. Continue with 04-PLAN-02.
+**Next action:** Phase 4 Plans 04-04 (weekly editor + settings panel) and 04-05 (overrides UI) — Wave 3. Data layer ready to consume.
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
+- ✅ Plan 04-03 (data layer + server actions) — complete, pushed (2026-04-25)
+- Plan 04-02 (slot engine + computeSlots) — Wave 2, running in parallel
 
 **Phase 3 plan status (final):**
 - ✅ Plan 03-01 (schema migration: deleted_at + partial unique index) — complete, pushed
