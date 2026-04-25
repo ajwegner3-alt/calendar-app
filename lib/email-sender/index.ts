@@ -1,8 +1,17 @@
 import "server-only";
 
 // Vendored from @nsi/email-sender sibling project (2026-04-25).
-// Gmail provider and template exports removed — Phase 5 uses Resend only.
-// To update: re-copy from ../email-sender/src/index.ts and re-apply this diff.
+// Phase 5 ships the Gmail provider only (nodemailer SMTP via App Password).
+// Resend provider was removed — re-vendor from ../email-sender/src/providers/resend.ts
+// if a non-Gmail backend is ever needed.
+//
+// v1: env-based singleton — Andrew's GMAIL_USER + GMAIL_APP_PASSWORD.
+// v2 (multi-tenant onboarding): per-account credential lookup at send time.
+//   Add a `gmail-oauth` provider variant that uses a refresh token stored on
+//   accounts.gmail_refresh_token (column added in v2 migration).
+//   The createEmailClient(config) factory already accepts per-call config, so
+//   the abstraction is forward-compatible — only a new provider file +
+//   schema columns needed for v2.
 
 // Types
 export type {
@@ -14,9 +23,9 @@ export type {
   EmailProvider,
 } from "./types";
 
-// Providers — Resend only (gmail import removed; Phase 5 scope)
-import { createResendClient } from "./providers/resend";
-import type { EmailClient, EmailClientConfig, EmailOptions, EmailResult, EmailProvider } from "./types";
+// Providers
+import { createGmailClient } from "./providers/gmail";
+import type { EmailClient, EmailClientConfig, EmailOptions, EmailResult } from "./types";
 
 // Utilities
 export { escapeHtml, stripHtml } from "./utils";
@@ -25,24 +34,13 @@ export { escapeHtml, stripHtml } from "./utils";
 // Client factory
 // ---------------------------------------------------------------------------
 
-/**
- * Create an email client with explicit configuration.
- *
- * ```ts
- * const client = createEmailClient({
- *   provider: 'resend',
- *   apiKey: 're_xxx',
- *   defaultFrom: 'Name <email@domain.com>',
- * });
- * ```
- */
 export function createEmailClient(config: EmailClientConfig): EmailClient {
   switch (config.provider) {
-    case "resend":
-      return createResendClient(config);
+    case "gmail":
+      return createGmailClient(config);
     default:
       throw new Error(
-        `[email-sender] Unknown provider: "${config.provider}". Only "resend" is supported in this vendored copy.`
+        `[email-sender] Provider "${config.provider}" not vendored. Only "gmail" is shipped in this copy.`
       );
   }
 }
@@ -56,34 +54,16 @@ let _defaultClient: EmailClient | null = null;
 function getDefaultClient(): EmailClient {
   if (_defaultClient) return _defaultClient;
 
-  const provider = (process.env.EMAIL_PROVIDER || "resend") as EmailProvider;
-
-  if (provider === "resend") {
-    _defaultClient = createEmailClient({
-      provider: "resend",
-      apiKey: process.env.RESEND_API_KEY,
-      defaultFrom: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-    });
-  } else {
-    throw new Error(
-      `[email-sender] EMAIL_PROVIDER="${provider}" is not supported in this vendored copy. Use "resend".`
-    );
-  }
+  _defaultClient = createEmailClient({
+    provider: "gmail",
+    user: process.env.GMAIL_USER,
+    appPassword: process.env.GMAIL_APP_PASSWORD,
+    fromName: process.env.GMAIL_FROM_NAME || "Andrew @ NSI",
+  });
 
   return _defaultClient;
 }
 
-/**
- * Quick-send an email using the default provider (auto-detected from env vars).
- *
- * ```ts
- * const result = await sendEmail({
- *   to: 'customer@example.com',
- *   subject: 'Hello',
- *   html: '<h1>Hi there</h1>',
- * });
- * ```
- */
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   try {
     const client = getDefaultClient();

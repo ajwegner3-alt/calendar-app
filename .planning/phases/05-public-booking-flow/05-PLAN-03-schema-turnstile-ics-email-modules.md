@@ -24,7 +24,8 @@ must_haves:
     - "lib/email/send-owner-notification.ts exports sendOwnerNotification({booking, eventType, account, ownerEmail}) — sends HTML email to ownerEmail; subject 'New booking: [name] — [event] on [date]'; reply-to = booker_email; body includes full custom-question answers"
     - "lib/email/send-booking-emails.ts exports sendBookingEmails(args) — fire-and-forget orchestrator; calls both senders; catches per-email errors and console.error()s but never throws (Pitfall: booking succeeds even if email fails)"
     - "All times in emails formatted in BOOKER timezone using @date-fns/tz (CONTEXT decision #7) — confirmation screen + email date strings honor booker_timezone; .ics ORGANIZER + ATTENDEE intact"
-    - "All email modules import sendEmail from @/lib/email-sender (vendored Plan 05-02), not directly from a Resend SDK"
+    - "All email modules import sendEmail from @/lib/email-sender (vendored Plan 05-02 — Gmail provider only in v1, no direct nodemailer or provider SDK references)"
+    - "Email sender modules MUST NOT pass an explicit `from` field. The vendored `lib/email-sender/index.ts` singleton constructs `defaultFrom = '${GMAIL_FROM_NAME} <${GMAIL_USER}>'` automatically — explicit `from` would break Gmail SMTP auth (must equal authenticated GMAIL_USER). Per-email modules pass `to`, `subject`, `html`, `replyTo` (owner notification only), `attachments` (booker confirmation only)"
     - "Cancel/reschedule URLs in email follow format: ${APP_URL}/cancel/${rawToken} and ${APP_URL}/reschedule/${rawToken} — Phase 6 routes consume these tokens; format LOCKED here per CONTEXT decision #10"
   artifacts:
     - path: "lib/bookings/schema.ts"

@@ -22,7 +22,7 @@ must_haves:
     - "Empty state when /api/slots returns {slots: []}: friendly message + mailto:[owner_email] link (CONTEXT decision #2)"
     - "BookingForm uses RHF + zodResolver(bookingInputSchema); contact fields first (name/email/phone all required), custom questions below (BOOK-04, CONTEXT decision #3)"
     - "Custom-question rendering follows event_type.custom_questions[].type — Phase 3 enum (short_text/long_text/select/radio); falls back to text input on unknown type"
-    - "Turnstile invisible mode via @marsidev/react-turnstile; ref-based getResponse() before submit; on any submit error (incl 409, validation, 5xx), call turnstileRef.current.reset() (RESEARCH Pitfall 5)"
+    - "Turnstile **Managed** mode (visible widget) via @marsidev/react-turnstile; widget renders ABOVE the submit button with a small explanatory label; ref-based getResponse() before submit; on any submit error (incl 409, validation, 5xx), call turnstileRef.current.reset() (RESEARCH Pitfall 5). NO `size: 'invisible'` option — let the widget render at default Managed appearance."
     - "Form passes browserTz as bookerTimezone, the picked slot's start_at/end_at as ISO UTC strings, and the Turnstile token to /api/bookings"
     - "On 409 SLOT_TAKEN: show RaceLoserBanner ('That time was just booked. Pick a new time below.' — locked CONTEXT message); auto-refetch /api/slots for current date range; preserve all form values; reset Turnstile token; clear selected slot; do NOT clear name/email/phone/answers"
     - "On 201 success: navigate to data.redirectTo (/[account]/[event-slug]/confirmed/[booking-id]) via router.push() — full-page navigation OK (server component on confirmation page does its own data load)"
@@ -379,7 +379,7 @@ Commit: `feat(05-06): add slot picker + race-loser banner client components`. Pu
 The form:
 - RHF + zodResolver(`bookingInputSchema` — Plan 05-03). The schema requires the full input shape; we layer `eventTypeId`, `startAt`, `endAt`, `bookerTimezone`, `turnstileToken` from props/state at submit time, NOT as form fields. RHF holds: `bookerName`, `bookerEmail`, `bookerPhone`, `answers` (record).
 - Custom-question rendering: iterate `eventType.custom_questions`. Render text/textarea for `short_text`/`long_text`; shadcn Select for `select`; radio group for `radio`. Required answers get RHF required: true.
-- Turnstile: `<Turnstile ref={turnstileRef} siteKey={...} />` mounted invisibly. Before submit, `const token = turnstileRef.current?.getResponse()`. On any error, `turnstileRef.current?.reset()`.
+- Turnstile: `<Turnstile ref={turnstileRef} siteKey={...} />` mounted **visibly** in Managed mode (no `size: "invisible"` prop). Place above the submit button with a small label like "We use Cloudflare to verify you're human." Before submit, `const token = turnstileRef.current?.getResponse()`. On any error, `turnstileRef.current?.reset()`.
 - Submit handler:
   - If `selectedSlot` is null, return early (parent should not render form, but defensive).
   - Build POST body with all server-required fields.
@@ -561,11 +561,15 @@ export function BookingForm(props: BookingFormProps) {
         />
       ))}
 
-      <Turnstile
-        ref={turnstileRef}
-        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-        options={{ size: "invisible" }}
-      />
+      <div className="flex flex-col gap-2">
+        <p className="text-xs text-muted-foreground">
+          We use Cloudflare to verify you&rsquo;re human.
+        </p>
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+        />
+      </div>
 
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? "Booking…" : "Book this time"}

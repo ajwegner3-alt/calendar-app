@@ -43,7 +43,7 @@ export interface EmailResult {
 }
 
 /** Supported email providers. */
-export type EmailProvider = "resend" | "gmail";
+export type EmailProvider = "gmail";
 
 /** Configuration for creating an email client. */
 export interface EmailClientConfig {
@@ -51,10 +51,6 @@ export interface EmailClientConfig {
   provider: EmailProvider;
   /** Default "from" address — required for sends unless overridden per-email */
   defaultFrom?: string;
-
-  // --- Resend-specific ---
-  /** Resend API key (required if provider = "resend") */
-  apiKey?: string;
 
   // --- Gmail-specific ---
   /** Gmail address (required if provider = "gmail") */
