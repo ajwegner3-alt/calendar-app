@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 4 Plans 02 + 03 complete)
+**Last updated:** 2026-04-25 (Phase 4 Plan 06 complete — /api/slots route handler + integration test)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 4 (Availability Engine) in progress — Plans 01 + 02 + 03 complete (Wave 2 parallel done).
+**Current focus:** Phase 4 (Availability Engine) in progress — Plans 01 + 02 + 03 + 04 + 06 complete. Plan 04-05 (overrides UI) remaining for Wave 3.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 4 in progress (Availability Engine)
-**Plan:** 03 of N complete (Plans 02 + 03 were Wave 2 parallel, both done)
-**Status:** Plans 04-01, 04-02, 04-03 complete. Pure slot engine + 15 AVAIL-09 DST tests (02) and full data layer (03) both done.
-**Last activity:** 2026-04-25 — Completed 04-02-PLAN (slot engine + DST tests)
+**Plan:** 06 of N complete (04-06 /api/slots GET handler + 13-test integration suite; Wave 3a all done)
+**Status:** Plans 04-01, 04-02, 04-03, 04-04, 04-06 complete. Plan 04-05 (date overrides UI) remaining.
+**Last activity:** 2026-04-25 — Completed 04-06-PLAN (/api/slots route + integration test; 45/45 tests passing)
 **Progress:** [███░░░░░░] 3 / 9 phases complete (Phase 4 in progress)
 
 ```
@@ -103,6 +103,16 @@ Phase 9  [ ] Manual QA & Verification
 - **`TZDate.getDay()` (method call) is TZ-aware** (Plan 04-02) — confirmed by AVAIL-09 spring-forward Sunday tests (day_of_week=0). Use `tzDate.getDay()` not `getDay(tzDate)` from date-fns.
 - **Buffer-overlap removes upstream adjacent slot** (Plan 04-02) — with buffer=15min and booking 10:00-10:30, slots 9:30, 10:00, AND 10:30 are removed (3 total, not 2). The 10:30 slot's buffered range overlaps the booking tail. Plans consuming computeSlots should expect aggressive buffering.
 - **`computeSlots()` pure function contract** (Plan 04-02) — NO `new Date()` inside; `now` MUST be injected via `SlotInput.now`. Caller (Plan 04-06 route handler) pre-fetches all data. Step size = `durationMinutes` (no separate step param). Daily cap: caller MUST filter cancelled bookings before passing `bookings` array. Returns sorted `Slot[]`; empty for blocked/cap-reached/no-rules days (no `cap_reached` flag).
+- **Admin client for /api/slots (public endpoint)** (Plan 04-06) — `/api/slots` is hit by unauthenticated Phase 5 booking-page visitors; RLS-scoped client silently returns 0 rows for anon callers. `createAdminClient()` (service-role) used. Safety: reads scoped to resolved `account_id`; no writes; inputs validated by UUID + date regex before any query; `import "server-only"` gates client-bundle inclusion.
+- **Bookings range padded ±1 UTC day** (Plan 04-06) — `from`/`to` are local YYYY-MM-DD dates. A booking at Chicago local 11pm has a later UTC timestamp. Bookings query uses `${from}T00:00:00.000Z .. ${to}T23:59:59.999Z`; engine filters precisely by local-date in account TZ.
+- **server-only Vitest alias** (Plan 04-06) — `lib/supabase/admin.ts` has `import "server-only"` which throws in Vitest node env. Added `resolve.alias["server-only"]` in `vitest.config.ts` pointing to `tests/__mocks__/server-only.ts` (no-op export). Required for any future route handler integration test. Use `path.resolve(__dirname, ...)` not `new URL(...).pathname` on Windows (spaces encode as `%20` and break resolution).
+- **Direct NextRequest for route handler tests** (Plan 04-06) — `NextRequest` from `next/server` constructs correctly in Vitest node environment. Tests construct `new NextRequest(url)` directly (not casting plain `Request`). This is the pattern for all future `app/api/*/route.ts` integration tests.
+- **Plain useState per weekday row (no RHF)** (Plan 04-04) — WeekdayRow holds only a `TimeWindow[]` array. RHF overhead not justified for 7 identical uniform sub-forms. Phase 3 used RHF for 8+ heterogeneous fields — different case.
+- **Mon-first display order in weekly editor** (Plan 04-04) — `WeeklyRulesEditor` renders `[1,2,3,4,5,6,0]` (Mon→Sat→Sun). Standard UX (Calendly, Google Calendar). Postgres `day_of_week = 0..6 = Sun..Sat` preserved in data layer.
+- **TimeWindowPicker exports minutesToHHMM + hhmmToMinutes** (Plan 04-04) — Named exports so Plan 04-05 can import them for date-overrides custom_hours modal. Path: `app/(shell)/app/availability/_components/time-window-picker.tsx`.
+- **PLAN-04-05-REPLACE-START/END comment markers in page.tsx** (Plan 04-04) — Date-overrides section fenced with markers for Plan 04-05 patch. Contract: (1) create `_components/date-overrides-section.tsx`, (2) uncomment import line, (3) replace placeholder paragraph with `<DateOverridesSection overrides={state.overrides} />`.
+- **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
+- **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
 
 ### Carried Concerns / Todos
 
@@ -133,14 +143,17 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 4 Plans 02 + 03 both complete. Slot engine + 15 AVAIL-09 DST tests (02) and _lib/ data layer (03) both pushed.
+**Last session:** 2026-04-25 — Phase 4 Plans 04-04 (weekly editor + settings panel) + 04-06 (/api/slots) both complete.
 
-**Next action:** Phase 4 Plans 04-04 (weekly editor + settings panel) and 04-05 (overrides UI) — Wave 3. Slot engine + data layer both ready.
+**Next action:** Phase 4 Plan 04-05 (date overrides UI) — final Wave 3 plan. Imports TimeWindowPicker from 04-04. page.tsx PLAN-04-05-REPLACE-START/END markers ready.
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
 - ✅ Plan 04-02 (slot engine + computeSlots + AVAIL-09 DST tests) — complete, pushed (2026-04-25)
 - ✅ Plan 04-03 (data layer + server actions) — complete, pushed (2026-04-25)
+- ✅ Plan 04-04 (weekly editor + settings panel UI) — complete, pushed (2026-04-25)
+- ⬜ Plan 04-05 (date overrides UI: calendar + list + modal) — next
+- ✅ Plan 04-06 (/api/slots GET handler) — complete, pushed (2026-04-25, Wave 3 parallel)
 
 **Phase 3 plan status (final):**
 - ✅ Plan 03-01 (schema migration: deleted_at + partial unique index) — complete, pushed
