@@ -25,12 +25,12 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Event Types
 
-- [ ] **EVENT-01**: Owner can create an event type with a name, URL slug, duration (minutes), and description
-- [ ] **EVENT-02**: Owner can edit any existing event type
-- [ ] **EVENT-03**: Owner can delete an event type (soft-delete preserves historical bookings)
-- [ ] **EVENT-04**: Owner can toggle an event type active/inactive (inactive types are hidden from booking pages)
-- [ ] **EVENT-05**: Owner can define custom questions per event type (label, type, required flag) that appear on the booker form
-- [ ] **EVENT-06**: Event type URL slug is unique per account and validated
+- [x] **EVENT-01**: Owner can create an event type with a name, URL slug, duration (minutes), and description
+- [x] **EVENT-02**: Owner can edit any existing event type
+- [x] **EVENT-03**: Owner can delete an event type (soft-delete preserves historical bookings)
+- [x] **EVENT-04**: Owner can toggle an event type active/inactive (inactive types are hidden from booking pages)
+- [x] **EVENT-05**: Owner can define custom questions per event type (label, type, required flag) that appear on the booker form
+- [x] **EVENT-06**: Event type URL slug is unique per account and validated
 
 ### Availability
 
@@ -193,12 +193,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AUTH-02 | Phase 2 | Complete |
 | AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Complete |
-| EVENT-01 | Phase 3 | Pending |
-| EVENT-02 | Phase 3 | Pending |
-| EVENT-03 | Phase 3 | Pending |
-| EVENT-04 | Phase 3 | Pending |
-| EVENT-05 | Phase 3 | Pending |
-| EVENT-06 | Phase 3 | Pending |
+| EVENT-01 | Phase 3 | Complete |
+| EVENT-02 | Phase 3 | Complete |
+| EVENT-03 | Phase 3 | Complete |
+| EVENT-04 | Phase 3 | Complete |
+| EVENT-05 | Phase 3 | Complete |
+| EVENT-06 | Phase 3 | Complete |
 | AVAIL-01 | Phase 4 | Pending |
 | AVAIL-02 | Phase 4 | Pending |
 | AVAIL-03 | Phase 4 | Pending |

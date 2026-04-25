@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Plans 03-04 and 03-05 complete)
+**Last updated:** 2026-04-24 (Phase 3 verifier passed 20/20)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 3 in progress (Wave 3 plans 03-04 and 03-05 complete; Phase 3 pending Phase 9 manual QA).
+**Current focus:** Phase 3 complete ✓ (verifier passed 20/20 must-haves). Ready for Phase 4 (Availability Engine).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,17 +14,17 @@
 
 ## Current Position
 
-**Phase:** 3 — Event Types CRUD (in progress — all 5 plans complete; pending Phase 9 manual QA)
-**Plan:** 03-05 complete (03-04 completed in parallel Wave 3)
-**Status:** Plans 03-01 through 03-05 complete and pushed.
-**Last activity:** 2026-04-25 — Plan 03-05 executed: create/edit route shells, URL preview, QuestionList sub-form, EventTypeForm component
-**Progress:** [██░░░░░░░] 2 / 9 phases complete (Phase 3 all plans done; Phase 4 next)
+**Phase:** 3 complete; 4 up next
+**Plan:** —
+**Status:** Phase 3 verified + closed out (20/20 must-haves passed). Phase 4 needs `/gsd:research-phase` (date-fns/tz v4 + slot algorithm).
+**Last activity:** 2026-04-24 — Phase 3 verifier passed; ROADMAP + REQUIREMENTS updated
+**Progress:** [███░░░░░░] 3 / 9 phases complete
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
-Phase 3  [ ] Event Types CRUD                        ← next
-Phase 4  [ ] Availability Engine
+Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
+Phase 4  [ ] Availability Engine                     ← next
 Phase 5  [ ] Public Booking Flow + Email + .ics
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
@@ -36,10 +36,10 @@ Phase 9  [ ] Manual QA & Verification
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 2 / 9 |
-| Phases complete | 2 / 9 |
+| Phases planned | 3 / 9 |
+| Phases complete | 3 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 11 / 73 (FOUND-01..06; AUTH-01..04; DASH-01) |
+| Requirements complete | 17 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06) |
 
 ## Accumulated Context
 
@@ -119,16 +119,27 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Plan 03-05 executed. Create/edit route shells, URL preview, QuestionList (useFieldArray + reorder + inline single-select options), EventTypeForm (RHF + zodResolver + slug auto-fill + edit warning + atomic direct-call action submit). npm run build exits 0. All 17 Vitest tests still green. Pushed to main.
+**Last session:** 2026-04-24 — Phase 3 closed out. Verifier passed 20/20 must-haves on first run. ROADMAP, STATE, REQUIREMENTS updated. EVENT-01..06 marked Complete (17/73 requirements done).
 
-**Next action:** Phase 3 is complete (all 5 plans done). Phase 4 (Availability Engine) needs `/gsd:research-phase` before planning.
+**Next action:** Phase 4 (Availability Engine) is next. Needs `/gsd:research-phase 4` first (date-fns/tz v4 + slot algorithm — biggest bug-hotspot research in the project per ROADMAP). Phase 4 can run in parallel with no other phase since Phase 3 was its only sibling-eligible peer.
 
-**Phase 3 plan status:**
-- ✅ Plan 03-01 (schema migration) — complete, pushed (1 commit + docs)
-- ✅ Plan 03-02 (shadcn primitives + Sonner Toaster) — complete, pushed (2 commits + docs)
-- ✅ Plan 03-03 (slugify + Zod schemas + 5 Server Actions) — complete, pushed (3 commits + docs)
-- ✅ Plan 03-04 (list page + table + dialogs) — complete, pushed (Wave 3 parallel)
-- ✅ Plan 03-05 (create/edit form pages + QuestionList + URL preview) — complete, pushed (Wave 3 parallel)
+**Phase 3 plan status (final):**
+- ✅ Plan 03-01 (schema migration: deleted_at + partial unique index) — complete, pushed
+- ✅ Plan 03-02 (9 shadcn primitives + Sonner Toaster mounted at root) — complete, pushed
+- ✅ Plan 03-03 (slugify + Zod schemas + 5 Server Actions with race-defense) — complete, pushed
+- ✅ Plan 03-04 (list page + table + kebab + 2-tier delete + restore-collision dialogs) — complete, pushed (Wave 3 parallel)
+- ✅ Plan 03-05 (create/edit routes + form + custom-questions sub-form + URL preview) — complete, pushed (Wave 3 parallel)
+- ✅ Phase verifier (2026-04-24) — 20/20 must-haves passed, no gaps; 5 advisory human-test items for Phase 9 manual QA
+
+**Phase 3 key decisions (folded into history):**
+- **Direct-call action contract** — Wave-3 form calls `await createEventTypeAction(values)` from RHF `onSubmit` (NOT via `<form action>`); avoids FormData-can't-serialize-nested-arrays pitfall for `custom_questions`. Tradeoff: loses progressive enhancement (acceptable for owner-only dashboard).
+- **Partial unique index over plain unique constraint** — `event_types_account_id_slug_active WHERE deleted_at IS NULL` replaces the old `unique(account_id, slug)`. Load-bearing for restore-with-slug-reuse UX. Pattern reusable for any future soft-deleted entity with a per-tenant slug.
+- **Lazy booking count fetch in delete dialog** — fetched after dialog mounts (with `useEffect` cancellation flag), not in list query. Avoids blocking kebab-open and complicating list SELECT. `{ count: "exact", head: true }` filtered to non-cancelled bookings.
+- **NEXT_REDIRECT re-throw in form's catch** — direct-call actions still hit `redirect()` on success which throws NEXT_REDIRECT; the form's catch checks `digest.startsWith("NEXT_REDIRECT")` and re-throws so Next handles it. Pattern to reuse in any direct-call form.
+- **shadcn@4.4 uses radix-ui monorepo** — single `radix-ui@^1.4.3` package (NOT individual `@radix-ui/react-*`). Future verification scripts should grep for `radix-ui`, not `@radix-ui/react-dropdown-menu` etc.
+- **Sonner mounted at root layout, not shell** — `<Toaster />` lives in `app/layout.tsx` so toasts work even on routes outside the shell (login). Shell layout has none (would double-mount).
+- **Zod v4 + RHF resolver v5 friction** — `zodResolver(eventTypeSchema) as any` cast in EventTypeForm because `z.coerce` fields have `unknown` input types that conflict with `useForm<EventTypeInput>`. Type-only workaround; no runtime impact. Revisit when @hookform/resolvers ships proper Zod v4 input-type support.
+- **CTE caveat for migration smoke tests** — Postgres CTEs run concurrently within a single statement, so `WITH archived AS (UPDATE ...) INSERT ...` does not see the UPDATE. Use sequential statements (UPDATE; INSERT;) for migration smokes that depend on order.
 
 **Phase 2 plan status (final):**
 - ✅ Plan 02-01 (login + auth actions) — complete, pushed (4 commits)
@@ -144,7 +155,8 @@ None.
 - `.planning/research/` — domain-level research (STACK/FEATURES/ARCHITECTURE/PITFALLS/SUMMARY)
 - `.planning/phases/01-foundation/` — Phase 1 CONTEXT, RESEARCH, 3 PLANs, 3 SUMMARYs, VERIFICATION
 - `.planning/phases/02-owner-auth-and-dashboard-shell/` — CONTEXT, RESEARCH, 4 PLANs, 4 SUMMARYs, VERIFICATION
+- `.planning/phases/03-event-types-crud/` — CONTEXT, RESEARCH, 5 PLANs, 5 SUMMARYs, VERIFICATION
 - `.planning/config.json` — depth, mode, parallelization, model profile (balanced), workflow toggles (all 3 on)
 
 ---
-*State updated: 2026-04-25 after Plan 03-05 complete (Wave 3)*
+*State updated: 2026-04-24 after Phase 3 close-out (verifier 20/20)*
