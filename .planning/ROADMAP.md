@@ -92,6 +92,15 @@ Plans:
 
 **Research flag:** None. Can run in parallel with Phase 4 after Phase 2 lands.
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 03-PLAN-01-schema-migration.md — Add deleted_at column + replace unique(account_id, slug) with partial unique index where deleted_at IS NULL (EVENT-03, EVENT-06 enabling)
+- [ ] 03-PLAN-02-shadcn-and-toaster.md — Install 9 shadcn primitives (table, dropdown-menu, alert-dialog, switch, badge, select, textarea, sonner, dialog) + mount Sonner Toaster in root layout
+- [ ] 03-PLAN-03-schemas-and-server-actions.md — slugify utility + Zod schemas (event type + custom questions discriminated union) + all 5 Server Actions (create, update, soft-delete, restore-with-collision, toggle-active) (EVENT-01..06)
+- [ ] 03-PLAN-04-list-page-and-row-actions.md — List page (table + status badges + show-archived toggle + empty state + loading skeleton) + kebab row actions + delete-confirm dialog (two-tier) + restore-collision dialog (EVENT-03, EVENT-04)
+- [ ] 03-PLAN-05-create-edit-form-and-questions.md — /new + /[id]/edit routes + EventTypeForm (RHF + slug auto-fill + URL preview + edit warning) + custom questions sub-form (useFieldArray + reorder + inline single-select options) (EVENT-01, EVENT-02, EVENT-05)
+
 ---
 
 ### Phase 4: Availability Engine
