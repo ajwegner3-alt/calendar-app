@@ -22,6 +22,7 @@ export default async function DashboardHome() {
   //   data.filter(r => r.current_owner_account_ids).length === 0
   // Do NOT ship the console.log — it's transient, removed in the same commit.
   const { data, error } = await supabase.rpc("current_owner_account_ids");
+  console.log("[RPC shape]", data); // transient — removed after Plan 04 Task 3 smoke
 
   if (error) {
     // Infrastructure failure — surface rather than silently hide.
