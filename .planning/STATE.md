@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 4 Plan 05 complete — date overrides UI: calendar + list + modal)
+**Last updated:** 2026-04-25 (Phase 5 Plan 01 complete — accounts.owner_email migration + nsi seed)
 
 ## Project Reference
 
@@ -14,18 +14,18 @@
 
 ## Current Position
 
-**Phase:** 4 complete — Phase 5 next (Public Booking Flow + Email + .ics)
-**Plan:** All 6 plans complete (04-01 through 04-06)
-**Status:** Phase 4 fully complete. All 45 tests passing. Phase 5 needs research phase first.
-**Last activity:** 2026-04-25 — Completed 04-05-PLAN (date overrides UI: calendar + list + modal; 45/45 tests passing)
-**Progress:** [████░░░░░] 4 / 9 phases complete
+**Phase:** 5 (Public Booking Flow + Email + .ics) — in progress
+**Plan:** 1 of 6 complete (05-01)
+**Status:** Phase 5 in progress. Plan 05-01 (migration) complete; accounts.owner_email live on mogfnutxrrbtvnaupoun.
+**Last activity:** 2026-04-25 — Completed 05-01-PLAN (accounts.owner_email migration + seed nsi; dcbe764)
+**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 in progress)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
-Phase 5  [ ] Public Booking Flow + Email + .ics      ← next
+Phase 5  [~] Public Booking Flow + Email + .ics      ← in progress (05-01 done)
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -113,7 +113,9 @@ Phase 9  [ ] Manual QA & Verification
 - **PLAN-04-05-REPLACE-START/END comment markers in page.tsx** (Plan 04-04) — Date-overrides section fenced with markers for Plan 04-05 patch. Contract: (1) create `_components/date-overrides-section.tsx`, (2) uncomment import line, (3) replace placeholder paragraph with `<DateOverridesSection overrides={state.overrides} />`. DONE — markers replaced in Plan 04-05.
 - **Two-button mode toggle for Block/Custom-hours in OverrideModal** (Plan 04-05) — shadcn Tabs not installed. Two `<Button>` elements (variant="default" active, variant="outline" inactive) handle the 2-option Block/Custom-hours toggle without an extra dep (~80 LOC saved). Pattern reusable for any 2-option toggle that doesn't justify full Tab nav.
 - **Date input disabled in Edit mode (OverrideModal)** (Plan 04-05) — Changing the date in Edit mode would require tracking original date to delete it before inserting at new date. Forcing remove+add is simpler and explicit. The action's delete-all-for-date semantic assumes date is stable during an upsert.
-- **Calendar marker rendering uses local browser TZ for Date objects** (Plan 04-05) — shadcn Calendar (react-day-picker v9) requires JavaScript `Date` objects for modifiers prop. Override dates are YYYY-MM-DD in account-local TZ. Using `new Date(y, m-1, d)` (browser-local midnight) is an acceptable simplification — visual markers only; the string identity passed to the action is always correct. Threading account.timezone to this component would be over-engineering.
+- **Calendar marker rendering uses local browser TZ for Date objects** (Plan 04-05)
+- **`accounts.owner_email` denormalized (not joined from auth.users)** (Plan 05-01) — nullable TEXT column on accounts; simpler for admin-client public route handlers (`/api/bookings` has no auth session); survives auth provider migrations. nsi seeded with `ajwegner3@gmail.com`. Plain `text` (not `citext`) — no lookup or uniqueness need. Downstream code MUST handle null gracefully (skip owner notification, omit .ics ORGANIZER).
+- **`supabase db query --linked` link confirmed working** (Plan 05-01) — `supabase link --project-ref mogfnutxrrbtvnaupoun` was already established; STATE.md concern resolved. CLI fallback is viable for future migrations without needing MCP. — shadcn Calendar (react-day-picker v9) requires JavaScript `Date` objects for modifiers prop. Override dates are YYYY-MM-DD in account-local TZ. Using `new Date(y, m-1, d)` (browser-local midnight) is an acceptable simplification — visual markers only; the string identity passed to the action is always correct. Threading account.timezone to this component would be over-engineering.
 - **OverridesList groups DateOverrideRow[] by override_date** (Plan 04-05) — Multiple window rows for one date (custom_hours) are consolidated into a single Card with comma-separated window strings. `groupOverrides()` utility function sorts dates ascending and sorts each group's windows by start_minute.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
@@ -121,7 +123,7 @@ Phase 9  [ ] Manual QA & Verification
 ### Carried Concerns / Todos
 
 - **Tidy up legacy JWT `SUPABASE_SERVICE_ROLE_KEY`** — swap for `sb_secret_*` format in `.env.local` + Vercel env UI before any security-sensitive phase (target: Phase 8 hardening).
-- **`supabase link` not completed locally.** Any future `npx supabase <cmd> --linked` will need `supabase link --project-ref mogfnutxrrbtvnaupoun` + DB password. MCP handles remote-apply case.
+- **`supabase link` confirmed working** (Plan 05-01 resolved) — `supabase db query --linked -f` succeeded cleanly. Link already established; no action needed for future CLI-apply migrations.
 - **Pre-existing `contact_submissions` table** (11 rows, unrelated) coexists in `public` schema on the Calendar Supabase project. No impact on booking app. Andrew can drop it from the dashboard anytime.
 - Phase 4 needs `/gsd:research-phase` (date-fns/tz v4 + slot algorithm).
 - Phase 5 needs `/gsd:research-phase` (.ics across clients + `@nsi/email-sender` attachment API).
@@ -147,9 +149,17 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 4 Plan 04-05 complete. Date overrides UI (calendar + list + modal); 45/45 tests passing; pushed to main. Phase 4 now fully complete.
+**Last session:** 2026-04-25 — Phase 5 Plan 05-01 complete. accounts.owner_email migration applied live; nsi.owner_email = ajwegner3@gmail.com confirmed; pushed to main (dcbe764).
 
-**Next action:** Phase 5 (Public Booking Flow + Email + .ics) — needs `/gsd:research-phase` first (per STATE.md carried concerns: .ics across clients + `@nsi/email-sender` attachment API). Also confirm `@nsi/email-sender` attachment signature before Phase 5 plan.
+**Next action:** Phase 5 Plan 05-02 (public booking page UI) — accounts.owner_email now populated; downstream plans can proceed.
+
+**Phase 5 plan status:**
+- ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
+- [ ] Plan 05-02 (public booking page UI)
+- [ ] Plan 05-03 (booking form + Zod + Turnstile)
+- [ ] Plan 05-04 (POST /api/bookings route handler)
+- [ ] Plan 05-05 (confirmation email + .ics attachment)
+- [ ] Plan 05-06 (confirmation screen)
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
