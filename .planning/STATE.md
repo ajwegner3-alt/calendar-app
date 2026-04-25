@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 4 Plan 06 complete — /api/slots route handler + integration test)
+**Last updated:** 2026-04-25 (Phase 4 Plan 05 complete — date overrides UI: calendar + list + modal)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 4 (Availability Engine) in progress — Plans 01 + 02 + 03 + 04 + 06 complete. Plan 04-05 (overrides UI) remaining for Wave 3.
+**Current focus:** Phase 4 (Availability Engine) COMPLETE — all 6 plans done. Ready for Phase 5 (Public Booking Flow).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,18 +14,18 @@
 
 ## Current Position
 
-**Phase:** 4 in progress (Availability Engine)
-**Plan:** 06 of N complete (04-06 /api/slots GET handler + 13-test integration suite; Wave 3a all done)
-**Status:** Plans 04-01, 04-02, 04-03, 04-04, 04-06 complete. Plan 04-05 (date overrides UI) remaining.
-**Last activity:** 2026-04-25 — Completed 04-06-PLAN (/api/slots route + integration test; 45/45 tests passing)
-**Progress:** [███░░░░░░] 3 / 9 phases complete (Phase 4 in progress)
+**Phase:** 4 complete — Phase 5 next (Public Booking Flow + Email + .ics)
+**Plan:** All 6 plans complete (04-01 through 04-06)
+**Status:** Phase 4 fully complete. All 45 tests passing. Phase 5 needs research phase first.
+**Last activity:** 2026-04-25 — Completed 04-05-PLAN (date overrides UI: calendar + list + modal; 45/45 tests passing)
+**Progress:** [████░░░░░] 4 / 9 phases complete
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
 Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
-Phase 4  [ ] Availability Engine                     ← next
-Phase 5  [ ] Public Booking Flow + Email + .ics
+Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
+Phase 5  [ ] Public Booking Flow + Email + .ics      ← next
 Phase 6  [ ] Cancel + Reschedule Lifecycle
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
@@ -110,7 +110,11 @@ Phase 9  [ ] Manual QA & Verification
 - **Plain useState per weekday row (no RHF)** (Plan 04-04) — WeekdayRow holds only a `TimeWindow[]` array. RHF overhead not justified for 7 identical uniform sub-forms. Phase 3 used RHF for 8+ heterogeneous fields — different case.
 - **Mon-first display order in weekly editor** (Plan 04-04) — `WeeklyRulesEditor` renders `[1,2,3,4,5,6,0]` (Mon→Sat→Sun). Standard UX (Calendly, Google Calendar). Postgres `day_of_week = 0..6 = Sun..Sat` preserved in data layer.
 - **TimeWindowPicker exports minutesToHHMM + hhmmToMinutes** (Plan 04-04) — Named exports so Plan 04-05 can import them for date-overrides custom_hours modal. Path: `app/(shell)/app/availability/_components/time-window-picker.tsx`.
-- **PLAN-04-05-REPLACE-START/END comment markers in page.tsx** (Plan 04-04) — Date-overrides section fenced with markers for Plan 04-05 patch. Contract: (1) create `_components/date-overrides-section.tsx`, (2) uncomment import line, (3) replace placeholder paragraph with `<DateOverridesSection overrides={state.overrides} />`.
+- **PLAN-04-05-REPLACE-START/END comment markers in page.tsx** (Plan 04-04) — Date-overrides section fenced with markers for Plan 04-05 patch. Contract: (1) create `_components/date-overrides-section.tsx`, (2) uncomment import line, (3) replace placeholder paragraph with `<DateOverridesSection overrides={state.overrides} />`. DONE — markers replaced in Plan 04-05.
+- **Two-button mode toggle for Block/Custom-hours in OverrideModal** (Plan 04-05) — shadcn Tabs not installed. Two `<Button>` elements (variant="default" active, variant="outline" inactive) handle the 2-option Block/Custom-hours toggle without an extra dep (~80 LOC saved). Pattern reusable for any 2-option toggle that doesn't justify full Tab nav.
+- **Date input disabled in Edit mode (OverrideModal)** (Plan 04-05) — Changing the date in Edit mode would require tracking original date to delete it before inserting at new date. Forcing remove+add is simpler and explicit. The action's delete-all-for-date semantic assumes date is stable during an upsert.
+- **Calendar marker rendering uses local browser TZ for Date objects** (Plan 04-05) — shadcn Calendar (react-day-picker v9) requires JavaScript `Date` objects for modifiers prop. Override dates are YYYY-MM-DD in account-local TZ. Using `new Date(y, m-1, d)` (browser-local midnight) is an acceptable simplification — visual markers only; the string identity passed to the action is always correct. Threading account.timezone to this component would be over-engineering.
+- **OverridesList groups DateOverrideRow[] by override_date** (Plan 04-05) — Multiple window rows for one date (custom_hours) are consolidated into a single Card with comma-separated window strings. `groupOverrides()` utility function sorts dates ascending and sorts each group's windows by start_minute.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
 
@@ -143,16 +147,16 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 4 Plans 04-04 + 04-06 both complete. /api/slots GET handler + 13-test integration suite (server-only alias fix); 45/45 tests passing; pushed to main.
+**Last session:** 2026-04-25 — Phase 4 Plan 04-05 complete. Date overrides UI (calendar + list + modal); 45/45 tests passing; pushed to main. Phase 4 now fully complete.
 
-**Next action:** Phase 4 Plan 04-05 (date overrides UI) — final Wave 3 plan. Imports TimeWindowPicker from 04-04. page.tsx PLAN-04-05-REPLACE-START/END markers ready. /api/slots is live on Vercel and ready for Phase 5 consumption.
+**Next action:** Phase 5 (Public Booking Flow + Email + .ics) — needs `/gsd:research-phase` first (per STATE.md carried concerns: .ics across clients + `@nsi/email-sender` attachment API). Also confirm `@nsi/email-sender` attachment signature before Phase 5 plan.
 
 **Phase 4 plan status:**
 - ✅ Plan 04-01 (deps + accounts migration) — complete, pushed (2026-04-25)
 - ✅ Plan 04-02 (slot engine + computeSlots + AVAIL-09 DST tests) — complete, pushed (2026-04-25)
 - ✅ Plan 04-03 (data layer + server actions) — complete, pushed (2026-04-25)
 - ✅ Plan 04-04 (weekly editor + settings panel UI) — complete, pushed (2026-04-25)
-- ⬜ Plan 04-05 (date overrides UI: calendar + list + modal) — next
+- ✅ Plan 04-05 (date overrides UI: calendar + list + modal) — complete, pushed (2026-04-25)
 - ✅ Plan 04-06 (/api/slots GET handler + 13-test integration suite) — complete, pushed (2026-04-25, Wave 3 parallel)
 
 **Phase 3 plan status (final):**
