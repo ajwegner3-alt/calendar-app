@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-24
+**Last updated:** 2026-04-25
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 2 complete ✓ (verifier passed 19/19 must-haves). Ready for Phase 3 (Event Types CRUD).
+**Current focus:** Phase 3 in progress (Wave 1 plans executing in parallel).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 2 complete; 3 up next
-**Plan:** —
-**Status:** Phase 2 verified + closed out (19/19 must-haves passed). Run `/gsd:discuss-phase 3` next.
-**Last activity:** 2026-04-24 — Phase 2 verifier passed; ROADMAP + REQUIREMENTS updated
-**Progress:** [██░░░░░░░] 2 / 9 phases complete
+**Phase:** 3 — Event Types CRUD (in progress)
+**Plan:** 03-01 complete; 03-02+ executing in parallel (Wave 1)
+**Status:** Plan 03-01 (schema migration) complete and verified.
+**Last activity:** 2026-04-25 — Plan 03-01 executed: deleted_at column + partial index applied to live Supabase project
+**Progress:** [██░░░░░░░] 2 / 9 phases complete (Phase 3 in progress)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -68,6 +68,11 @@ Phase 9  [ ] Manual QA & Verification
 - **Dashboard nav icon set** (Plan 02-02) — Lucide `CalendarDays` / `Clock` / `Palette` / `Inbox` / `LogOut` in the sidebar; `Inbox` for Bookings deviates from RESEARCH §3c's `List` example (stylistic choice, no functional impact).
 - **TooltipProvider wraps SidebarProvider** (Plan 02-04 fix) — shadcn version installed in Plan 02-01 does NOT bundle `TooltipProvider` inside `SidebarProvider`. Shell layout (`app/(shell)/layout.tsx`) wraps `<SidebarProvider>` with `<TooltipProvider delayDuration={0}>`. Discovered during Plan 02-04 Task 3 smoke ("Tooltip must be used within TooltipProvider" runtime crash). Future shadcn upgrades may re-internalize TooltipProvider; if so, the wrapper becomes redundant but not harmful.
 - **RPC shape for `current_owner_account_ids()`** (Plan 02-04 evidence) — function returns `SETOF uuid` (verified via `pg_get_function_result`). supabase-js returns this as flat array of UUID strings (`['uuid', ...]`), NOT wrapped objects. Existing length check `Array.isArray(data) ? data.length : 0` is correct. Closes RESEARCH Open Question #1; reuse pattern in Phase 3 event-types CRUD.
+- **Soft-delete via `deleted_at timestamptz` on event_types** (Plan 03-01) — null = active, timestamptz = archived. No boolean flag. Filter active rows with `.is('deleted_at', null)` in supabase-js. Archive writes `deleted_at = now()`.
+- **Partial unique index replaces full constraint on event_types** (Plan 03-01) — `event_types_account_id_slug_active ON event_types(account_id, slug) WHERE deleted_at IS NULL` replaces the dropped `event_types_account_id_slug_key`. Slug becomes reusable after archive; DB enforces uniqueness among active rows only.
+- **Postgres CTEs run concurrently** (Plan 03-01 smoke test) — Within a single CTE query, all data-modifying CTEs see the same snapshot; an UPDATE in one CTE branch is not visible to an INSERT in another branch of the same query. Smoke tests requiring INSERT → UPDATE → INSERT must be sequential statements, not a single CTE.
+- **`supabase db query --linked` as MCP fallback** (Plan 03-01) — When Supabase MCP `apply_migration`/`execute_sql` tools are not in scope (Claude Code CLI sessions), use `supabase db query --linked -f <migration.sql>`. Requires `supabase link --project-ref mogfnutxrrbtvnaupoun` first. Same Management API path; fully equivalent.
+- **TEST_OWNER_PASSWORD dotenv quoting** (Plan 03-01 bug fix) — Fixed `#plaNNing4succ3ss!` → `"#plaNNing4succ3ss!"` in `.env.local`. dotenvx treats unquoted `#` as comment character. Value starting with `#` MUST be double-quoted. Updated locally (.env.local gitignored). Andrew must apply same fix to any other environments.
 
 ### Carried Concerns / Todos
 
@@ -82,7 +87,7 @@ Phase 9  [ ] Manual QA & Verification
 - **Phase 8 backlog: render-test harness** — Vitest + React Testing Library coverage for shell layout. The TooltipProvider regression in Plan 02-04 would have been caught at CI instead of user smoke. Add a render test that mounts `ShellLayout` and asserts no missing context providers.
 - **Phase 8 backlog: ESLint flat-config migration** — pre-existing circular-JSON error in `npm run lint` carries forward from Phase 1. Doesn't block phases 2-7 builds, but blocks lint hygiene.
 - **v2 backlog: `/auth/callback` route** — Supabase recovery / magic-link flows currently 404. Blocks password reset for end users; deferred to v2.
-- **dotenv quoting trap** — leading-`#` values silently parse as empty strings. Plan 02-04 Task 2 tripped over this. Future plans involving env values should add to failure-mode tables.
+- **dotenv quoting trap** — leading-`#` values silently parse as empty strings. Plan 02-04 Task 2 and Plan 03-01 Task 2 both tripped over this. Fixed locally in `.env.local` (TEST_OWNER_PASSWORD now quoted). Any env value starting with `#` MUST be double-quoted. Future plans involving env values should add to failure-mode tables.
 
 ### Live Resources
 
@@ -98,9 +103,15 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-24 — Plan 02-04 executed across two checkpoints. Andrew provisioned auth user via Supabase Dashboard (recreated once after first attempt was passwordless). Orchestrator MCP-linked the new UUID and fixed `email_confirmed_at` via SQL. Plan 02-04 Task 3 smoke surfaced a runtime bug — shadcn `SidebarMenuButton` requires a `TooltipProvider` ancestor that the installed sidebar primitive does NOT bundle. Fixed in `app/(shell)/layout.tsx`. RPC shape evidence captured via Postgres introspection + empirical /app redirect path.
+**Last session:** 2026-04-25 — Plan 03-01 executed. Schema migration applied to live Supabase project. deleted_at column + partial unique index verified via Postgres introspection. Slug-reuse smoke test passed (sequential statements). All 17 Vitest tests pass after fixing dotenv # quoting bug in .env.local.
 
-**Next action:** Run `/gsd:discuss-phase 3` to gather implementation context for Event Types CRUD before planning.
+**Next action:** Plans 03-02 through 03-04 executing in Wave 1 (parallel).
+
+**Phase 3 plan status:**
+- ✅ Plan 03-01 (schema migration) — complete, pushed (1 commit + docs)
+- [ ] Plan 03-02 (server actions) — in progress / Wave 1
+- [ ] Plan 03-03 (list + detail UI) — in progress / Wave 1
+- [ ] Plan 03-04 (archive + restore UI) — Wave 1
 
 **Phase 2 plan status (final):**
 - ✅ Plan 02-01 (login + auth actions) — complete, pushed (4 commits)
