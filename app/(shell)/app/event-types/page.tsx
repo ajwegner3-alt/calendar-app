@@ -6,6 +6,9 @@ import { EventTypesTable } from "./_components/event-types-table";
 import { EmptyState } from "./_components/empty-state";
 import { ShowArchivedToggle } from "./_components/show-archived-toggle";
 
+// Fallback matches Plan 07-05 lock: production Vercel URL as last resort.
+const DEFAULT_APP_URL = "https://calendar-app-xi-smoky.vercel.app";
+
 // Next.js 16: searchParams is a Promise — must be awaited (RESEARCH Pitfall 4).
 export default async function EventTypesPage({
   searchParams,
@@ -15,7 +18,24 @@ export default async function EventTypesPage({
   const { archived } = await searchParams;
   const showArchived = archived === "true";
 
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || DEFAULT_APP_URL;
+
   const supabase = await createClient();
+
+  // Resolve owner's account slug for embed snippets.
+  // Uses same RPC pattern as loadBrandingForOwner (Phase 7 lock).
+  const { data: accountIds } = await supabase.rpc("current_owner_account_ids");
+  const ids = Array.isArray(accountIds) ? accountIds : [];
+  let accountSlug = "nsi"; // safe fallback; replaced below if DB resolves
+  if (ids.length > 0) {
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("slug")
+      .eq("id", ids[0])
+      .maybeSingle();
+    if (account?.slug) accountSlug = account.slug;
+  }
 
   // Soft-delete filter — RESEARCH §"Soft-Delete Query Filter":
   //   .is("deleted_at", null) for IS NULL
@@ -60,7 +80,12 @@ export default async function EventTypesPage({
       {eventTypes.length === 0 ? (
         <EmptyState showArchived={showArchived} />
       ) : (
-        <EventTypesTable eventTypes={eventTypes} showArchived={showArchived} />
+        <EventTypesTable
+          eventTypes={eventTypes}
+          showArchived={showArchived}
+          accountSlug={accountSlug}
+          appUrl={appUrl}
+        />
       )}
     </div>
   );

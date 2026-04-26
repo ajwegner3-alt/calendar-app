@@ -19,23 +19,31 @@ import {
 } from "../_lib/actions";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { RestoreCollisionDialog } from "./restore-collision-dialog";
+import { EmbedCodeDialog } from "./embed-code-dialog";
 
 export function RowActionsMenu({
   id,
   name,
+  slug,
   isActive,
   isArchived,
+  accountSlug,
+  appUrl,
 }: {
   id: string;
   name: string;
+  slug: string;
   isActive: boolean;
   isArchived: boolean;
+  accountSlug: string;
+  appUrl: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [collisionOpen, setCollisionOpen] = useState(false);
   const [collisionSlug, setCollisionSlug] = useState<string | null>(null);
+  const [embedOpen, setEmbedOpen] = useState(false);
 
   async function handleToggle() {
     startTransition(async () => {
@@ -86,6 +94,14 @@ export function RowActionsMenu({
               <DropdownMenuItem onSelect={handleToggle}>
                 {isActive ? "Make inactive" : "Make active"}
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setEmbedOpen(true);
+                }}
+              >
+                Get embed code
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={(e) => {
@@ -119,6 +135,15 @@ export function RowActionsMenu({
           originalSlug={collisionSlug}
         />
       )}
+
+      <EmbedCodeDialog
+        open={embedOpen}
+        onOpenChange={setEmbedOpen}
+        appUrl={appUrl}
+        accountSlug={accountSlug}
+        eventSlug={slug}
+        eventName={name}
+      />
     </>
   );
 }

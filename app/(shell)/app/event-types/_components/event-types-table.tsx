@@ -15,9 +15,13 @@ import { RowActionsMenu } from "./row-actions-menu";
 export function EventTypesTable({
   eventTypes,
   showArchived,
+  accountSlug,
+  appUrl,
 }: {
   eventTypes: EventTypeListItem[];
   showArchived: boolean;
+  accountSlug: string;
+  appUrl: string;
 }) {
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -57,8 +61,11 @@ export function EventTypesTable({
                   <RowActionsMenu
                     id={et.id}
                     name={et.name}
+                    slug={et.slug}
                     isActive={et.is_active}
                     isArchived={!!et.deleted_at}
+                    accountSlug={accountSlug}
+                    appUrl={appUrl}
                   />
                 </TableCell>
               </TableRow>
