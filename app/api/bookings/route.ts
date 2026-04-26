@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 
   const { data: account, error: acctError } = await supabase
     .from("accounts")
-    .select("id, slug, name, timezone, owner_email")
+    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
     .eq("id", eventType.account_id)
     .single();
 
@@ -216,6 +216,8 @@ export async function POST(req: NextRequest) {
       timezone: account.timezone,
       owner_email: account.owner_email,
       slug: account.slug,
+      logo_url: account.logo_url ?? null,
+      brand_primary: account.brand_primary ?? null,
     },
     rawCancelToken: tokens.rawCancel,
     rawRescheduleToken: tokens.rawReschedule,
@@ -235,6 +237,8 @@ export async function POST(req: NextRequest) {
         name: account.name,
         timezone: account.timezone,
         owner_email: account.owner_email,
+        logo_url: account.logo_url ?? null,
+        brand_primary: account.brand_primary ?? null,
       },
     },
   });
