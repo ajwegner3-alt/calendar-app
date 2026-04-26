@@ -1,0 +1,231 @@
+import "server-only";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { generateBookingTokens } from "@/lib/bookings/tokens";
+import { sendRescheduleEmails } from "@/lib/email/send-reschedule-emails";
+
+export interface RescheduleBookingArgs {
+  /** UUID of the booking to reschedule. Caller (Plan 06-04 public route) hashes
+   *  the URL token and looks up by reschedule_token_hash BEFORE calling this. */
+  bookingId: string;
+  /** The CURRENT (pre-rotation) reschedule token hash — embedded in the UPDATE
+   *  WHERE clause as a CAS guard so concurrent requests using the same token
+   *  cannot both succeed (RESEARCH Pitfall 6). The caller already hashed the
+   *  URL token to look up the booking; pass that hash here. */
+  oldRescheduleHash: string;
+  /** New slot start (ISO UTC) — typically from the SlotPicker submission */
+  newStartAt: string;
+  /** New slot end (ISO UTC) — must equal newStartAt + duration_minutes */
+  newEndAt: string;
+  /** Caller-resolved app URL for cancel/reschedule links in the new email */
+  appUrl: string;
+  /** Optional client IP for the audit row */
+  ip?: string | null;
+}
+
+export type RescheduleBookingResult =
+  | {
+      ok: true;
+      booking: {
+        id: string;
+        account_id: string;
+        start_at: string;
+        end_at: string;
+        booker_name: string;
+        booker_email: string;
+        booker_timezone: string;
+      };
+    }
+  | {
+      ok: false;
+      /** 'not_active': CAS failed — token already rotated, booking already cancelled, or start_at passed.
+       *                Maps to friendly "no longer active" page.
+       *  'slot_taken': bookings_no_double_book partial unique index violation (23505) — RESEARCH Pitfall 5.
+       *                Maps to "that time was just booked, pick another" UX (mirror Phase 5 SLOT_TAKEN).
+       *  'bad_slot':   newStartAt is in the past, or newEndAt <= newStartAt — invariant violation BEFORE UPDATE.
+       *  'db_error':   unexpected DB error. */
+      reason: "not_active" | "slot_taken" | "bad_slot" | "db_error";
+      error?: string;
+    };
+
+/**
+ * Atomically reschedule a confirmed booking to a new slot, rotating both
+ * cancel + reschedule tokens (RESEARCH §Pattern 3).
+ *
+ * Single UPDATE:
+ *   - SET start_at, end_at, cancel_token_hash, reschedule_token_hash
+ *   - Status STAYS 'confirmed' (RESEARCH §Pattern 3 commentary: 'rescheduled'
+ *     enum value is for booking_events.event_type only; bookings.status remains
+ *     'confirmed' so the new tokens are valid)
+ *   - WHERE id=? AND status='confirmed' AND reschedule_token_hash=oldHash
+ *     AND start_at > now() — DOUBLE CAS guard (status + old token hash)
+ *
+ * Three failure modes:
+ *   - 0 rows matched (PGRST116) → 'not_active' (token already rotated/used)
+ *   - Postgres 23505 → 'slot_taken' (target slot is already booked)
+ *   - Other DB error → 'db_error'
+ *
+ * After successful UPDATE: fire-and-forget sendRescheduleEmails (BOTH parties)
+ * with the FRESH raw cancel + reschedule tokens + the OLD start/end (for the
+ * "Was → New" body), and a fire-and-forget booking_events audit row.
+ */
+export async function rescheduleBooking(
+  args: RescheduleBookingArgs,
+): Promise<RescheduleBookingResult> {
+  const { bookingId, oldRescheduleHash, newStartAt, newEndAt, appUrl, ip } =
+    args;
+
+  // ── 0. Invariant checks BEFORE UPDATE ──────────────────────────────────────
+  const newStartDate = new Date(newStartAt);
+  const newEndDate = new Date(newEndAt);
+  if (
+    Number.isNaN(newStartDate.getTime()) ||
+    Number.isNaN(newEndDate.getTime())
+  ) {
+    return { ok: false, reason: "bad_slot", error: "Invalid date format." };
+  }
+  if (newStartDate <= new Date()) {
+    return {
+      ok: false,
+      reason: "bad_slot",
+      error: "New slot must be in the future.",
+    };
+  }
+  if (newEndDate <= newStartDate) {
+    return {
+      ok: false,
+      reason: "bad_slot",
+      error: "End time must be after start time.",
+    };
+  }
+
+  const supabase = createAdminClient();
+
+  // ── 1. Pre-fetch booking + event_type + account for the email senders ──────
+  // (Same join pattern as cancel.ts — 1 round-trip.)
+  const { data: pre, error: preError } = await supabase
+    .from("bookings")
+    .select(
+      `id, account_id, event_type_id, start_at, end_at, booker_name, booker_email, booker_timezone,
+       event_types!inner(name, description, duration_minutes, slug),
+       accounts!inner(name, slug, timezone, owner_email)`,
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (preError) {
+    console.error("[reschedule] pre-fetch error:", preError);
+    return { ok: false, reason: "db_error", error: preError.message };
+  }
+  if (!pre) {
+    return { ok: false, reason: "not_active" };
+  }
+
+  // Capture OLD slot for the email body BEFORE the UPDATE rotates them away.
+  const oldStartAt = pre.start_at;
+  const oldEndAt = pre.end_at;
+
+  // ── 2. Generate fresh cancel + reschedule tokens for the new slot ──────────
+  const fresh = await generateBookingTokens();
+
+  // ── 3. Atomic reschedule UPDATE with double CAS guard ──────────────────────
+  const { data: updated, error: updateError } = await supabase
+    .from("bookings")
+    .update({
+      start_at: newStartAt,
+      end_at: newEndAt,
+      cancel_token_hash: fresh.hashCancel,
+      reschedule_token_hash: fresh.hashReschedule,
+      // status stays 'confirmed' — see RESEARCH §Pattern 3 commentary
+    })
+    .eq("id", bookingId)
+    .eq("status", "confirmed")
+    .eq("reschedule_token_hash", oldRescheduleHash) // CAS guard: only the original token holder wins (RESEARCH Pitfall 6)
+    .gt("start_at", new Date().toISOString())
+    .select("id, start_at, end_at")
+    .single();
+
+  if (updateError) {
+    if (updateError.code === "23505") {
+      // bookings_no_double_book fired — target slot is taken (RESEARCH Pitfall 5)
+      return { ok: false, reason: "slot_taken" };
+    }
+    if (updateError.code === "PGRST116") {
+      // 0 rows matched — CAS failed (token already rotated, booking already
+      // cancelled, or start_at passed during the call)
+      return { ok: false, reason: "not_active" };
+    }
+    console.error("[reschedule] update error:", updateError);
+    return { ok: false, reason: "db_error", error: updateError.message };
+  }
+  if (!updated) {
+    return { ok: false, reason: "not_active" };
+  }
+
+  // ── 4. Fire-and-forget reschedule emails ──────────────────────────────────
+  // supabase-js join shape varies by foreign key direction and PostgREST version;
+  // defensive normalization (Array.isArray ? [0] : ...) is the established pattern.
+  const eventType = Array.isArray(pre.event_types)
+    ? pre.event_types[0]
+    : pre.event_types;
+  const account = Array.isArray(pre.accounts)
+    ? pre.accounts[0]
+    : pre.accounts;
+
+  void sendRescheduleEmails({
+    booking: {
+      id: pre.id,
+      start_at: updated.start_at, // NEW start (post-rotation)
+      end_at: updated.end_at, // NEW end
+      booker_name: pre.booker_name,
+      booker_email: pre.booker_email,
+      booker_timezone: pre.booker_timezone,
+    },
+    eventType: {
+      name: eventType.name,
+      description: eventType.description ?? null,
+      duration_minutes: eventType.duration_minutes,
+    },
+    account: {
+      name: account.name,
+      slug: account.slug,
+      timezone: account.timezone,
+      owner_email: account.owner_email ?? null,
+    },
+    oldStartAt,
+    oldEndAt,
+    rawCancelToken: fresh.rawCancel,
+    rawRescheduleToken: fresh.rawReschedule,
+    appUrl,
+  });
+
+  // ── 5. Fire-and-forget audit row ──────────────────────────────────────────
+  void supabase
+    .from("booking_events")
+    .insert({
+      booking_id: pre.id,
+      account_id: pre.account_id,
+      event_type: "rescheduled",
+      actor: "booker", // public reschedule path is booker-initiated only in v1
+      metadata: {
+        old_start_at: oldStartAt,
+        new_start_at: updated.start_at,
+        ip: ip ?? null,
+      },
+    })
+    .then(({ error }) => {
+      if (error) console.error("[reschedule] audit insert error:", error);
+    });
+
+  return {
+    ok: true,
+    booking: {
+      id: pre.id,
+      account_id: pre.account_id,
+      start_at: updated.start_at,
+      end_at: updated.end_at,
+      booker_name: pre.booker_name,
+      booker_email: pre.booker_email,
+      booker_timezone: pre.booker_timezone,
+    },
+  };
+}
