@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 7 Plan 08 complete — public /[account] index route with card grid, brand-styled EventTypeCard, empty state, BrandedPage wrap; RESERVED_SLUGS guard; 80/80 tests green)
+**Last updated:** 2026-04-26 (Phase 7 Plan 07 paused at checkpoint — branding-blocks.ts created, all 4 email senders updated, all 3 callers widened; Task 4 human-verify checkpoint pending Andrew's email QA)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Plan 07-08 complete 2026-04-26. 80/80 tests green. Next: Plan 07-09 (embed snippet dialog).
+**Current focus:** Phase 7 (Widget + Branding) — Plan 07-07 paused at checkpoint 2026-04-26. 80/80 tests green. Tasks 1-3 complete; Task 4 is human-verify checkpoint awaiting Andrew's email inspection across all 6 email types.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,10 +15,10 @@
 ## Current Position
 
 **Phase:** 7 (Widget + Branding) — in progress
-**Plan:** 8 of 9 in Phase 7 complete (07-01 through 07-08 done 2026-04-26)
-**Status:** In progress
-**Last activity:** 2026-04-26 — Completed 07-08-account-index-route-PLAN.md
-**Progress:** [████████░] Phase 7 in progress (07-01 through 07-08 complete; 07-09 pending)
+**Plan:** 07-07 paused at checkpoint (Tasks 1-3 complete; Task 4 human-verify pending)
+**Status:** Checkpoint — awaiting human verification
+**Last activity:** 2026-04-26 — Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify
+**Progress:** [███████░░] Phase 7 in progress (07-01 through 07-08 code complete; 07-07 checkpoint pending; 07-09 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -206,6 +206,10 @@ Phase 9  [ ] Manual QA & Verification
 - **widget.js Route Handler over public/widget.js (Plan 07-05)** — Route Handler at `app/widget.js/route.ts` serves IIFE at `/widget.js` with `NEXT_PUBLIC_APP_URL` injected at request time. `Content-Type: application/javascript; charset=utf-8`. `Cache-Control: public, max-age=3600, s-maxage=86400`. BASE_URL uses `||` (not `??`) so empty-string env var also falls back to `request.nextUrl.origin`.
 - **Snippet dialog forward contract LOCKED (Plan 07-05)** — Plan 07-09 MUST generate: `<script src="${baseUrl}/widget.js"></script>` and `<div data-nsi-calendar="${accountSlug}/${eventSlug}"></div>`. Single-attribute form preferred; `data-nsi-account` + `data-nsi-event` split form accepted as fallback.
 - **evt.source validation in widget.js (Plan 07-05)** — `evt.source !== iframe.contentWindow` is the source guard (not origin matching). Each `initWidget()` closure captures its own `iframe` ref — independent postMessage channels per mount point. Idempotency guard: `window.__nsiWidgetLoaded`. 5s handshake timeout → inline fallback link. encodeURIComponent on slug parts prevents path injection.
+- **lib/email/branding-blocks.ts is the canonical email branding source (Plan 07-07)** — All future email senders MUST import from this module (renderEmailLogoHeader, renderEmailFooter, renderBrandedButton, brandedHeadingStyle). No inline branding HTML in individual sender files.
+- **NSI_MARK_URL=null in v1 (Plan 07-07)** — /public/nsi-mark.png asset does not exist yet. A 404'd img in a transactional email is a guaranteed broken-image in Gmail/Outlook/Apple Mail. Text-only "Powered by NSI" footer is the safe v1 surface. TODO comment in branding-blocks.ts documents the path to enabling the image mark.
+- **AccountRecord in every email sender includes logo_url + brand_primary (Plan 07-07)** — All 4 sender files widened. All 3 callers (route.ts, cancel.ts, reschedule.ts) SELECT and pass both fields. Future email senders MUST include both fields.
+- **Email logo URL never modified by senders (Plan 07-07)** — accounts.logo_url is passed as-is to img src. The ?v= cache-bust from Plan 07-04 is already embedded; stripping or re-encoding it would break cache invalidation.
 
 ### Carried Concerns / Todos
 
@@ -241,21 +245,20 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 7 Plan 07-08 complete. 80/80 tests green. /[account] route live.
-**Stopped at:** Completed 07-08-account-index-route-PLAN.md
+**Last session:** 2026-04-26 — Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify (Task 4).
+**Stopped at:** Task 4 checkpoint in 07-07-apply-branding-to-emails-PLAN.md
 **Resume file:** None
 
-Previous session note: Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file-rejection edge cases) deferred to Phase 9 QA backlog.
+Previous session note (07-07):
+- 07-07 Task 1: Create lib/email/branding-blocks.ts (1f0c7eb)
+- 07-07 Task 2: Apply branding blocks to all 4 email sender files (242cfe6)
+- 07-07 Task 3: Widen caller SELECTs to include logo_url and brand_primary (73389a1)
+- Task 4: CHECKPOINT — awaiting Andrew to send live booking and verify all 6 email types render with logo + brand color + NSI footer
+
+Previous session note (07-08):
+Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file-rejection edge cases) deferred to Phase 9 QA backlog.
 - 07-08 Task 2: Card + empty-state components (413131c)
 - 07-08 Task 3: Wire account index page.tsx (d84c5ee)
-- 07-04 Task 1: Schema + Server Actions + branding loader (bdd5e01)
-- 07-04 Task 2: Build all client components (de70cc3)
-- 07-04 Task 3: Wire branding/page.tsx + build check (498cb25)
-- 07-04 Task 4: Human-verify checkpoint — APPROVED 2026-04-26 (steps 8–10 deferred)
-- Metadata commit: docs(07-04): complete branding-editor plan
-
-**Stopped at:** Completed 07-04-branding-editor-PLAN.md
-**Resume file:** None
 
 **Next action:** Execute Plan 07-03 (embed route + height reporter).
 
