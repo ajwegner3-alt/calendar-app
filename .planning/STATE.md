@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 6 (Cancel + Reschedule Lifecycle) — In progress
-**Plan:** 1 of 6 plans complete (06-01 done — rate_limit_events migration applied to remote DB)
-**Status:** Phase 6 started. Plan 06-01 complete (DB migration). Plans 06-02..06-06 ready.
-**Last activity:** 2026-04-26 — Completed 06-01 (rate_limit_events migration; 26a9030)
+**Plan:** 2 of 6 plans complete (06-02 done — ICS extension + rate limiter + cancel/reschedule email senders)
+**Status:** Phase 6 in progress. Plans 06-03..06-06 ready.
+**Last activity:** 2026-04-26 — Completed 06-02 (buildIcsBuffer extension, lib/rate-limit.ts, send-cancel-emails.ts, send-reschedule-emails.ts; 8ba4f43 + 9c608f4 + 893e428)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phase 6 in progress)
 
 ```
@@ -150,6 +150,11 @@ Phase 9  [ ] Manual QA & Verification
 - **Rate limiting deferred to Phase 8 INFRA-01 (Plan 05-05)** — Turnstile provides bot protection in v1; full per-IP/per-email rate limiting is Phase 8 hardening.
 - **Postgres-backed rate limiting for Phase 6 token routes (Plan 06-01)** — `rate_limit_events(id bigserial PK, key text NOT NULL, occurred_at timestamptz NOT NULL DEFAULT now())` table with composite index `(key, occurred_at)`. No RLS (service-role admin client only). No `expires_at` column (window length lives in `lib/rate-limit.ts`). No UNIQUE constraint on `(key, occurred_at)` (concurrent requests must each be recorded). Phase 8 pg_cron sweep can clean up old rows.
 - **`supabase db query --linked 'SQL'` positional arg syntax (Plan 06-01)** — The `--execute` flag does not exist in this project's Supabase CLI version. Inline SQL for ad-hoc verification must be passed as a positional argument. Confirmed: `npx supabase db query --linked "SELECT count(*) FROM rate_limit_events;"` works correctly.
+- **buildIcsBuffer EXTEND pattern (Plan 06-02 Open Question A resolved)** — Optional `method?: ICalCalendarMethod` (default REQUEST) + `sequence?: number` (default 0) added to existing function. Phase 5 callers unchanged. CANCEL branch sets `ICalEventStatus.CANCELLED` (belt-and-suspenders for non-iTIP clients). `event.sequence()` called explicitly on every invocation (ical-generator v10 does NOT auto-increment).
+- **sendCancelEmails reason-callout rule (Plan 06-02)** — Reason callout renders ONLY for the OPPOSITE party of the cancel trigger and ONLY when reason is non-empty. No "Reason: (none)" empty cells. Owner-cancel branch: booker email is apologetic + includes "Book again" CTA to re-book.
+- **cancelled.ics filename for cancel .ics (Plan 06-02)** — Cancel attachment is named `cancelled.ics` (not `invite.ics`). Reschedule attachment keeps `invite.ics`. Non-iTIP clients see the filename in their attachment panel — makes intent clear.
+- **checkRateLimit fails OPEN on DB error (Plan 06-02)** — Transient Supabase hiccup must not lock out a legitimate booker. Log + allow. Consistent with RESEARCH §Rate-Limit Storage Backend Decision.
+- **sendRescheduleEmails token contract (Plan 06-02)** — `rawCancelToken` + `rawRescheduleToken` are the FRESH tokens for the NEW booking (after reschedule token rotation). Plan 06-03 generates them; Plan 06-02 senders embed them in links. Booker-tz times for booker email; account-tz for owner email (same pattern as Phase 5).
 - **vitest.config.ts alias-level mock interception (Plan 05-08)** — `@/lib/turnstile` and `@/lib/email-sender` aliased to `tests/__mocks__/` via `path.resolve(__dirname, ...)`. Alias-level is preferred over `vi.mock()` for route-handler integration tests (avoids ESM hoisting issues). Pattern reusable for any future server-only module needing mock interception.
 - **`sendEmail` spy asserts `>= 1` (not `== 2`) (Plan 05-08)** — Both `send-booking-confirmation.ts` and `send-owner-notification.ts` call `sendEmail`. Owner notification is conditional on `accounts.owner_email` being non-null. Assert `>= 1` to stay env-tolerant; assert `[0].to === bookerEmail` to confirm the booker confirmation fired.
 - **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
@@ -186,13 +191,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 6 Plan 06-01 complete. rate_limit_events migration applied to remote Supabase calendar project (mogfnutxrrbtvnaupoun); table + composite index confirmed live (26a9030).
+**Last session:** 2026-04-26 — Phase 6 Plan 06-02 complete. buildIcsBuffer extended; lib/rate-limit.ts created; send-cancel-emails.ts + send-reschedule-emails.ts created. All 4 utility modules ready for Plan 06-03 consumers (8ba4f43 + 9c608f4 + 893e428).
 
-**Next action:** Plan 06-02 — implement `lib/rate-limit.ts` (checkRateLimit function using rate_limit_events table via createAdminClient()).
+**Next action:** Plan 06-03 — implement `lib/bookings/cancel.ts` + `lib/bookings/reschedule.ts` (shared business logic using the senders from 06-02).
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
-- [ ] Plan 06-02 (lib/rate-limit.ts + ICS extension + email senders)
+- ✅ Plan 06-02 (lib/rate-limit.ts + ICS extension + cancel/reschedule email senders) — complete, pushed (2026-04-26, 8ba4f43 + 9c608f4 + 893e428)
+- [ ] Plan 06-03 (cancel + reschedule shared functions)
 - [ ] Plan 06-03 (cancel + reschedule shared functions)
 - [ ] Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token])
 - [ ] Plan 06-05 (owner bookings detail page + cancel)
