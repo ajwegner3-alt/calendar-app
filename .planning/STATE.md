@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 6 Plan 06-05 complete — owner booking detail page + cancelBookingAsOwner Server Action + CancelButton AlertDialog; 364351e + 4338be3)
+**Last updated:** 2026-04-26 (Phase 6 Plan 06-06 auto tasks complete — 12-test integration suite; 34554b6 + f346b33; awaiting Andrew's Manual QA sign-off)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 6 (Cancel + Reschedule Lifecycle) in progress — Plan 06-05 done (owner cancel surface at /app/bookings/[id]). Plan 06-06 (integration tests + manual QA) is next.
+**Current focus:** Phase 6 (Cancel + Reschedule Lifecycle) — auto tasks complete; Manual QA (Plan 06-06 Task 3) awaiting Andrew's sign-off. 66/66 tests green.
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 6 (Cancel + Reschedule Lifecycle) — In progress
-**Plan:** 5 of 6 plans complete (06-05 done — /app/bookings/[id] Server Component + cancelBookingAsOwner Server Action + CancelButton client AlertDialog)
-**Status:** Phase 6 in progress. Plan 06-06 (integration tests + manual QA) ready.
-**Last activity:** 2026-04-26 — Completed 06-05 (owner cancel surface; 364351e + 4338be3)
-**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phase 6 in progress)
+**Phase:** 6 (Cancel + Reschedule Lifecycle) — code complete; awaiting Manual QA
+**Plan:** 6 of 6 auto tasks complete (06-06 auto done — fixture helper + 12-test integration suite); Manual QA task 3 pending Andrew sign-off
+**Status:** Phase 6 code + integration tests complete. Plan 06-06 Manual QA (Task 3) is the only remaining gate.
+**Last activity:** 2026-04-26 — Completed 06-06 auto tasks (12-test Phase 6 integration suite; 34554b6 + f346b33)
+**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 6 code complete + manual QA pending; Phase 9 QA pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -172,6 +172,10 @@ Phase 9  [ ] Manual QA & Verification
 - **/app/bookings/[id] URL contract LOCKED (Plan 06-05)** — Phase 8 bookings list will link rows to `/app/bookings/[id]`. Do NOT change this URL shape.
 - **Open Question B confirmed resolved (Plan 06-05)** — Owner cancel surface lives at `/app/bookings/[id]` detail page, NOT the list. The bookings list page (`/app/bookings`) remains a Phase 8 placeholder.
 - **vitest.config.ts alias-level mock interception (Plan 05-08)** — `@/lib/turnstile` and `@/lib/email-sender` aliased to `tests/__mocks__/` via `path.resolve(__dirname, ...)`. Alias-level is preferred over `vi.mock()` for route-handler integration tests (avoids ESM hoisting issues). Pattern reusable for any future server-only module needing mock interception.
+- **NextRequest required for route-handler integration tests (Plan 06-06)** — Route handlers that call `req.nextUrl.origin` (appUrl fallback) require `NextRequest` not plain `Request`. When `NEXT_PUBLIC_APP_URL` is not set in `.env.local`, the route falls through to `req.nextUrl.origin`; plain `Request` has no `.nextUrl` property → TypeError. All future integration tests for cancel/reschedule/bookings route handlers MUST use `new NextRequest(url, {...})`.
+- **Supabase timestamptz format mismatch (Plan 06-06)** — Supabase may return `+00:00` suffix from some query paths while `new Date().toISOString()` always produces `Z`. These represent the same instant but `toBe()` string comparison fails. Use `new Date(ts).getTime()` for timestamp equality assertions in integration tests.
+- **escapeHtml-aware HTML email assertions (Plan 06-06)** — Email templates run user strings through `escapeHtml()` (converts `'` to `&#39;`, `"` to `&quot;`, etc.). Asserting raw user strings against HTML email content fails. Apply the same escaping rules before asserting, or assert a substring that avoids special chars.
+- **cancelBookingAsOwner vitest bypass (Plan 06-06)** — Server Action calls `createClient()` from `next/headers`, which calls `cookies()`. In vitest+node, `cookies()` throws outside a Next request context. Integration tests for owner-cancel path must call `cancelBooking({ actor: 'owner', ... })` directly. Server Action RLS wrapper coverage deferred to Manual QA.
 - **`sendEmail` spy asserts `>= 1` (not `== 2`) (Plan 05-08)** — Both `send-booking-confirmation.ts` and `send-owner-notification.ts` call `sendEmail`. Owner notification is conditional on `accounts.owner_email` being non-null. Assert `>= 1` to stay env-tolerant; assert `[0].to === bookerEmail` to confirm the booker confirmation fired.
 - **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
@@ -207,11 +211,12 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 6 Plans 06-04 and 06-05 complete (ran in parallel, Wave 4).
-- 06-04: public token routes — GET /cancel/[token] + POST /api/cancel + GET /reschedule/[token] + POST /api/reschedule + shared TokenNotActive component (0ecbab9 + 92739c5).
-- 06-05: /app/bookings/[id] Server Component (RLS fetch, notFound, dual-TZ render, status branches) + cancelBookingAsOwner Server Action (two-stage RLS pre-check + delegate to shared cancelBooking(actor:'owner')) + CancelButton client AlertDialog (useTransition, e.preventDefault confirm, reason Textarea, not_active branch) (364351e + 4338be3).
+**Last session:** 2026-04-26 — Phase 6 Plan 06-06 auto tasks complete.
+- 06-06 Task 1: tests/helpers/booking-fixtures.ts (34554b6)
+- 06-06 Task 2: tests/cancel-reschedule-api.test.ts 12-test integration suite — all 66 tests green (f346b33)
+- Awaiting Manual QA Task 3 (Andrew sign-off) before Phase 6 closes.
 
-**Next action:** Plan 06-06 — integration tests + manual QA for Phase 6 cancel/reschedule lifecycle.
+**Next action:** Andrew executes Manual QA checklist (Plan 06-06 Task 3 — 8 steps) and signs off. Continuation agent will then finalize Phase 6 as complete. Phase 7 (Widget + Branding) follows.
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
@@ -219,7 +224,7 @@ None.
 - ✅ Plan 06-03 (lib/bookings/cancel.ts + lib/bookings/reschedule.ts shared atomic functions) — complete, pushed (2026-04-26, 47a8b13 + 13359d3)
 - ✅ Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token] + /api/cancel + /api/reschedule) — complete, pushed (2026-04-26, 0ecbab9 + 92739c5)
 - ✅ Plan 06-05 (owner bookings detail page + cancel — /app/bookings/[id] Server Component + cancelBookingAsOwner Server Action + CancelButton AlertDialog) — complete, pushed (2026-04-26, 364351e + 4338be3)
-- [ ] Plan 06-06 (integration tests + manual QA)
+- [~] Plan 06-06 (integration tests + manual QA) — auto tasks done (34554b6 + f346b33); Manual QA Task 3 pending Andrew sign-off
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
