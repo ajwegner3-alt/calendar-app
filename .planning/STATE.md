@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 7 Plan 02 complete — proxy CSP branching + next.config.ts security headers + 'branding' Supabase Storage bucket confirmed)
+**Last updated:** 2026-04-26 (Phase 7 Plan 03 complete — /embed/[account]/[event-slug] chromeless route + nsi-booking:height postMessage protocol + preview-param contract locked)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Plan 07-02 complete 2026-04-26. 75/75 tests green. Next: Plan 07-03 (embed route + height reporter).
+**Current focus:** Phase 7 (Widget + Branding) — Plan 07-03 complete 2026-04-26. 75/75 tests green. Next: Plan 07-04 (branding editor).
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,10 +15,10 @@
 ## Current Position
 
 **Phase:** 7 (Widget + Branding) — in progress
-**Plan:** 2 of 9 in Phase 7 complete (07-01 done 2026-04-26; 07-02 done 2026-04-26)
+**Plan:** 3 of 9 in Phase 7 complete (07-01 done 2026-04-26; 07-02 done 2026-04-26; 07-03 done 2026-04-26)
 **Status:** In progress
-**Last activity:** 2026-04-26 — Completed 07-02-proxy-csp-and-headers-PLAN.md
-**Progress:** [█████░░░░] Phase 7 in progress (07-01 + 07-02 complete; 07-03 through 07-09 pending)
+**Last activity:** 2026-04-26 — Completed 07-03-embed-route-and-height-reporter-PLAN.md
+**Progress:** [██████░░░] Phase 7 in progress (07-01 through 07-03 complete; 07-04 through 07-09 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -189,6 +189,11 @@ Phase 9  [ ] Manual QA & Verification
 - **X-Frame-Options layering: next.config.ts default + proxy.ts override (Plan 07-02)** — `next.config.ts` sets global `SAMEORIGIN` default; proxy.ts re-asserts on non-embed routes and DELETES on `/embed/*` routes. Both layers required: next.config.ts runs first (static config), proxy.ts overrides at middleware execution time.
 - **updateSession() response preserved and mutated in place (Plan 07-02)** — proxy.ts captures the `NextResponse` from `updateSession()` and mutates its headers directly. Creating a fresh `NextResponse.next()` instead would discard Supabase auth cookie mutations, silently logging the owner out on every request (RESEARCH Pitfall 2). All future proxy.ts modifications MUST preserve this pattern.
 - **Supabase Storage 'branding' bucket: PNG-only, 2 MB cap, public (Plan 07-02 confirmed)** — Bucket pre-existed from prior session. Name locked as `branding` for Plans 07-04 + 07-05. SVG deferred (XSS surface). No code change needed for bucket access.
+- **app/embed/layout.tsx NOT created (Plan 07-03)** — Root layout is `<html><body>{children}<Toaster/></body></html>` — no chrome. Sidebar in `app/(shell)/layout.tsx` route group never enters `/embed/*`. Toaster in iframe is invisible to host page (sealed window). No embed layout override needed.
+- **nsi-booking:height postMessage protocol LOCKED (Plan 07-03)** — `{ type: "nsi-booking:height", height: number }` with target `"*"`. ResizeObserver on `document.documentElement`. Deduped via `lastHeight`. iframe-only guard (`window.parent === window`). widget.js (Plan 07-05) MUST filter by `event.data.type === "nsi-booking:height"` AND `event.source === iframe.contentWindow`.
+- **preview-param contract LOCKED (Plan 07-03)** — `?previewColor`: `/^#[0-9a-fA-F]{6}$/` regex. `?previewLogo`: `/^https:\/\//` protocol. Both validated server-side in page.tsx before passing to EmbedShell. Plan 07-04 branding editor iframe src: `/embed/{account}/{slug}?previewColor=%23{hex}&previewLogo={encodedUrl}`.
+- **CSS var names LOCKED (Plan 07-03)** — `--brand-primary` + `--brand-text` applied via inline style on EmbedShell wrapper div. Distinct from Tailwind v4 `@theme` token names. Plan 07-06 wires consumption in BookingShell child components. BookingShell does NOT yet read these vars.
+- **Standard `<img>` over next/image for logos (Plan 07-03)** — Supabase Storage logo URLs are cross-domain. Configuring `next/image remotePatterns` for a runtime-unknown domain is excessive friction. `eslint-disable-next-line @next/next/no-img-element` applied.
 
 ### Carried Concerns / Todos
 
@@ -223,17 +228,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 7 Plan 07-02 complete. 75/75 tests green.
-- 07-01 Task 1: lib/branding/contrast.ts + types.ts + tests/branding-contrast.test.ts (7c67fbc)
-- 07-01 Task 2: lib/branding/read-branding.ts server-only helper (45c629b)
-- 07-01 Task 3: AccountSummary + load-event-type + RESERVED_SLUGS "embed" (461c81d)
-- Metadata commit: docs(07-01): complete branding-lib-and-read-helper plan
-- 07-02 Task 1: next.config.ts global security headers (bc7572f)
-- 07-02 Task 2: proxy.ts per-route CSP branching (902ad35)
-- 07-02 Task 3: 'branding' Supabase Storage bucket (pre-existing; confirmed in dashboard)
-- Metadata commit: docs(07-02): complete proxy-csp-and-headers plan
+**Last session:** 2026-04-26 — Phase 7 Plan 07-03 complete. 75/75 tests green.
+- 07-03 Task 1: app/embed/layout.tsx — SKIPPED (root layout already chromeless)
+- 07-03 Task 2: EmbedHeightReporter (84fc4c4)
+- 07-03 Task 3: EmbedShell client wrapper (2a2bb06)
+- 07-03 Task 4: embed page.tsx Server Component (b83cfae)
+- Metadata commit: docs(07-03): complete embed-route-and-height-reporter plan
 
-**Stopped at:** Completed 07-02-proxy-csp-and-headers-PLAN.md
+**Stopped at:** Completed 07-03-embed-route-and-height-reporter-PLAN.md
 **Resume file:** None
 
 **Next action:** Execute Plan 07-03 (embed route + height reporter).
