@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 7 Plan 07 paused at checkpoint — branding-blocks.ts created, all 4 email senders updated, all 3 callers widened; Task 4 human-verify checkpoint pending Andrew's email QA)
+**Last updated:** 2026-04-26 (Plan 07-06 complete — BrandedPage + four public surfaces branded, live-verified on Vercel; Plan 07-07 paused at checkpoint awaiting Andrew's email QA)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Plan 07-07 paused at checkpoint 2026-04-26. 80/80 tests green. Tasks 1-3 complete; Task 4 is human-verify checkpoint awaiting Andrew's email inspection across all 6 email types.
+**Current focus:** Phase 7 (Widget + Branding) — Plan 07-06 complete (live-verified 2026-04-26). Plan 07-07 paused at checkpoint 2026-04-26. 80/80 tests green. Tasks 1-3 complete; Task 4 is human-verify checkpoint awaiting Andrew's email inspection across all 6 email types.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 7 (Widget + Branding) — in progress
-**Plan:** 07-07 paused at checkpoint (Tasks 1-3 complete; Task 4 human-verify pending)
-**Status:** Checkpoint — awaiting human verification
-**Last activity:** 2026-04-26 — Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify
+**Plan:** 07-07 paused at checkpoint (Tasks 1-3 complete; Task 4 human-verify pending); 07-06 complete
+**Status:** Checkpoint — awaiting human verification (07-07 Task 4 email QA)
+**Last activity:** 2026-04-26 — Plan 07-06 complete (live-verified); Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify
 **Progress:** [███████░░] Phase 7 in progress (07-01 through 07-08 code complete; 07-07 checkpoint pending; 07-09 pending)
 
 ```
@@ -210,6 +210,8 @@ Phase 9  [ ] Manual QA & Verification
 - **NSI_MARK_URL=null in v1 (Plan 07-07)** — /public/nsi-mark.png asset does not exist yet. A 404'd img in a transactional email is a guaranteed broken-image in Gmail/Outlook/Apple Mail. Text-only "Powered by NSI" footer is the safe v1 surface. TODO comment in branding-blocks.ts documents the path to enabling the image mark.
 - **AccountRecord in every email sender includes logo_url + brand_primary (Plan 07-07)** — All 4 sender files widened. All 3 callers (route.ts, cancel.ts, reschedule.ts) SELECT and pass both fields. Future email senders MUST include both fields.
 - **Email logo URL never modified by senders (Plan 07-07)** — accounts.logo_url is passed as-is to img src. The ?v= cache-bust from Plan 07-04 is already embedded; stripping or re-encoding it would break cache invalidation.
+- **BrandedPage CSS var convention LOCKED (Plan 07-06)** — `--brand-primary` + `--brand-text` are the canonical CSS var names across ALL public surfaces (booking, confirmation, cancel, reschedule, embed). BrandedPage injects them via inline style on a root div; child components consume via `var(--brand-primary, #0A2540)` / `var(--brand-text, #ffffff)` inline styles. Only PRIMARY CTAs recolored; secondary buttons retain neutral shadcn styling.
+- **PROCESS LOCK: Push to origin/main before live Vercel checkpoints (Plan 07-06 post-mortem)** — Wave 3 parallel executors committed 15 tasks across multiple plans but did not auto-push to origin/main. When Andrew visited the live Vercel URL for the human-verify checkpoint, branding was absent because Vercel had not redeployed. Orchestrator manually pushed all 15 commits; branding rendered immediately. Future executors MUST push all accumulated commits to origin/main IMMEDIATELY before returning any checkpoint:human-verify that references a live Vercel URL.
 
 ### Carried Concerns / Todos
 
@@ -245,8 +247,8 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify (Task 4).
-**Stopped at:** Task 4 checkpoint in 07-07-apply-branding-to-emails-PLAN.md
+**Last session:** 2026-04-26 — Plan 07-06 complete (SUMMARY.md written, live-verified); Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify (Task 4).
+**Stopped at:** Task 4 checkpoint in 07-07-apply-branding-to-emails-PLAN.md (awaiting Andrew's email QA)
 **Resume file:** None
 
 Previous session note (07-07):
