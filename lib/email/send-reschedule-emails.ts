@@ -4,6 +4,12 @@ import { format } from "date-fns";
 import { ICalCalendarMethod } from "ical-generator";
 import { sendEmail } from "@/lib/email-sender";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
+import {
+  renderEmailLogoHeader,
+  renderEmailFooter,
+  renderBrandedButton,
+  brandedHeadingStyle,
+} from "./branding-blocks";
 
 interface BookingRecord {
   id: string;
@@ -25,6 +31,8 @@ interface AccountRecord {
   slug: string;
   timezone: string;          // IANA
   owner_email: string | null;
+  logo_url: string | null;
+  brand_primary: string | null;
 }
 
 export interface SendRescheduleEmailsArgs {
@@ -83,9 +91,16 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
   const cancelUrl     = `${appUrl}/cancel/${rawCancelToken}`;
   const rescheduleUrl = `${appUrl}/reschedule/${rawRescheduleToken}`;
 
+  const branding = {
+    name: account.name,
+    logo_url: account.logo_url,
+    brand_primary: account.brand_primary,
+  };
+
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 16px 0;">Your appointment was rescheduled</h1>
+  ${renderEmailLogoHeader(branding)}
+  <h1 style="${brandedHeadingStyle(account.brand_primary)}">Your appointment was rescheduled</h1>
   <p style="margin: 0 0 8px 0;">Hi ${escapeHtml(booking.booker_name)},</p>
   <p style="margin: 0 0 24px 0;">Your appointment with <strong>${escapeHtml(account.name)}</strong> has been moved.</p>
 
@@ -108,17 +123,18 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     An updated calendar invite (.ics) is attached — open it to update your calendar.
   </p>
 
-  <p style="margin: 0 0 32px 0; font-size: 14px; color: #555;">
-    Need to make another change?<br/>
-    <a href="${rescheduleUrl}" style="color: #0A2540;">Reschedule</a>
-    &nbsp;&nbsp;·&nbsp;&nbsp;
-    <a href="${cancelUrl}" style="color: #0A2540;">Cancel</a>
+  <p style="margin: 0 0 8px 0;">Need to make another change?</p>
+  <p style="margin: 0 0 32px 0;">
+    ${renderBrandedButton({ href: rescheduleUrl, label: "Reschedule", primaryColor: account.brand_primary })}
+    &nbsp;
+    ${renderBrandedButton({ href: cancelUrl, label: "Cancel", primaryColor: account.brand_primary })}
   </p>
 
   <hr style="border: none; border-top: 1px solid #eee; margin: 0 0 16px 0;"/>
   <p style="margin: 0; font-size: 12px; color: #888;">
     ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
   </p>
+  ${renderEmailFooter()}
 </div>`;
 
   const organizerEmail = account.owner_email ?? "noreply@nsi.tools";
@@ -172,9 +188,16 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
   const newTime = format(newTz, "h:mm a (z)");
   const subjectDate = format(newTz, "MMM d, yyyy");
 
+  const branding = {
+    name: account.name,
+    logo_url: account.logo_url,
+    brand_primary: account.brand_primary,
+  };
+
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 16px 0;">Booking rescheduled</h1>
+  ${renderEmailLogoHeader(branding)}
+  <h1 style="${brandedHeadingStyle(account.brand_primary)}">Booking rescheduled</h1>
   <p style="margin: 0 0 24px 0;"><strong>${escapeHtml(booking.booker_name)}</strong> rescheduled their booking.</p>
 
   <table style="border-collapse: collapse; margin: 0 0 24px 0; width: 100%;">
@@ -196,7 +219,11 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
     </tr>
   </table>
 
-  <p style="margin: 0; font-size: 12px; color: #888;">Booking ID: ${booking.id}</p>
+  <p style="margin: 0 0 16px 0; font-size: 12px; color: #888;">Booking ID: ${booking.id}</p>
+  <p style="margin: 0; font-size: 12px; color: #888;">
+    ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
+  </p>
+  ${renderEmailFooter()}
 </div>`;
 
   const organizerEmail = account.owner_email;

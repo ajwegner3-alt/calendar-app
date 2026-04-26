@@ -4,6 +4,12 @@ import { format } from "date-fns";
 import { ICalCalendarMethod } from "ical-generator";
 import { sendEmail } from "@/lib/email-sender";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
+import {
+  renderEmailLogoHeader,
+  renderEmailFooter,
+  renderBrandedButton,
+  brandedHeadingStyle,
+} from "./branding-blocks";
 
 interface BookingRecord {
   id: string;
@@ -28,6 +34,8 @@ interface AccountRecord {
   slug: string;            // for "Book again" CTA URL
   timezone: string;        // IANA — used for owner email times + .ics ORGANIZER tz
   owner_email: string | null;
+  logo_url: string | null;
+  brand_primary: string | null;
 }
 
 export interface SendCancelEmailsArgs {
@@ -82,6 +90,12 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
 
   const rebookUrl = `${appUrl}/${account.slug}/${eventType.slug}`;
 
+  const branding = {
+    name: account.name,
+    logo_url: account.logo_url,
+    brand_primary: account.brand_primary,
+  };
+
   // Apology copy when owner cancelled (CONTEXT lock); confirmation copy when booker cancelled
   const intro =
     actor === "owner"
@@ -102,7 +116,8 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 16px 0;">Appointment cancelled</h1>
+  ${renderEmailLogoHeader(branding)}
+  <h1 style="${brandedHeadingStyle(account.brand_primary)}">Appointment cancelled</h1>
   ${intro}
   ${reasonBlock}
 
@@ -117,15 +132,16 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
     </tr>
   </table>
 
-  <p style="margin: 0 0 32px 0; font-size: 14px;">
-    Need to book another time?
-    <a href="${rebookUrl}" style="color: #0A2540; font-weight: 600;">Book again</a>
+  <p style="margin: 0 0 8px 0; font-size: 14px;">Need to book another time?</p>
+  <p style="margin: 0 0 32px 0;">
+    ${renderBrandedButton({ href: rebookUrl, label: "Book again", primaryColor: account.brand_primary })}
   </p>
 
   <hr style="border: none; border-top: 1px solid #eee; margin: 0 0 16px 0;"/>
   <p style="margin: 0; font-size: 12px; color: #888;">
     ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
   </p>
+  ${renderEmailFooter()}
 </div>`;
 
   const organizerEmail = account.owner_email ?? "noreply@nsi.tools";
@@ -176,6 +192,12 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
   const timeLine = format(startTz, "h:mm a (z)");
   const subjectDate = format(startTz, "MMM d, yyyy");
 
+  const branding = {
+    name: account.name,
+    logo_url: account.logo_url,
+    brand_primary: account.brand_primary,
+  };
+
   // Booker-cancel reason callout — only when actor=booker AND reason is non-empty
   // (CONTEXT decision: reason callout only for the OPPOSITE party of the trigger)
   const reasonBlock =
@@ -193,7 +215,8 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 16px 0;">Booking cancelled</h1>
+  ${renderEmailLogoHeader(branding)}
+  <h1 style="${brandedHeadingStyle(account.brand_primary)}">Booking cancelled</h1>
   <p style="margin: 0 0 24px 0;">${triggeredBy}</p>
   ${reasonBlock}
 
@@ -212,7 +235,11 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
     </tr>
   </table>
 
-  <p style="margin: 0; font-size: 12px; color: #888;">Booking ID: ${booking.id}</p>
+  <p style="margin: 0 0 16px 0; font-size: 12px; color: #888;">Booking ID: ${booking.id}</p>
+  <p style="margin: 0; font-size: 12px; color: #888;">
+    ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
+  </p>
+  ${renderEmailFooter()}
 </div>`;
 
   const organizerEmail = account.owner_email;

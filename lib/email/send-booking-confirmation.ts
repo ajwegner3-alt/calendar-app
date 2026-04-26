@@ -3,6 +3,12 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
+import {
+  renderEmailLogoHeader,
+  renderEmailFooter,
+  renderBrandedButton,
+  brandedHeadingStyle,
+} from "./branding-blocks";
 
 interface BookingRecord {
   id: string;
@@ -24,6 +30,8 @@ interface AccountRecord {
   timezone: string;   // IANA — .ics uses ACCOUNT timezone; calendar clients adapt
   owner_email: string | null;
   slug: string;
+  logo_url: string | null;
+  brand_primary: string | null;
 }
 
 export interface SendBookingConfirmationArgs {
@@ -69,11 +77,18 @@ export async function sendBookingConfirmation(
   const cancelUrl      = `${appUrl}/cancel/${rawCancelToken}`;
   const rescheduleUrl  = `${appUrl}/reschedule/${rawRescheduleToken}`;
 
-  // Plain HTML — Phase 7 will templatize with per-account branding.
+  const branding = {
+    name: account.name,
+    logo_url: account.logo_url,
+    brand_primary: account.brand_primary,
+  };
+
   // Table-based layout for broad email-client compatibility.
+  // All styles inline (Gmail/Outlook/Apple Mail lock from Phase 5 STATE).
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 16px 0;">You're booked.</h1>
+  ${renderEmailLogoHeader(branding)}
+  <h1 style="${brandedHeadingStyle(account.brand_primary)}">You're booked.</h1>
   <p style="margin: 0 0 8px 0;">Hi ${escapeHtml(booking.booker_name)},</p>
   <p style="margin: 0 0 24px 0;">Your appointment with <strong>${escapeHtml(account.name)}</strong> is confirmed.</p>
 
@@ -96,17 +111,18 @@ export async function sendBookingConfirmation(
     A calendar invite (.ics) is attached — open it to add this event to your calendar.
   </p>
 
-  <p style="margin: 0 0 32px 0; font-size: 14px; color: #555;">
-    Need to make a change?<br/>
-    <a href="${rescheduleUrl}" style="color: #0A2540;">Reschedule</a>
-    &nbsp;&nbsp;·&nbsp;&nbsp;
-    <a href="${cancelUrl}" style="color: #0A2540;">Cancel</a>
+  <p style="margin: 0 0 8px 0;">Need to make a change?</p>
+  <p style="margin: 0 0 32px 0;">
+    ${renderBrandedButton({ href: rescheduleUrl, label: "Reschedule", primaryColor: account.brand_primary })}
+    &nbsp;
+    ${renderBrandedButton({ href: cancelUrl, label: "Cancel", primaryColor: account.brand_primary })}
   </p>
 
   <hr style="border: none; border-top: 1px solid #eee; margin: 0 0 16px 0;"/>
   <p style="margin: 0; font-size: 12px; color: #888;">
     ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
   </p>
+  ${renderEmailFooter()}
 </div>`;
 
   // .ics uses owner email for ORGANIZER. If null (shouldn't happen post Plan 05-01

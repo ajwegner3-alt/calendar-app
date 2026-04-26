@@ -2,6 +2,11 @@ import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
+import {
+  renderEmailLogoHeader,
+  renderEmailFooter,
+  brandedHeadingStyle,
+} from "./branding-blocks";
 
 interface BookingRecord {
   id: string;
@@ -21,6 +26,8 @@ interface AccountRecord {
   name: string;
   timezone: string;       // IANA — owner email shows times in OWNER timezone
   owner_email: string | null;
+  logo_url: string | null;
+  brand_primary: string | null;
 }
 
 export interface SendOwnerNotificationArgs {
@@ -62,6 +69,12 @@ export async function sendOwnerNotification(
   const timeLine      = format(startOwnerTz, "h:mm a (z)");         // "10:00 AM (CDT)"
   const subjectDate   = format(startOwnerTz, "MMM d, yyyy");        // "Jun 16, 2026"
 
+  const branding = {
+    name: account.name,
+    logo_url: account.logo_url,
+    brand_primary: account.brand_primary,
+  };
+
   // Build custom-question answers rows (only rendered if answers exist)
   const answerEntries = Object.entries(booking.answers);
   const answersHtml =
@@ -82,7 +95,8 @@ ${answerEntries
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0;">New booking</h1>
+  ${renderEmailLogoHeader(branding)}
+  <h1 style="${brandedHeadingStyle(account.brand_primary)}">New booking</h1>
 
   <table style="border-collapse: collapse; width: 100%;">
     <tr>
@@ -118,6 +132,11 @@ ${answerEntries
   </table>
 
   ${answersHtml}
+
+  <p style="margin: 16px 0 0 0; font-size: 12px; color: #888;">
+    ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
+  </p>
+  ${renderEmailFooter()}
 </div>`;
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
