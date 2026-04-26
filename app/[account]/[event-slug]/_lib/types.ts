@@ -7,6 +7,9 @@ export interface AccountSummary {
   name: string;
   timezone: string; // IANA — owner's TZ
   owner_email: string | null;
+  // Phase 7: branding columns — additive; existing Phase 5/6 callers unaffected
+  logo_url: string | null;
+  brand_primary: string | null;
 }
 
 export interface CustomQuestion {

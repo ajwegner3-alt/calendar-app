@@ -2,7 +2,11 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { BookingPageData, CustomQuestion } from "./types";
 
-const RESERVED_SLUGS = new Set(["app", "api", "_next", "auth"]);
+// Phase 7: added "embed" — /embed/[account]/[event-slug] is a new top-level route.
+// Next.js 16 static segments take precedence over dynamic, but the guard is
+// belt-and-suspenders per RESEARCH.md Pitfall 8. Must also be added to any future
+// /[account]/page.tsx loader (Plan 07-08).
+const RESERVED_SLUGS = new Set(["app", "api", "_next", "auth", "embed"]);
 
 /**
  * Loads account + event_type for the public booking page.
@@ -23,7 +27,7 @@ export async function loadEventTypeForBookingPage(
   // 1. Account
   const { data: accountRow, error: accountError } = await supabase
     .from("accounts")
-    .select("id, slug, name, timezone, owner_email")
+    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
     .eq("slug", accountSlug)
     .maybeSingle();
 
@@ -55,6 +59,9 @@ export async function loadEventTypeForBookingPage(
       name: accountRow.name,
       timezone: accountRow.timezone,
       owner_email: accountRow.owner_email,
+      // Phase 7 branding fields — additive; downstream callers may ignore
+      logo_url: accountRow.logo_url ?? null,
+      brand_primary: accountRow.brand_primary ?? null,
     },
     eventType: {
       id: eventTypeRow.id,
