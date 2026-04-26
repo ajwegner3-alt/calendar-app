@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 7 Plan 03 complete — /embed/[account]/[event-slug] chromeless route + nsi-booking:height postMessage protocol + preview-param contract locked)
+**Last updated:** 2026-04-26 (Phase 7 Plan 04 complete — branding editor at /app/branding; PNG logo upload + hex color picker + live preview iframe; accounts.logo_url + accounts.brand_primary populated; two-stage owner auth pattern locked)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Plan 07-03 complete 2026-04-26. 75/75 tests green. Next: Plan 07-04 (branding editor).
+**Current focus:** Phase 7 (Widget + Branding) — Plan 07-04 complete 2026-04-26. 75/75 tests green. Next: Plan 07-05 (widget.js embed script).
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,10 +15,10 @@
 ## Current Position
 
 **Phase:** 7 (Widget + Branding) — in progress
-**Plan:** 3 of 9 in Phase 7 complete (07-01 done 2026-04-26; 07-02 done 2026-04-26; 07-03 done 2026-04-26)
+**Plan:** 4 of 9 in Phase 7 complete (07-01 done 2026-04-26; 07-02 done 2026-04-26; 07-03 done 2026-04-26; 07-04 done 2026-04-26)
 **Status:** In progress
-**Last activity:** 2026-04-26 — Completed 07-03-embed-route-and-height-reporter-PLAN.md
-**Progress:** [██████░░░] Phase 7 in progress (07-01 through 07-03 complete; 07-04 through 07-09 pending)
+**Last activity:** 2026-04-26 — Completed 07-04-branding-editor-PLAN.md
+**Progress:** [███████░░] Phase 7 in progress (07-01 through 07-04 complete; 07-05 through 07-09 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -194,6 +194,12 @@ Phase 9  [ ] Manual QA & Verification
 - **preview-param contract LOCKED (Plan 07-03)** — `?previewColor`: `/^#[0-9a-fA-F]{6}$/` regex. `?previewLogo`: `/^https:\/\//` protocol. Both validated server-side in page.tsx before passing to EmbedShell. Plan 07-04 branding editor iframe src: `/embed/{account}/{slug}?previewColor=%23{hex}&previewLogo={encodedUrl}`.
 - **CSS var names LOCKED (Plan 07-03)** — `--brand-primary` + `--brand-text` applied via inline style on EmbedShell wrapper div. Distinct from Tailwind v4 `@theme` token names. Plan 07-06 wires consumption in BookingShell child components. BookingShell does NOT yet read these vars.
 - **Standard `<img>` over next/image for logos (Plan 07-03)** — Supabase Storage logo URLs are cross-domain. Configuring `next/image remotePatterns` for a runtime-unknown domain is excessive friction. `eslint-disable-next-line @next/next/no-img-element` applied.
+- **PNG-only in v1 for logo upload (Plan 07-04)** — SVG can embed `<script>` tags and event handlers; serving user-uploaded SVG from public Supabase Storage is an XSS surface. PNG-only is the safe v1 choice. SVG support deferred to v2 with sanitization. Applied in schema.ts (`logoFileSchema.allowedMime = "image/png"`) and uploadLogoAction MIME + magic-byte checks.
+- **Cache-bust via ?v={timestamp} in stored logo_url (Plan 07-04)** — Supabase Storage public URLs are stable per path; Gmail's image proxy (and other CDNs) cache aggressively. `uploadLogoAction` appends `?v=${Date.now()}` to the public URL BEFORE writing to `accounts.logo_url`. Downstream plans (07-06 emails, 07-07 booking pages) MUST pass `logo_url` to `<img src={...}>` without stripping or re-encoding the query param — the cache-bust is load-bearing.
+- **React key={url} for iframe re-mount as live preview (Plan 07-04)** — RESEARCH §Pattern 7 option b: `PreviewIframe` sets `key={url}` where url includes `?previewColor=...&previewLogo=...`. On every color/logo change the key changes, React unmounts+remounts the iframe, and the embed page loads fresh with new params. Simpler than postMessage from editor → embed; no new listeners needed in 07-03 EmbedShell.
+- **Outer try/catch exception in branding actions.ts (Plan 07-04)** — Plan 03-03 locked "no try/catch in actions.ts." Exception here: `getOwnerAccountIdOrThrow()` throws on auth failure; an outer try is necessary. Inner error paths still use early return `{error}`. This mirrors Phase 6 `cancelBookingAsOwner`. Future plans seeing this pattern should NOT remove the outer try — it is intentional.
+- **Two-stage owner auth for branding mutations (Plan 07-04)** — `getOwnerAccountIdOrThrow()` calls `createClient()` (RLS-scoped) → `current_owner_account_ids()` RPC to confirm the caller owns the account; then `createAdminClient()` performs Storage upload + accounts UPDATE. Mirrors Phase 6 `cancelBookingAsOwner` lock. Use this pattern for all future Owner-scoped Storage or cross-table mutations.
+- **Forward contract: accounts.logo_url includes ?v= (Plan 07-04)** — Plans 07-06 (booking page branding) and 07-07 (emails) read `accounts.logo_url` as-is. The `?v=` cache-bust is already embedded in the stored value. No manipulation needed downstream; `brandingFromRow()` from Plan 07-01 handles null fallback to DEFAULT_BRAND_PRIMARY.
 
 ### Carried Concerns / Todos
 
@@ -211,6 +217,7 @@ Phase 9  [ ] Manual QA & Verification
 - **Phase 8 backlog: `waitUntil()` adoption (INFRA-01/INFRA-04 candidate)** — During Phase 6 manual QA, the second booking confirmation email took longer than expected (arrived eventually; no code change). If lambda-timeout symptoms appear in Phase 9 hardening, adopt `waitUntil()` from `@vercel/functions` on fire-and-forget email paths in: `app/api/bookings/route.ts`, `app/api/cancel/route.ts`, `app/api/reschedule/route.ts`, and `cancelBookingAsOwner` Server Action. Not a Phase 6 blocker.
 - **Phase 9 backlog: .ics iTIP calendar-client removal/update** — Deferred from Phase 6 manual QA step 4. Verify METHOD:CANCEL auto-removes event in Apple Mail / Gmail web / Outlook web; verify METHOD:REQUEST + same UID + SEQUENCE:1 updates event in-place on reschedule. Consolidates with Phase 5's "ICS file structure for Gmail inline card" and QA-03 mail-tester items.
 - **Phase 9 backlog: rate-limit live verification** — Deferred from Phase 6 manual QA step 8. Integration test #7 proves the code path. Live check: hit `/api/cancel` and `/api/reschedule` 11+ times rapidly from same IP; confirm 429 + Retry-After in real browser DevTools; confirm rate_limit_events accumulates in Supabase under real network load.
+- **Phase 9 backlog: branding editor file-rejection edge cases (Plan 07-04 steps 8–10)** — Server-side validation code is correct and committed. Deferred because Andrew did not have the right test files during the 2026-04-26 smoke session. Three checks needed: (1) upload a real JPG → expect toast "PNG only" (MIME check); (2) upload a PNG > 2 MB → expect toast "File too large" (size check); (3) rename a JPEG to `.png`, upload → expect toast "PNG only" (magic-byte server check catches spoofed MIME, proving the security backstop works).
 - **v2 backlog: `/auth/callback` route** — Supabase recovery / magic-link flows currently 404. Blocks password reset for end users; deferred to v2.
 - **dotenv quoting trap** — leading-`#` values silently parse as empty strings. Plan 02-04 Task 2 and Plan 03-01 Task 2 both tripped over this. Fixed locally in `.env.local` (TEST_OWNER_PASSWORD now quoted). Any env value starting with `#` MUST be double-quoted. Future plans involving env values should add to failure-mode tables.
 
@@ -228,14 +235,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 7 Plan 07-03 complete. 75/75 tests green.
-- 07-03 Task 1: app/embed/layout.tsx — SKIPPED (root layout already chromeless)
-- 07-03 Task 2: EmbedHeightReporter (84fc4c4)
-- 07-03 Task 3: EmbedShell client wrapper (2a2bb06)
-- 07-03 Task 4: embed page.tsx Server Component (b83cfae)
-- Metadata commit: docs(07-03): complete embed-route-and-height-reporter plan
+**Last session:** 2026-04-26 — Phase 7 Plan 07-04 complete. 75/75 tests green. Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file-rejection edge cases) deferred to Phase 9 QA backlog.
+- 07-04 Task 1: Schema + Server Actions + branding loader (bdd5e01)
+- 07-04 Task 2: Build all client components (de70cc3)
+- 07-04 Task 3: Wire branding/page.tsx + build check (498cb25)
+- 07-04 Task 4: Human-verify checkpoint — APPROVED 2026-04-26 (steps 8–10 deferred)
+- Metadata commit: docs(07-04): complete branding-editor plan
 
-**Stopped at:** Completed 07-03-embed-route-and-height-reporter-PLAN.md
+**Stopped at:** Completed 07-04-branding-editor-PLAN.md
 **Resume file:** None
 
 **Next action:** Execute Plan 07-03 (embed route + height reporter).
