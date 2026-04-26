@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 7 Plan 04 complete — branding editor at /app/branding; PNG logo upload + hex color picker + live preview iframe; accounts.logo_url + accounts.brand_primary populated; two-stage owner auth pattern locked)
+**Last updated:** 2026-04-26 (Phase 7 Plan 08 complete — public /[account] index route with card grid, brand-styled EventTypeCard, empty state, BrandedPage wrap; RESERVED_SLUGS guard; 80/80 tests green)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Plan 07-04 complete 2026-04-26. 75/75 tests green. Next: Plan 07-05 (widget.js embed script).
+**Current focus:** Phase 7 (Widget + Branding) — Plan 07-08 complete 2026-04-26. 80/80 tests green. Next: Plan 07-09 (embed snippet dialog).
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,10 +15,10 @@
 ## Current Position
 
 **Phase:** 7 (Widget + Branding) — in progress
-**Plan:** 4 of 9 in Phase 7 complete (07-01 done 2026-04-26; 07-02 done 2026-04-26; 07-03 done 2026-04-26; 07-04 done 2026-04-26)
+**Plan:** 8 of 9 in Phase 7 complete (07-01 through 07-08 done 2026-04-26)
 **Status:** In progress
-**Last activity:** 2026-04-26 — Completed 07-04-branding-editor-PLAN.md
-**Progress:** [███████░░] Phase 7 in progress (07-01 through 07-04 complete; 07-05 through 07-09 pending)
+**Last activity:** 2026-04-26 — Completed 07-08-account-index-route-PLAN.md
+**Progress:** [████████░] Phase 7 in progress (07-01 through 07-08 complete; 07-09 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -200,6 +200,9 @@ Phase 9  [ ] Manual QA & Verification
 - **Outer try/catch exception in branding actions.ts (Plan 07-04)** — Plan 03-03 locked "no try/catch in actions.ts." Exception here: `getOwnerAccountIdOrThrow()` throws on auth failure; an outer try is necessary. Inner error paths still use early return `{error}`. This mirrors Phase 6 `cancelBookingAsOwner`. Future plans seeing this pattern should NOT remove the outer try — it is intentional.
 - **Two-stage owner auth for branding mutations (Plan 07-04)** — `getOwnerAccountIdOrThrow()` calls `createClient()` (RLS-scoped) → `current_owner_account_ids()` RPC to confirm the caller owns the account; then `createAdminClient()` performs Storage upload + accounts UPDATE. Mirrors Phase 6 `cancelBookingAsOwner` lock. Use this pattern for all future Owner-scoped Storage or cross-table mutations.
 - **Forward contract: accounts.logo_url includes ?v= (Plan 07-04)** — Plans 07-06 (booking page branding) and 07-07 (emails) read `accounts.logo_url` as-is. The `?v=` cache-bust is already embedded in the stored value. No manipulation needed downstream; `brandingFromRow()` from Plan 07-01 handles null fallback to DEFAULT_BRAND_PRIMARY.
+- **RESERVED_SLUGS duplicated in load-account-listing.ts (Plan 07-08)** — Intentional. `/[account]/_lib/load-account-listing.ts` owns its own `Set(["app","api","_next","auth","embed"])`. Not imported from `load-event-type.ts` — keeps the two public-route loaders independent. MUST be manually kept in sync. Any v2 multi-tenant onboarding MUST update BOTH sets.
+- **loadAccountListing fails soft on events DB error (Plan 07-08)** — Transient Supabase error on event_types query: `console.error` + return `{ account, eventTypes: [] }` (not null). Caller renders empty state. Prevents 404'ing on transient DB blips.
+- **/[account] + /[account]/[event-slug] coexistence confirmed (Plan 07-08)** — Next.js 16 depth scoping: `app/[account]/page.tsx` serves the index, `app/[account]/[event-slug]/page.tsx` serves individual event. No route conflict. Build verified.
 
 ### Carried Concerns / Todos
 
@@ -235,7 +238,13 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 7 Plan 07-04 complete. 75/75 tests green. Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file-rejection edge cases) deferred to Phase 9 QA backlog.
+**Last session:** 2026-04-26 — Phase 7 Plan 07-08 complete. 80/80 tests green. /[account] route live.
+**Stopped at:** Completed 07-08-account-index-route-PLAN.md
+**Resume file:** None
+
+Previous session note: Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file-rejection edge cases) deferred to Phase 9 QA backlog.
+- 07-08 Task 2: Card + empty-state components (413131c)
+- 07-08 Task 3: Wire account index page.tsx (d84c5ee)
 - 07-04 Task 1: Schema + Server Actions + branding loader (bdd5e01)
 - 07-04 Task 2: Build all client components (de70cc3)
 - 07-04 Task 3: Wire branding/page.tsx + build check (498cb25)
