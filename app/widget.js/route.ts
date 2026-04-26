@@ -26,8 +26,9 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   // Resolve BASE_URL: env var > request origin fallback (dev convenience).
   // Strip trailing slash so string concatenation in the script body is uniform.
+  // Use || (not ??) so an empty-string env var also falls back to request origin.
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     request.nextUrl.origin;
 
   const script = buildWidgetScript(baseUrl);
