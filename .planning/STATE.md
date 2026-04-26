@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Plan 07-06 complete — BrandedPage + four public surfaces branded, live-verified on Vercel; Plan 07-07 paused at checkpoint awaiting Andrew's email QA)
+**Last updated:** 2026-04-26 (Plan 07-07 complete — all 6 transactional email types branded; Andrew approved live 2026-04-26; Phase 9 backlog: per-email-type smoke 6 types x 4 clients)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Plan 07-06 complete (live-verified 2026-04-26). Plan 07-07 paused at checkpoint 2026-04-26. 80/80 tests green. Tasks 1-3 complete; Task 4 is human-verify checkpoint awaiting Andrew's email inspection across all 6 email types.
+**Current focus:** Phase 7 (Widget + Branding) — Plans 07-01 through 07-08 complete (live-verified 2026-04-26). 80/80 tests green. 07-09 (embed snippet dialog) is the final Phase 7 plan.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,10 +15,10 @@
 ## Current Position
 
 **Phase:** 7 (Widget + Branding) — in progress
-**Plan:** 07-07 paused at checkpoint (Tasks 1-3 complete; Task 4 human-verify pending); 07-06 complete
-**Status:** Checkpoint — awaiting human verification (07-07 Task 4 email QA)
-**Last activity:** 2026-04-26 — Plan 07-06 complete (live-verified); Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify
-**Progress:** [███████░░] Phase 7 in progress (07-01 through 07-08 code complete; 07-07 checkpoint pending; 07-09 pending)
+**Plan:** 07-07 complete; 07-09 pending
+**Status:** In progress
+**Last activity:** 2026-04-26 — Plan 07-07 complete (Andrew approved email branding live; Phase 9 backlog added)
+**Progress:** [████████░] Phase 7 in progress (07-01 through 07-08 complete; 07-09 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -230,6 +230,7 @@ Phase 9  [ ] Manual QA & Verification
 - **Phase 9 backlog: .ics iTIP calendar-client removal/update** — Deferred from Phase 6 manual QA step 4. Verify METHOD:CANCEL auto-removes event in Apple Mail / Gmail web / Outlook web; verify METHOD:REQUEST + same UID + SEQUENCE:1 updates event in-place on reschedule. Consolidates with Phase 5's "ICS file structure for Gmail inline card" and QA-03 mail-tester items.
 - **Phase 9 backlog: rate-limit live verification** — Deferred from Phase 6 manual QA step 8. Integration test #7 proves the code path. Live check: hit `/api/cancel` and `/api/reschedule` 11+ times rapidly from same IP; confirm 429 + Retry-After in real browser DevTools; confirm rate_limit_events accumulates in Supabase under real network load.
 - **Phase 9 backlog: branding editor file-rejection edge cases (Plan 07-04 steps 8–10)** — Server-side validation code is correct and committed. Deferred because Andrew did not have the right test files during the 2026-04-26 smoke session. Three checks needed: (1) upload a real JPG → expect toast "PNG only" (MIME check); (2) upload a PNG > 2 MB → expect toast "File too large" (size check); (3) rename a JPEG to `.png`, upload → expect toast "PNG only" (magic-byte server check catches spoofed MIME, proving the security backstop works).
+- **Phase 9 backlog: per-email-type smoke testing (Plan 07-07 Task 4 deferred)** — Andrew approved email branding in a combined 07-06 + 07-07 sweep 2026-04-26 but individual email types were not enumerated. Phase 9 must render all 6 transactional email types (booker confirmation + owner notification + booker cancel + owner cancel + booker reschedule + owner reschedule) in Gmail web, Gmail iOS, Apple Mail, Outlook web. Checks per email: logo centered at top (absent when logo_url null), brand-colored H1 (fallback to NSI navy when brand_primary null), brand-colored CTA buttons where applicable, "Powered by NSI" text-link footer (no broken image), .ics attaches + behaves correctly per client.
 - **v2 backlog: `/auth/callback` route** — Supabase recovery / magic-link flows currently 404. Blocks password reset for end users; deferred to v2.
 - **dotenv quoting trap** — leading-`#` values silently parse as empty strings. Plan 02-04 Task 2 and Plan 03-01 Task 2 both tripped over this. Fixed locally in `.env.local` (TEST_OWNER_PASSWORD now quoted). Any env value starting with `#` MUST be double-quoted. Future plans involving env values should add to failure-mode tables.
 
@@ -247,15 +248,15 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Plan 07-06 complete (SUMMARY.md written, live-verified); Plan 07-07 Tasks 1-3 complete; paused at checkpoint:human-verify (Task 4).
-**Stopped at:** Task 4 checkpoint in 07-07-apply-branding-to-emails-PLAN.md (awaiting Andrew's email QA)
+**Last session:** 2026-04-26 — Plan 07-07 complete (checkpoint resolved; Andrew approved 2026-04-26; SUMMARY.md updated; Phase 9 backlog added).
+**Stopped at:** Plan 07-07 complete. Next: Plan 07-09 (embed snippet dialog).
 **Resume file:** None
 
 Previous session note (07-07):
 - 07-07 Task 1: Create lib/email/branding-blocks.ts (1f0c7eb)
 - 07-07 Task 2: Apply branding blocks to all 4 email sender files (242cfe6)
 - 07-07 Task 3: Widen caller SELECTs to include logo_url and brand_primary (73389a1)
-- Task 4: CHECKPOINT — awaiting Andrew to send live booking and verify all 6 email types render with logo + brand color + NSI footer
+- 07-07 Task 4: APPROVED — Andrew confirmed "I see the branding elements now. It is working" (combined 07-06 + 07-07 sweep); Phase 9 backlog: per-email-type smoke 6 types x 4 clients
 
 Previous session note (07-08):
 Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file-rejection edge cases) deferred to Phase 9 QA backlog.
@@ -267,12 +268,12 @@ Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file
 **Phase 7 plan status:**
 - ✅ Plan 07-01 (branding lib: contrast.ts + types.ts + read-branding.ts + AccountSummary extension + RESERVED_SLUGS "embed") — complete, pushed (2026-04-26, 7c67fbc + 45c629b + 461c81d)
 - ✅ Plan 07-02 (proxy CSP headers + next.config.ts security headers + 'branding' bucket confirmed) — complete (2026-04-26, bc7572f + 902ad35; bucket pre-existed)
-- ⬜ Plan 07-03 (embed route + height reporter)
-- ⬜ Plan 07-04 (branding editor)
-- ⬜ Plan 07-05 (Supabase Storage bucket + logo upload action)
-- ⬜ Plan 07-06 (apply branding to booking page surfaces)
-- ⬜ Plan 07-07 (apply branding to emails)
-- ⬜ Plan 07-08 (account index route /[account])
+- ✅ Plan 07-03 (embed route + height reporter) — complete (2026-04-26)
+- ✅ Plan 07-04 (branding editor) — complete (2026-04-26)
+- ✅ Plan 07-05 (widget.js Route Handler) — complete (2026-04-26)
+- ✅ Plan 07-06 (apply branding to booking page surfaces) — complete, live-verified (2026-04-26)
+- ✅ Plan 07-07 (apply branding to emails) — complete; Andrew approved 2026-04-26 combined sweep; Phase 9 backlog: per-email-type smoke 6 types x 4 clients (1f0c7eb + 242cfe6 + 73389a1 + 7e0034d)
+- ✅ Plan 07-08 (account index route /[account]) — complete (2026-04-26)
 - ⬜ Plan 07-09 (embed snippet dialog)
 
 **Phase 6 plan status:**

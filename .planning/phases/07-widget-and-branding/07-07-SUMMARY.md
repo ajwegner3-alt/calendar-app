@@ -64,10 +64,10 @@ completed: 2026-04-26
 
 ## Performance
 
-- **Duration:** ~11 min (Tasks 1-3 complete; Task 4 checkpoint awaiting Andrew's manual verification)
+- **Duration:** ~11 min (Tasks 1-3) + checkpoint resolution 2026-04-26
 - **Started:** 2026-04-26T14:47:29Z
-- **Completed:** 2026-04-26T14:58:32Z (Tasks 1-3)
-- **Tasks:** 3/4 auto tasks complete; 1 checkpoint pending manual verify
+- **Completed:** 2026-04-26 (all 4 tasks complete — Task 4 checkpoint approved)
+- **Tasks:** 4/4 complete
 - **Files modified:** 7 (1 created, 6 modified)
 
 ## Accomplishments
@@ -85,7 +85,7 @@ Each task was committed atomically:
 2. **Task 2: Apply branding blocks to all 4 email sender files** - `242cfe6` (feat)
 3. **Task 3: Update callers to SELECT branding columns and pass them through** - `73389a1` (feat)
 
-**Plan metadata:** (docs commit — pending checkpoint resolution)
+**Plan metadata:** (docs commit — docs(07-07): complete apply-branding-to-emails plan)
 
 ## Files Created/Modified
 
@@ -128,6 +128,35 @@ None — plan executed exactly as written.
 
 Pre-existing TypeScript errors in `tests/bookings-api.test.ts` and `tests/cancel-reschedule-api.test.ts` (mock alias errors for `__setTurnstileResult`, `__mockSendCalls`, `__resetMockSendCalls`) — existed before this plan, documented in 07-01-SUMMARY.md. The Vitest suite (which uses alias resolution, not `tsc`) passes 80/80 tests.
 
+## Live Verification
+
+**Task 4 checkpoint approved 2026-04-26.**
+
+Andrew completed a combined branding-surfaces + emails sweep on the live Vercel deployment and confirmed: "I see the branding elements now. It is working."
+
+Individual email types were not enumerated in the approval. The specific 6-type x 4-client smoke test (Gmail web, Gmail iOS, Apple Mail, Outlook web) is recorded as a Phase 9 backlog item below.
+
+## Phase 9 Backlog (Added by This Plan)
+
+**Per-email-type smoke testing — deferred from Task 4 live verification**
+
+Verify in Gmail web, Gmail iOS, Apple Mail, and Outlook web:
+
+- **6 email types:** booker confirmation + owner notification + booker cancel + owner cancel + booker reschedule + owner reschedule
+- **Per-email checks:**
+  - Logo renders at top, centered, max ~120px wide (absent when logo_url is null — no broken-img, no empty space)
+  - Brand-colored H1 (custom test color; fallback to NSI navy when brand_primary cleared)
+  - Brand-colored CTA buttons where applicable:
+    - Booker confirmation: Reschedule + Cancel buttons
+    - Booker cancel: Book again button
+    - Booker reschedule: Cancel + Reschedule buttons
+    - Owner emails: no major CTAs (notification only)
+  - "Powered by NSI" text-link footer present; "North Star Integrations" links to https://nsi.dev; no broken image
+  - .ics attaches and behaves correctly (inline calendar card in Gmail; calendar add prompt in Apple Mail; SEQUENCE increment on reschedule)
+- **Sanity fallback checks:**
+  - Clear brand_primary in Supabase Table Editor → emails fall back to NSI navy with no errors
+  - Clear logo_url → email renders with no logo header, no empty space, no broken-img placeholder
+
 ## Authentication Gates
 
 None.
@@ -136,18 +165,13 @@ None.
 
 None — no external service configuration required. The `accounts` table already has `logo_url` and `brand_primary` columns from the Phase 1 schema.
 
-**Task 4 (checkpoint:human-verify) requires Andrew to:**
-1. Create a booking with a real email to test booker confirmation + owner notification
-2. Cancel and reschedule to test the remaining 4 email types
-3. Verify logo, brand color, CTA buttons, and "Powered by NSI" footer render correctly
-4. Test null fallbacks (clear logo_url and brand_primary in Supabase to verify graceful fallback)
-
 ## Next Phase Readiness
 
-- `lib/email/branding-blocks.ts` is the canonical source for email branding HTML — ready for Phase 8 email senders
-- All 6 transactional email types are wired to branding; only human verification remains
-- Plan 07-08 (account index route): no overlap — no blockers from 07-07
+- `lib/email/branding-blocks.ts` is the canonical source for email branding HTML — ready for Phase 8 reminder email senders
+- BRAND-04 satisfied: all 6 transactional email types render per-account logo + brand color
+- 80/80 tests green; build passes; no regressions from additive changes
+- Phase 9 backlog: per-email-type smoke across 6 email types x 4 clients
 
 ---
 *Phase: 07-widget-and-branding*
-*Completed: 2026-04-26 (Tasks 1-3; Task 4 pending manual QA)*
+*Completed: 2026-04-26*
