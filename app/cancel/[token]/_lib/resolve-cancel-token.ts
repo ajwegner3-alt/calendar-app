@@ -19,6 +19,8 @@ export interface ResolvedCancelToken {
     slug: string;
     timezone: string;
     owner_email: string | null;
+    logo_url: string | null;
+    brand_primary: string | null;
   };
   eventType?: {
     name: string;
@@ -55,7 +57,7 @@ export async function resolveCancelToken(rawToken: string): Promise<ResolvedCanc
     .select(
       `id, account_id, start_at, end_at, booker_name, booker_email, booker_timezone, status, cancelled_at,
        event_types!inner(name, slug, duration_minutes),
-       accounts!inner(name, slug, timezone, owner_email)`,
+       accounts!inner(name, slug, timezone, owner_email, logo_url, brand_primary)`,
     )
     .eq("cancel_token_hash", hash)
     .maybeSingle();
@@ -88,6 +90,8 @@ export async function resolveCancelToken(rawToken: string): Promise<ResolvedCanc
         slug: account.slug,
         timezone: account.timezone,
         owner_email: account.owner_email ?? null,
+        logo_url: account.logo_url ?? null,
+        brand_primary: account.brand_primary ?? null,
       },
       eventType: {
         name: eventType.name,
@@ -111,6 +115,8 @@ export async function resolveCancelToken(rawToken: string): Promise<ResolvedCanc
         slug: account.slug,
         timezone: account.timezone,
         owner_email: account.owner_email ?? null,
+        logo_url: account.logo_url ?? null,
+        brand_primary: account.brand_primary ?? null,
       },
       eventType: {
         name: eventType.name,
