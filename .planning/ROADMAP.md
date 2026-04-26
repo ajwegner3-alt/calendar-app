@@ -255,7 +255,7 @@ Note: `EMBED-07` (live verification on a real Squarespace/WordPress site) is int
 | 3 - Event Types CRUD | Andrew can define what people book | ✓ Complete (2026-04-24) |
 | 4 - Availability Engine | Slot API returns correct UTC slots, DST-safe | ✓ Complete (2026-04-25) |
 | 5 - Public Booking Flow + Email + .ics | Visitor books a slot and gets a calendar invite | ✓ Complete (2026-04-25, human_needed for Phase 9) |
-| 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | Pending |
+| 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | ✓ Complete (2026-04-25, human_needed for Phase 9) |
 | 7 - Widget + Branding | Branded embeddable widget for client sites | Pending |
 | 8 - Reminders + Hardening + Dashboard List | Reliable reminders, hardened production, bookings UI | Pending |
 | 9 - Manual QA & Verification | Andrew signs off v1 is shippable | Pending |
