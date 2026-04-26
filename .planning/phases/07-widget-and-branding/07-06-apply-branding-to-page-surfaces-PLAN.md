@@ -75,6 +75,8 @@ Each surface gets a top-centered logo (when set) and uses the account's brand_pr
 Purpose: Delivers BRAND-03 (booking + confirmation + cancel + reschedule pages render account branding). The shared `BrandedPage` wrapper centralizes logo + CSS-var injection so each page only needs a one-line wrap. CTAs in existing components consume `var(--brand-primary)` via inline style.
 
 Output: New `app/_components/branded-page.tsx`; loader extensions on confirmation + cancel + reschedule resolvers; one-line wraps + targeted CTA color updates on the four pages.
+
+# Note: This plan is at the upper bound of atomic scope (9 files across 5 route trees). All edits are mechanical (additive field widening + JSX wraps). If the executor encounters non-trivial loader shapes, escalate via SUMMARY.md rather than proceeding.
 </objective>
 
 <execution_context>

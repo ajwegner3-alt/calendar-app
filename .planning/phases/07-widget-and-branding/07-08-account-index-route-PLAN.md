@@ -384,19 +384,9 @@ Output: New `app/[account]/page.tsx` + `_lib/` (loader + types) + `_components/`
     ```
 
     KEY DECISIONS:
-    - Wrapped in BrandedPage (Plan 07-06 dependency, but BrandedPage is a server component with no runtime deps — safe to consume even if 07-06 hasn't merged).
-    - Wait — 07-06 is in the same wave. Files won't conflict (07-06 OWNS branded-page.tsx; 07-08 only imports from it). Both can run in parallel within wave 3 IF 07-06 completes its Task 1 first OR if both plans share a coordinated commit boundary. To remove ordering risk, this plan (07-08) is in WAVE 2 and depends only on 07-01 — but BrandedPage doesn't exist until Plan 07-06. RESOLUTION: 07-08 is moved to WAVE 3 with `depends_on: ["07-01", "07-06"]`. Update frontmatter accordingly OR inline the BrandedPage logic here (5 lines + pickTextColor import) to avoid the dependency.
-
-    DECISION: Update frontmatter `depends_on: ["07-01", "07-06"]` and `wave: 3` after writing this plan. Andrew's planner will reconcile when assembling waves.
-
-    Actually — re-reading the planner directive: I (planner) compute waves. Let me re-decide:
-
-    Plan 07-06 is in wave 3 because it depends on 07-01.
-    Plan 07-08 needs BrandedPage (created in 07-06 task 1) → 07-08 also belongs in wave 3 with depends_on: ["07-01", "07-06"].
-
-    HOWEVER, 07-06 Task 1 creates app/_components/branded-page.tsx as a server component with one import (pickTextColor from lib/branding/contrast). It's a tiny atomic unit. There's no real reason to gate 07-08 on 07-06 — they don't share files. The cleanest resolution: 07-08 imports BrandedPage; if Plan 07-06 hasn't run yet, the import will fail — but waves enforce ordering.
-
-    LOCK: 07-08 stays in wave 3 with depends_on: ["07-01", "07-06"]. Update the frontmatter at the TOP of this PLAN.md before committing. (Self-correction: the frontmatter wave/depends will be updated below in the final plan list.)
+    - Wrapped in BrandedPage (created in Plan 07-06). Frontmatter already declares `wave: 3` and `depends_on: ["07-01", "07-06"]` so the executor's import will resolve cleanly.
+    - BrandedPage is a Server Component with no runtime deps beyond `pickTextColor` from `lib/branding/contrast.ts` (Plan 07-01).
+    - This plan only IMPORTS branded-page.tsx; it does NOT modify it (no file conflict with Plan 07-06).
   </action>
   <verify>
     `npm run build` succeeds.

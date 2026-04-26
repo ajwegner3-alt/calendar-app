@@ -21,7 +21,7 @@ must_haves:
     - "Andrew can upload a PNG (max 2 MB) and it is stored in Supabase Storage 'branding' bucket; logo_url column is updated"
     - "Andrew can type a hex color OR use the native color picker; on save, brand_primary column is updated"
     - "A live preview iframe alongside the editor reflects color/logo changes BEFORE save (via postMessage to the embed page)"
-    - "Save action validates: hex matches /^#[0-9a-fA-F]{6}$/; PNG content-type; file size ≤ 2 MB"
+    - "Save action validates: hex matches /^#[0-9a-fA-F]{6}$/; file.type === 'image/png' AND first 4 bytes === PNG magic [0x89,0x50,0x4E,0x47]; file size ≤ 2 MB"
   artifacts:
     - path: "app/(shell)/app/branding/page.tsx"
       provides: "Server Component: loads current branding for owner's account, renders BrandingEditor"
@@ -104,7 +104,28 @@ Output: Branding editor route with upload + color picker + preview iframe + Serv
 
     // File validation runs BOTH client-side (UX) and server-side (truth).
     // Server limit also enforced by Supabase bucket policy (PNG only, 2 MB).
+    //
+    // RESEARCH override: CONTEXT.md said "PNG or SVG"; RESEARCH.md §SVG-rationale
+    // narrows to PNG-only in v1 due to XSS surface (SVG can embed scripts).
+    // SVG support is a deferred future enhancement.
     export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+    // PNG magic number: every PNG file starts with these 4 bytes.
+    // Used for server-side magic-byte validation in uploadLogoAction
+    // (file.type is browser-reported MIME and is spoofable; magic-byte check
+    //  is the actual proof the upload is a PNG).
+    export const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47] as const;
+
+    /**
+     * RESEARCH override: CONTEXT.md said "PNG or SVG"; RESEARCH.md §SVG-rationale
+     * narrows to PNG-only in v1 due to XSS surface (SVG can embed scripts).
+     * SVG support is a deferred future enhancement.
+     */
+    export const logoFileSchema = {
+      maxBytes: MAX_LOGO_BYTES,
+      allowedMime: "image/png" as const,
+      magicBytes: PNG_MAGIC,
+    };
     ```
 
     Create `_lib/load-branding.ts`:
@@ -199,7 +220,25 @@ Output: Branding editor route with upload + color picker + preview iframe + Serv
         const file = formData.get("file");
         if (!(file instanceof File)) return { error: "No file provided." };
         if (file.size > MAX_LOGO_BYTES) return { error: "File too large (max 2 MB)." };
+
+        // file.type is the browser-reported MIME (spoofable: a renamed JPEG
+        // can carry Content-Type: image/png). Reject on MIME mismatch first
+        // for fast UX, then verify magic bytes from the actual file buffer.
         if (file.type !== "image/png") return { error: "PNG only." };
+
+        // Magic-byte validation: read first 4 bytes, must equal PNG magic
+        // [0x89, 0x50, 0x4E, 0x47]. This is the security check that catches
+        // a renamed JPEG (or any non-PNG) that bypassed the client-side
+        // accept="image/png" filter and the file.type sniff.
+        const headBuf = await file.slice(0, 4).arrayBuffer();
+        const head = new Uint8Array(headBuf);
+        const isPng =
+          head.length === 4 &&
+          head[0] === 0x89 &&
+          head[1] === 0x50 &&
+          head[2] === 0x4e &&
+          head[3] === 0x47;
+        if (!isPng) return { error: "PNG only." };
 
         const accountId = await getOwnerAccountIdOrThrow();
 
@@ -404,6 +443,7 @@ Output: Branding editor route with upload + color picker + preview iframe + Serv
     - Should see Logo section + Color section on the left, Preview iframe on the right.
     - Upload a small PNG (try a 100KB test file). Confirm it appears in current-logo display + live preview.
     - Try uploading a JPG → toast "PNG only".
+    - Try uploading a renamed JPEG (rename `photo.jpg` to `photo.png`, browser will report content-type as `image/png` because Windows/Chrome sniff by extension) → toast "PNG only" (magic-byte check rejects it; this is the security backstop that proves spoofed MIME is caught).
     - Try uploading a 5MB PNG → toast "File too large".
     - Type `#ff0000` in color text input → preview iframe re-mounts with red.
     - Use native color picker to pick a green → text input updates to e.g. `#00ff00`; preview updates.

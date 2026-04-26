@@ -8,7 +8,7 @@ files_modified:
   - app/embed/[account]/[event-slug]/page.tsx
   - app/embed/[account]/[event-slug]/_components/embed-height-reporter.tsx
   - app/embed/[account]/[event-slug]/_components/embed-shell.tsx
-  - app/embed/layout.tsx
+  - app/embed/layout.tsx (conditional — only created if root layout is not already chromeless; see Task 1 — file may not be created and the planner accepts either outcome)
 autonomous: true
 
 must_haves:

@@ -191,7 +191,7 @@ Output: Updated `proxy.ts` (CSP branching), updated `next.config.ts` (global def
     3. Name: `branding`
     4. Public bucket: **ON** (toggle the switch — this is critical; private buckets break email/embed image rendering per RESEARCH §Pattern 4)
     5. Additional configuration:
-       - Allowed MIME types: `image/png` (one entry, exact)
+       - Allowed MIME types: `image/png` ONLY (RESEARCH override of CONTEXT — CONTEXT.md said "PNG or SVG"; RESEARCH.md §SVG-rationale narrows to PNG-only in v1 due to XSS surface (SVG can embed scripts). SVG support is a deferred future enhancement.)
        - File size limit: `2` with unit `MB`
     6. Save / Create bucket
     7. Verify the bucket appears in the list with "Public" badge

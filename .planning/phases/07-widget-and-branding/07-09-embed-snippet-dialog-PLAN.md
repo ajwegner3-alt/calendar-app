@@ -16,7 +16,7 @@ must_haves:
   truths:
     - "Each event-type row's kebab menu has a 'Get embed code' item"
     - "Clicking 'Get embed code' opens a Dialog with two tabs: 'Script (recommended)' and 'iframe fallback'"
-    - "Script tab shows: <script src='${appUrl}/widget.js'> + <div data-nsi-calendar='${accountSlug}/${eventSlug}'></div>"
+    - "Script tab shows: `<div data-nsi-calendar=\"${accountSlug}/${eventSlug}\"></div>` THEN `<script src=\"${appUrl}/widget.js\" defer></script>` (div first so element is in DOM before script's init() runs at DOMContentLoaded)"
     - "iframe tab shows: <iframe src='${appUrl}/embed/${accountSlug}/${eventSlug}' width='100%' height='600' frameborder='0'></iframe>"
     - "Each tab has a Copy button that (a) copies snippet to clipboard, (b) shows 'Copied!' on the button for 2 seconds, (c) fires a Sonner toast"
     - "A live preview iframe of /embed/${accountSlug}/${eventSlug} renders alongside the snippets"

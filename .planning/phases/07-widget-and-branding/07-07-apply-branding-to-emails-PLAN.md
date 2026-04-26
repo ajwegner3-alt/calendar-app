@@ -22,7 +22,7 @@ must_haves:
     - "Booker cancel email renders logo + brand-colored 'Book again' CTA"
     - "Booker reschedule email renders logo + brand-colored heading + cancel/reschedule links"
     - "Owner notification email renders the same logo + brand color (consistent with public surfaces)"
-    - "All emails include a 'Powered by NSI' footer with small NSI logo (CONTEXT lock — not white-label in v1)"
+    - "All emails include a 'Powered by NSI' text-link footer (CONTEXT lock — not white-label in v1). Logo mark is conditional on NSI_MARK_URL being set; v1 ships text-only."
     - "When account.logo_url is null OR brand_primary is null, emails gracefully fall back (no logo header; default NSI navy color); no broken images, no validator errors"
     - "All sender callers pass account.logo_url + brand_primary through (no hard-coded null)"
   artifacts:
@@ -131,21 +131,28 @@ Output: New `branding-blocks.ts` shared module, type extensions to `AccountRecor
     }
 
     /**
-     * "Powered by NSI" footer with small NSI logo.
-     * CONTEXT lock: not white-label in v1; always present.
+     * "Powered by NSI" footer.
+     * CONTEXT lock: not white-label in v1; always present as a text link.
      *
-     * NSI logo URL: published location from NSI brand assets. For v1, use a hosted
-     * URL on the calendar app's own domain (we'll bundle it during execution).
-     * Fallback: text-only "Powered by NSI" if image broken.
+     * v1 SHIPS TEXT-ONLY. The image mark is rendered ONLY when NSI_MARK_URL is set
+     * (non-null). Default is null because /public/nsi-mark.png does not exist yet
+     * and a 404'd <img> in transactional email is a guaranteed broken-image
+     * artifact in every email client. Text-only is the safe v1 surface.
+     *
+     * TODO(future): when nsi-mark.png is added to /public/, set
+     *   NSI_MARK_URL = `${appUrl}/nsi-mark.png`
+     * to render the inline mark. Remove the null guard once the asset is committed.
      */
+    const NSI_MARK_URL: string | null = null;
+    const NSI_HOMEPAGE_URL = "https://nsi.dev";
+
     export function renderEmailFooter(): string {
-      // The NSI logo is small (height 16px), inline alongside text.
-      // Source URL: served from calendar-app domain (Plan 07-07 also adds /public/nsi-mark.png)
-      // — fallback to text-only if image fails (alt attribute provides accessible text).
-      const nsiLogoSrc = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://calendar-app-xi-smoky.vercel.app"}/nsi-mark.png`;
+      const markHtml = NSI_MARK_URL
+        ? `<img src="${NSI_MARK_URL}" alt="NSI" width="14" height="14" style="display:inline-block;vertical-align:middle;margin:0 2px;border:0;" /> `
+        : "";
       return `<hr style="border: none; border-top: 1px solid #eee; margin: 32px 0 16px 0;"/>
         <p style="margin: 0; font-size: 12px; color: #888; text-align: center;">
-          Powered by <img src="${nsiLogoSrc}" alt="NSI" width="14" height="14" style="display:inline-block;vertical-align:middle;margin:0 2px;border:0;" /> <strong>North Star Integrations</strong>
+          Powered by ${markHtml}<a href="${NSI_HOMEPAGE_URL}" style="color:#888;text-decoration:underline;"><strong>North Star Integrations</strong></a>
         </p>`;
     }
 
@@ -184,9 +191,7 @@ Output: New `branding-blocks.ts` shared module, type extensions to `AccountRecor
     }
     ```
 
-    Then create `public/nsi-mark.png` IF the project root has a `public/` folder. If `public/` does not exist yet (verify first via Bash `ls public/`), create it AND drop a placeholder PNG. The file can be a 14x14 NSI orange square; Andrew can swap to the real NSI mark in the dashboard later. Use the `Write` tool to create a tiny binary placeholder if needed; otherwise document this as a manual step in the SUMMARY.
-
-    ALTERNATIVE if creating a binary PNG via Write tool is awkward: the `renderEmailFooter` falls back to text gracefully because the alt is "NSI". For Plan 07-07 v1, accept that `nsi-mark.png` may 404 in development — production deploys will include it. Document the asset upload as a TODO for Plan 07-10 manual QA.
+    DO NOT create `public/nsi-mark.png` in this plan. v1 ships TEXT-ONLY (NSI_MARK_URL = null). Fix rationale: a 404'd `<img>` tag in a transactional email is a guaranteed broken-image artifact in Gmail/Outlook/Apple Mail. By rendering text-only when NSI_MARK_URL is null, we ship a clean v1 footer and leave a documented TODO comment for the future.
 
     KEY DECISIONS:
     - All HTML returned is INLINE-STYLED (Gmail/Outlook compatibility — STATE.md Phase 5 lock continues here).
@@ -345,7 +350,7 @@ Output: New `branding-blocks.ts` shared module, type extensions to `AccountRecor
     - Top-centered logo header
     - Brand-colored H1
     - Brand-colored CTA buttons (where applicable — confirmation, cancel-booker, reschedule-booker)
-    - "Powered by NSI" footer with small NSI logo
+    - "Powered by NSI" text-link footer (text-only in v1; no broken image, no missing asset)
   </what-built>
   <how-to-verify>
     Pre-req: branding editor (Plan 07-04) has saved a logo + custom color (e.g., magenta) on the nsi account.
@@ -356,13 +361,13 @@ Output: New `branding-blocks.ts` shared module, type extensions to `AccountRecor
          - Logo at top, centered
          - "You're booked." in your magenta color
          - Reschedule + Cancel buttons with magenta background
-         - "Powered by NSI" footer at the bottom
+         - "Powered by NSI" text-link footer at the bottom (no broken image; "North Star Integrations" links to https://nsi.dev)
          - .ics still attaches and Gmail shows the inline calendar card
        - **Owner notification email**:
          - Logo at top
          - H1 in magenta
          - Booking details rendered correctly
-         - "Powered by NSI" footer
+         - "Powered by NSI" text-link footer (no broken image)
     3. Click the cancel link in the booker confirmation. Submit cancel.
     4. Check inbox again:
        - **Booker cancel email**:
@@ -399,7 +404,7 @@ Output: New `branding-blocks.ts` shared module, type extensions to `AccountRecor
 
 <success_criteria>
 1. BRAND-04: All 6 transactional emails render account logo + brand color.
-2. CONTEXT lock honored: heading + CTA both use primary; "Powered by NSI" footer present.
+2. CONTEXT lock honored: heading + CTA both use primary; "Powered by NSI" text-link footer present (text-only in v1; logo mark gated on NSI_MARK_URL).
 3. Fallbacks work (null logo → no header; null brand_primary → NSI navy).
 4. .ics attachments unchanged (Phase 5/6 functionality preserved).
 5. Inline-styled HTML survives Gmail/Outlook/Apple Mail (lock from Phase 5 STATE).
