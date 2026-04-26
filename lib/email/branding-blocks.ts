@@ -42,7 +42,7 @@ export function renderEmailLogoHeader(branding: EmailBranding): string {
  * to render the inline mark. Remove the null guard once the asset is committed.
  */
 const NSI_MARK_URL: string | null = null;
-const NSI_HOMEPAGE_URL = "https://nsi.dev";
+const NSI_HOMEPAGE_URL = "https://nsintegrations.com";
 
 export function renderEmailFooter(): string {
   const markHtml = NSI_MARK_URL
