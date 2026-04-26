@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 6 Plan 06-03 complete — lib/bookings/cancel.ts + lib/bookings/reschedule.ts; 47a8b13 + 13359d3)
+**Last updated:** 2026-04-26 (Phase 6 Plan 06-05 complete — owner booking detail page + cancelBookingAsOwner Server Action + CancelButton AlertDialog; 364351e + 4338be3)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 6 (Cancel + Reschedule Lifecycle) in progress — Plan 06-03 done (shared cancel/reschedule business logic). Plan 06-04 (public token routes) is next.
+**Current focus:** Phase 6 (Cancel + Reschedule Lifecycle) in progress — Plan 06-05 done (owner cancel surface at /app/bookings/[id]). Plan 06-06 (integration tests + manual QA) is next.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 6 (Cancel + Reschedule Lifecycle) — In progress
-**Plan:** 3 of 6 plans complete (06-03 done — lib/bookings/cancel.ts + lib/bookings/reschedule.ts shared atomic functions)
-**Status:** Phase 6 in progress. Plans 06-04..06-06 ready.
-**Last activity:** 2026-04-26 — Completed 06-03 (cancelBooking + rescheduleBooking; 47a8b13 + 13359d3)
+**Plan:** 5 of 6 plans complete (06-05 done — /app/bookings/[id] Server Component + cancelBookingAsOwner Server Action + CancelButton client AlertDialog)
+**Status:** Phase 6 in progress. Plan 06-06 (integration tests + manual QA) ready.
+**Last activity:** 2026-04-26 — Completed 06-05 (owner cancel surface; 364351e + 4338be3)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phase 6 in progress)
 
 ```
@@ -160,6 +160,11 @@ Phase 9  [ ] Manual QA & Verification
 - **bookings.status stays 'confirmed' after reschedule (Plan 06-03)** — The `'rescheduled'` value in `booking_event_kind` enum is for `booking_events.event_type` only. bookings.status stays 'confirmed' after reschedule so the new rotated tokens remain valid for subsequent cancel/reschedule operations.
 - **Double CAS guard on reschedule prevents concurrent same-token success (Plan 06-03)** — UPDATE WHERE includes `reschedule_token_hash = oldRescheduleHash` (RESEARCH Pitfall 6). Without it, two concurrent requests using the same token can both succeed and rotate to different new tokens — the second request's tokens would be unknown to the second requester.
 - **Pre-fetch snapshot before UPDATE pattern (Plan 06-03)** — booking + event_types!inner + accounts!inner fetched in one round-trip BEFORE the CAS UPDATE. Post-UPDATE the tokens are dead/rotated; re-fetching would add a round-trip for no gain. Pre-fetch snapshot is used for fire-and-forget email construction.
+- **Two-stage owner authorization (Plan 06-05)** — `cancelBookingAsOwner` Server Action does RLS-scoped pre-check (SELECT via createClient() before delegating to service-role `cancelBooking()`). Prevents any logged-in owner from cancelling another account's booking via UUID guessing. Both "not found" and "foreign account" return identical `{ error: 'Booking not found.' }` — no 403 vs 404 distinction to prevent UUID existence leakage.
+- **Owner cancel Server Action appUrl resolution (Plan 06-05)** — `NEXT_PUBLIC_APP_URL ?? https://${NEXT_PUBLIC_VERCEL_URL} ?? localhost:3000`. Server Actions cannot access `req.nextUrl`. This is the canonical pattern for env-derived URL in Server Actions.
+- **AlertDialog confirm flow (Plan 06-05)** — `e.preventDefault()` on `AlertDialogAction` onClick prevents premature dialog close before Server Action resolves. `useTransition` + manual `setOpen(false)` after resolution. Without `preventDefault`, Radix closes the dialog immediately (default behavior) before the `await` completes.
+- **/app/bookings/[id] URL contract LOCKED (Plan 06-05)** — Phase 8 bookings list will link rows to `/app/bookings/[id]`. Do NOT change this URL shape.
+- **Open Question B confirmed resolved (Plan 06-05)** — Owner cancel surface lives at `/app/bookings/[id]` detail page, NOT the list. The bookings list page (`/app/bookings`) remains a Phase 8 placeholder.
 - **vitest.config.ts alias-level mock interception (Plan 05-08)** — `@/lib/turnstile` and `@/lib/email-sender` aliased to `tests/__mocks__/` via `path.resolve(__dirname, ...)`. Alias-level is preferred over `vi.mock()` for route-handler integration tests (avoids ESM hoisting issues). Pattern reusable for any future server-only module needing mock interception.
 - **`sendEmail` spy asserts `>= 1` (not `== 2`) (Plan 05-08)** — Both `send-booking-confirmation.ts` and `send-owner-notification.ts` call `sendEmail`. Owner notification is conditional on `accounts.owner_email` being non-null. Assert `>= 1` to stay env-tolerant; assert `[0].to === bookerEmail` to confirm the booker confirmation fired.
 - **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
@@ -196,18 +201,16 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 6 Plan 06-03 complete. lib/bookings/cancel.ts (atomic cancel with dead-hash invalidation, CAS guard, PGRST116→not_active, fire-and-forget emails + audit) and lib/bookings/reschedule.ts (atomic reschedule with double CAS guard, 23505→slot_taken, token rotation, bad_slot pre-flight) created. Both pushed (47a8b13 + 13359d3).
+**Last session:** 2026-04-26 — Phase 6 Plan 06-05 complete. /app/bookings/[id] Server Component (RLS fetch, notFound, dual-TZ render, status branches) + cancelBookingAsOwner Server Action (two-stage RLS pre-check + delegate to shared cancelBooking(actor:'owner')) + CancelButton client AlertDialog (useTransition, e.preventDefault confirm, reason Textarea, not_active branch). Both pushed (364351e + 4338be3).
 
-**Next action:** Plan 06-04 — implement public token routes (POST /api/cancel + POST /api/reschedule) consuming cancelBooking + rescheduleBooking from 06-03.
+**Next action:** Plan 06-06 — integration tests + manual QA for Phase 6 cancel/reschedule lifecycle.
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
 - ✅ Plan 06-02 (lib/rate-limit.ts + ICS extension + cancel/reschedule email senders) — complete, pushed (2026-04-26, 8ba4f43 + 9c608f4 + 893e428)
 - ✅ Plan 06-03 (lib/bookings/cancel.ts + lib/bookings/reschedule.ts shared atomic functions) — complete, pushed (2026-04-26, 47a8b13 + 13359d3)
-- [ ] Plan 06-03 (cancel + reschedule shared functions)
-- [ ] Plan 06-03 (cancel + reschedule shared functions)
-- [ ] Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token])
-- [ ] Plan 06-05 (owner bookings detail page + cancel)
+- ✅ Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token] + /api/cancel + /api/reschedule) — complete, pushed (2026-04-26, 0ecbab9 + 92739c5)
+- ✅ Plan 06-05 (owner bookings detail page + cancel — /app/bookings/[id] Server Component + cancelBookingAsOwner Server Action + CancelButton AlertDialog) — complete, pushed (2026-04-26, 364351e + 4338be3)
 - [ ] Plan 06-06 (integration tests + manual QA)
 
 **Phase 5 plan status:**
