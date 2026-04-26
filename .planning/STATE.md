@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 6 complete — code + integration tests + manual QA signed off by Andrew; steps 1-3/5-7 approved live; steps 4+8 deferred to Phase 9)
+**Last updated:** 2026-04-26 (Phase 7 Plan 01 complete — branding lib foundation: contrast helper, server-only read helper, AccountSummary extension, RESERVED_SLUGS updated)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 7 (Widget + Branding) — Phase 6 complete as of 2026-04-25. 66/66 tests green. Next: Phase 7 research + planning.
+**Current focus:** Phase 7 (Widget + Branding) — Plan 07-01 complete 2026-04-26. 75/75 tests green. Next: Plan 07-02 (proxy CSP headers).
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 7 (Widget + Branding) — next up
-**Plan:** Phase 6 complete (6/6 plans done, manual QA signed off 2026-04-25); Phase 7 not yet started
-**Status:** Phase 6 code complete + integration-tested + manual QA partial (steps 1-3/5-7 approved 2026-04-25; steps 4+8 deferred to Phase 9). Ready for Phase 7.
-**Last activity:** 2026-04-25 — Phase 6 manual QA signed off by Andrew (steps 1-3/5-7 live on Vercel; steps 4+8 deferred to Phase 9)
-**Progress:** [█████░░░░] 5 / 9 phases complete (Phase 6 complete 2026-04-25; human_needed for Phase 9)
+**Phase:** 7 (Widget + Branding) — in progress
+**Plan:** 1 of 9 in Phase 7 complete (07-01 done 2026-04-26)
+**Status:** In progress
+**Last activity:** 2026-04-26 — Completed 07-01-branding-lib-and-read-helper-PLAN.md
+**Progress:** [█████░░░░] Phase 7 started (07-01 complete; 07-02 through 07-09 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -180,6 +180,11 @@ Phase 9  [ ] Manual QA & Verification
 - **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
 - **daily_cap empty string → null at form boundary** (Plan 04-04) — `SettingsPanel` converts empty string to `null` before calling `saveAccountSettingsAction`. DB CHECK rejects 0; null = no cap. Coercion at component boundary, not in the action.
 - **Locked Phase 5 forward contract: {slots: Array<{start_at, end_at}>}** (Plan 04-06) — Response shape from `/api/slots` is LOCKED here. Do NOT add `cap_reached`, `timezone`, or other top-level fields without updating Phase 5 consumers. Empty array = "no times available" — Phase 5 renders friendly empty-state.
+- **DEFAULT_BRAND_PRIMARY = "#0A2540" (Plan 07-01)** — NSI navy; matches Phase 2 Tailwind v4 `@theme` `--color-primary`. All `Branding` objects default to this when `accounts.brand_primary` is NULL.
+- **0.04045 sRGB linearization threshold (Plan 07-01)** — IEC standard (not 0.03928 from some W3C wiki pages). Difference negligible for 8-bit values; use the precise one. All contrast math in `lib/branding/contrast.ts`.
+- **brandingFromRow vs getBrandingForAccount split (Plan 07-01)** — `brandingFromRow(row)` for callers that already have the accounts row (booking page, embed, /[account] index); `getBrandingForAccount(accountId)` for callers with only accountId (email senders). Avoids redundant DB round-trips.
+- **RESERVED_SLUGS adds "embed" (Plan 07-01)** — `/embed/*` is the new top-level route from Plan 07-03. Both `load-event-type.ts` and the future `/[account]/page.tsx` loader (Plan 07-08) MUST guard against `accountSlug === "embed"`.
+- **AccountSummary extension is additive (Plan 07-01)** — `logo_url` and `brand_primary` added at end of interface; Phase 5/6 callers unchanged. `loadEventTypeForBookingPage` SELECT expanded in same edit.
 
 ### Carried Concerns / Todos
 
@@ -214,16 +219,27 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 6 manual QA signed off. Phase 6 complete.
-- 06-06 Task 1: tests/helpers/booking-fixtures.ts (34554b6)
-- 06-06 Task 2: tests/cancel-reschedule-api.test.ts 12-test integration suite — all 66 tests green (f346b33)
-- 06-06 Task 3: Manual QA — Andrew approved steps 1-3/5-7 live on Vercel; steps 4+8 deferred to Phase 9
-- Metadata commit: docs(06-06): complete Phase 6 manual QA checkpoint
+**Last session:** 2026-04-26 — Phase 7 Plan 07-01 complete. 75/75 tests green.
+- 07-01 Task 1: lib/branding/contrast.ts + types.ts + tests/branding-contrast.test.ts (7c67fbc)
+- 07-01 Task 2: lib/branding/read-branding.ts server-only helper (45c629b)
+- 07-01 Task 3: AccountSummary + load-event-type + RESERVED_SLUGS "embed" (461c81d)
+- Metadata commit: docs(07-01): complete branding-lib-and-read-helper plan
 
-**Stopped at:** Completed Phase 6 (06-06-SUMMARY.md + 06-VERIFICATION.md written; STATE.md updated)
+**Stopped at:** Completed 07-01-branding-lib-and-read-helper-PLAN.md
 **Resume file:** None
 
-**Next action:** Start Phase 7 (Widget + Branding) — requires `/gsd:research-phase` first (Next 16 per-route CSP + static `widget.js` on Vercel). Phases 7 and 8 can run in parallel.
+**Next action:** Execute Plan 07-02 (proxy CSP headers + next.config.ts global security headers).
+
+**Phase 7 plan status:**
+- ✅ Plan 07-01 (branding lib: contrast.ts + types.ts + read-branding.ts + AccountSummary extension + RESERVED_SLUGS "embed") — complete, pushed (2026-04-26, 7c67fbc + 45c629b + 461c81d)
+- ⬜ Plan 07-02 (proxy CSP headers + next.config.ts security headers)
+- ⬜ Plan 07-03 (embed route + height reporter)
+- ⬜ Plan 07-04 (branding editor)
+- ⬜ Plan 07-05 (Supabase Storage bucket + logo upload action)
+- ⬜ Plan 07-06 (apply branding to booking page surfaces)
+- ⬜ Plan 07-07 (apply branding to emails)
+- ⬜ Plan 07-08 (account index route /[account])
+- ⬜ Plan 07-09 (embed snippet dialog)
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
