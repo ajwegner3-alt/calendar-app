@@ -205,15 +205,15 @@ Note: `EMBED-07` (live verification on a real Squarespace/WordPress site) is int
 **Plans:** 9 plans
 
 Plans:
-- [ ] 07-01-branding-lib-and-read-helper-PLAN.md — WCAG contrast helper + server-only branding read helper + AccountSummary type extension + RESERVED_SLUGS adds "embed"
-- [ ] 07-02-proxy-csp-and-headers-PLAN.md — proxy.ts per-route CSP (frame-ancestors * on /embed/*) + next.config.ts global headers + manual Supabase Storage 'branding' bucket setup
-- [ ] 07-03-embed-route-and-height-reporter-PLAN.md — /embed/[account]/[event-slug] chromeless route + EmbedShell + EmbedHeightReporter (postMessage protocol) + ?previewColor/?previewLogo overrides
-- [ ] 07-04-branding-editor-PLAN.md — /app/branding editor (logo upload + color picker + live preview iframe + Server Actions with two-stage auth + cache-bust)
-- [ ] 07-05-widget-js-route-handler-PLAN.md — /widget.js Route Handler with BASE_URL injection + simplified iframe lifecycle + 5s handshake timeout + Vitest integration
-- [ ] 07-06-apply-branding-to-page-surfaces-PLAN.md — BrandedPage shared wrapper + apply to booking + confirmation + cancel + reschedule pages with brand-colored CTAs
-- [ ] 07-07-apply-branding-to-emails-PLAN.md — lib/email/branding-blocks.ts + apply to all 6 email types (logo header + brand H1 + branded buttons + Powered by NSI footer)
-- [ ] 07-08-account-index-route-PLAN.md — /[account] public index route (card grid of active events + brand-styled cards + empty state with optional owner_email)
-- [ ] 07-09-embed-snippet-dialog-PLAN.md — shadcn Tabs install + EmbedCodeDialog on event-types kebab (Script + iframe tabs + copy with toast + live preview iframe)
+- [x] 07-01-branding-lib-and-read-helper-PLAN.md — WCAG contrast helper + server-only branding read helper + AccountSummary type extension + RESERVED_SLUGS adds "embed"
+- [x] 07-02-proxy-csp-and-headers-PLAN.md — proxy.ts per-route CSP (frame-ancestors * on /embed/*) + next.config.ts global headers + manual Supabase Storage 'branding' bucket setup
+- [x] 07-03-embed-route-and-height-reporter-PLAN.md — /embed/[account]/[event-slug] chromeless route + EmbedShell + EmbedHeightReporter (postMessage protocol) + ?previewColor/?previewLogo overrides
+- [x] 07-04-branding-editor-PLAN.md — /app/branding editor (logo upload + color picker + live preview iframe + Server Actions with two-stage auth + cache-bust)
+- [x] 07-05-widget-js-route-handler-PLAN.md — /widget.js Route Handler with BASE_URL injection + simplified iframe lifecycle + 5s handshake timeout + Vitest integration
+- [x] 07-06-apply-branding-to-page-surfaces-PLAN.md — BrandedPage shared wrapper + apply to booking + confirmation + cancel + reschedule pages with brand-colored CTAs
+- [x] 07-07-apply-branding-to-emails-PLAN.md — lib/email/branding-blocks.ts + apply to all 6 email types (logo header + brand H1 + branded buttons + Powered by NSI footer)
+- [x] 07-08-account-index-route-PLAN.md — /[account] public index route (card grid of active events + brand-styled cards + empty state with optional owner_email)
+- [x] 07-09-embed-snippet-dialog-PLAN.md — shadcn Tabs install + EmbedCodeDialog on event-types kebab (Script + iframe tabs + copy with toast + live preview iframe)
 
 
 ---
@@ -270,7 +270,7 @@ Plans:
 | 4 - Availability Engine | Slot API returns correct UTC slots, DST-safe | ✓ Complete (2026-04-25) |
 | 5 - Public Booking Flow + Email + .ics | Visitor books a slot and gets a calendar invite | ✓ Complete (2026-04-25, human_needed for Phase 9) |
 | 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | ✓ Complete (2026-04-25, human_needed for Phase 9) |
-| 7 - Widget + Branding | Branded embeddable widget for client sites | Pending |
+| 7 - Widget + Branding | Branded embeddable widget for client sites | ✓ Complete (2026-04-26) |
 | 8 - Reminders + Hardening + Dashboard List | Reliable reminders, hardened production, bookings UI | Pending |
 | 9 - Manual QA & Verification | Andrew signs off v1 is shippable | Pending |
 

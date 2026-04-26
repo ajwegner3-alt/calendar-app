@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Plan 07-09 complete — embed snippet dialog with script/iframe builders, EmbedCodeDialog, copy feedback, live preview; X-FO bug fixed; production widget verified from https://example.com parent; Phase 7 COMPLETE)
+**Last updated:** 2026-04-26 (Phase 7 finalized — 07-VERIFICATION.md status→passed; all 3 human-verify items documented with user approval quotes; bug f5dbaee documented; ROADMAP/REQUIREMENTS/STATE updated; 55/73 requirements complete; .gitignore updated; Phase 8 next)
 
 ## Project Reference
 
@@ -18,7 +18,7 @@
 **Plan:** Phase 7 complete (07-09 was final)
 **Status:** Phase 7 complete; Phase 8 next
 **Last activity:** 2026-04-26 — Plan 07-09 complete (embed snippet dialog; X-FO bug fixed; production widget verified; Phase 7 COMPLETE)
-**Progress:** [█████████░] Phase 7 complete; Phase 8 pending
+**Progress:** [██████░░░] 6 / 9 phases complete (Phase 7 now done = 7/9 code-complete; Phases 8-9 pending)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -36,10 +36,10 @@ Phase 9  [ ] Manual QA & Verification
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 6 / 9 |
-| Phases complete | 6 / 9 |
+| Phases planned | 7 / 9 |
+| Phases complete | 7 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 44 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; LIFE-01..05) |
+| Requirements complete | 55 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; LIFE-01..05; BRAND-01..04; EMBED-01..06; EMBED-08) |
 
 ## Accumulated Context
 
@@ -213,6 +213,9 @@ Phase 9  [ ] Manual QA & Verification
 - **Copy feedback pattern locked (Plan 07-09)** — Belt-and-suspenders: navigator.clipboard.writeText + Sonner toast.success + setCopied(true) + setTimeout 2000ms reset. Error path: toast.error with manual-selection fallback message. Reusable for any future copy-to-clipboard surface.
 - **Embed menu item: active rows only (Plan 07-09)** — EmbedCodeDialog and Get embed code DropdownMenuItem are inside {!isArchived} branch of RowActionsMenu. Archived event types have no /embed/* page to preview or link to; no embed option shown.
 - **NSI_MARK_URL=null in v1 (Plan 07-07)** — /public/nsi-mark.png asset does not exist yet. A 404'd img in a transactional email is a guaranteed broken-image in Gmail/Outlook/Apple Mail. Text-only "Powered by NSI" footer is the safe v1 surface. TODO comment in branding-blocks.ts documents the path to enabling the image mark.
+- **X-Frame-Options ownership rule (Phase 7 LOCKED)** — X-Frame-Options MUST NEVER be set in next.config.ts. It is owned exclusively by proxy.ts. next.config.ts `headers()` runs as static config; Next.js merges it AFTER middleware, silently overwriting proxy.ts's `response.headers.delete("X-Frame-Options")` on /embed/* routes. proxy.ts sets SAMEORIGIN on non-embed routes and omits the header on /embed/* routes. Confirmed in production 2026-04-26 (commit that removed XFO from next.config.ts is the fix proof point).
+- **CSP opaque-origin spec quirk (Phase 7 LOCKED)** — `frame-ancestors *` per CSP spec does NOT match opaque origins (file://, about:blank, browser sandboxes). This is not a bug. Local embed testing must use `npx serve` (http://localhost:*) — http:// scheme matches `*`. Phase 9 Squarespace/WordPress test must be on a real https:// deployed page, not a file:// local file.
+- **Powered-by-NSI URL = https://nsintegrations.com (Phase 7 LOCKED)** — The "Powered by NSI" footer link in lib/email/branding-blocks.ts (renderEmailFooter) uses https://nsintegrations.com. The placeholder https://nsi.dev was a bug caught during Phase 7 human verification (user: "The link went to the wrong site in the email."); fixed in commit f5dbaee. Do not revert or change this URL without Andrew's explicit approval.
 - **AccountRecord in every email sender includes logo_url + brand_primary (Plan 07-07)** — All 4 sender files widened. All 3 callers (route.ts, cancel.ts, reschedule.ts) SELECT and pass both fields. Future email senders MUST include both fields.
 - **Email logo URL never modified by senders (Plan 07-07)** — accounts.logo_url is passed as-is to img src. The ?v= cache-bust from Plan 07-04 is already embedded; stripping or re-encoding it would break cache invalidation.
 - **BrandedPage CSS var convention LOCKED (Plan 07-06)** — `--brand-primary` + `--brand-text` are the canonical CSS var names across ALL public surfaces (booking, confirmation, cancel, reschedule, embed). BrandedPage injects them via inline style on a root div; child components consume via `var(--brand-primary, #0A2540)` / `var(--brand-text, #ffffff)` inline styles. Only PRIMARY CTAs recolored; secondary buttons retain neutral shadcn styling.
@@ -254,16 +257,24 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Plan 07-09 complete (embed snippet dialog; X-FO bug fixed; production widget verified via Playwright on https://example.com; Phase 7 COMPLETE).
-**Stopped at:** Plan 07-09 complete. Phase 7 done. Next: Plan 08-01 (Phase 8 — Reminders + Hardening + Dashboard List).
+**Last session:** 2026-04-26 — Phase 7 finalized: 07-VERIFICATION.md updated to passed, ROADMAP/REQUIREMENTS/STATE updated, .gitignore updated with .playwright-mcp/ and tmp/.
+**Stopped at:** Phase 7 fully complete and documented. Next: Phase 8 (Reminders + Hardening + Dashboard List) — start with Plan 08-01.
 **Resume file:** None
 
-Previous session note (07-09):
-- 07-09 Task 1: Install tabs primitive + snippet builders (8944364)
-- 07-09 Task 2: Build EmbedCodeDialog + EmbedTabs (7aaeb7b)
-- 07-09 Task 3: Wire Get embed code into RowActionsMenu (9c5a1cc)
-- 07-09 Mid-plan fix: Remove X-Frame-Options from next.config.ts (d249562)
+Previous session note (07-09 finalization):
+- 07-VERIFICATION.md: status human_needed → passed; Human Verification Resolution section added with all 3 user approval quotes; Bug Fixed During Verification section added for f5dbaee
+- ROADMAP.md: Phase 7 row → ✓ Complete (2026-04-26); all 9 plan checkboxes marked [x]
+- REQUIREMENTS.md: BRAND-01..04 + EMBED-01..06 + EMBED-08 → Complete; EMBED-07 remains Pending (Phase 9)
+- STATE.md: Performance Metrics bumped (7/9 phases, 55/73 requirements); Phase 7 plan commit hashes updated; locked decisions added; session continuity updated
+- .gitignore: .playwright-mcp/ and tmp/ added
+
+Previous session note (07-09 execution):
+- 07-09 Task 1: Install tabs primitive + snippet builders (029859a)
+- 07-09 Task 2: Build EmbedCodeDialog + EmbedTabs
+- 07-09 Task 3: Wire Get embed code into RowActionsMenu
+- 07-09 Mid-plan fix: Remove X-Frame-Options from next.config.ts
 - 07-09 Task 4: APPROVED — Andrew confirmed "embed snippet approved" after http-served local test + Playwright on example.com verified nsi-booking:height (height: 626)
+- Bug fix f5dbaee: correct NSI homepage URL in email footer (https://nsi.dev → https://nsintegrations.com)
 
 Previous session note (07-07):
 - 07-07 Task 1: Create lib/email/branding-blocks.ts (1f0c7eb)
@@ -279,15 +290,15 @@ Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file
 **Next action:** Execute Phase 8 plans (Reminders + Hardening + Dashboard List).
 
 **Phase 7 plan status:**
-- ✅ Plan 07-01 (branding lib: contrast.ts + types.ts + read-branding.ts + AccountSummary extension + RESERVED_SLUGS "embed") — complete, pushed (2026-04-26, 7c67fbc + 45c629b + 461c81d)
-- ✅ Plan 07-02 (proxy CSP headers + next.config.ts security headers + 'branding' bucket confirmed) — complete (2026-04-26, bc7572f + 902ad35; bucket pre-existed)
-- ✅ Plan 07-03 (embed route + height reporter) — complete (2026-04-26)
-- ✅ Plan 07-04 (branding editor) — complete (2026-04-26)
-- ✅ Plan 07-05 (widget.js Route Handler) — complete (2026-04-26)
-- ✅ Plan 07-06 (apply branding to booking page surfaces) — complete, live-verified (2026-04-26)
-- ✅ Plan 07-07 (apply branding to emails) — complete; Andrew approved 2026-04-26 combined sweep; Phase 9 backlog: per-email-type smoke 6 types x 4 clients (1f0c7eb + 242cfe6 + 73389a1 + 7e0034d)
-- ✅ Plan 07-08 (account index route /[account]) — complete (2026-04-26)
-- ✅ Plan 07-09 (embed snippet dialog) — complete, live-verified (2026-04-26; widget posts nsi-booking:height from https://example.com; 8944364 + 7aaeb7b + 9c5a1cc + d249562)
+- ✅ Plan 07-01 (branding lib: contrast.ts + types.ts + read-branding.ts + AccountSummary extension + RESERVED_SLUGS "embed") — complete, pushed (2026-04-26, bb4089a)
+- ✅ Plan 07-02 (proxy CSP headers + next.config.ts security headers + 'branding' bucket confirmed) — complete (2026-04-26, 23d9500; bucket pre-existed)
+- ✅ Plan 07-03 (embed route + height reporter) — complete (2026-04-26, fe6f722)
+- ✅ Plan 07-04 (branding editor) — complete (2026-04-26, c982a19)
+- ✅ Plan 07-05 (widget.js Route Handler) — complete (2026-04-26, 4c5f97a)
+- ✅ Plan 07-06 (apply branding to booking page surfaces) — complete, live-verified (2026-04-26, b867a55)
+- ✅ Plan 07-07 (apply branding to emails) — complete; Andrew approved 2026-04-26 combined sweep; Phase 9 backlog: per-email-type smoke 6 types x 4 clients (560eac9); bug fix f5dbaee (correct NSI homepage URL in email footer)
+- ✅ Plan 07-08 (account index route /[account]) — complete (2026-04-26, 9bc0764)
+- ✅ Plan 07-09 (embed snippet dialog) — complete, live-verified (2026-04-26; widget posts nsi-booking:height from https://example.com; 029859a + bug-fix f5dbaee)
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)

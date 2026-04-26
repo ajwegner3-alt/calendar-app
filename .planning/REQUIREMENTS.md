@@ -75,21 +75,21 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Branding
 
-- [ ] **BRAND-01**: Owner can upload a logo image (stored in Supabase Storage) in dashboard settings
-- [ ] **BRAND-02**: Owner can set a primary brand color (hex) in dashboard settings
-- [ ] **BRAND-03**: Booking page and widget render with the account's logo and primary color
-- [ ] **BRAND-04**: Emails sent for an account render with that account's branding (logo + primary color)
+- [x] **BRAND-01**: Owner can upload a logo image (stored in Supabase Storage) in dashboard settings
+- [x] **BRAND-02**: Owner can set a primary brand color (hex) in dashboard settings
+- [x] **BRAND-03**: Booking page and widget render with the account's logo and primary color
+- [x] **BRAND-04**: Emails sent for an account render with that account's branding (logo + primary color)
 
 ### Embed & Hosted Page
 
-- [ ] **EMBED-01**: A chromeless embed route exists at `/embed/[account]/[event-slug]` that hosts only the booking picker + form (no site chrome)
-- [ ] **EMBED-02**: A static `widget.js` loader is served from the app and, when included on a third-party site, finds elements with `[data-nsi-calendar]` attributes and injects an iframe pointing to the embed route
-- [ ] **EMBED-03**: The iframe auto-resizes to content height via a namespaced `postMessage` protocol (`nsi-booking:height`) with a `ResizeObserver` on the embed root
-- [ ] **EMBED-04**: `Content-Security-Policy: frame-ancestors *` is set on `/embed/*` only; `X-Frame-Options` is removed on that route; default CSP elsewhere remains `self`
-- [ ] **EMBED-05**: Dashboard provides a copy-paste embed snippet for each active event type (script tag + div with `data-nsi-calendar` attributes)
-- [ ] **EMBED-06**: Dashboard provides a raw `<iframe>` fallback snippet for host sites that block external scripts
+- [x] **EMBED-01**: A chromeless embed route exists at `/embed/[account]/[event-slug]` that hosts only the booking picker + form (no site chrome)
+- [x] **EMBED-02**: A static `widget.js` loader is served from the app and, when included on a third-party site, finds elements with `[data-nsi-calendar]` attributes and injects an iframe pointing to the embed route
+- [x] **EMBED-03**: The iframe auto-resizes to content height via a namespaced `postMessage` protocol (`nsi-booking:height`) with a `ResizeObserver` on the embed root
+- [x] **EMBED-04**: `Content-Security-Policy: frame-ancestors *` is set on `/embed/*` only; `X-Frame-Options` is removed on that route; default CSP elsewhere remains `self`
+- [x] **EMBED-05**: Dashboard provides a copy-paste embed snippet for each active event type (script tag + div with `data-nsi-calendar` attributes)
+- [x] **EMBED-06**: Dashboard provides a raw `<iframe>` fallback snippet for host sites that block external scripts
 - [ ] **EMBED-07**: Widget is verified working on a live NSI Squarespace or WordPress page with no JS errors
-- [ ] **EMBED-08**: Each account has a public hosted booking page at `/[account]` that lists all active event types with links to individual event booking pages
+- [x] **EMBED-08**: Each account has a public hosted booking page at `/[account]` that lists all active event types with links to individual event booking pages
 
 ### Dashboard
 
@@ -228,18 +228,18 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LIFE-03 | Phase 6 | Complete |
 | LIFE-04 | Phase 6 | Complete |
 | LIFE-05 | Phase 6 | Complete |
-| BRAND-01 | Phase 7 | Pending |
-| BRAND-02 | Phase 7 | Pending |
-| BRAND-03 | Phase 7 | Pending |
-| BRAND-04 | Phase 7 | Pending |
-| EMBED-01 | Phase 7 | Pending |
-| EMBED-02 | Phase 7 | Pending |
-| EMBED-03 | Phase 7 | Pending |
-| EMBED-04 | Phase 7 | Pending |
-| EMBED-05 | Phase 7 | Pending |
-| EMBED-06 | Phase 7 | Pending |
+| BRAND-01 | Phase 7 | Complete |
+| BRAND-02 | Phase 7 | Complete |
+| BRAND-03 | Phase 7 | Complete |
+| BRAND-04 | Phase 7 | Complete |
+| EMBED-01 | Phase 7 | Complete |
+| EMBED-02 | Phase 7 | Complete |
+| EMBED-03 | Phase 7 | Complete |
+| EMBED-04 | Phase 7 | Complete |
+| EMBED-05 | Phase 7 | Complete |
+| EMBED-06 | Phase 7 | Complete |
 | EMBED-07 | Phase 9 | Pending |
-| EMBED-08 | Phase 7 | Pending |
+| EMBED-08 | Phase 7 | Complete |
 | DASH-01 | Phase 2 | Complete |
 | DASH-02 | Phase 8 | Pending |
 | DASH-03 | Phase 8 | Pending |
@@ -265,4 +265,4 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-24 after Phase 2 completion — AUTH-01..04 + DASH-01 marked Complete*
+*Last updated: 2026-04-26 after Phase 7 completion — BRAND-01..04 + EMBED-01..06 + EMBED-08 marked Complete (EMBED-07 remains Pending — deferred to Phase 9)*
