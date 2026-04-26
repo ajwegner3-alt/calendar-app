@@ -202,6 +202,20 @@ Plans:
 
 Note: `EMBED-07` (live verification on a real Squarespace/WordPress site) is intentionally deferred to Phase 9 because it requires manual UI work on Andrew's live sites.
 
+**Plans:** 9 plans
+
+Plans:
+- [ ] 07-01-branding-lib-and-read-helper-PLAN.md — WCAG contrast helper + server-only branding read helper + AccountSummary type extension + RESERVED_SLUGS adds "embed"
+- [ ] 07-02-proxy-csp-and-headers-PLAN.md — proxy.ts per-route CSP (frame-ancestors * on /embed/*) + next.config.ts global headers + manual Supabase Storage 'branding' bucket setup
+- [ ] 07-03-embed-route-and-height-reporter-PLAN.md — /embed/[account]/[event-slug] chromeless route + EmbedShell + EmbedHeightReporter (postMessage protocol) + ?previewColor/?previewLogo overrides
+- [ ] 07-04-branding-editor-PLAN.md — /app/branding editor (logo upload + color picker + live preview iframe + Server Actions with two-stage auth + cache-bust)
+- [ ] 07-05-widget-js-route-handler-PLAN.md — /widget.js Route Handler with BASE_URL injection + simplified iframe lifecycle + 5s handshake timeout + Vitest integration
+- [ ] 07-06-apply-branding-to-page-surfaces-PLAN.md — BrandedPage shared wrapper + apply to booking + confirmation + cancel + reschedule pages with brand-colored CTAs
+- [ ] 07-07-apply-branding-to-emails-PLAN.md — lib/email/branding-blocks.ts + apply to all 6 email types (logo header + brand H1 + branded buttons + Powered by NSI footer)
+- [ ] 07-08-account-index-route-PLAN.md — /[account] public index route (card grid of active events + brand-styled cards + empty state with optional owner_email)
+- [ ] 07-09-embed-snippet-dialog-PLAN.md — shadcn Tabs install + EmbedCodeDialog on event-types kebab (Script + iframe tabs + copy with toast + live preview iframe)
+
+
 ---
 
 ### Phase 8: Reminders Cron + Hardening + Dashboard Bookings List
