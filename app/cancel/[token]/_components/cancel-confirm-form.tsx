@@ -53,7 +53,11 @@ export function CancelConfirmForm({ token, accountSlug, eventSlug }: CancelConfi
         <p className="text-sm text-muted-foreground mb-4">Your booking has been cancelled.</p>
         <Link
           href={`/${accountSlug}/${eventSlug}`}
-          className="inline-block px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+          className="inline-block px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"
+          style={{
+            background: "var(--brand-primary, #0A2540)",
+            color: "var(--brand-text, #ffffff)",
+          }}
         >
           Book again
         </Link>
@@ -83,7 +87,10 @@ export function CancelConfirmForm({ token, accountSlug, eventSlug }: CancelConfi
           onClick={handleConfirm}
           disabled={submitting}
           className="w-full sm:w-auto"
-          variant="destructive"
+          style={{
+            background: "var(--brand-primary, #0A2540)",
+            color: "var(--brand-text, #ffffff)",
+          }}
         >
           {submitting ? "Cancelling\u2026" : "Yes, cancel this booking"}
         </Button>

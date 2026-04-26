@@ -138,6 +138,10 @@ export function RescheduleShell(props: RescheduleShellProps) {
         onClick={handleSubmit}
         disabled={submitting || !selectedSlot}
         className="w-full"
+        style={{
+          background: "var(--brand-primary, #0A2540)",
+          color: "var(--brand-text, #ffffff)",
+        }}
       >
         {submitting ? "Rescheduling\u2026" : selectedSlot ? "Confirm new time" : "Pick a new time first"}
       </Button>

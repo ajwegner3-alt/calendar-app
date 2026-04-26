@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { loadConfirmedBooking } from "./_lib/load-confirmed-booking";
+import { BrandedPage } from "@/app/_components/branded-page";
 
 interface RouteParams {
   account: string;
@@ -106,50 +107,66 @@ export default async function ConfirmedBookingPage({
     // Phase 6 may set status to 'cancelled' or 'rescheduled'.
     // Render a friendly fallback without breaking this URL for the booker.
     return (
-      <main className="mx-auto max-w-xl px-6 py-16">
-        <section className="rounded-lg border p-8 text-center">
-          <h1 className="text-xl font-semibold mb-3">
-            This booking is no longer active.
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Check your email for the latest details about your appointment.
-          </p>
-        </section>
-      </main>
+      <BrandedPage
+        logoUrl={acct.logo_url}
+        primaryColor={acct.brand_primary}
+        accountName={acct.name}
+      >
+        <main className="mx-auto max-w-xl px-6 py-16">
+          <section className="rounded-lg border p-8 text-center">
+            <h1 className="text-xl font-semibold mb-3">
+              This booking is no longer active.
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Check your email for the latest details about your appointment.
+            </p>
+          </section>
+        </main>
+      </BrandedPage>
     );
   }
 
   return (
-    <main className="mx-auto max-w-xl px-6 py-16">
-      {/* Success header */}
-      <header className="mb-8 text-center">
-        <div
-          className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-xl"
-          aria-hidden="true"
-        >
-          ✓
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          You&apos;re booked.
-        </h1>
-      </header>
+    <BrandedPage
+      logoUrl={acct.logo_url}
+      primaryColor={acct.brand_primary}
+      accountName={acct.name}
+    >
+      <main className="mx-auto max-w-xl px-6 py-16">
+        {/* Success header */}
+        <header className="mb-8 text-center">
+          <div
+            className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full text-xl"
+            style={{
+              backgroundColor: "color-mix(in srgb, var(--brand-primary, #0A2540) 15%, transparent)",
+              color: "var(--brand-primary, #0A2540)",
+            }}
+            aria-hidden="true"
+          >
+            ✓
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            You&apos;re booked.
+          </h1>
+        </header>
 
-      {/* Booking details card */}
-      <dl className="rounded-lg border p-6 space-y-3 text-sm">
-        <BookingRow label="Event">{eventType.name}</BookingRow>
-        <BookingRow label="When">
-          <span>{dateLine}</span>
-          <span className="block text-muted-foreground">{timeLine}</span>
-        </BookingRow>
-        <BookingRow label="Duration">{eventType.duration_minutes} min</BookingRow>
-        <BookingRow label="With">{acct.name}</BookingRow>
-      </dl>
+        {/* Booking details card */}
+        <dl className="rounded-lg border p-6 space-y-3 text-sm">
+          <BookingRow label="Event">{eventType.name}</BookingRow>
+          <BookingRow label="When">
+            <span>{dateLine}</span>
+            <span className="block text-muted-foreground">{timeLine}</span>
+          </BookingRow>
+          <BookingRow label="Duration">{eventType.duration_minutes} min</BookingRow>
+          <BookingRow label="With">{acct.name}</BookingRow>
+        </dl>
 
-      {/* Confirmation note — CONTEXT decision #7 verbatim copy */}
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Confirmation sent to <strong>{maskedEmail}</strong> with calendar invite.
-      </p>
-    </main>
+        {/* Confirmation note — CONTEXT decision #7 verbatim copy */}
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Confirmation sent to <strong>{maskedEmail}</strong> with calendar invite.
+        </p>
+      </main>
+    </BrandedPage>
   );
 }
 

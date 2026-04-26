@@ -223,6 +223,10 @@ export function BookingForm(props: BookingFormProps) {
         type="submit"
         disabled={form.formState.isSubmitting}
         className="w-full"
+        style={{
+          background: "var(--brand-primary, #0A2540)",
+          color: "var(--brand-text, #ffffff)",
+        }}
       >
         {form.formState.isSubmitting ? "Booking\u2026" : "Book this time"}
       </Button>

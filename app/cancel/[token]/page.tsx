@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { TokenNotActive } from "@/app/_components/token-not-active";
 import { resolveCancelToken } from "./_lib/resolve-cancel-token";
 import { CancelConfirmForm } from "./_components/cancel-confirm-form";
+import { BrandedPage } from "@/app/_components/branded-page";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,20 +32,30 @@ export default async function CancelPage({ params }: PageProps) {
 
   if (resolved.state === "cancelled") {
     return (
-      <div className="mx-auto max-w-md p-6 sm:p-10">
-        <div className="rounded-lg border bg-card p-6 sm:p-8 text-center">
-          <h1 className="text-xl font-semibold mb-2">Booking cancelled</h1>
-          <p className="text-sm text-muted-foreground mb-6">Your appointment has been cancelled.</p>
-          {resolved.account && resolved.eventType ? (
-            <Link
-              href={`/${resolved.account.slug}/${resolved.eventType.slug}`}
-              className="inline-block px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
-            >
-              Book again
-            </Link>
-          ) : null}
+      <BrandedPage
+        logoUrl={resolved.account?.logo_url ?? null}
+        primaryColor={resolved.account?.brand_primary ?? null}
+        accountName={resolved.account?.name ?? "NSI"}
+      >
+        <div className="mx-auto max-w-md p-6 sm:p-10">
+          <div className="rounded-lg border bg-card p-6 sm:p-8 text-center">
+            <h1 className="text-xl font-semibold mb-2">Booking cancelled</h1>
+            <p className="text-sm text-muted-foreground mb-6">Your appointment has been cancelled.</p>
+            {resolved.account && resolved.eventType ? (
+              <Link
+                href={`/${resolved.account.slug}/${resolved.eventType.slug}`}
+                className="inline-block px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"
+                style={{
+                  background: "var(--brand-primary, #0A2540)",
+                  color: "var(--brand-text, #ffffff)",
+                }}
+              >
+                Book again
+              </Link>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </BrandedPage>
     );
   }
 
@@ -59,32 +70,38 @@ export default async function CancelPage({ params }: PageProps) {
   const timeLine = format(startTz, "h:mm a (z)");
 
   return (
-    <div className="mx-auto max-w-md p-6 sm:p-10">
-      <div className="rounded-lg border bg-card p-6 sm:p-8">
-        <h1 className="text-xl font-semibold mb-2">Cancel this booking?</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          You&apos;re about to cancel your appointment with <strong>{account.name}</strong>.
-        </p>
+    <BrandedPage
+      logoUrl={account.logo_url ?? null}
+      primaryColor={account.brand_primary ?? null}
+      accountName={account.name}
+    >
+      <div className="mx-auto max-w-md p-6 sm:p-10">
+        <div className="rounded-lg border bg-card p-6 sm:p-8">
+          <h1 className="text-xl font-semibold mb-2">Cancel this booking?</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            You&apos;re about to cancel your appointment with <strong>{account.name}</strong>.
+          </p>
 
-        <dl className="space-y-3 mb-6">
-          <div>
-            <dt className="text-xs uppercase text-muted-foreground tracking-wide">What</dt>
-            <dd className="text-sm">{eventType.name}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase text-muted-foreground tracking-wide">When</dt>
-            <dd className="text-sm">{dateLine}<br />{timeLine}</dd>
-          </div>
-        </dl>
+          <dl className="space-y-3 mb-6">
+            <div>
+              <dt className="text-xs uppercase text-muted-foreground tracking-wide">What</dt>
+              <dd className="text-sm">{eventType.name}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase text-muted-foreground tracking-wide">When</dt>
+              <dd className="text-sm">{dateLine}<br />{timeLine}</dd>
+            </div>
+          </dl>
 
-        <Suspense fallback={null}>
-          <CancelConfirmForm
-            token={token}
-            accountSlug={account.slug}
-            eventSlug={eventType.slug}
-          />
-        </Suspense>
+          <Suspense fallback={null}>
+            <CancelConfirmForm
+              token={token}
+              accountSlug={account.slug}
+              eventSlug={eventType.slug}
+            />
+          </Suspense>
+        </div>
       </div>
-    </div>
+    </BrandedPage>
   );
 }

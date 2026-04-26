@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { TokenNotActive } from "@/app/_components/token-not-active";
 import { resolveRescheduleToken } from "./_lib/resolve-reschedule-token";
 import { RescheduleShell } from "./_components/reschedule-shell";
+import { BrandedPage } from "@/app/_components/branded-page";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,32 +38,38 @@ export default async function ReschedulePage({ params }: PageProps) {
   const oldTime = format(oldStartTz, "h:mm a (z)");
 
   return (
-    <div className="mx-auto max-w-2xl p-6 sm:p-10">
-      <div className="rounded-lg border bg-card p-6 sm:p-8">
-        <h1 className="text-xl font-semibold mb-2">Reschedule your booking</h1>
-        <p className="text-sm text-muted-foreground mb-4">
-          Pick a new time for your appointment with <strong>{account.name}</strong>.
-        </p>
-        <p className="text-sm bg-muted/50 rounded-md px-3 py-2 mb-6">
-          <span className="text-muted-foreground">Currently scheduled:</span>{" "}
-          <span className="font-medium">{oldDate}, {oldTime}</span>
-        </p>
+    <BrandedPage
+      logoUrl={account.logo_url ?? null}
+      primaryColor={account.brand_primary ?? null}
+      accountName={account.name}
+    >
+      <div className="mx-auto max-w-2xl p-6 sm:p-10">
+        <div className="rounded-lg border bg-card p-6 sm:p-8">
+          <h1 className="text-xl font-semibold mb-2">Reschedule your booking</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Pick a new time for your appointment with <strong>{account.name}</strong>.
+          </p>
+          <p className="text-sm bg-muted/50 rounded-md px-3 py-2 mb-6">
+            <span className="text-muted-foreground">Currently scheduled:</span>{" "}
+            <span className="font-medium">{oldDate}, {oldTime}</span>
+          </p>
 
-        <RescheduleShell
-          token={token}
-          tokenHash={tokenHash}
-          accountSlug={account.slug}
-          accountTimezone={account.timezone}
-          accountName={account.name}
-          ownerEmail={account.owner_email}
-          eventTypeId={eventType.id}
-          eventTypeSlug={eventType.slug}
-          eventTypeName={eventType.name}
-          durationMinutes={eventType.duration_minutes}
-          oldStartAt={booking.start_at}
-          bookerTimezoneInitial={booking.booker_timezone}
-        />
+          <RescheduleShell
+            token={token}
+            tokenHash={tokenHash}
+            accountSlug={account.slug}
+            accountTimezone={account.timezone}
+            accountName={account.name}
+            ownerEmail={account.owner_email}
+            eventTypeId={eventType.id}
+            eventTypeSlug={eventType.slug}
+            eventTypeName={eventType.name}
+            durationMinutes={eventType.duration_minutes}
+            oldStartAt={booking.start_at}
+            bookerTimezoneInitial={booking.booker_timezone}
+          />
+        </div>
       </div>
-    </div>
+    </BrandedPage>
   );
 }
