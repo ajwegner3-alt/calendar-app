@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 6 Plan 06-06 auto tasks complete — 12-test integration suite; 34554b6 + f346b33; awaiting Andrew's Manual QA sign-off)
+**Last updated:** 2026-04-25 (Phase 6 complete — code + integration tests + manual QA signed off by Andrew; steps 1-3/5-7 approved live; steps 4+8 deferred to Phase 9)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 6 (Cancel + Reschedule Lifecycle) — auto tasks complete; Manual QA (Plan 06-06 Task 3) awaiting Andrew's sign-off. 66/66 tests green.
+**Current focus:** Phase 7 (Widget + Branding) — Phase 6 complete as of 2026-04-25. 66/66 tests green. Next: Phase 7 research + planning.
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 6 (Cancel + Reschedule Lifecycle) — code complete; awaiting Manual QA
-**Plan:** 6 of 6 auto tasks complete (06-06 auto done — fixture helper + 12-test integration suite); Manual QA task 3 pending Andrew sign-off
-**Status:** Phase 6 code + integration tests complete. Plan 06-06 Manual QA (Task 3) is the only remaining gate.
-**Last activity:** 2026-04-26 — Completed 06-06 auto tasks (12-test Phase 6 integration suite; 34554b6 + f346b33)
-**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 6 code complete + manual QA pending; Phase 9 QA pending)
+**Phase:** 7 (Widget + Branding) — next up
+**Plan:** Phase 6 complete (6/6 plans done, manual QA signed off 2026-04-25); Phase 7 not yet started
+**Status:** Phase 6 code complete + integration-tested + manual QA partial (steps 1-3/5-7 approved 2026-04-25; steps 4+8 deferred to Phase 9). Ready for Phase 7.
+**Last activity:** 2026-04-25 — Phase 6 manual QA signed off by Andrew (steps 1-3/5-7 live on Vercel; steps 4+8 deferred to Phase 9)
+**Progress:** [█████░░░░] 5 / 9 phases complete (Phase 6 complete 2026-04-25; human_needed for Phase 9)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -26,7 +26,7 @@ Phase 2  [✓] Owner Auth + Dashboard Shell            (verified 2026-04-24)
 Phase 3  [✓] Event Types CRUD                        (verified 2026-04-24)
 Phase 4  [✓] Availability Engine                     (verified 2026-04-25)
 Phase 5  [✓] Public Booking Flow + Email + .ics      (code complete 2026-04-25; Phase 9 manual QA pending)
-Phase 6  [ ] Cancel + Reschedule Lifecycle
+Phase 6  [✓] Cancel + Reschedule Lifecycle           (Complete 2026-04-25, human_needed for Phase 9)
 Phase 7  [ ] Widget + Branding
 Phase 8  [ ] Reminders + Hardening + Dashboard List
 Phase 9  [ ] Manual QA & Verification
@@ -36,10 +36,10 @@ Phase 9  [ ] Manual QA & Verification
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 5 / 9 |
-| Phases complete | 5 / 9 |
+| Phases planned | 6 / 9 |
+| Phases complete | 6 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 37 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..04) |
+| Requirements complete | 44 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; LIFE-01..05) |
 
 ## Accumulated Context
 
@@ -194,6 +194,9 @@ Phase 9  [ ] Manual QA & Verification
 - **CHECKPOINT PENDING (Plan 05-02 Task 2):** Andrew must set TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL in both .env.local AND Vercel Production env before Plans 05-03+ can proceed. Resume signal: "env vars set".
 - **Phase 8 backlog: render-test harness** — Vitest + React Testing Library coverage for shell layout. The TooltipProvider regression in Plan 02-04 would have been caught at CI instead of user smoke. Add a render test that mounts `ShellLayout` and asserts no missing context providers.
 - **Phase 8 backlog: ESLint flat-config migration** — pre-existing circular-JSON error in `npm run lint` carries forward from Phase 1. Doesn't block phases 2-7 builds, but blocks lint hygiene.
+- **Phase 8 backlog: `waitUntil()` adoption (INFRA-01/INFRA-04 candidate)** — During Phase 6 manual QA, the second booking confirmation email took longer than expected (arrived eventually; no code change). If lambda-timeout symptoms appear in Phase 9 hardening, adopt `waitUntil()` from `@vercel/functions` on fire-and-forget email paths in: `app/api/bookings/route.ts`, `app/api/cancel/route.ts`, `app/api/reschedule/route.ts`, and `cancelBookingAsOwner` Server Action. Not a Phase 6 blocker.
+- **Phase 9 backlog: .ics iTIP calendar-client removal/update** — Deferred from Phase 6 manual QA step 4. Verify METHOD:CANCEL auto-removes event in Apple Mail / Gmail web / Outlook web; verify METHOD:REQUEST + same UID + SEQUENCE:1 updates event in-place on reschedule. Consolidates with Phase 5's "ICS file structure for Gmail inline card" and QA-03 mail-tester items.
+- **Phase 9 backlog: rate-limit live verification** — Deferred from Phase 6 manual QA step 8. Integration test #7 proves the code path. Live check: hit `/api/cancel` and `/api/reschedule` 11+ times rapidly from same IP; confirm 429 + Retry-After in real browser DevTools; confirm rate_limit_events accumulates in Supabase under real network load.
 - **v2 backlog: `/auth/callback` route** — Supabase recovery / magic-link flows currently 404. Blocks password reset for end users; deferred to v2.
 - **dotenv quoting trap** — leading-`#` values silently parse as empty strings. Plan 02-04 Task 2 and Plan 03-01 Task 2 both tripped over this. Fixed locally in `.env.local` (TEST_OWNER_PASSWORD now quoted). Any env value starting with `#` MUST be double-quoted. Future plans involving env values should add to failure-mode tables.
 
@@ -211,12 +214,16 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 6 Plan 06-06 auto tasks complete.
+**Last session:** 2026-04-25 — Phase 6 manual QA signed off. Phase 6 complete.
 - 06-06 Task 1: tests/helpers/booking-fixtures.ts (34554b6)
 - 06-06 Task 2: tests/cancel-reschedule-api.test.ts 12-test integration suite — all 66 tests green (f346b33)
-- Awaiting Manual QA Task 3 (Andrew sign-off) before Phase 6 closes.
+- 06-06 Task 3: Manual QA — Andrew approved steps 1-3/5-7 live on Vercel; steps 4+8 deferred to Phase 9
+- Metadata commit: docs(06-06): complete Phase 6 manual QA checkpoint
 
-**Next action:** Andrew executes Manual QA checklist (Plan 06-06 Task 3 — 8 steps) and signs off. Continuation agent will then finalize Phase 6 as complete. Phase 7 (Widget + Branding) follows.
+**Stopped at:** Completed Phase 6 (06-06-SUMMARY.md + 06-VERIFICATION.md written; STATE.md updated)
+**Resume file:** None
+
+**Next action:** Start Phase 7 (Widget + Branding) — requires `/gsd:research-phase` first (Next 16 per-route CSP + static `widget.js` on Vercel). Phases 7 and 8 can run in parallel.
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
@@ -224,7 +231,7 @@ None.
 - ✅ Plan 06-03 (lib/bookings/cancel.ts + lib/bookings/reschedule.ts shared atomic functions) — complete, pushed (2026-04-26, 47a8b13 + 13359d3)
 - ✅ Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token] + /api/cancel + /api/reschedule) — complete, pushed (2026-04-26, 0ecbab9 + 92739c5)
 - ✅ Plan 06-05 (owner bookings detail page + cancel — /app/bookings/[id] Server Component + cancelBookingAsOwner Server Action + CancelButton AlertDialog) — complete, pushed (2026-04-26, 364351e + 4338be3)
-- [~] Plan 06-06 (integration tests + manual QA) — auto tasks done (34554b6 + f346b33); Manual QA Task 3 pending Andrew sign-off
+- ✅ Plan 06-06 (integration tests + manual QA) — complete (34554b6 + f346b33 + manual QA 2026-04-25; steps 4+8 deferred to Phase 9)
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
