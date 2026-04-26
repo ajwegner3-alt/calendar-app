@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 verified — verifier status: human_needed; 11/11 must-haves passed; 10 manual QA gates deferred to Phase 9)
+**Last updated:** 2026-04-26 (Phase 6 Plan 06-03 complete — lib/bookings/cancel.ts + lib/bookings/reschedule.ts; 47a8b13 + 13359d3)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 5 (Public Booking Flow) COMPLETE — all 7 plans done. Booking flow end-to-end: visitor → page → form → POST → redirect → confirmation screen. Ready for Phase 6 (Cancel + Reschedule Lifecycle) || Phase 7 (Widget + Branding) || Phase 8 (Reminders + Hardening).
+**Current focus:** Phase 6 (Cancel + Reschedule Lifecycle) in progress — Plan 06-03 done (shared cancel/reschedule business logic). Plan 06-04 (public token routes) is next.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 6 (Cancel + Reschedule Lifecycle) — In progress
-**Plan:** 2 of 6 plans complete (06-02 done — ICS extension + rate limiter + cancel/reschedule email senders)
-**Status:** Phase 6 in progress. Plans 06-03..06-06 ready.
-**Last activity:** 2026-04-26 — Completed 06-02 (buildIcsBuffer extension, lib/rate-limit.ts, send-cancel-emails.ts, send-reschedule-emails.ts; 8ba4f43 + 9c608f4 + 893e428)
+**Plan:** 3 of 6 plans complete (06-03 done — lib/bookings/cancel.ts + lib/bookings/reschedule.ts shared atomic functions)
+**Status:** Phase 6 in progress. Plans 06-04..06-06 ready.
+**Last activity:** 2026-04-26 — Completed 06-03 (cancelBooking + rescheduleBooking; 47a8b13 + 13359d3)
 **Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phase 6 in progress)
 
 ```
@@ -155,6 +155,11 @@ Phase 9  [ ] Manual QA & Verification
 - **cancelled.ics filename for cancel .ics (Plan 06-02)** — Cancel attachment is named `cancelled.ics` (not `invite.ics`). Reschedule attachment keeps `invite.ics`. Non-iTIP clients see the filename in their attachment panel — makes intent clear.
 - **checkRateLimit fails OPEN on DB error (Plan 06-02)** — Transient Supabase hiccup must not lock out a legitimate booker. Log + allow. Consistent with RESEARCH §Rate-Limit Storage Backend Decision.
 - **sendRescheduleEmails token contract (Plan 06-02)** — `rawCancelToken` + `rawRescheduleToken` are the FRESH tokens for the NEW booking (after reschedule token rotation). Plan 06-03 generates them; Plan 06-02 senders embed them in links. Booker-tz times for booker email; account-tz for owner email (same pattern as Phase 5).
+- **cancelBooking trusts bookingId arg (Plan 06-03)** — Caller (owner Server Action, Plan 06-05) MUST verify booking ownership via RLS-scoped client BEFORE calling cancelBooking. cancelBooking itself does no auth check — it's a pure business-logic module.
+- **Dead-hash invalidation for NOT NULL token columns (Plan 06-03)** — cancel_token_hash + reschedule_token_hash are TEXT NOT NULL; cannot set to null. On cancel, both are replaced with `hashToken(crypto.randomUUID())` — a SHA-256 hash of an unused UUID, unreachable from any email, permanently invalidating both tokens without DB error.
+- **bookings.status stays 'confirmed' after reschedule (Plan 06-03)** — The `'rescheduled'` value in `booking_event_kind` enum is for `booking_events.event_type` only. bookings.status stays 'confirmed' after reschedule so the new rotated tokens remain valid for subsequent cancel/reschedule operations.
+- **Double CAS guard on reschedule prevents concurrent same-token success (Plan 06-03)** — UPDATE WHERE includes `reschedule_token_hash = oldRescheduleHash` (RESEARCH Pitfall 6). Without it, two concurrent requests using the same token can both succeed and rotate to different new tokens — the second request's tokens would be unknown to the second requester.
+- **Pre-fetch snapshot before UPDATE pattern (Plan 06-03)** — booking + event_types!inner + accounts!inner fetched in one round-trip BEFORE the CAS UPDATE. Post-UPDATE the tokens are dead/rotated; re-fetching would add a round-trip for no gain. Pre-fetch snapshot is used for fire-and-forget email construction.
 - **vitest.config.ts alias-level mock interception (Plan 05-08)** — `@/lib/turnstile` and `@/lib/email-sender` aliased to `tests/__mocks__/` via `path.resolve(__dirname, ...)`. Alias-level is preferred over `vi.mock()` for route-handler integration tests (avoids ESM hoisting issues). Pattern reusable for any future server-only module needing mock interception.
 - **`sendEmail` spy asserts `>= 1` (not `== 2`) (Plan 05-08)** — Both `send-booking-confirmation.ts` and `send-owner-notification.ts` call `sendEmail`. Owner notification is conditional on `accounts.owner_email` being non-null. Assert `>= 1` to stay env-tolerant; assert `[0].to === bookerEmail` to confirm the booker confirmation fired.
 - **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
@@ -191,13 +196,14 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 6 Plan 06-02 complete. buildIcsBuffer extended; lib/rate-limit.ts created; send-cancel-emails.ts + send-reschedule-emails.ts created. All 4 utility modules ready for Plan 06-03 consumers (8ba4f43 + 9c608f4 + 893e428).
+**Last session:** 2026-04-26 — Phase 6 Plan 06-03 complete. lib/bookings/cancel.ts (atomic cancel with dead-hash invalidation, CAS guard, PGRST116→not_active, fire-and-forget emails + audit) and lib/bookings/reschedule.ts (atomic reschedule with double CAS guard, 23505→slot_taken, token rotation, bad_slot pre-flight) created. Both pushed (47a8b13 + 13359d3).
 
-**Next action:** Plan 06-03 — implement `lib/bookings/cancel.ts` + `lib/bookings/reschedule.ts` (shared business logic using the senders from 06-02).
+**Next action:** Plan 06-04 — implement public token routes (POST /api/cancel + POST /api/reschedule) consuming cancelBooking + rescheduleBooking from 06-03.
 
 **Phase 6 plan status:**
 - ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
 - ✅ Plan 06-02 (lib/rate-limit.ts + ICS extension + cancel/reschedule email senders) — complete, pushed (2026-04-26, 8ba4f43 + 9c608f4 + 893e428)
+- ✅ Plan 06-03 (lib/bookings/cancel.ts + lib/bookings/reschedule.ts shared atomic functions) — complete, pushed (2026-04-26, 47a8b13 + 13359d3)
 - [ ] Plan 06-03 (cancel + reschedule shared functions)
 - [ ] Plan 06-03 (cancel + reschedule shared functions)
 - [ ] Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token])
