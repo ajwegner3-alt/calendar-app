@@ -153,14 +153,14 @@ Plans:
 **Plans:** 8 plans
 
 Plans:
-- [ ] 05-PLAN-01-migration-and-account-owner-email.md — Add nullable owner_email column to accounts; seed nsi row
-- [ ] 05-PLAN-02-vendor-email-sender-and-deps.md — Vendor @nsi/email-sender into lib/email-sender/; install ical-generator + timezones-ical-library + @marsidev/react-turnstile + resend; .env.example + Andrew env-var checkpoint
-- [ ] 05-PLAN-03-schema-turnstile-ics-email-modules.md — Zod bookingInputSchema + verifyTurnstile + buildIcsBuffer + booker/owner email senders + fire-and-forget orchestrator
-- [ ] 05-PLAN-04-public-booking-page-shell.md — Server Component at /[account]/[event-slug]; reserved-slug guard; loader + types + not-found.tsx
-- [ ] 05-PLAN-05-bookings-api-route-handler.md — POST /api/bookings race-safe (23505→409 SLOT_TAKEN); Turnstile gate; token gen+hash; fire-and-forget emails
-- [ ] 05-PLAN-06-booking-page-client-components.md — BookingShell + SlotPicker + BookingForm + RaceLoserBanner; Turnstile invisible mode; 409 inline-banner UX
-- [ ] 05-PLAN-07-confirmation-screen-route.md — /[account]/[event-slug]/confirmed/[booking-id] Server Component; service-role read + cross-tenant verification; booker-TZ formatting; noindex
-- [ ] 05-PLAN-08-bookings-api-integration-tests.md — Vitest suite mocking Turnstile + email-sender; race-safe 409 end-to-end via partial unique index
+- [x] 05-PLAN-01-migration-and-account-owner-email.md — Add nullable owner_email column to accounts; seed nsi row
+- [x] 05-PLAN-02-vendor-email-sender-and-deps.md — Vendor @nsi/email-sender (Gmail-only post-pivot) into lib/email-sender/; install ical-generator + timezones-ical-library + @marsidev/react-turnstile + nodemailer; .env.example + Andrew env-var checkpoint
+- [x] 05-PLAN-03-schema-turnstile-ics-email-modules.md — Zod bookingInputSchema + verifyTurnstile + buildIcsBuffer + booker/owner email senders + fire-and-forget orchestrator
+- [x] 05-PLAN-04-public-booking-page-shell.md — Server Component at /[account]/[event-slug]; reserved-slug guard; loader + types + not-found.tsx
+- [x] 05-PLAN-05-bookings-api-route-handler.md — POST /api/bookings race-safe (23505→409 SLOT_TAKEN); Turnstile gate; token gen+hash; fire-and-forget emails
+- [x] 05-PLAN-06-booking-page-client-components.md — BookingShell + SlotPicker + BookingForm + RaceLoserBanner; Managed Turnstile (visible widget); 409 inline-banner UX
+- [x] 05-PLAN-07-confirmation-screen-route.md — /[account]/[event-slug]/confirmed/[booking-id] Server Component; service-role read + cross-tenant verification; booker-TZ formatting; noindex
+- [x] 05-PLAN-08-bookings-api-integration-tests.md — Vitest suite mocking Turnstile + email-sender; race-safe 409 end-to-end via partial unique index (54/54 passing)
 
 ---
 
@@ -254,7 +254,7 @@ Note: `EMBED-07` (live verification on a real Squarespace/WordPress site) is int
 | 2 - Owner Auth + Dashboard Shell | Andrew can log in to a navigable dashboard | ✓ Complete (2026-04-24) |
 | 3 - Event Types CRUD | Andrew can define what people book | ✓ Complete (2026-04-24) |
 | 4 - Availability Engine | Slot API returns correct UTC slots, DST-safe | ✓ Complete (2026-04-25) |
-| 5 - Public Booking Flow + Email + .ics | Visitor books a slot and gets a calendar invite | Pending |
+| 5 - Public Booking Flow + Email + .ics | Visitor books a slot and gets a calendar invite | ✓ Complete (2026-04-25, human_needed for Phase 9) |
 | 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | Pending |
 | 7 - Widget + Branding | Branded embeddable widget for client sites | Pending |
 | 8 - Reminders + Hardening + Dashboard List | Reliable reminders, hardened production, bookings UI | Pending |

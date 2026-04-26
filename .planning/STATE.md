@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-25 (Phase 5 Plan 08 complete — 9-test bookings-api integration suite; 2 commits 1e280aa+44df424, npm run build exits 0, 54/54 tests passing)
+**Last updated:** 2026-04-25 (Phase 5 verified — verifier status: human_needed; 11/11 must-haves passed; 10 manual QA gates deferred to Phase 9)
 
 ## Project Reference
 
@@ -36,10 +36,10 @@ Phase 9  [ ] Manual QA & Verification
 
 | Metric | Value |
 |--------|-------|
-| Phases planned | 4 / 9 |
-| Phases complete | 4 / 9 |
+| Phases planned | 5 / 9 |
+| Phases complete | 5 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 26 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09) |
+| Requirements complete | 37 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..04) |
 
 ## Accumulated Context
 
