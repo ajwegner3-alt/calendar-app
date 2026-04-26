@@ -17,6 +17,8 @@ export interface ConfirmedBookingData {
   account: {
     name: string;
     timezone: string;
+    logo_url: string | null;
+    brand_primary: string | null;
   };
   eventType: {
     name: string;
@@ -73,7 +75,7 @@ export async function loadConfirmedBooking(args: {
   const [accountRes, eventTypeRes] = await Promise.all([
     supabase
       .from("accounts")
-      .select("slug, name, timezone")
+      .select("slug, name, timezone, logo_url, brand_primary")
       .eq("id", booking.account_id)
       .single(),
     supabase
@@ -109,6 +111,8 @@ export async function loadConfirmedBooking(args: {
     account: {
       name: accountRes.data.name,
       timezone: accountRes.data.timezone,
+      logo_url: accountRes.data.logo_url ?? null,
+      brand_primary: accountRes.data.brand_primary ?? null,
     },
     eventType: {
       name: et.name,

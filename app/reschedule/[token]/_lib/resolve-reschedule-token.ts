@@ -19,6 +19,8 @@ export interface ResolvedRescheduleToken {
     slug: string;
     timezone: string;
     owner_email: string | null;
+    logo_url: string | null;
+    brand_primary: string | null;
   };
   eventType?: {
     id: string;
@@ -44,7 +46,7 @@ export async function resolveRescheduleToken(rawToken: string): Promise<Resolved
     .select(
       `id, account_id, event_type_id, start_at, end_at, booker_timezone, status,
        event_types!inner(id, name, slug, duration_minutes),
-       accounts!inner(name, slug, timezone, owner_email)`,
+       accounts!inner(name, slug, timezone, owner_email, logo_url, brand_primary)`,
     )
     .eq("reschedule_token_hash", hash)
     .maybeSingle();
@@ -74,6 +76,8 @@ export async function resolveRescheduleToken(rawToken: string): Promise<Resolved
       slug: account.slug,
       timezone: account.timezone,
       owner_email: account.owner_email ?? null,
+      logo_url: account.logo_url ?? null,
+      brand_primary: account.brand_primary ?? null,
     },
     eventType: {
       id: eventType.id,
