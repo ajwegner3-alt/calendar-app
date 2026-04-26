@@ -14,11 +14,11 @@
 
 ## Current Position
 
-**Phase:** 5 (Public Booking Flow + Email + .ics) — COMPLETE (pending Phase 9 manual QA sign-off)
-**Plan:** 8 of 8 plans complete (05-08 done — integration test suite for POST /api/bookings)
-**Status:** Phase 5 fully shipped + integration-tested. All 8 plans done. Phase 9 QA pending.
-**Last activity:** 2026-04-25 — Completed 05-08 (bookings-api integration suite; 1e280aa, 44df424)
-**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phases 6/7/8 ready to start)
+**Phase:** 6 (Cancel + Reschedule Lifecycle) — In progress
+**Plan:** 1 of 6 plans complete (06-01 done — rate_limit_events migration applied to remote DB)
+**Status:** Phase 6 started. Plan 06-01 complete (DB migration). Plans 06-02..06-06 ready.
+**Last activity:** 2026-04-26 — Completed 06-01 (rate_limit_events migration; 26a9030)
+**Progress:** [████░░░░░] 4 / 9 phases complete (Phase 5 code complete; Phase 9 QA pending; Phase 6 in progress)
 
 ```
 Phase 1  [✓] Foundation                              (verified 2026-04-19)
@@ -148,6 +148,8 @@ Phase 9  [ ] Manual QA & Verification
 - **generateMetadata only (no module-level metadata export) (Plan 05-07)** — Next.js 16 build fails if both are exported from the same `page.tsx`. `generateMetadata` is the correct pattern for dynamic titles. `robots: { index: false, follow: false }` returned from every branch including 404 fallback.
 - **is_active + deleted_at filter on event_type in confirmation loader (Plan 05-07)** — Archived event types' old booking confirmations 404 on revisit (acceptable v1 behavior; booker has all details in email). Privacy: soft-deleted event types' bookings should not be browsable.
 - **Rate limiting deferred to Phase 8 INFRA-01 (Plan 05-05)** — Turnstile provides bot protection in v1; full per-IP/per-email rate limiting is Phase 8 hardening.
+- **Postgres-backed rate limiting for Phase 6 token routes (Plan 06-01)** — `rate_limit_events(id bigserial PK, key text NOT NULL, occurred_at timestamptz NOT NULL DEFAULT now())` table with composite index `(key, occurred_at)`. No RLS (service-role admin client only). No `expires_at` column (window length lives in `lib/rate-limit.ts`). No UNIQUE constraint on `(key, occurred_at)` (concurrent requests must each be recorded). Phase 8 pg_cron sweep can clean up old rows.
+- **`supabase db query --linked 'SQL'` positional arg syntax (Plan 06-01)** — The `--execute` flag does not exist in this project's Supabase CLI version. Inline SQL for ad-hoc verification must be passed as a positional argument. Confirmed: `npx supabase db query --linked "SELECT count(*) FROM rate_limit_events;"` works correctly.
 - **vitest.config.ts alias-level mock interception (Plan 05-08)** — `@/lib/turnstile` and `@/lib/email-sender` aliased to `tests/__mocks__/` via `path.resolve(__dirname, ...)`. Alias-level is preferred over `vi.mock()` for route-handler integration tests (avoids ESM hoisting issues). Pattern reusable for any future server-only module needing mock interception.
 - **`sendEmail` spy asserts `>= 1` (not `== 2`) (Plan 05-08)** — Both `send-booking-confirmation.ts` and `send-owner-notification.ts` call `sendEmail`. Owner notification is conditional on `accounts.owner_email` being non-null. Assert `>= 1` to stay env-tolerant; assert `[0].to === bookerEmail` to confirm the booker confirmation fired.
 - **Test event_type seeded on `nsi` (not `nsi-test`) for bookings-api tests (Plan 05-08)** — The POST handler resolves `account` by `event_type.account_id`. Using `nsi` account guarantees valid `slug/name/timezone/owner_email` for `redirectTo` assertion and email routing. Race-guard tests (`bookings_no_double_book`) require the event_type to be active + not soft-deleted — `nsi` account satisfies all preconditions. Cleanup: `afterAll` hard-deletes the temp event_type from `nsi` after the run.
@@ -184,13 +186,17 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-25 — Phase 5 Plan 05-08 complete. 9-test bookings-api integration suite; 54/54 tests passing; npm run build exits 0 (1e280aa, 44df424). Phase 5 fully complete.
+**Last session:** 2026-04-26 — Phase 6 Plan 06-01 complete. rate_limit_events migration applied to remote Supabase calendar project (mogfnutxrrbtvnaupoun); table + composite index confirmed live (26a9030).
 
-**Next action:** Phase 5 is code-complete + integration-tested. Options (all parallel, no dependencies between them):
-1. Phase 6 (Cancel + Reschedule Lifecycle) — cancel/reschedule tokens already generated in bookings table
-2. Phase 7 (Widget + Branding) — embed iframe + per-account brand tokens
-3. Phase 8 (Reminders + Hardening + Dashboard Bookings List) — Vercel Cron reminders, rate limiting, dashboard
-4. Phase 9 (Manual QA) — end-to-end booking flow live test (book → confirm screen → noindex check → cross-tenant 404)
+**Next action:** Plan 06-02 — implement `lib/rate-limit.ts` (checkRateLimit function using rate_limit_events table via createAdminClient()).
+
+**Phase 6 plan status:**
+- ✅ Plan 06-01 (rate_limit_events migration — table + composite index, applied to remote DB) — complete, pushed (2026-04-26, 26a9030)
+- [ ] Plan 06-02 (lib/rate-limit.ts + ICS extension + email senders)
+- [ ] Plan 06-03 (cancel + reschedule shared functions)
+- [ ] Plan 06-04 (public token routes — /cancel/[token] + /reschedule/[token])
+- [ ] Plan 06-05 (owner bookings detail page + cancel)
+- [ ] Plan 06-06 (integration tests + manual QA)
 
 **Phase 5 plan status:**
 - ✅ Plan 05-01 (accounts.owner_email migration + seed nsi) — complete, pushed (2026-04-25, dcbe764)
