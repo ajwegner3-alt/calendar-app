@@ -3,14 +3,15 @@
  *
  * Flow:
  *   1. Parse + validate body via bookingInputSchema (Zod).
- *   2. Verify Cloudflare Turnstile token server-side BEFORE any DB hit.
- *   3. Resolve event_type (must be active, not soft-deleted) with service-role client.
- *   4. Resolve account by event_type.account_id.
- *   5. Generate raw + hashed cancel/reschedule tokens.
- *   6. INSERT booking row.
+ *   2. IP-based rate limit (20/IP/5min sliding window) BEFORE Turnstile + DB.
+ *   3. Verify Cloudflare Turnstile token server-side BEFORE any DB hit.
+ *   4. Resolve event_type (must be active, not soft-deleted) with service-role client.
+ *   5. Resolve account by event_type.account_id.
+ *   6. Generate raw + hashed cancel/reschedule tokens.
+ *   7. INSERT booking row.
  *      Postgres 23505 on bookings_no_double_book partial unique index → 409.
- *   7. Fire emails (booker confirmation + owner notification) — fire-and-forget.
- *   8. Return 201 with bookingId + suggested redirect path.
+ *   8. Fire emails (booker confirmation + owner notification) — fire-and-forget.
+ *   9. Return 201 with bookingId + suggested redirect path.
  *
  * Why a Route Handler (NOT a Server Action):
  *   Server Actions cannot return 409 — redirects or throws are the only escape
@@ -32,7 +33,9 @@
  * latency without closing the race window (gap between check and INSERT still exists).
  * Plan 05-08 integration tests verify the end-to-end 409 path.
  *
- * Rate limiting: DEFERRED to Phase 8 (INFRA-01).
+ * Rate limiting: 20 req / IP / 5-min sliding window (Plan 08-03 / INFRA-04).
+ *   Reuses Phase 6 lib/rate-limit.ts; key prefix `bookings:`. Fails open on DB
+ *   errors. 21st request from same IP within window returns 429 + Retry-After.
  *
  * Response shapes:
  *   201 → { bookingId: string; redirectTo: string }
@@ -40,6 +43,7 @@
  *   403 → { error: string; code: "TURNSTILE" }
  *   404 → { error: string; code: "NOT_FOUND" }
  *   409 → { error: string; code: "SLOT_TAKEN" }   ← race-loser path
+ *   429 → { error: string; code: "RATE_LIMITED" } ← rate-limit path (Retry-After header)
  *   500 → { error: string; code: "INTERNAL" }
  */
 
@@ -50,6 +54,7 @@ import { generateBookingTokens } from "@/lib/bookings/tokens";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { sendBookingEmails } from "@/lib/email/send-booking-emails";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -92,14 +97,35 @@ export async function POST(req: NextRequest) {
   }
   const input = parsed.data;
 
-  // ── 3. Turnstile verify (BEFORE any DB hit) ──────────────────────────────
-  // Extract visitor IP from standard proxy headers for additional validation.
+  // ── 3. Rate limit (Plan 08-03 / INFRA-04) ────────────────────────────────
+  // 20 req / IP / 5-min sliding window — runs BEFORE Turnstile + DB to fail
+  // fast on enumeration / flood. Reuses Phase 6 lib/rate-limit.ts (same
+  // rate_limit_events table, key prefix `bookings:` distinguishes from
+  // `cancel:` / `reschedule:`). Threshold rationale: token routes use 10/5min
+  // (low-frequency); booking flow can produce 2-3 calls per real session, so
+  // 20/5min blocks bots while tolerating real users (RESEARCH §Pattern 7).
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
-    undefined;
+    "unknown";
 
-  const turnstileOk = await verifyTurnstile(input.turnstileToken, ip);
+  const rl = await checkRateLimit(`bookings:${ip}`, 20, 5 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again shortly.", code: "RATE_LIMITED" },
+      {
+        status: 429,
+        headers: { ...NO_STORE, "Retry-After": String(rl.retryAfterSeconds) },
+      },
+    );
+  }
+
+  // ── 4. Turnstile verify (BEFORE any DB hit) ──────────────────────────────
+  // Pass the IP extracted above for Cloudflare's additional validation.
+  // `unknown` (the rate-limit fallback) is harmless — Turnstile treats missing
+  // IP as a no-op rather than a hard failure.
+  const turnstileIp = ip === "unknown" ? undefined : ip;
+  const turnstileOk = await verifyTurnstile(input.turnstileToken, turnstileIp);
   if (!turnstileOk) {
     return NextResponse.json(
       { error: "Bot check failed. Please refresh and try again.", code: "TURNSTILE" },
@@ -107,7 +133,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 4. Resolve event_type + account via service-role client ─────────────
+  // ── 5. Resolve event_type + account via service-role client ─────────────
   const supabase = createAdminClient();
 
   // Must be active AND not soft-deleted. maybeSingle() returns null (not error)
@@ -140,13 +166,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 5. Generate raw tokens + SHA-256 hashes ──────────────────────────────
+  // ── 6. Generate raw tokens + SHA-256 hashes ──────────────────────────────
   // Raw tokens go ONLY into the confirmation email (via sendBookingEmails).
   // Hashes are stored in the DB. Phase 6 cancel/reschedule routes hash the URL
   // token and look up the row by hash. NEVER include raw tokens in the response body.
   const tokens = await generateBookingTokens();
 
-  // ── 6. Insert booking row ────────────────────────────────────────────────
+  // ── 7. Insert booking row ────────────────────────────────────────────────
   // The partial unique index `bookings_no_double_book ON (event_type_id, start_at)
   // WHERE status='confirmed'` is the authoritative race guard. On collision,
   // Postgres raises error code 23505 (unique_violation). supabase-js surfaces
@@ -193,7 +219,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 7. Fire emails — scheduled via next/server after() ───────────────────
+  // ── 8. Fire emails — scheduled via next/server after() ───────────────────
   // Email failures must not roll back the booking or delay the 201 response.
   // sendBookingEmails uses Promise.allSettled internally and logs per-email errors.
   // Raw tokens passed here only — they will NOT appear in the response body.
@@ -249,7 +275,7 @@ export async function POST(req: NextRequest) {
     },
   }));
 
-  // ── 8. Return 201 ────────────────────────────────────────────────────────
+  // ── 9. Return 201 ────────────────────────────────────────────────────────
   // redirectTo follows the LOCKED confirmation route format (CONTEXT decision #10):
   //   /${account.slug}/${eventType.slug}/confirmed/${booking.id}
   // The client (booking form) will router.push(redirectTo) on success.
