@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Plan 08-02 complete — three Wave-1 hardening prereqs shipped: use-debounce@10.1.1 installed for 08-07; ESLint flat config migrated off FlatCompat to native eslint-config-next 16 imports (clears the Phase 1 circular-JSON crash and surfaces 19 pre-existing violations now deferred to Phase 9); all `void sendXxxEmails(...)` patterns swapped to `after()` from `next/server` across app/api/bookings/route.ts + lib/bookings/{cancel,reschedule}.ts with a tests/setup.ts shim for Vitest; 80/80 tests still green; 3 atomic commits: fe2c3de + 211fff1 + 8d3af15)
+**Last updated:** 2026-04-26 (Plan 08-03 complete — IP rate-limit on POST /api/bookings at 20/5min/ip closes INFRA-04. Reused Phase 6 lib/rate-limit.ts with key prefix `bookings:` — zero new deps, zero new tables. New test file tests/bookings-rate-limit.test.ts adds 3 cases (allowed/blocked/different-IP); test count 80 → 83 green. Single combined commit per plan instruction: 9a5a573.)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 1 progressing; Plans 08-01 + 08-02 complete (schema additions live; hardening prereqs shipped). Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 80/80 tests green.
+**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 1 progressing; Plans 08-01 + 08-02 + 08-03 complete (schema additions live; hardening prereqs shipped; bookings rate-limit landed). Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 83/83 tests green.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 8 (Reminders + Hardening + Dashboard List) — Wave 1 in progress
-**Plan:** 08-02 complete (2 / 8 Phase 8 plans done)
-**Status:** Plans 08-01 + 08-02 complete; Wave 2 plans (08-04, 08-05, 08-07) unblocked. Plan 08-03 (rate limiting on /api/bookings) ready next — no collision with 08-02's after() block.
-**Last activity:** 2026-04-26 — Plan 08-02 complete (use-debounce installed; ESLint flat config migrated; void sendXxxEmails → after() across 3 production files; tests/setup.ts after() shim; 80/80 tests green; commits fe2c3de + 211fff1 + 8d3af15)
+**Plan:** 08-03 complete (3 / 8 Phase 8 plans done)
+**Status:** Plans 08-01 + 08-02 + 08-03 complete; Wave 2 plans (08-04, 08-05, 08-07) unblocked. Wave 1 hardening Wave is now COMPLETE on the API surface — INFRA-04 closed, after() migration in place, ESLint flat config stable.
+**Last activity:** 2026-04-26 — Plan 08-03 complete (rate-limit guard added to POST /api/bookings; key prefix `bookings:` on shared rate_limit_events table; 20/5min/ip threshold; tests/bookings-rate-limit.test.ts adds 3 cases; 83/83 tests green; commit 9a5a573)
 **Progress:** [██████░░░] 6 / 9 phases complete (Phase 7 now done = 7/9 code-complete; Phases 8-9 pending)
 
 ```
@@ -39,7 +39,7 @@ Phase 9  [ ] Manual QA & Verification
 | Phases planned | 7 / 9 |
 | Phases complete | 7 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 55 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; LIFE-01..05; BRAND-01..04; EMBED-01..06; EMBED-08) |
+| Requirements complete | 56 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; LIFE-01..05; BRAND-01..04; EMBED-01..06; EMBED-08; INFRA-04) |
 
 ## Accumulated Context
 
@@ -229,6 +229,9 @@ Phase 9  [ ] Manual QA & Verification
 - **`after()` IS safe in `lib/bookings/*.ts`** (Plan 08-02) — Even though `after()` requires a request scope, calling it from shared lib functions is safe IFF every caller is request-scoped. `cancelBooking()` is called from `/api/cancel` (Route Handler) + `cancelBookingAsOwner` (Server Action); `rescheduleBooking()` is called from `/api/reschedule` (Route Handler). Both qualify. When adding new lib functions that call `after()`, document this caller invariant in JSDoc.
 - **Vitest `after()` shim in tests/setup.ts** (Plan 08-02) — Raw Vitest invocations of `POST(req)` aren't inside a Next.js request scope, so `after()` throws "outside a request scope". `tests/setup.ts` adds a `vi.mock("next/server", ...)` block that re-exports the real module but stubs `after()` to fire the callback as a microtask. The existing 100ms drain wait in `bookings-api.test.ts` continues to observe `__mockSendCalls`. Future test setup rewrites MUST preserve this shim.
 - **Plan 08-02 file-list deviation** (Plan 08-02) — Plan 08-02's `files_modified` listed `app/api/cancel/route.ts`, `app/api/reschedule/route.ts`, and `app/(shell)/app/bookings/[id]/_lib/actions.ts` for the `after()` migration, but those files do NOT contain `void send` patterns — they delegate to `cancelBooking()` / `rescheduleBooking()` in `lib/bookings/`. Migration was applied at the real call sites in `lib/bookings/{cancel,reschedule}.ts`. Honored the plan's intent ("kill all void-promise patterns") rather than its file list. See 08-02-SUMMARY.md Deviation #1.
+- **POST /api/bookings rate-limited at 20/5min/ip** (Plan 08-03 / INFRA-04) — Reused Phase 6 `lib/rate-limit.ts` with key prefix `bookings:`. Threshold deliberately higher than token routes (10/5min) because legitimate booking flow can produce 2-3 calls per real session (slot check + submit + retry). 21st call returns 429 + Retry-After. Same `rate_limit_events` table; no new dependencies. Guard placement: parse → Zod → checkRateLimit → Turnstile → DB resolve. Future public POST endpoints in Phases 8/9 SHOULD follow the same prefix-per-route pattern + same insertion point.
+- **Test fixture: UUIDs must satisfy Zod's strict `.uuid()` format** (Plan 08-03) — `"00000000-0000-0000-0000-000000000001"` is rejected by Zod v4's `.uuid()` because the third group's first digit must be a valid version (1-5). Use a syntactically valid v4 UUID like `"11111111-2222-4333-8444-555555555555"` for tests where the value just needs to pass shape validation but doesn't need to exist in DB. Document this in test fixture comments to save future debug time.
+- **Rate-limit test isolation pattern: Turnstile mock=false** (Plan 08-03) — In tests that prove the rate-limit guard, set Turnstile mock to false so each call short-circuits at the Turnstile gate AFTER the rate-limit increment. This isolates the guard cleanly: `rate_limit_events` accumulates as expected, but no event_type lookups, account lookups, or booking inserts happen. Cleanup is single-table: `DELETE FROM rate_limit_events WHERE key IN (...)`. Apply the same pattern when adding rate-limit tests to any future public endpoint.
 
 ### Carried Concerns / Todos
 
@@ -247,7 +250,7 @@ Phase 9  [ ] Manual QA & Verification
 - **Phase 9 backlog: lint cleanup (19 violations surfaced by 08-02)** — Now that `npm run lint` runs, the following pre-existing violations need attention: 8 errors (`react-hooks/set-state-in-effect` × 6 in booking-shell/slot-picker/reschedule-shell/use-mobile, `react-hooks/refs` × 1 in booking-form for turnstileRef inside effect, `react-hooks/incompatible-library` × 1) + 11 warnings (`@typescript-eslint/no-unused-vars` × 8 — mostly underscore-prefixed args in test mocks; `react-hooks/exhaustive-deps` "unused disable" × 2). Recommended approach: configure `argsIgnorePattern: "^_"` to clear 8 warnings; remove stale eslint-disable comments to clear 2 more; refactor 4 set-state-in-effect hits with useSyncExternalStore + lazy initial state patterns. None affect runtime — production has been live with all of them since Phase 7.
 - **Phase 9 backlog: audit-row `void` cleanup (08-02 follow-up)** — Two `void supabase.from('booking_events').insert(...).then(...)` patterns remain in `lib/bookings/cancel.ts` and `lib/bookings/reschedule.ts`. Same lambda-mid-flight-kill risk as the email sends. Migrate to `after()` in a follow-up commit.
 - **Phase 9 backlog: .ics iTIP calendar-client removal/update** — Deferred from Phase 6 manual QA step 4. Verify METHOD:CANCEL auto-removes event in Apple Mail / Gmail web / Outlook web; verify METHOD:REQUEST + same UID + SEQUENCE:1 updates event in-place on reschedule. Consolidates with Phase 5's "ICS file structure for Gmail inline card" and QA-03 mail-tester items.
-- **Phase 9 backlog: rate-limit live verification** — Deferred from Phase 6 manual QA step 8. Integration test #7 proves the code path. Live check: hit `/api/cancel` and `/api/reschedule` 11+ times rapidly from same IP; confirm 429 + Retry-After in real browser DevTools; confirm rate_limit_events accumulates in Supabase under real network load.
+- **Phase 9 backlog: rate-limit live verification** — Deferred from Phase 6 manual QA step 8 + Plan 08-03. Integration tests cover the code paths (cancel-reschedule-api.test.ts #7-cancel/#7-reschedule + bookings-rate-limit.test.ts #1-#3). Live check across all 3 routes: hit `/api/cancel` and `/api/reschedule` 11+ times rapidly from same IP; hit `/api/bookings` 21+ times rapidly from same IP. For each: confirm 429 + Retry-After in real browser DevTools; confirm rate_limit_events accumulates in Supabase under real network load with the correct per-route key prefix (`cancel:`, `reschedule:`, `bookings:`).
 - **Phase 9 backlog: branding editor file-rejection edge cases (Plan 07-04 steps 8–10)** — Server-side validation code is correct and committed. Deferred because Andrew did not have the right test files during the 2026-04-26 smoke session. Three checks needed: (1) upload a real JPG → expect toast "PNG only" (MIME check); (2) upload a PNG > 2 MB → expect toast "File too large" (size check); (3) rename a JPEG to `.png`, upload → expect toast "PNG only" (magic-byte server check catches spoofed MIME, proving the security backstop works).
 - **Phase 9 backlog: per-email-type smoke testing (Plan 07-07 Task 4 deferred)** — Andrew approved email branding in a combined 07-06 + 07-07 sweep 2026-04-26 but individual email types were not enumerated. Phase 9 must render all 6 transactional email types (booker confirmation + owner notification + booker cancel + owner cancel + booker reschedule + owner reschedule) in Gmail web, Gmail iOS, Apple Mail, Outlook web. Checks per email: logo centered at top (absent when logo_url null), brand-colored H1 (fallback to NSI navy when brand_primary null), brand-colored CTA buttons where applicable, "Powered by NSI" text-link footer (no broken image), .ics attaches + behaves correctly per client.
 - **Phase 9 backlog: live Squarespace/WordPress embed test (EMBED-07, Plan 07-09 deferred)** — Paste the Script snippet and iframe snippet into a real hosted Squarespace or WordPress page (must be a real https:// URL, NOT file:// or browser sandbox). Verify: (1) widget.js injects iframe, iframe loads booking flow, auto-resizes to content height via postMessage; (2) full booking completes (date → time → form → submit → confirmation email); (3) multi-mount: two `<div data-nsi-calendar="...">` divs both render independently; (4) idempotency: duplicate `<script src="...widget.js">` tag produces no double iframes. CRITICAL NOTE: `frame-ancestors *` per CSP spec does NOT match opaque origins (file://, about:blank). If pre-deploy local testing is needed, use `npx serve tmp/` (http://localhost:*) — http:// scheme matches `*`. Do NOT attempt file:// test and conclude the code is broken.
@@ -268,11 +271,19 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Plan 08-02 complete: three Wave-1 hardening prereqs shipped as atomic commits — `use-debounce@10.1.1` installed (08-07 unblocked); ESLint flat config migrated off FlatCompat to native `eslint-config-next` 16 imports (clears the long-standing circular-JSON crash; 19 pre-existing violations now visible and deferred to Phase 9 cleanup); all `void sendXxxEmails(...)` patterns replaced with `after()` from `next/server` across `app/api/bookings/route.ts` + `lib/bookings/{cancel,reschedule}.ts`. Required two auto-fixed deviations: file-list mismatch with reality (the route/action files don't have `void send`; the lib functions do) and a Vitest `next/server` after() shim because raw `POST(req)` invocations aren't request-scoped. 80/80 tests still green.
-**Stopped at:** Plan 08-02 complete (commits fe2c3de + 211fff1 + 8d3af15). Plan 08-03 (rate limiting on /api/bookings) ready next — collision-free with 08-02's after() block at the bottom of the handler. Wave 2 plans (08-04, 08-05, 08-07) unblocked.
+**Last session:** 2026-04-26 — Plan 08-03 complete: IP rate-limit on POST /api/bookings closes INFRA-04. Single combined commit per the plan's explicit instruction. Reused Phase 6 `lib/rate-limit.ts` with key prefix `bookings:` (20/5min/ip threshold, vs token routes' 10/5min). Insertion point: after Zod validation, before Turnstile + DB. Hoisted IP extraction to share between rate-limit and Turnstile gates. New test file `tests/bookings-rate-limit.test.ts` adds 3 cases (allowed under threshold, blocked at 21st, different IP not affected) using Turnstile mock=false to short-circuit each call after the rate-limit increment (no event_type/booking writes). Two auto-fixed deviations: UUID fixture rejected by Zod's strict `.uuid()` validator (zero-filled UUIDs fail version-digit check) and docblock/step-number comment refresh. Test count 80 → 83 green.
+**Stopped at:** Plan 08-03 complete (commit 9a5a573). Wave 2 plans (08-04 reminder cron, 08-05 settings UI, 08-07 bookings detail extension) unblocked. Wave 1 hardening on the API surface is now complete.
 **Resume file:** None
 
-Latest session note (Plan 08-02 execution):
+Latest session note (Plan 08-03 execution):
+- 08-03 Task 1: Added `import { checkRateLimit } from "@/lib/rate-limit"` + 8-line guard block in `app/api/bookings/route.ts` between Zod validation and Turnstile. Hoisted IP extraction (was previously inline in step 3 Turnstile block). Updated docblock Flow + Response shapes to reflect new step numbering and the 429 path. Removed stale "Rate limiting: DEFERRED" comment.
+- 08-03 Task 2: Created `tests/bookings-rate-limit.test.ts` with 3 cases mirroring `tests/cancel-reschedule-api.test.ts` Scenario 7. Strategy: Turnstile mock=false → each call passes the rate-limit gate (incrementing the counter) and short-circuits at Turnstile (403). Cleanup deletes `rate_limit_events` rows by key in `afterAll`.
+- 08-03 deviation #1: First test run failed at status 400 (Zod VALIDATION) instead of reaching the rate-limit gate. Root cause: `"00000000-0000-0000-0000-000000000001"` is rejected by Zod v4's `.uuid()` because the third group's first digit must be a valid version (1-5). Fixed by switching to `"11111111-2222-4333-8444-555555555555"` (valid v4 format) with a fixture comment explaining why.
+- 08-03 deviation #2: Updated route docblock + step-numbering comments (Flow / Response shapes / Rate limiting line). Pure hygiene; no logic change.
+- 08-03 SUMMARY.md created at .planning/phases/08-reminders-hardening-and-dashboard-list/08-03-SUMMARY.md
+- Single combined commit (per Plan 08-03 Task 2 action): 9a5a573
+
+Previous session note (Plan 08-02 execution):
 - 08-02 Task 1a: `npm install use-debounce` — landed at `^10.1.1` under `dependencies` (commit fe2c3de)
 - 08-02 Task 1b: Replaced FlatCompat-based eslint.config.mjs with direct `import nextCoreWebVitals from "eslint-config-next/core-web-vitals"` + `import nextTypescript from "eslint-config-next/typescript"`. eslint-config-next 16 already publishes both as native flat configs; FlatCompat was both unnecessary AND the source of the circular-JSON crash (commit 211fff1). 19 violations surfaced and deferred to Phase 9 (full breakdown in 08-02-SUMMARY.md).
 - 08-02 Task 2: Migrated `void sendBookingEmails(...)` (app/api/bookings/route.ts), `void sendCancelEmails(...)` (lib/bookings/cancel.ts), `void sendRescheduleEmails(...)` (lib/bookings/reschedule.ts) to `after(() => ...)`. Plan listed `app/api/cancel/route.ts` + `app/api/reschedule/route.ts` + `app/(shell)/.../actions.ts` but those just delegate — actual `void send` calls live in lib/bookings/. Honored plan intent (kill all void-promise patterns) at the real call sites. Audit-row `void supabase.from('booking_events').insert(...)` patterns left untouched to keep diff narrow. (commit 8d3af15)
@@ -312,12 +323,12 @@ Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file
 - 07-08 Task 2: Card + empty-state components (413131c)
 - 07-08 Task 3: Wire account index page.tsx (d84c5ee)
 
-**Next action:** Execute Plan 08-03 (rate limiting on /api/bookings) — diff-clean against 08-02's after() block (insertion point at top of POST(); after() block lives at the bottom). Then proceed to Wave 2 parallel execution (08-04 reminder cron, 08-05 settings UI, 08-07 bookings detail extension). Refer to ROADMAP.md for the full Phase 8 wave plan.
+**Next action:** Wave 2 parallel execution (08-04 reminder cron, 08-05 settings UI, 08-07 bookings detail extension). Refer to ROADMAP.md for the full Phase 8 wave plan. Wave 1 (08-01 + 08-02 + 08-03) is now complete on the API + schema surface.
 
 **Phase 8 plan status:**
 - ✅ Plan 08-01 (schema additions migration: 3 reminder toggles + event_types.location + bookings.owner_note) — complete (2026-04-26, aa6ac14)
 - ✅ Plan 08-02 (hardening prereqs: use-debounce + ESLint flat config + after() migration) — complete (2026-04-26, fe2c3de + 211fff1 + 8d3af15)
-- ⬜ Plan 08-03 (bookings rate limit)
+- ✅ Plan 08-03 (bookings rate limit at 20/5min/ip; INFRA-04 closed) — complete (2026-04-26, 9a5a573)
 - ⬜ Plan 08-04 (reminder cron + immediate send) — Wave 2
 - ⬜ Plan 08-05 (reminder settings + event location UI) — Wave 2
 - ⬜ Plan 08-06 (bookings list page)
