@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashToken } from "@/lib/bookings/tokens";
 import { sendCancelEmails } from "@/lib/email/send-cancel-emails";
@@ -147,35 +148,42 @@ export async function cancelBooking(
     ? pre.accounts[0]
     : pre.accounts;
 
-  void sendCancelEmails({
-    booking: {
-      id: pre.id,
-      start_at: pre.start_at,
-      end_at: pre.end_at,
-      booker_name: pre.booker_name,
-      booker_email: pre.booker_email,
-      booker_phone: pre.booker_phone ?? null,
-      booker_timezone: pre.booker_timezone,
-      answers: (pre.answers ?? {}) as Record<string, string>,
-    },
-    eventType: {
-      name: eventType.name,
-      description: eventType.description ?? null,
-      duration_minutes: eventType.duration_minutes,
-      slug: eventType.slug,
-    },
-    account: {
-      name: account.name,
-      slug: account.slug,
-      timezone: account.timezone,
-      owner_email: account.owner_email ?? null,
-      logo_url: account.logo_url ?? null,
-      brand_primary: account.brand_primary ?? null,
-    },
-    actor,
-    reason,
-    appUrl,
-  });
+  // Plan 08-02: scheduled via next/server after() instead of `void` so the
+  // serverless worker is kept alive until the email orchestrator resolves.
+  // sendCancelEmails is called from request scopes only (the public /api/cancel
+  // Route Handler and the cancelBookingAsOwner Server Action), both of which
+  // satisfy after()'s request-context requirement.
+  after(() =>
+    sendCancelEmails({
+      booking: {
+        id: pre.id,
+        start_at: pre.start_at,
+        end_at: pre.end_at,
+        booker_name: pre.booker_name,
+        booker_email: pre.booker_email,
+        booker_phone: pre.booker_phone ?? null,
+        booker_timezone: pre.booker_timezone,
+        answers: (pre.answers ?? {}) as Record<string, string>,
+      },
+      eventType: {
+        name: eventType.name,
+        description: eventType.description ?? null,
+        duration_minutes: eventType.duration_minutes,
+        slug: eventType.slug,
+      },
+      account: {
+        name: account.name,
+        slug: account.slug,
+        timezone: account.timezone,
+        owner_email: account.owner_email ?? null,
+        logo_url: account.logo_url ?? null,
+        brand_primary: account.brand_primary ?? null,
+      },
+      actor,
+      reason,
+      appUrl,
+    }),
+  );
 
   // ── 5. Fire-and-forget audit row (Open Question C resolution) ──────────────
   // booking_events.event_type='cancelled', actor=booker|owner, metadata jsonb

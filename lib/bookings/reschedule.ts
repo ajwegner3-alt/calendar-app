@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateBookingTokens } from "@/lib/bookings/tokens";
 import { sendRescheduleEmails } from "@/lib/email/send-reschedule-emails";
@@ -171,34 +172,40 @@ export async function rescheduleBooking(
     ? pre.accounts[0]
     : pre.accounts;
 
-  void sendRescheduleEmails({
-    booking: {
-      id: pre.id,
-      start_at: updated.start_at, // NEW start (post-rotation)
-      end_at: updated.end_at, // NEW end
-      booker_name: pre.booker_name,
-      booker_email: pre.booker_email,
-      booker_timezone: pre.booker_timezone,
-    },
-    eventType: {
-      name: eventType.name,
-      description: eventType.description ?? null,
-      duration_minutes: eventType.duration_minutes,
-    },
-    account: {
-      name: account.name,
-      slug: account.slug,
-      timezone: account.timezone,
-      owner_email: account.owner_email ?? null,
-      logo_url: account.logo_url ?? null,
-      brand_primary: account.brand_primary ?? null,
-    },
-    oldStartAt,
-    oldEndAt,
-    rawCancelToken: fresh.rawCancel,
-    rawRescheduleToken: fresh.rawReschedule,
-    appUrl,
-  });
+  // Plan 08-02: scheduled via next/server after() instead of `void` so the
+  // serverless worker keeps the email orchestrator alive past the response
+  // flush. Same context note as cancel.ts: this function is only invoked from
+  // request-scoped callers (the public /api/reschedule Route Handler).
+  after(() =>
+    sendRescheduleEmails({
+      booking: {
+        id: pre.id,
+        start_at: updated.start_at, // NEW start (post-rotation)
+        end_at: updated.end_at, // NEW end
+        booker_name: pre.booker_name,
+        booker_email: pre.booker_email,
+        booker_timezone: pre.booker_timezone,
+      },
+      eventType: {
+        name: eventType.name,
+        description: eventType.description ?? null,
+        duration_minutes: eventType.duration_minutes,
+      },
+      account: {
+        name: account.name,
+        slug: account.slug,
+        timezone: account.timezone,
+        owner_email: account.owner_email ?? null,
+        logo_url: account.logo_url ?? null,
+        brand_primary: account.brand_primary ?? null,
+      },
+      oldStartAt,
+      oldEndAt,
+      rawCancelToken: fresh.rawCancel,
+      rawRescheduleToken: fresh.rawReschedule,
+      appUrl,
+    }),
+  );
 
   // ── 5. Fire-and-forget audit row ──────────────────────────────────────────
   void supabase

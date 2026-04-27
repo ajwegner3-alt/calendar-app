@@ -43,7 +43,7 @@
  *   500 → { error: string; code: "INTERNAL" }
  */
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { bookingInputSchema } from "@/lib/bookings/schema";
 import { generateBookingTokens } from "@/lib/bookings/tokens";
@@ -193,11 +193,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 7. Fire emails — DO NOT AWAIT ────────────────────────────────────────
+  // ── 7. Fire emails — scheduled via next/server after() ───────────────────
   // Email failures must not roll back the booking or delay the 201 response.
   // sendBookingEmails uses Promise.allSettled internally and logs per-email errors.
   // Raw tokens passed here only — they will NOT appear in the response body.
-  void sendBookingEmails({
+  //
+  // Plan 08-02: switched from `void sendBookingEmails(...)` to `after(() => …)`
+  // so the runtime keeps the function alive until emails resolve. On serverless
+  // (Vercel) `void` can be killed mid-flight when the response is flushed and
+  // the lambda spins down; `after()` is the canonical Next.js 15.1+ primitive
+  // for "run this after the response, but before the worker is reaped."
+  after(() => sendBookingEmails({
     booking: {
       id: booking.id,
       start_at: booking.start_at,
@@ -241,7 +247,7 @@ export async function POST(req: NextRequest) {
         brand_primary: account.brand_primary ?? null,
       },
     },
-  });
+  }));
 
   // ── 8. Return 201 ────────────────────────────────────────────────────────
   // redirectTo follows the LOCKED confirmation route format (CONTEXT decision #10):
