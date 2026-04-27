@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Phase 7 finalized — 07-VERIFICATION.md status→passed; all 3 human-verify items documented with user approval quotes; bug f5dbaee documented; ROADMAP/REQUIREMENTS/STATE updated; 55/73 requirements complete; .gitignore updated; Phase 8 next)
+**Last updated:** 2026-04-26 (Plan 08-01 complete — Phase 8 schema additions migration applied to live remote DB: 3 reminder toggles on accounts + location on event_types + owner_note on bookings; 5 columns verified via information_schema; existing nsi + nsi-test rows backfilled with defaults; 80/80 tests still green; commit aa6ac14)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 80/80 tests green.
+**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 1 in progress; Plan 08-01 complete (schema additions live). Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 80/80 tests green.
 
 **Mode:** yolo
 **Depth:** standard
@@ -14,10 +14,10 @@
 
 ## Current Position
 
-**Phase:** 8 (Reminders + Hardening + Dashboard List) — not yet started
-**Plan:** Phase 7 complete (07-09 was final)
-**Status:** Phase 7 complete; Phase 8 next
-**Last activity:** 2026-04-26 — Plan 07-09 complete (embed snippet dialog; X-FO bug fixed; production widget verified; Phase 7 COMPLETE)
+**Phase:** 8 (Reminders + Hardening + Dashboard List) — Wave 1 in progress
+**Plan:** 08-01 complete (1 / 8 Phase 8 plans done)
+**Status:** Plan 08-01 complete; Wave 2 plans (08-04, 08-05, 08-07) unblocked
+**Last activity:** 2026-04-26 — Plan 08-01 complete (Phase 8 schema migration applied to live DB: 3 reminder toggles + location + owner_note; 5 columns verified; 80/80 tests green; commit aa6ac14)
 **Progress:** [██████░░░] 6 / 9 phases complete (Phase 7 now done = 7/9 code-complete; Phases 8-9 pending)
 
 ```
@@ -220,6 +220,10 @@ Phase 9  [ ] Manual QA & Verification
 - **Email logo URL never modified by senders (Plan 07-07)** — accounts.logo_url is passed as-is to img src. The ?v= cache-bust from Plan 07-04 is already embedded; stripping or re-encoding it would break cache invalidation.
 - **BrandedPage CSS var convention LOCKED (Plan 07-06)** — `--brand-primary` + `--brand-text` are the canonical CSS var names across ALL public surfaces (booking, confirmation, cancel, reschedule, embed). BrandedPage injects them via inline style on a root div; child components consume via `var(--brand-primary, #0A2540)` / `var(--brand-text, #ffffff)` inline styles. Only PRIMARY CTAs recolored; secondary buttons retain neutral shadcn styling.
 - **PROCESS LOCK: Push to origin/main before live Vercel checkpoints (Plan 07-06 post-mortem)** — Wave 3 parallel executors committed 15 tasks across multiple plans but did not auto-push to origin/main. When Andrew visited the live Vercel URL for the human-verify checkpoint, branding was absent because Vercel had not redeployed. Orchestrator manually pushed all 15 commits; branding rendered immediately. Future executors MUST push all accumulated commits to origin/main IMMEDIATELY before returning any checkpoint:human-verify that references a live Vercel URL.
+- **Phase 8 schema additive columns LOCKED (Plan 08-01)** — `accounts.reminder_include_custom_answers` / `reminder_include_location` / `reminder_include_lifecycle_links` are `boolean NOT NULL DEFAULT true`; existing nsi + nsi-test rows backfilled to true on migration apply (preserves Phase 5/6 confirmation-email behavior with no UI step). `event_types.location` and `bookings.owner_note` are nullable `text` — NULL = "not set". No indexes (none of these are filter predicates in v1). RLS untouched (Phase 1 policies cover the new columns by inheritance). Migration timestamp `20260427120001` (next-second after rate_limit_events).
+- **Migration drift workaround LOCKED (Plan 08-01 confirms 03-01 + 05-01 + 06-01)** — `npx supabase db push --linked` continues to fail with "Remote migration versions not found in local migrations directory" due to three orphan timestamps in the supabase_migrations.schema_migrations table on the remote DB (20251223162516, 20260419144234, 20260419144302). Locked workaround: `npx supabase db query --linked -f <migration-file>`. Same Management API path; bypasses the schema_migrations tracking table. Phase 8 hardening could add a "fix migrations drift" cleanup task — until then, all new migrations MUST use the db query fallback.
+- **Forward contract: NULL location semantics (Plan 08-01 → 08-04)** — `event_types.location IS NULL` means "no location set". 08-04 reminder cron MUST omit the location block from the email when location is null, regardless of `accounts.reminder_include_location`. The toggle gates the block when location IS set; nullness wins absolutely.
+- **Forward contract: empty-string → null at action boundary (Plan 08-01 → 08-05 + 08-07)** — Settings UI (08-05) writes to `event_types.location` should normalize empty string to `null` before calling the action. Same convention for `bookings.owner_note` autosave (08-07). Mirrors the locked Plan 04-04 daily_cap pattern.
 
 ### Carried Concerns / Todos
 
@@ -257,9 +261,15 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Phase 7 finalized: 07-VERIFICATION.md updated to passed, ROADMAP/REQUIREMENTS/STATE updated, .gitignore updated with .playwright-mcp/ and tmp/.
-**Stopped at:** Phase 7 fully complete and documented. Next: Phase 8 (Reminders + Hardening + Dashboard List) — start with Plan 08-01.
+**Last session:** 2026-04-26 — Plan 08-01 complete: Phase 8 schema additions migration applied to live remote Supabase (3 reminder toggles on accounts + location on event_types + owner_note on bookings); 5 columns verified via information_schema; existing nsi + nsi-test rows backfilled with `true` defaults; 80/80 tests still green.
+**Stopped at:** Plan 08-01 complete (commit aa6ac14). Wave 2 plans (08-04, 08-05, 08-07) unblocked. Next: Plan 08-02 (hardening prereqs) or Wave 2 parallel execution.
 **Resume file:** None
+
+Latest session note (Plan 08-01 execution):
+- 08-01 Task 1: Authored supabase/migrations/20260427120001_phase8_schema_additions.sql (3 ALTER blocks, all IF NOT EXISTS)
+- 08-01 Task 2: Applied via `supabase db query --linked -f` (db push failed with same migration-drift issue as 03-01/05-01/06-01); information_schema returned all 5 columns with correct types/defaults; nsi + nsi-test rows show toggles=true; no generated types file in repo so regeneration step skipped
+- 08-01 commit aa6ac14: feat(08-01): add phase 8 schema columns (reminder toggles + location + owner_note)
+- 08-01 SUMMARY.md created at .planning/phases/08-reminders-hardening-and-dashboard-list/08-01-SUMMARY.md
 
 Previous session note (07-09 finalization):
 - 07-VERIFICATION.md: status human_needed → passed; Human Verification Resolution section added with all 3 user approval quotes; Bug Fixed During Verification section added for f5dbaee
@@ -287,7 +297,17 @@ Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file
 - 07-08 Task 2: Card + empty-state components (413131c)
 - 07-08 Task 3: Wire account index page.tsx (d84c5ee)
 
-**Next action:** Execute Phase 8 plans (Reminders + Hardening + Dashboard List).
+**Next action:** Execute Plan 08-02 (hardening prereqs) sequentially or proceed to Wave 2 parallel execution (08-04 reminder cron, 08-05 settings UI, 08-07 bookings detail extension) once 08-02 + 08-03 are done. Refer to ROADMAP.md for the full Phase 8 wave plan.
+
+**Phase 8 plan status:**
+- ✅ Plan 08-01 (schema additions migration: 3 reminder toggles + event_types.location + bookings.owner_note) — complete (2026-04-26, aa6ac14)
+- ⬜ Plan 08-02 (hardening prereqs)
+- ⬜ Plan 08-03 (bookings rate limit)
+- ⬜ Plan 08-04 (reminder cron + immediate send) — Wave 2
+- ⬜ Plan 08-05 (reminder settings + event location UI) — Wave 2
+- ⬜ Plan 08-06 (bookings list page)
+- ⬜ Plan 08-07 (bookings detail extension) — Wave 2
+- ⬜ Plan 08-08 (RLS matrix + ops hardening)
 
 **Phase 7 plan status:**
 - ✅ Plan 07-01 (branding lib: contrast.ts + types.ts + read-branding.ts + AccountSummary extension + RESERVED_SLUGS "embed") — complete, pushed (2026-04-26, bb4089a)
