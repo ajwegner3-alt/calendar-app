@@ -23,43 +23,45 @@
 
 ## Marathon Criteria (Plan 09-02)
 
-| #   | Criterion                                                                                                                                                                                                                                                          | Status | Timestamp | Notes |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | --------- | ----- |
-| 1   | Embed live on Andrew's Next.js site, end-to-end booking, no JS errors (Squarespace/Wix deferred to FUTURE_DIRECTIONS.md per Plan 09-01 prereq substitution)                                                                                                        | __     | __        | __    |
-| 2   | .ics opens correctly in Gmail web/iOS, Outlook web/desktop (cancel + reschedule lifecycle) + Apple Mail code review findings — record as "PASS (Apple Mail: code-review-only, deferred)" not unqualified PASS, per CONTEXT.md no-device-access deferral            | __     | __        | __    |
-| 3   | mail-tester.com >= 9/10 for confirmation AND reminder                                                                                                                                                                                                              | __     | __        | __    |
-| 4   | DST/timezone correctness verified — Notes column MUST record (a) Andrew's substitution-approval signal verbatim if applicable and (b) the substitute method used (e.g., "cross-timezone NY/Chicago"); if not substituted, record actual method used                | __     | __        | __    |
-| 5   | Responsive at 320 / 768 / 1024 (hosted + embed)                                                                                                                                                                                                                    | __     | __        | __    |
-| 6   | Multi-tenant UI isolation (manual login as 2nd test user)                                                                                                                                                                                                          | __     | __        | __    |
-| 7   | FUTURE_DIRECTIONS.md committed to repo root (Plan 09-03)                                                                                                                                                                                                           | __     | __        | __    |
-| 8   | Andrew explicit ship sign-off                                                                                                                                                                                                                                      | __     | __        | __    |
+| #   | Criterion                                                                                                                                                                                                                                                          | Status                                                                  | Timestamp  | Notes |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | ---------- | ----- |
+| 1   | Embed live on Andrew's Next.js site, end-to-end booking, no JS errors (Squarespace/Wix deferred to FUTURE_DIRECTIONS.md per Plan 09-01 prereq substitution)                                                                                                        | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Remaining verification work consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
+| 2   | .ics opens correctly in Gmail web/iOS, Outlook web/desktop (cancel + reschedule lifecycle) + Apple Mail code review findings — record as "PASS (Apple Mail: code-review-only, deferred)" not unqualified PASS, per CONTEXT.md no-device-access deferral            | DEFERRED (Apple Mail code-review-only complete; live email-client testing deferred to v1.1) | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Apple Mail code-review LIKELY PASS recorded below (Plan 09-02 Task 1, commit `3d5fb31`, 11 fact-bullets). Live Gmail/Outlook .ics validation + remaining 6-template per-surface branding smoke deferred to v1.1. Consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
+| 3   | mail-tester.com >= 9/10 for confirmation AND reminder                                                                                                                                                                                                              | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Remaining verification work consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
+| 4   | DST/timezone correctness verified — Notes column MUST record (a) Andrew's substitution-approval signal verbatim if applicable and (b) the substitute method used (e.g., "cross-timezone NY/Chicago"); if not substituted, record actual method used                | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Remaining verification work consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
+| 5   | Responsive at 320 / 768 / 1024 (hosted + embed)                                                                                                                                                                                                                    | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Remaining verification work consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
+| 6   | Multi-tenant UI isolation (manual login as 2nd test user)                                                                                                                                                                                                          | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Note: automated RLS cross-tenant matrix (Plan 08-08, `tests/rls-cross-tenant-matrix.test.ts`) provides backend isolation coverage. Live UI-layer multi-tenant login walkthrough deferred. Consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
+| 7   | FUTURE_DIRECTIONS.md committed to repo root (Plan 09-03)                                                                                                                                                                                                           | PENDING                                                                 | __         | Plan 09-03 work. |
+| 8   | Andrew explicit ship sign-off                                                                                                                                                                                                                                      | PENDING                                                                 | __         | Plan 09-03 work. |
 
 ### Criterion #2 — per-template body branding smoke (6 transactional emails)
 
 Per CONTEXT.md / Plan 09-02 Task 3 Phase D. Each row evaluates one rendered email body for: logo (centered top, or absent if `logo_url` null), brand-colored H1 (or NSI navy fallback), brand-colored CTA buttons, "Powered by NSI" text-link footer, and (for booker confirmation only) the spam-folder copy line.
 
-| #   | Surface (recipient × email type)             | Status | Timestamp | Notes |
-| --- | -------------------------------------------- | ------ | --------- | ----- |
-| 2a  | Booker — confirmation (with .ics)            | __     | __        | __    |
-| 2b  | Owner  — confirmation notification           | __     | __        | __    |
-| 2c  | Booker — cancellation (with cancelled.ics)   | __     | __        | __    |
-| 2d  | Owner  — cancellation notification           | __     | __        | __    |
-| 2e  | Booker — reschedule (with .ics SEQUENCE:1)   | __     | __        | __    |
-| 2f  | Owner  — reschedule notification             | __     | __        | __    |
+| #   | Surface (recipient × email type)             | Status   | Timestamp  | Notes |
+| --- | -------------------------------------------- | -------- | ---------- | ----- |
+| 2a  | Booker — confirmation (with .ics)            | DEFERRED | 2026-04-27 | Per-surface live render deferred to v1.1 (parent Criterion #2 scope-cut). Apple Mail code-review covers the underlying .ics + branding HTML patterns (LIKELY PASS, see findings below). |
+| 2b  | Owner  — confirmation notification           | DEFERRED | 2026-04-27 | Per-surface live render deferred to v1.1 (parent Criterion #2 scope-cut). Apple Mail code-review covers underlying patterns. |
+| 2c  | Booker — cancellation (with cancelled.ics)   | DEFERRED | 2026-04-27 | Per-surface live render deferred to v1.1 (parent Criterion #2 scope-cut). Apple Mail code-review covers underlying patterns (METHOD:CANCEL + STATUS:CANCELLED + SEQUENCE:1 confirmed in build-ics.ts). |
+| 2d  | Owner  — cancellation notification           | DEFERRED | 2026-04-27 | Per-surface live render deferred to v1.1 (parent Criterion #2 scope-cut). Apple Mail code-review covers underlying patterns. |
+| 2e  | Booker — reschedule (with .ics SEQUENCE:1)   | DEFERRED | 2026-04-27 | Per-surface live render deferred to v1.1 (parent Criterion #2 scope-cut). Apple Mail code-review covers underlying patterns (SEQUENCE explicit on every invocation; UID stable; VTIMEZONE present). |
+| 2f  | Owner  — reschedule notification             | DEFERRED | 2026-04-27 | Per-surface live render deferred to v1.1 (parent Criterion #2 scope-cut). Apple Mail code-review covers underlying patterns. |
 
 ---
 
 ## Phase 8 dashboard walkthrough (sub-criteria, part of #1-#6 evidence collection)
 
-- [ ] Bookings list filters / pagination / sort
-- [ ] Booking detail page (answers + owner-note autosave + history timeline + action bar)
-- [ ] Reminder settings toggles
-- [ ] Event-type Location field persistence
-- [ ] Reminder email arrives in inbox with correct branding + toggles
-- [ ] Vercel Cron dashboard shows green ticks (cron-fired-in-production verification — gates whether the next reminder actually arrived; deferred from Plan 09-01 prereqs)
-- [ ] Rate-limit smoke test (3 endpoints): /api/bookings, /api/cancel, /api/reschedule each return 429 + Retry-After when hit rapidly
-- [ ] Sidebar Settings group renders Reminder Settings entry
-- [ ] Branding editor file-rejection edge cases (JPG / >2MB / spoofed MIME)
+All 9 sub-criteria DEFERRED to v1.1 (2026-04-27) — Andrew elected to defer remaining marathon QA to next milestone; other priorities pressing. Not a failure; explicit scope-cut by project owner. Underlying functionality is covered by automated test suites (131/132 green) and Phase 8 code-complete sign-off; what's deferred is the live human walkthrough. Consolidated into FUTURE_DIRECTIONS.md (Plan 09-03).
+
+- [ ] Bookings list filters / pagination / sort — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Booking detail page (answers + owner-note autosave + history timeline + action bar) — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Reminder settings toggles — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Event-type Location field persistence — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Reminder email arrives in inbox with correct branding + toggles — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Vercel Cron dashboard shows green ticks (cron-fired-in-production verification — gates whether the next reminder actually arrived; deferred from Plan 09-01 prereqs) — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Rate-limit smoke test (3 endpoints): /api/bookings, /api/cancel, /api/reschedule each return 429 + Retry-After when hit rapidly — DEFERRED 2026-04-27 (v1.1 scope-cut; integration-test coverage already in `tests/bookings-rate-limit.test.ts` + `tests/cancel-reschedule-api.test.ts` Scenario 7)
+- [ ] Sidebar Settings group renders Reminder Settings entry — DEFERRED 2026-04-27 (v1.1 scope-cut)
+- [ ] Branding editor file-rejection edge cases (JPG / >2MB / spoofed MIME) — DEFERRED 2026-04-27 (v1.1 scope-cut; server-side validation is committed and unit-tested — what remains is the live human upload smoke)
 
 ---
 
@@ -102,6 +104,32 @@ These were captured during Plan 09-01 (pre-flight) and are carried forward for P
 5. **Pre-existing `tsc --noEmit` mock-alias errors in tests/** — `__setTurnstileResult`, `__mockSendCalls`, `__resetMockSendCalls` are aliased only in `vitest.config.ts`, not in `tsconfig.json`. Tests run green; tsc emits errors. Pre-dates Plan 09-01. Carried into FUTURE_DIRECTIONS.md.
 
 _Any criterion downgraded by Andrew during the Plan 09-02 marathon will be appended below._
+
+---
+
+### Plan 09-02 wholesale scope-cut (2026-04-27)
+
+**Decision (verbatim):** _"Close out everything and move to future directions. Everything we need right now is fine. Other problems are more pressing and will be addressed in the next milestone."_ — Andrew
+
+**Status:** This is NOT a failure mode. It is an explicit project-owner discretion call to ship v1 with what is verified, and consolidate remaining marathon QA into v1.1 backlog. Apple Mail code review (Plan 09-02 Task 1) was the only marathon-QA verification work that ran; all 11 fact-bullets recorded in this checklist remain authoritative.
+
+**Scope of items deferred under this decision (the consolidated v1.1 backlog the FUTURE_DIRECTIONS.md authorship in Plan 09-03 must surface):**
+
+6. **Criterion #1 — Embed end-to-end booking on Andrew's Next.js site** (also covers the already-deferred Squarespace/Wix verification from Plan 09-01 deferral #1).
+7. **Criterion #2 — .ics live-client validation across Gmail web/iOS, Outlook web/desktop** + remaining 6-row per-template branding smoke (sub-criteria 2a–2f). Apple Mail code-review (LIKELY PASS) is the only Criterion #2 evidence collected; live email-client testing carries forward.
+8. **Criterion #3 — mail-tester.com >= 9/10 for confirmation AND reminder.** Folds in the existing Plan 09-01 deferral #2 (cron-fired-in-production functional proof) — if the reminder doesn't arrive, that's still the same surface to revisit in v1.1.
+9. **Criterion #4 — DST/timezone correctness via cross-timezone or November 1 2026 DST-spanning booking.** Algorithmic correctness is covered by unit tests (`tests/availability/compute-slots*.test.ts`); what carries forward is the human end-to-end-with-real-email confirmation.
+10. **Criterion #5 — Responsive at 320 / 768 / 1024 (hosted + embed).**
+11. **Criterion #6 — Multi-tenant UI isolation walkthrough (manual login as second test user).** Backend RLS isolation is covered by `tests/rls-cross-tenant-matrix.test.ts` (Plan 08-08); what carries forward is the live UI-layer login walkthrough.
+12. **Phase 8 dashboard walkthrough (9 sub-criteria) — bookings list filters/pagination/sort; booking detail page; reminder settings toggles; event-type Location field persistence; reminder email arrives in inbox with branding + toggles; Vercel Cron dashboard green ticks; rate-limit live smoke (3 endpoints); sidebar Settings group renders Reminder Settings entry; branding editor file-rejection edge cases (JPG / >2MB / spoofed MIME).**
+
+**Source-of-truth citations for FUTURE_DIRECTIONS.md (Plan 09-03):**
+
+- Marathon Criteria table above (rows #1–#6)
+- Per-template branding smoke sub-table (rows 2a–2f)
+- Phase 8 dashboard walkthrough section (9 checkboxes)
+- This consolidated entry
+- Apple Mail code review findings section (KEPT INTACT — these stand as the only marathon-QA evidence collected before the scope-cut)
 
 ---
 
