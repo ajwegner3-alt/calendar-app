@@ -239,14 +239,14 @@ Plans:
 **Plans:** 8 plans
 
 Plans:
-- [ ] 08-01-schema-additions-PLAN.md — Phase 8 schema migration: account reminder toggles + event_types.location + bookings.owner_note
-- [ ] 08-02-hardening-prereqs-PLAN.md — install use-debounce + ESLint flat-config migration + after() fire-and-forget refactor
-- [ ] 08-03-bookings-rate-limit-PLAN.md — rate-limit POST /api/bookings at 20/5min/IP using existing checkRateLimit lib + integration test
-- [ ] 08-04-reminder-cron-and-immediate-send-PLAN.md — sendReminderBooker + /api/cron/send-reminders + immediate-send hook in /api/bookings + vercel.json + token rotation
-- [ ] 08-05-reminder-settings-and-event-location-PLAN.md — /app/settings/reminders toggles + event-type Location field + Server Action
-- [ ] 08-06-bookings-list-page-PLAN.md — /app/bookings list with URL-driven filters + numbered pagination + status badges
-- [ ] 08-07-bookings-detail-extension-PLAN.md — /app/bookings/[id] answers + owner-note autosave + history timeline + action bar
-- [ ] 08-08-rls-matrix-and-ops-hardening-PLAN.md — RLS cross-tenant test matrix + render harness + cron-job.org + mail-tester + key swap (manual checkpoints)
+- [x] 08-01-schema-additions-PLAN.md — Phase 8 schema migration: account reminder toggles + event_types.location + bookings.owner_note
+- [x] 08-02-hardening-prereqs-PLAN.md — install use-debounce + ESLint flat-config migration + after() fire-and-forget refactor
+- [x] 08-03-bookings-rate-limit-PLAN.md — rate-limit POST /api/bookings at 20/5min/IP using existing checkRateLimit lib + integration test
+- [x] 08-04-reminder-cron-and-immediate-send-PLAN.md — sendReminderBooker + /api/cron/send-reminders + immediate-send hook in /api/bookings + vercel.json + token rotation
+- [x] 08-05-reminder-settings-and-event-location-PLAN.md — /app/settings/reminders toggles + event-type Location field + Server Action
+- [x] 08-06-bookings-list-page-PLAN.md — /app/bookings list with URL-driven filters + numbered pagination + status badges
+- [x] 08-07-bookings-detail-extension-PLAN.md — /app/bookings/[id] answers + owner-note autosave + history timeline + action bar
+- [x] 08-08-rls-matrix-and-ops-hardening-PLAN.md — RLS cross-tenant test matrix + render harness + Vercel Pro hourly cron (cron-job.org dropped) + mail-tester deferred to Phase 9
 
 ---
 
@@ -283,7 +283,7 @@ Plans:
 | 5 - Public Booking Flow + Email + .ics | Visitor books a slot and gets a calendar invite | ✓ Complete (2026-04-25, human_needed for Phase 9) |
 | 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | ✓ Complete (2026-04-25, human_needed for Phase 9) |
 | 7 - Widget + Branding | Branded embeddable widget for client sites | ✓ Complete (2026-04-26) |
-| 8 - Reminders + Hardening + Dashboard List | Reliable reminders, hardened production, bookings UI | Pending |
+| 8 - Reminders + Hardening + Dashboard List | Reliable reminders, hardened production, bookings UI | ✓ Complete (2026-04-26, human_needed for Phase 9) |
 | 9 - Manual QA & Verification | Andrew signs off v1 is shippable | Pending |
 
 ## Coverage Summary
