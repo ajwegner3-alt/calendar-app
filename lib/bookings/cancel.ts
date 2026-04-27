@@ -188,21 +188,27 @@ export async function cancelBooking(
   // ── 5. Fire-and-forget audit row (Open Question C resolution) ──────────────
   // booking_events.event_type='cancelled', actor=booker|owner, metadata jsonb
   // carries the cancellation reason + ip for forensics. Failure logged.
-  void supabase
-    .from("booking_events")
-    .insert({
-      booking_id: pre.id,
-      account_id: pre.account_id,
-      event_type: "cancelled",
-      actor,
-      metadata: {
-        reason: reason ?? null,
-        ip: ip ?? null,
-      },
-    })
-    .then(({ error }) => {
-      if (error) console.error("[cancel] audit insert error:", error);
-    });
+  // Plan 09-01: scheduled via next/server after() (matches sendCancelEmails
+  // above) so the serverless worker keeps the audit-insert alive past the
+  // response flush. Same request-scope guarantee — caller is /api/cancel route
+  // or cancelBookingAsOwner Server Action.
+  after(() =>
+    supabase
+      .from("booking_events")
+      .insert({
+        booking_id: pre.id,
+        account_id: pre.account_id,
+        event_type: "cancelled",
+        actor,
+        metadata: {
+          reason: reason ?? null,
+          ip: ip ?? null,
+        },
+      })
+      .then(({ error }) => {
+        if (error) console.error("[cancel] audit insert error:", error);
+      }),
+  );
 
   return {
     ok: true,

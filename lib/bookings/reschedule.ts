@@ -208,22 +208,26 @@ export async function rescheduleBooking(
   );
 
   // ── 5. Fire-and-forget audit row ──────────────────────────────────────────
-  void supabase
-    .from("booking_events")
-    .insert({
-      booking_id: pre.id,
-      account_id: pre.account_id,
-      event_type: "rescheduled",
-      actor: "booker", // public reschedule path is booker-initiated only in v1
-      metadata: {
-        old_start_at: oldStartAt,
-        new_start_at: updated.start_at,
-        ip: ip ?? null,
-      },
-    })
-    .then(({ error }) => {
-      if (error) console.error("[reschedule] audit insert error:", error);
-    });
+  // Plan 09-01: scheduled via next/server after() (matches sendRescheduleEmails
+  // above). Same request-scope guarantee — caller is /api/reschedule route.
+  after(() =>
+    supabase
+      .from("booking_events")
+      .insert({
+        booking_id: pre.id,
+        account_id: pre.account_id,
+        event_type: "rescheduled",
+        actor: "booker", // public reschedule path is booker-initiated only in v1
+        metadata: {
+          old_start_at: oldStartAt,
+          new_start_at: updated.start_at,
+          ip: ip ?? null,
+        },
+      })
+      .then(({ error }) => {
+        if (error) console.error("[reschedule] audit insert error:", error);
+      }),
+  );
 
   return {
     ok: true,
