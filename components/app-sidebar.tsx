@@ -7,6 +7,7 @@ import {
   Clock,
   Palette,
   Inbox,
+  BellRing,
   LogOut,
 } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -26,6 +28,14 @@ const NAV_ITEMS = [
   { href: "/app/availability", label: "Availability", icon: Clock },
   { href: "/app/branding", label: "Branding", icon: Palette },
   { href: "/app/bookings", label: "Bookings", icon: Inbox },
+] as const;
+
+const SETTINGS_NAV_ITEMS = [
+  {
+    href: "/app/settings/reminders",
+    label: "Reminder Settings",
+    icon: BellRing,
+  },
 ] as const;
 
 export function AppSidebar({ email }: { email: string }) {
@@ -47,6 +57,28 @@ export function AppSidebar({ email }: { email: string }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                      <Link href={item.href}>
+                        <Icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {SETTINGS_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
                 return (
