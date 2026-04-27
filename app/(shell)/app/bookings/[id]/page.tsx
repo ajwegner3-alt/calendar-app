@@ -1,9 +1,19 @@
 import { notFound } from "next/navigation";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
+import { MoreVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CancelButton } from "./_components/cancel-button";
+import { OwnerNote } from "./_components/owner-note";
+import { BookingHistory } from "./_components/booking-history";
 
 // Next.js 16 lock (Phase 1 + Phase 3): params is a Promise — must be awaited.
 export default async function BookingDetailPage({
@@ -15,14 +25,16 @@ export default async function BookingDetailPage({
 
   // RLS-scoped fetch. Phase 1 policies restrict bookings SELECT to the
   // authenticated owner's account_id; foreign rows return zero results → 404.
+  // Plan 08-07 extends the select with `owner_note` (added by 08-01 schema)
+  // and additionally fetches booking_events for the history timeline.
   const supabase = await createClient();
   const { data: booking, error } = await supabase
     .from("bookings")
     .select(
-      `id, account_id, event_type_id, start_at, end_at, status,
+      `id, account_id, event_type_id, start_at, end_at, status, owner_note,
        booker_name, booker_email, booker_phone, booker_timezone, answers,
        cancelled_at, cancelled_by, created_at,
-       event_types!inner(name, slug, duration_minutes),
+       event_types!inner(name, slug, duration_minutes, location),
        accounts!inner(name, slug, timezone)`,
     )
     .eq("id", id)
@@ -41,6 +53,22 @@ export default async function BookingDetailPage({
   const account = Array.isArray(booking.accounts)
     ? booking.accounts[0]
     : booking.accounts;
+
+  // Booking history events — RLS-scoped (booking_events policies restrict to
+  // authenticated owner's account_id, same as bookings). Ordered ASCending so
+  // the timeline reads top-down: oldest at top, newest at bottom.
+  const { data: rawEvents } = await supabase
+    .from("booking_events")
+    .select("id, event_type, occurred_at, metadata")
+    .eq("booking_id", booking.id)
+    .order("occurred_at", { ascending: true });
+
+  const events = (rawEvents ?? []) as Array<{
+    id: string;
+    event_type: "created" | "cancelled" | "rescheduled" | "reminder_sent";
+    occurred_at: string;
+    metadata: Record<string, unknown> | null;
+  }>;
 
   // Render scheduled time in BOTH zones — owner-primary (account.timezone) on
   // top, booker-secondary below. Mirrors the Phase 5 confirmed page pattern but
@@ -94,13 +122,45 @@ export default async function BookingDetailPage({
             Booker time: {timeLineBooker}
           </p>
         </div>
-        <Badge
-          variant={
-            isCancelled ? "destructive" : isConfirmed ? "default" : "secondary"
-          }
-        >
-          {booking.status}
-        </Badge>
+        {/* Action bar (Plan 08-07): preserves Phase 6 Cancel button + adds a
+            kebab placeholder for future per-booking actions. The Cancel
+            component itself is unchanged — only its container has changed. */}
+        <div className="flex items-center gap-2">
+          <Badge
+            variant={
+              isCancelled ? "destructive" : isConfirmed ? "default" : "secondary"
+            }
+          >
+            {booking.status}
+          </Badge>
+          {canCancel ? (
+            <CancelButton
+              bookingId={booking.id}
+              eventTypeName={eventType.name}
+              scheduledLine={scheduledLine}
+            />
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="More actions"
+                className="size-8"
+              >
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {/* CONTEXT.md: kebab is currently empty in v1; placeholder
+                  signals the slot exists for future per-booking actions
+                  (manual reminder, mark no-show, etc). */}
+              <DropdownMenuItem disabled>
+                More actions coming soon
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
 
       {isCancelled ? (
@@ -147,7 +207,13 @@ export default async function BookingDetailPage({
               <dt className="text-xs uppercase text-muted-foreground tracking-wide">
                 Phone
               </dt>
-              <dd className="mt-0.5">{booking.booker_phone}</dd>
+              <dd className="mt-0.5">
+                {/* Plan 08-07: phone surfaces as tel: link for one-tap
+                    dial from mobile devices. */}
+                <a href={`tel:${booking.booker_phone}`} className="hover:underline">
+                  {booking.booker_phone}
+                </a>
+              </dd>
             </div>
           ) : null}
           <div>
@@ -175,15 +241,29 @@ export default async function BookingDetailPage({
         ) : null}
       </section>
 
-      {canCancel ? (
-        <div className="flex justify-end">
-          <CancelButton
-            bookingId={booking.id}
-            eventTypeName={eventType.name}
-            scheduledLine={scheduledLine}
-          />
-        </div>
+      {eventType.location ? (
+        <section className="rounded-lg border bg-card p-6">
+          <h2 className="text-lg font-semibold mb-2">Location</h2>
+          <p className="text-sm whitespace-pre-line">{eventType.location}</p>
+        </section>
       ) : null}
+
+      <section className="rounded-lg border bg-card p-6">
+        <h2 className="text-lg font-semibold mb-2">Owner note</h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Private to you — never shown to the booker.
+        </p>
+        <OwnerNote bookingId={booking.id} initialNote={booking.owner_note} />
+      </section>
+
+      <section className="rounded-lg border bg-card p-6">
+        <h2 className="text-lg font-semibold mb-3">History</h2>
+        <BookingHistory
+          events={events}
+          bookingCreatedAt={booking.created_at}
+          accountTimezone={account.timezone}
+        />
+      </section>
     </div>
   );
 }

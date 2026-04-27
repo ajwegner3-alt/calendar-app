@@ -15,7 +15,7 @@ export default async function EditEventTypePage({
   const { data, error } = await supabase
     .from("event_types")
     .select(
-      "id, account_id, slug, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, min_notice_minutes, max_advance_days, custom_questions, is_active, created_at, deleted_at",
+      "id, account_id, slug, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, min_notice_minutes, max_advance_days, custom_questions, is_active, created_at, deleted_at, location",
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -46,6 +46,7 @@ export default async function EditEventTypePage({
           description: eventType.description ?? "",
           is_active: eventType.is_active,
           custom_questions: eventType.custom_questions ?? [],
+          location: eventType.location ?? "",
         }}
       />
     </div>

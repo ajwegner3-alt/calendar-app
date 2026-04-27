@@ -48,6 +48,9 @@ export type EventTypeRow = {
   is_active: boolean;
   created_at: string;
   deleted_at: string | null;
+  // Phase 8 Plan 08-05: per-event-type location/address. Surfaced in the
+  // reminder email body when accounts.reminder_include_location is true.
+  location: string | null;
 };
 
 export type EventTypeListItem = Pick<

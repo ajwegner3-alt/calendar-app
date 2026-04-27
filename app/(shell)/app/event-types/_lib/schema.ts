@@ -70,6 +70,15 @@ export const eventTypeSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
   is_active: z.coerce.boolean().default(true),
   custom_questions: z.array(customQuestionSchema).default([]),
+  // Phase 8 Plan 08-05: per-event-type location/address. Optional, up to 500
+  // chars (matches description ceiling). Empty string normalizes to undefined
+  // so the action layer can write NULL to the DB (cleaner queries downstream;
+  // the reminder cron join in 08-04 selects this column).
+  location: z
+    .string()
+    .max(500, "Location must be 500 characters or fewer.")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export type EventTypeInput = z.infer<typeof eventTypeSchema>;

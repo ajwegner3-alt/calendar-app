@@ -22,6 +22,7 @@ import {
 import { slugify } from "@/lib/slugify";
 import { QuestionList } from "./question-list";
 import { UrlPreview } from "./url-preview";
+import { LocationField } from "../[id]/edit/_components/location-field";
 
 type FormMode = "create" | "edit";
 
@@ -32,6 +33,7 @@ const DEFAULTS: EventTypeInput = {
   description: "",
   is_active: true,
   custom_questions: [],
+  location: "",
 };
 
 export function EventTypeForm({
@@ -238,6 +240,11 @@ export function EventTypeForm({
           <p className="text-sm text-destructive">{errors.description.message}</p>
         )}
       </div>
+
+      {/* Location (edit-only per Plan 08-05 Step C — owners set it after creation). */}
+      {mode === "edit" && (
+        <LocationField register={register} error={errors.location} />
+      )}
 
       {/* Active toggle */}
       <div className="flex items-start gap-3 border rounded-lg p-3 bg-muted/30">

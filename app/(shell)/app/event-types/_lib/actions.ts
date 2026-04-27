@@ -106,6 +106,9 @@ export async function createEventTypeAction(
     description: parsed.data.description ?? null,
     is_active: parsed.data.is_active,
     custom_questions: parsed.data.custom_questions,
+    // Phase 8 Plan 08-05: location is edit-only in v1 UI but the schema accepts
+    // it on create for symmetry; missing/empty input writes NULL.
+    location: parsed.data.location ?? null,
   });
 
   if (error) {
@@ -178,6 +181,8 @@ export async function updateEventTypeAction(
       description: parsed.data.description ?? null,
       is_active: parsed.data.is_active,
       custom_questions: parsed.data.custom_questions,
+      // Phase 8 Plan 08-05: persist location/address. Empty input → NULL.
+      location: parsed.data.location ?? null,
     })
     .eq("id", id);
 
