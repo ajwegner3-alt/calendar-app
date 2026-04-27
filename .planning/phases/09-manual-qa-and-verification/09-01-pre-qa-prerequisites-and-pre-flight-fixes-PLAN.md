@@ -93,6 +93,8 @@ Run all pre-QA prerequisites to completion AND apply the only in-scope Phase 9 c
 Purpose: The marathon QA session is time-boxed and human-driven. Doing the prereqs and code edits up front means Plan 09-02 can run start-to-finish without context switches into "fix this thing first." It also means the deployed code under test in Plan 09-02 already includes the spam-folder copy line + cleaned-up code health.
 
 Output: A populated 09-CHECKLIST.md file ready for Plan 09-02 to fill in, two email template files with the spam-folder line, two booking lib files with after()-wrapped audit rows, a clean `npm run lint` exit, and a green Vercel deploy.
+
+**Task-count note:** This plan has 6 tasks but Tasks 1 (human checkpoint) and 6 (deploy verification) are low-context human/deploy operations; effective autonomous Claude work = Tasks 2-5 (4 tasks).
 </objective>
 
 <execution_context>
@@ -276,9 +278,9 @@ Output: A populated 09-CHECKLIST.md file ready for Plan 09-02 to fill in, two em
     | # | Criterion | Status | Timestamp | Notes |
     |---|-----------|--------|-----------|-------|
     | 1 | Embed live on Squarespace, end-to-end booking, no JS errors | __ | __ | __ |
-    | 2 | .ics opens correctly in Gmail web/iOS, Outlook web/desktop (cancel + reschedule lifecycle) + Apple Mail code review findings | __ | __ | __ |
+    | 2 | .ics opens correctly in Gmail web/iOS, Outlook web/desktop (cancel + reschedule lifecycle) + Apple Mail code review findings — record as "PASS (Apple Mail: code-review-only, deferred)" not unqualified PASS, per CONTEXT.md no-device-access deferral | __ | __ | __ |
     | 3 | mail-tester.com >= 9/10 for confirmation AND reminder | __ | __ | __ |
-    | 4 | DST/timezone correctness verified | __ | __ | __ |
+    | 4 | DST/timezone correctness verified — Notes column MUST record (a) Andrew's substitution-approval signal verbatim if applicable and (b) the substitute method used (e.g., "cross-timezone NY/Chicago"); if not substituted, record actual method used | __ | __ | __ |
     | 5 | Responsive at 320 / 768 / 1024 (hosted + embed) | __ | __ | __ |
     | 6 | Multi-tenant UI isolation (manual login as 2nd test user) | __ | __ | __ |
     | 7 | FUTURE_DIRECTIONS.md committed to repo root (Plan 09-03) | __ | __ | __ |

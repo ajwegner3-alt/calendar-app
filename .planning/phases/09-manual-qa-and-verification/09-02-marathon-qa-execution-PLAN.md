@@ -11,7 +11,8 @@ autonomous: false
 must_haves:
   truths:
     - "Criterion #1 verified: widget embedded on Squarespace test page; end-to-end booking completed; zero JS errors in host console; multi-mount + idempotency tests pass"
-    - "Criterion #2 verified: .ics opens correctly across Gmail web, Gmail iOS, Outlook web, Outlook desktop with correct title/time/timezone/organizer; cancel removes event; reschedule updates in-place. Apple Mail code review findings logged"
+    - "Criterion #2 partially verified: .ics confirmed correct in Gmail web, Gmail iOS, Outlook web, Outlook desktop (live tests) with correct title/time/timezone/organizer; cancel removes event; reschedule updates in-place. Apple Mail: code review only — findings logged in checklist. Live Apple Mail formally deferred per CONTEXT.md (no device access). Status in checklist must be recorded as 'PASS (Apple Mail: code-review-only, deferred)' — never an unqualified PASS"
+    - "Per-template branding smoke verified across all 6 transactional emails (booker+owner × confirm/cancel/reschedule): logo centered top (or absent if null), brand-colored H1 (or NSI navy fallback), brand-colored CTAs, 'Powered by NSI' text-link footer. 6-row sub-table under Criterion #2 in 09-CHECKLIST.md captures per-surface PASS/FAIL"
     - "Criterion #3 verified: mail-tester.com >= 9/10 for confirmation AND reminder emails (one retry allowed; sub-9 documented in checklist + FUTURE_DIRECTIONS.md)"
     - "Criterion #4 verified: timezone correctness — booker in different TZ than owner sees correct local times in email + .ics; or November 1 2026 DST-spanning booking succeeds"
     - "Criterion #5 verified: hosted booking page + embed render correctly at 320px / 768px / 1024px"
@@ -129,9 +130,24 @@ Sequencing follows RESEARCH.md Recommended Sequencing (Block A → H). Critical:
 </task>
 
 <task type="checkpoint:human-verify" gate="blocking">
-  <name>Task 3: Criterion #2 — .ics correctness across Gmail/Outlook clients</name>
+  <name>Task 3: Criterion #2 — .ics correctness AND per-template body branding smoke (6 emails)</name>
   <what-built>
-    Booking confirmation, cancel, and reschedule emails each ship a .ics attachment. Per CONTEXT.md "exhaustive": accept invite + verify on calendar + then cancel/reschedule via email link triggers proper update.
+    Booking confirmation, cancel, and reschedule emails each ship a .ics attachment AND each renders a branded HTML body. Per CONTEXT.md "exhaustive": accept invite + verify on calendar + then cancel/reschedule via email link triggers proper update. PLUS: this task closes the STATE.md backlog item "per-email-type smoke (6 templates: booker+owner × confirm/cancel/reschedule)" by verifying each email body's branding rendering during the same booking lifecycle.
+
+    **Per CONTEXT.md, each of the 6 emails must show:**
+    - Logo centered top (absent if `logo_url` is null)
+    - Brand-colored H1 (fallback to NSI navy if `brand_primary` is null)
+    - Brand-colored CTA buttons where applicable (cancel/reschedule links in booker emails; "View booking" in owner emails)
+    - "Powered by NSI" text-link footer (text-only — NSI_MARK_URL=null)
+    - .ics attaches and behaves correctly (covered by Phases A-C below)
+
+    **The 6 surfaces:**
+    1. Booker confirmation (Phase A inbox: `ajwegner3+booker2@gmail.com`)
+    2. Owner notification — confirmation (same booking, Owner inbox = `ajwegner3@gmail.com`)
+    3. Booker cancel (Phase B sender)
+    4. Owner cancel (same cancel event)
+    5. Booker reschedule (Phase C sender = `ajwegner3+booker3@gmail.com`)
+    6. Owner reschedule (same reschedule event)
   </what-built>
   <how-to-verify>
     **CLAUDE PROPOSES (per RESEARCH.md Per-Criterion #2):**
@@ -158,22 +174,46 @@ Sequencing follows RESEARCH.md Recommended Sequencing (Block A → H). Critical:
     8. Click "Reschedule" link in confirmation email. Pick a different time. Confirm.
     9. Open the reschedule email in each client. Verify the calendar event is UPDATED IN-PLACE (same event, new time — NOT a duplicate). This tests METHOD:REQUEST + SEQUENCE:1.
 
-    **PASS criteria:** All 4 clients show correct event creation on confirmation, removal on cancel, and in-place update on reschedule.
+    **Phase D — Per-template body branding smoke (6 emails):**
+    10. For EACH of the 6 emails generated above (Phase A confirmation booker + owner; Phase B cancel booker + owner; Phase C reschedule booker + owner), open the email in Gmail web and verify ALL of:
+        - **Logo:** if `logo_url` is set on the nsi account, logo renders centered at top; if null, NO image (no broken-image icon).
+        - **H1 color:** brand-colored if `brand_primary` set; falls back to NSI navy (#1a2b4a or similar) if null.
+        - **CTA buttons:** brand-colored. Booker confirmation has Cancel + Reschedule links. Owner notifications have "View booking" / dashboard link. Cancel emails confirm cancellation (no CTA back). Reschedule emails show new time + Cancel option.
+        - **Footer:** "Powered by NSI" text-only link (no NSI mark image).
+        - **Spam-folder copy line** (Plan 09-01 Task 2): present in booker confirmation. Reminder email is verified separately in Task 9 item #5 — note: spam-folder line was added to booker confirmation + booker reminder ONLY; cancel/reschedule emails do not have this line per CONTEXT.md scope.
+    11. Log per-email PASS/FAIL into 09-CHECKLIST.md as a 6-row sub-table under Criterion #2 (one row per surface). Failures here trigger fix-as-you-go OR Andrew-called deferral.
+
+    **PASS criteria:** All 4 clients show correct event creation on confirmation, removal on cancel, and in-place update on reschedule. AND all 6 email bodies render branding correctly per the checklist above.
 
     **Likely partial pass:** Outlook desktop on Windows may handle SEQUENCE differently than web. Note any client-specific quirks in the checklist.
+
+    **Reminder per BLOCKER 1:** Criterion #2 status in checklist must be recorded as "PASS (Apple Mail: code-review-only, deferred)" — never an unqualified PASS, since live Apple Mail testing was deferred per CONTEXT.md.
   </how-to-verify>
-  <resume-signal>Type "criterion 2 PASS" or "criterion 2 FAIL: &lt;client&gt; — &lt;detail&gt;" or "criterion 2 DEFERRED: &lt;reason&gt;"</resume-signal>
+  <resume-signal>Type "criterion 2 PASS (qualified — Apple Mail code-review-only)" or "criterion 2 FAIL: &lt;client or template&gt; — &lt;detail&gt;" or "criterion 2 DEFERRED: &lt;reason&gt;"</resume-signal>
 </task>
 
 <task type="checkpoint:human-verify" gate="blocking">
-  <name>Task 4: Criterion #4 — Timezone correctness (DST decision: cross-timezone booking)</name>
+  <name>Task 4: Criterion #4 — Timezone correctness (DST substitution proposal — Andrew approval REQUIRED before proceeding)</name>
   <what-built>
-    Per RESEARCH.md Open Question 1 + CONTEXT.md Claude's discretion: March 8 2026 DST is past; instead of waiting for November 1 2026, verify timezone correctness via a CROSS-TIMEZONE booking. This covers the timezone math (the actual concern) without requiring a future date. The automated DST tests in `lib/slots.test.ts` (Plan 04-02) already prove DST math is correct at the algorithm level; this manual check is the email + .ics verification.
+    ROADMAP Criterion #4 names March 8 2026 / Nov 1 2026 specifically as the DST verification dates. CONTEXT.md reserves substitutions/overrides for Andrew, NOT the planner. Therefore this task does NOT execute the substitute test until Andrew explicitly approves the substitution at runtime.
 
-    **DECISION (resolved by planner):** Use cross-timezone test (booker in America/New_York, owner in America/Chicago). NOT November 1 2026 (too far out, and date-overrides may not exist). Document this decision in the checklist.
+    **CLAUDE PROPOSES substituting a cross-timezone test** (booker in America/New_York, owner in America/Chicago) because:
+    - March 8 2026 is in the past (~7 weeks ago as of 2026-04-27)
+    - November 1 2026 is ~6 months out — outside the marathon window AND outside qa-test event-type's likely availability range
+    - The automated DST tests in `lib/slots.test.ts` (Plan 04-02) already prove DST math is correct at the algorithm level
+    - A cross-timezone booking exercises the same email-rendering + .ics VTIMEZONE conversion paths that a DST-spanning booking would
+
+    **Andrew's options:**
+    - **Approve substitute:** run the cross-timezone test (steps below)
+    - **Reject — wait for Nov 1 2026:** defer Criterion #4 to v1.1 (note in checklist; cannot satisfy in this marathon)
+    - **Reject — different approach:** Andrew names an alternate verification method
+
+    The substitute method + Andrew's approval signal MUST be recorded in 09-CHECKLIST.md row #4 so Plan 09-03 sign-off is auditable.
   </what-built>
   <how-to-verify>
-    **CLAUDE PROPOSES:**
+    **STEP 0 — Substitution gate (BLOCKING):** Andrew must approve the substitution before the steps below run. Resume signal options below.
+
+    **If approved, CLAUDE PROPOSES (cross-timezone booking, NY booker / Chicago owner):**
 
     1. Open https://calendar-app-xi-smoky.vercel.app/nsi/qa-test in a fresh browser window.
     2. **Override timezone to America/New_York** via Chrome DevTools: F12 → 3-dot menu → More tools → Sensors → Location → "Other..." → set Timezone ID to America/New_York. Reload the page.
@@ -192,8 +232,13 @@ Sequencing follows RESEARCH.md Recommended Sequencing (Block A → H). Critical:
     **PASS criteria:** Email times match booker's submitted timezone (EDT); .ics correctly converts via VTIMEZONE; calendar adds the event at the correct local time.
 
     Reset DevTools sensor timezone to "No override" when done.
+
+    **After execution, Claude records in 09-CHECKLIST.md row #4:**
+    - Andrew's approval signal verbatim ("criterion 4 DST substitute approved" or alternate)
+    - Substitute method used (cross-timezone NY/Chicago, or whatever Andrew approved)
+    - PASS/FAIL/DEFERRED outcome
   </how-to-verify>
-  <resume-signal>Type "criterion 4 PASS" or "criterion 4 FAIL: &lt;detail&gt;" or "criterion 4 DEFERRED: &lt;reason&gt;"</resume-signal>
+  <resume-signal>**For substitution gate (Step 0):** type "criterion 4 DST substitute approved" to proceed with cross-timezone test, or "reject — use different approach" (then specify: "wait for Nov 1 2026" / "skip and defer to v1.1" / alternate method). **For test outcome (after approval + execution):** type "criterion 4 PASS" or "criterion 4 FAIL: &lt;detail&gt;" or "criterion 4 DEFERRED: &lt;reason&gt;".</resume-signal>
 </task>
 
 <task type="checkpoint:human-verify" gate="blocking">
@@ -252,13 +297,26 @@ Sequencing follows RESEARCH.md Recommended Sequencing (Block A → H). Critical:
     5. **One retry allowed** (per CONTEXT.md): if < 9/10, get a fresh address, book again, retest. Same retry policy applies.
 
     **Reminder email mail-tester:**
-    6. Check inbox for the booking made in Task 2. The reminder email should arrive within an hour of `start_at - 24h`. If `start_at` was ~22-23h from Task 2 timestamp, reminder should already have fired (CRON fires at top of hour with CAS guard).
-    7. If reminder has NOT yet arrived: check Vercel Cron dashboard for green ticks. If cron fired but no email arrived, the issue is in the send path — investigate logs. If cron has not fired yet, wait OR manually trigger via:
+
+    **IMPORTANT — DO NOT forward Task 2's reminder email to mail-tester.** Forwarding breaks DKIM (signature is over the original sender's headers; forwarder's outbound differs) and breaks SPF alignment (the forwarder's IP is not in the calendar-app sender's SPF record). The score would be artificially low and would not reflect real deliverability of our reminder send path.
+
+    Task 2's booking is for **live cron-fires-and-delivers verification** — confirms the cron actually sends a reminder. Task 6 needs its OWN dedicated mail-tester booking to score the reminder send path.
+
+    Correct technique (fresh second mail-tester address + new booking):
+
+    6. Open https://www.mail-tester.com — get a SECOND fresh disposable address (different from the confirmation-email address used in steps 1-5, and different from Task 2's address).
+    7. Within 5 minutes: book a NEW qa-test slot at https://calendar-app-xi-smoky.vercel.app/nsi/qa-test with this second mail-tester address as the booker email. Pick a slot ~22-23h out (just inside the <24h reminder window).
+    8. Wait for the reminder cron to fire. Cron runs hourly at top-of-hour. If `start_at - 24h` is past the next top-of-hour, the next tick will send the reminder. If timing is tight or the marathon clock is short, manually trigger immediate send via:
        ```
        curl -H "Authorization: Bearer $CRON_SECRET" https://calendar-app-xi-smoky.vercel.app/api/cron/send-reminders
        ```
-    8. Forward the reminder email to a fresh mail-tester address (mail-tester accepts forwards). Wait + check score.
-    9. Same PASS bar (>= 9/10) + retry policy.
+       (This is the same endpoint Vercel Cron hits — manually invoking it processes the same query.)
+    9. Once the reminder arrives at the mail-tester address (the address itself, not a forward), open the mail-tester page for THAT address and click "Then check your score." The score reflects the REAL send path — DKIM/SPF/DMARC all alignable.
+    10. PASS bar: >= 9/10. One retry allowed (different fresh address + new booking + repeat). Sub-9 after retry: log deductions in checklist; do NOT block ship; goes to FUTURE_DIRECTIONS.md.
+
+    Document both purposes explicitly in the checklist:
+    - Task 2 booking → live cron + delivery verification
+    - Task 6 second booking → reminder mail-tester score
 
     **Sub-9 handling:** If either email scores < 9/10 after retry, log the specific deductions in checklist Notes column. Do NOT block ship (per CONTEXT.md: "clients will be actively looking for booking emails — even modest deliverability is workable"). The deductions go into FUTURE_DIRECTIONS.md as "Untested deliverability follow-up."
   </how-to-verify>
@@ -331,6 +389,8 @@ Sequencing follows RESEARCH.md Recommended Sequencing (Block A → H). Critical:
        - `/api/cancel`: 11 POSTs in <5min from same IP → 11th returns 429
        - `/api/reschedule`: 11 POSTs in <5min from same IP → 11th returns 429
        Use a quick fetch loop in the DevTools Console; payloads can be intentionally invalid (Zod fails first) — the rate limiter increments BEFORE Zod per Plan 08-03 STATE.md line 234. Cleanup: nothing to clean (rate_limit_events expire naturally).
+
+       **Note:** With invalid payloads the first 20 requests to `/api/bookings` return 400/422 (Zod validation fails) and the 21st returns 429 — this is correct behavior because the rate limiter increments before Zod runs. Andrew may see a stream of 400/422 errors before the 429 appears; the test is NOT broken — keep firing until the 21st request. Same pattern for `/api/cancel` (10 × 400/422 then 429 on the 11th) and `/api/reschedule`.
     8. **Sidebar entries** — verify sidebar shows: Bookings, Event Types, Availability, Branding (top group) + Settings → Reminder Settings (settings group). All clickable + routes correctly.
     9. **Branding editor file-rejection** (per STATE.md line 278): upload (a) a real JPG → expect toast "PNG only"; (b) a PNG > 2 MB → expect toast "File too large"; (c) a JPEG renamed to `.png` (spoofed MIME) → expect toast "PNG only" (magic-byte check catches it).
 

@@ -13,7 +13,7 @@ must_haves:
   truths:
     - "FUTURE_DIRECTIONS.md exists at repo root (NOT in .planning/) — committed to main and pushed to origin"
     - "FUTURE_DIRECTIONS.md is structured for future Claude Code sessions (audience = Claude, NOT human engineers / NOT marketing) — fact-statement bullets, source citations, scannable headers like CLAUDE.md"
-    - "FUTURE_DIRECTIONS.md has 5 sections: How to Use This File / Known Limitations / Assumptions & Constraints / Future Improvements / Technical Debt + (optional) Untested Email Clients"
+    - "FUTURE_DIRECTIONS.md has all required sections per Task 1 action: How to Use This File, Known Limitations, Assumptions & Constraints, Future Improvements, Technical Debt (5 required) + Untested Email Clients (required when Apple Mail code-review findings present, which they will be) + Commit Reference appendix"
     - "All 11 STATE.md Phase 9 backlog items are accounted for in FUTURE_DIRECTIONS.md (either as fixed or as deferred)"
     - "All deferrals captured during Plan 09-02 are propagated into FUTURE_DIRECTIONS.md"
     - "Apple Mail code-review findings from Plan 09-02 Task 1 lifted into FUTURE_DIRECTIONS.md §Untested Email Clients"
@@ -220,6 +220,24 @@ Output: A committed FUTURE_DIRECTIONS.md file. A signed-off 09-CHECKLIST.md. v1 
     No bullet uses marketing language ("seamless", "powerful", "best-in-class", etc.)
     v2 mention is one line, no architectural detail.
     Markdown lints clean (preview renders correctly).
+
+    **Backlog cross-check (Claude-executed, BLOCKING — must complete before "done"):**
+    Cross-check all 11 STATE.md Phase 9 backlog items (`### Carried Concerns / Todos` lines) against the FUTURE_DIRECTIONS.md document. Each MUST appear in the file as either "fixed in 09-01 (commit SHA)" OR "deferred — see §X."
+
+    The 11 items (verbatim from STATE.md / revision_context):
+    1. Lint cleanup (19 violations from 08-02)
+    2. Audit-row `void` cleanup (cancel.ts/reschedule.ts after() migration)
+    3. .ics iTIP CANCEL/REQUEST+SEQUENCE behavior
+    4. Rate-limit live verification (3 routes)
+    5. Branding editor file-rejection edge cases
+    6. Per-email-type smoke (6 templates)
+    7. Production CRON_SECRET in Vercel env
+    8. Reminder mail-tester live verification
+    9. Phase 8 dashboard walkthrough (9 items)
+    10. Reminder retry/resend UI (v2 deferral)
+    11. Live Squarespace/WordPress embed test (EMBED-07)
+
+    Produce a 11-row mapping table inline in this <verify> output (not in FUTURE_DIRECTIONS.md itself — this is QA-time evidence) showing item → disposition (fixed-in-09-01 with SHA / verified-in-09-02 / deferred-§N-of-FUTURE_DIRECTIONS). If any item lacks a disposition, FUTURE_DIRECTIONS.md is incomplete — return to <action> and add the missing entry.
   </verify>
   <done>
     FUTURE_DIRECTIONS.md is publication-ready.
@@ -262,8 +280,9 @@ Output: A committed FUTURE_DIRECTIONS.md file. A signed-off 09-CHECKLIST.md. v1 
     Andrew reviews 09-CHECKLIST.md and FUTURE_DIRECTIONS.md. Specifically:
 
     1. Confirms every criterion in 09-CHECKLIST.md is either PASS or explicitly DEFERRED with a reason captured.
-    2. Confirms FUTURE_DIRECTIONS.md accurately captures the deferrals and known limitations Andrew is aware of (no surprises).
-    3. Says the words: "ship v1" (or equivalent — "approved", "sign off", "ship it").
+    2. Confirms qualified-PASS rows are recorded with their qualifier (e.g., Criterion #2 must read "PASS (Apple Mail: code-review-only, deferred)" — never an unqualified PASS — per the locked CONTEXT.md no-device-access deferral). If Criterion #4 was substituted (cross-timezone in lieu of named DST dates), the row must record both Andrew's substitution-approval signal and the substitute method used.
+    3. Confirms FUTURE_DIRECTIONS.md accurately captures the deferrals and known limitations Andrew is aware of (no surprises).
+    4. Says the words: "ship v1" (or equivalent — "approved", "sign off", "ship it").
 
     On verbal sign-off:
     - Claude appends a final entry to 09-CHECKLIST.md:
