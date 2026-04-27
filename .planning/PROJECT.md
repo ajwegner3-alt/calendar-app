@@ -2,95 +2,173 @@
 
 ## What This Is
 
-A Calendly-style booking tool that lets visitors pick a time slot on a website and puts the appointment directly into the site owner's schedule. Andrew uses it for his own NSI bookings and white-labels it onto client websites (trade contractors: plumbers, HVAC, roofers, electricians). It's a multi-tenant web app — one codebase, one Supabase project, many branded booking pages.
+A multi-tenant Calendly-style booking tool for trade contractors. Visitors land on a contractor's website, pick an available slot in a branded widget, and walk away with a confirmed booking and a calendar invite in their inbox. v1.0 shipped 2026-04-27 with Andrew's NSI account end-to-end (single-tenant in production; multi-tenant plumbing baked into the schema for v2 onboarding). The branded embeddable widget (script + iframe; auto-resizes via `nsi-booking:height` postMessage) is what makes it a sellable deliverable for client websites, not just a personal tool.
 
 ## Core Value
 
 A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
+(Validated in v1.0 — core value held; ship pivot reinforced widget-first distribution as the actual product wedge.)
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+**v1.0 — shipped 2026-04-27 (66 of 73 requirements complete):**
+
+- ✓ Multi-tenant data model in Supabase (accounts, event types, availability, bookings) — v1.0 (single tenant in production; schema supports many)
+- ✓ Secure owner authentication via Supabase Auth (email/password) — v1.0
+- ✓ Deployed as a single Vercel app — v1.0 (`calendar-app-xi-smoky.vercel.app`)
+- ✓ Owner can define multiple event types per account with per-type duration and custom questions — v1.0
+- ✓ Owner sets weekly recurring availability with per-date overrides — v1.0
+- ✓ Owner sees a dashboard listing upcoming and past bookings — v1.0
+- ✓ Owner can cancel a booking from the dashboard — v1.0
+- ✓ Public booking page shows available slots in booker's local time zone — v1.0
+- ✓ Booker fills standard fields + custom questions — v1.0
+- ✓ Booking is persisted in Supabase as the sole source of truth — v1.0 (no Google Calendar sync)
+- ✓ Booker receives email confirmation with .ics calendar invite attached — v1.0 (live cross-client import verification deferred to v1.1)
+- ✓ Booker receives reminder email 24 hours before the appointment — v1.0
+- ✓ Booker can cancel or reschedule via tokenized links in confirmation email — v1.0
+- ✓ Embeddable widget (iframe + script snippet) — v1.0 (live Squarespace/WordPress test deferred to v1.1)
+- ✓ Per-account branding: logo + brand color — v1.0
+- ✓ Hosted booking page URL for direct linking — v1.0 (`/[account]` index + `/[account]/[event-slug]` per-event)
+- ✓ Owner receives email when a new booking is created — v1.0
+- ✓ Emails sent via vendored `@nsi/email-sender` — v1.0 (provider pivoted from Resend to Gmail SMTP during Phase 5)
+- ✓ Reminder emails dispatched by Vercel Cron — v1.0 (hourly schedule; Vercel Pro tier required)
+- ✓ DB-level race-safe booking via partial unique index — v1.0
+- ✓ DST-correct slot computation across March 8 + Nov 1 2026 — v1.0
+- ✓ RLS cross-tenant isolation (automated 16-case matrix × 4 client contexts) — v1.0
+- ✓ Rate limiting on `/api/bookings`, `/api/cancel`, `/api/reschedule` (per-IP, Postgres-backed) — v1.0
+- ✓ Cloudflare Turnstile bot protection on booking form — v1.0
+- ✓ `FUTURE_DIRECTIONS.md` authored at repo root — v1.0 (213 lines; canonical v1.1 backlog)
 
 ### Active
 
-**Architecture & auth**
-- [ ] Multi-tenant data model in Supabase (accounts, event types, availability, bookings) built in from day one
-- [ ] Secure owner authentication via Supabase Auth (email/password)
-- [ ] Deployed as a single Vercel app; schema supports many accounts even though v1 ships with one
+**v1.1 — deferred from v1.0, see FUTURE_DIRECTIONS.md for canonical enumeration:**
 
-**Owner side (Andrew's v1 use)**
-- [ ] Owner can define multiple event types per account (e.g., "15-min discovery call", "60-min consultation") with per-type duration and custom questions
-- [ ] Owner sets weekly recurring availability (Mon–Fri 9–5 etc.) with per-date overrides (vacation, holidays, one-off blocks)
-- [ ] Owner sees a dashboard listing upcoming and past bookings
-- [ ] Owner can cancel a booking from the dashboard
+- [ ] **EMBED-07** — Live Squarespace/Wix/WordPress embed test on real https:// host (file:// fails CSP `frame-ancestors *` — opaque origin). See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **EMAIL-08** — Sending domain SPF/DKIM/DMARC verified; `mail-tester.com` ≥ 9/10 for confirmation AND reminder. See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **QA-01** — Live end-to-end booking completed on NSI Squarespace or WordPress page with no JS errors. See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **QA-02** — `.ics` import verified in Gmail web, Gmail iOS, Apple Mail, Outlook (live device verification, not just code review). Apple Mail code-review LIKELY PASS in v1 (FUTURE_DIRECTIONS.md §5). See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **QA-03** — `mail-tester.com` scoring run. See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **QA-04** — Live DST / cross-timezone booking E2E with real email confirmation. Algorithmic correctness covered in v1 (`tests/availability/compute-slots*.test.ts`); live human E2E deferred. See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **QA-05** — Responsive 320 / 768 / 1024 pass on hosted page AND embed (live multi-viewport human verification). See FUTURE_DIRECTIONS.md §1, §3.
+- [ ] **QA-06** — Live multi-tenant UI isolation walkthrough (login as 2nd test user; confirm dashboard shows zero of Andrew's data). Backend RLS automated coverage in v1; UI-layer walkthrough deferred. See FUTURE_DIRECTIONS.md §1, §3.
 
-**Booker side**
-- [ ] Public booking page shows available slots converted to booker's local time zone (browser auto-detect)
-- [ ] Booker fills in standard fields (name, email, phone) plus any custom questions defined on the event type
-- [ ] Booking is persisted in Supabase as the sole source of truth for availability (no Google Calendar sync)
-- [ ] Booker receives email confirmation with .ics calendar invite attached
-- [ ] Booker receives reminder email 24 hours before the appointment
-- [ ] Booker can cancel or reschedule via links embedded in the confirmation email
+**v1.1 also includes (per FUTURE_DIRECTIONS.md §3 Future Improvements):**
 
-**Embed & branding**
-- [ ] Embeddable widget (iframe or script snippet) that drops into any website (NSI site, Squarespace, WordPress, custom)
-- [ ] Per-account branding: account uploads logo, picks brand colors; widget and booking page render with those
-- [ ] Owner also gets a hosted booking page URL for direct linking
-
-**Notifications (owner + infra)**
-- [ ] Owner receives email when a new booking is created
-- [ ] Emails sent via the shared `@nsi/email-sender` tool using the Resend provider
-- [ ] Reminder emails dispatched by a scheduled job (Supabase `pg_cron` or Vercel cron)
+- [ ] Phase 8 dashboard 9-item human walkthrough (bookings list filters/pagination/sort, booking detail page, reminder settings toggles, event-type Location field, reminder email branding live in inbox, Vercel Cron green-tick verification, rate-limit live smoke on 3 endpoints, Settings group sidebar entry, branding editor file-rejection edge cases).
+- [ ] Cron-fired-in-production functional proof (Vercel Crons UI tab not surfacing schedule despite `vercel.json` deployed; verify via real reminder arrival).
+- [ ] Per-template branding 6-row smoke (booker × owner × confirm/cancel/reschedule).
+- [ ] Apple Mail live device verification (currently code-review LIKELY PASS only).
+- [ ] Plain-text alternative on confirmation email (low-risk small commit; mirror reminder email pattern).
+- [ ] NSI mark image in "Powered by NSI" email footer (currently text-only because `NSI_MARK_URL = null`).
 
 ### Out of Scope
 
+(Reasoning audited at v1.0 milestone — all entries still valid; no removals or additions.)
+
 - **Google Calendar / iCal / Outlook sync** — Andrew explicitly wants Supabase as the sole source of truth; no external calendar OAuth.
 - **Paid bookings / Stripe integration** — all bookings are free in v1; trade contractors don't typically charge for quote consultations.
-- **Signup UI for new accounts / client self-serve onboarding** — v1 ships Andrew's account only; additional accounts are provisioned by Andrew when selling to a client (can come in a later milestone).
-- **Custom subdomains (`book.clientsite.com`)** — per-account path-based URLs (`app.com/acct/plumber-bob`) are sufficient for v1; DNS work deferred.
+- **Signup UI for new accounts / client self-serve onboarding** — v1 ships Andrew's account only; additional accounts are provisioned by Andrew when selling to a client. v2 milestone scope (per Phase 9 CONTEXT lock: "multi-tenant signup + onboarding flow; out of scope for v1").
+- **Custom subdomains (`book.clientsite.com`)** — per-account path-based URLs (`app.com/[account]/[event-slug]`) are sufficient for v1; DNS work deferred.
 - **Custom CSS white-label** — v1 offers logo + color theming only, not arbitrary CSS.
 - **Configurable reminder timing** — hardcoded at 24h before appointment in v1.
-- **Per-event-type availability schedules** — v1 uses account-wide availability applied to all event types; per-type schedules deferred.
+- **Per-event-type availability schedules** — v1 uses account-wide availability applied to all event types.
 - **Multiple reminders (24h + 1h)** — single 24h reminder in v1.
 - **SMS notifications** — email only in v1.
 - **Mobile app** — web-only (widget + hosted page).
+- **Round-robin / team scheduling** — anti-feature; targets enterprises, not solo trade contractors.
+- **Workflow builder** — anti-feature; n8n exists for this.
+- **Video conferencing integration** — trade bookings are in-person.
+- **Recurring bookings** — trade bookings are one-off jobs.
+- **Waitlists / Group bookings** — complexity not justified by demand in this vertical.
+- **Two-way SMS chat** — pushes into messaging-platform territory.
+- **Temporal (JS proposal)** — v1 uses `date-fns v4 + @date-fns/tz`; re-evaluate when Temporal ships natively.
 
 ## Context
 
-**Business context.** Andrew runs North Star Integrations (NSI), a web design + business automation consultancy in Omaha targeting trade contractors. This tool is both (1) something he uses personally for his own client consultations and (2) a white-labelable product he drops into websites he builds for clients. Ability to brand it per-client is what makes it a sellable deliverable, not just an internal tool.
+**Production state at v1.0 ship (2026-04-27):**
 
-**Ship fast for personal use.** v1 only needs to work for Andrew's own account on the NSI site. Multi-tenant plumbing is baked into the schema from day one so later milestones can light up additional accounts without migrations — but the signup/onboarding UI and multiple simultaneous tenants aren't v1 concerns.
+- 20,417 lines of TypeScript/TSX in the runtime tree.
+- 85,014 lines inserted across 344 files in the milestone span.
+- 222 commits (`e068ab8` → `3f83461`).
+- 131 passing + 1 skipped automated tests across 16 test files.
+- Production URL: `https://calendar-app-xi-smoky.vercel.app` (auto-deploys from `main`).
+- GitHub: `https://github.com/ajwegner3-alt/calendar-app`.
+- Supabase project ref: `mogfnutxrrbtvnaupoun` (region West US 2, Postgres 17.6.1).
+- Seeded NSI account: `slug=nsi`, `id=ba8e712d-28b7-4071-b3d4-361fb6fb7a60`, timezone `America/Chicago`, `owner_email=ajwegner3@gmail.com`.
 
-**Existing tooling to reuse.**
-- `C:\Users\andre\OneDrive - Creighton University\Desktop\Claude-Code-Projects\tools-made-by-claude-for-claude\email-sender` (`@nsi/email-sender`) — handles all transactional email via Resend; supports attachments, so .ics files can ride along on confirmations. A new booking-specific template will need to be added.
-- Supabase project named `calendar` already exists.
+**Tech stack (as shipped):**
 
-**Known integration surface.** Widget must embed cleanly into Squarespace, WordPress, and custom Next.js sites. Iframe is most portable; a script snippet that injects the iframe is the typical pattern.
+- Next.js 16 + App Router + Turbopack (upgraded from spec'd Next 15 during Phase 1 research).
+- TypeScript + Tailwind CSS v4 + shadcn/ui v4 (radix-nova style; `radix-ui` monorepo package).
+- Supabase (Auth + Postgres + Storage); `@supabase/ssr` for cookie-based session.
+- Gmail SMTP via vendored `lib/email-sender/` (post-Resend pivot during Phase 5).
+- `date-fns@4.1.0` + `@date-fns/tz@1.4.1` for all time math (no raw `Date` math; `TZDate` constructor for wall-clock window endpoints).
+- Cloudflare Turnstile (Managed widget) for booking-form bot protection.
+- Vercel hosting + Vercel Cron (Pro tier required for hourly cron).
+- `ical-generator@10` for `.ics` building; `timezones-ical-library` for VTIMEZONE blocks.
+- Vitest + `@vitest/coverage-v8` for tests; alias-level mock interception in `vitest.config.ts`.
+
+**Architectural patterns established (will carry forward to v1.1+):**
+
+- **Race-safety at the DB layer** — `bookings_no_double_book` partial unique index is the authoritative double-book guard. Pattern reusable for any future "exactly one of these can succeed" insert race.
+- **Service-role gate** — `lib/supabase/admin.ts` line 1 `import "server-only"`. Pattern locked for any future service-role module.
+- **Per-route CSP via `proxy.ts` exclusively** — `next.config.ts` cannot conditionally delete headers. proxy.ts is the sole CSP and `X-Frame-Options` owner; locked for all future routes.
+- **Direct-call Server Action contract** — actions accept structured TS objects (NOT FormData) when forms have nested arrays/discriminated unions. NEXT_REDIRECT re-throw in form catch handler.
+- **Two-stage owner authorization** — RLS-scoped pre-check (via `createClient()` from `next/headers`) before delegating to service-role mutation. Pattern repeated in 3+ places.
+- **Postgres-backed rate limiting** — single `rate_limit_events` table with composite index, per-route key prefix (`bookings:`, `cancel:`, `reschedule:`). `checkRateLimit` fails OPEN on DB error (transient hiccup must not lock out legitimate users).
+- **Token-based public lifecycle routes** — SHA-256 hashes in DB, raw tokens only in email; rotation on every reminder send; double CAS guard on reschedule. GET pages are read-only Server Components (Gmail/Outlook prefetch links); mutations only on POST Route Handlers.
+- **Reminder cron claim-once via CAS UPDATE** — `WHERE reminder_sent_at IS NULL` claim guarantees exactly one reminder per booking even with duplicate cron invocations. Reminder retry on send failure = NONE by design (RESEARCH Pitfall 4).
+- **Vendor over npm-link for sibling tools** — Vercel build cannot resolve `file:../` paths. Future cross-project tools must be vendored into `lib/` (or published to npm).
+
+**Known issues / technical debt (carried into v1.1, see FUTURE_DIRECTIONS.md §4):**
+
+- 1 documented ESLint warning (`react-hooks/incompatible-library` on `event-type-form.tsx:99` — RHF `watch()` not memoizable; refactor to `useWatch`).
+- Pre-existing `tsc --noEmit` test-mock alias errors (mock exports aliased only in `vitest.config.ts`, not `tsconfig.json`).
+- `RESERVED_SLUGS` duplicated across 2 files (must be hand-synced).
+- Migration drift workaround: `supabase db push --linked` fails; locked alternative is `supabase db query --linked -f`.
+- `generateMetadata` double-load on public booking page (acceptable v1; can wrap in `import { cache } from 'react'`).
+- `/auth/callback` route 404s (blocks Supabase password-reset / magic-link flows; v2 backlog).
+- Supabase service-role key still legacy JWT (`sb_secret_*` format not yet rolled out).
+- Plan 08-05/06/07 wave-2 git-index race (multi-agent commits swept in untracked sibling files; future YOLO multi-wave runs should serialize commits or use per-agent worktrees).
+
+**Existing tooling reused:**
+
+- `lib/email-sender/` (vendored from `tools-made-by-claude-for-claude/email-sender`; post-Resend pivot to Gmail SMTP).
+- Supabase `calendar` project pre-existed.
 
 ## Constraints
 
-- **Tech stack**: Next.js + Tailwind CSS + TypeScript on Vercel, Supabase for DB + Auth, `@nsi/email-sender` (Resend) for email. — Matches Andrew's standard NSI stack; everything stays on free/low tiers of services he already uses.
-- **Hosting budget**: Must fit free tiers of Vercel + Supabase + Resend (3k emails/mo). — Andrew is on Claude Max 5x ($100/mo) and prefers free-tier services.
-- **Data ownership**: Supabase is the sole source of truth for availability and bookings. — Explicit user preference; avoids Google OAuth complexity and third-party sync failure modes.
-- **Multi-tenant from day one**: Schema must isolate data per account even though only one account exists in v1. — Avoids a painful data-migration milestone later when more tenants come online.
-- **Deploy after every logical unit**: Push to GitHub → Vercel for each completed feature per Andrew's live-testing workflow. — Defined in `CLAUDE.md`.
-- **Manual QA as final phase**: Last phase is explicitly Manual QA & Verification; project isn't done until Andrew signs off. — Defined in `CLAUDE.md`.
+(Audited at v1.0 milestone — all entries still valid; one constraint changed during development.)
+
+- **Tech stack**: Next.js + Tailwind CSS + TypeScript on Vercel, Supabase for DB + Auth, vendored `@nsi/email-sender` for Gmail SMTP. — Matches Andrew's standard NSI stack.
+- **Hosting budget**: Free tier of Supabase + Resend (3k emails/mo). **Updated 2026-04-26:** Vercel Pro tier required for hourly cron schedule (`vercel.json` `0 * * * *` does not deploy on Hobby; cron-job.org fallback was researched and dropped during Plan 08-08).
+- **Data ownership**: Supabase is the sole source of truth for availability and bookings.
+- **Multi-tenant from day one**: Schema isolates data per account even though only one account exists in v1.
+- **Deploy after every logical unit**: Push to GitHub → Vercel for each completed feature per Andrew's live-testing workflow.
+- **Manual QA as final phase**: Last phase is explicitly Manual QA & Verification; project isn't done until Andrew signs off. — v1.0 sign-off recorded 2026-04-27 with verbatim "ship v1" direction; marathon QA scope-cut to v1.1 by project-owner discretion.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Calendly-style booking tool, not a general calendar | Matches the actual use case (visitors booking owner's time); narrower scope ships faster | — Pending |
-| Multi-tenant architecture from day one, v1 ships single account | Supports the NSI business model (sell to clients) without forcing a later data migration; still ships fast by deferring signup UI | — Pending |
-| Embeddable widget (iframe/script) as primary embed, plus hosted page per account | Portable to any host site (Squarespace/WordPress/custom); hosted page gives a shareable link option | — Pending |
-| Supabase is sole source of truth — no Google Calendar sync | Explicit user preference; removes OAuth/sync complexity; trade-off is owner must manage all availability in-app | — Pending |
-| Per-account branding = logo + colors only (no custom CSS) | Good enough for trade contractor sites; avoids support burden of arbitrary CSS | — Pending |
-| Emails via `@nsi/email-sender` (Resend) | Existing reusable tool from shared folder; already handles attachments needed for .ics | — Pending |
-| Free bookings only; no Stripe | Trade contractors don't charge for quote consultations; removes PCI/Stripe scope from v1 | — Pending |
-| v1 scope = Andrew's booking page + widget on NSI site | Ships fastest path to personal utility; client-onboarding flows come in a later milestone | — Pending |
+| Calendly-style booking tool, not a general calendar | Matches the actual use case; narrower scope ships faster | ✓ Good — scope held; shipped in 10 days |
+| Multi-tenant architecture from day one, v1 ships single account | Supports the NSI business model without forcing later data migration | ✓ Good — schema supports v2 signup with no migrations needed |
+| Embeddable widget (script + iframe) as primary distribution + hosted page per account | Portable to any host site; hosted page gives shareable link | ✓ Good — `/widget.js` live-verified posting from `https://example.com` (2026-04-26); live Squarespace/WordPress deferred to v1.1 |
+| Supabase is sole source of truth — no Google Calendar sync | Removes OAuth/sync complexity; trade-off is owner manages all availability in-app | ✓ Good — race-safe at DB layer; no sync failure modes |
+| Per-account branding = logo + colors only (no custom CSS) | Good enough for trade contractors; avoids support burden | ✓ Good — `BrandedPage` wrapper + email branding-blocks shipped clean |
+| Vendor `@nsi/email-sender` into `lib/email-sender/` (NOT `npm install ../email-sender`) | Vercel build cannot resolve sibling-relative `file:../` paths | ✓ Good — locked pattern for any future shared tooling |
+| Email provider pivot Resend → Gmail SMTP | Resend domain verification stuck; Gmail SMTP available immediately via owner's account | ⚠ Revisit when scaling — Gmail SMTP not suitable for high volume; revisit if multi-account v2 lights up |
+| POST `/api/bookings` is a Route Handler, NOT a Server Action | Server Actions cannot return 409 status code (race-loser flow requires it) | ✓ Good — clean inline-banner UX preserves form values |
+| DB-level race-safe via partial unique index | RESEARCH Pitfall 1 — application-layer race checks don't close the window | ✓ Good — Vitest race test proves: 2 concurrent submits → 1 success + 1 23505 → 409 |
+| `timestamptz` everywhere + IANA TZ + `date-fns v4 + @date-fns/tz` | RESEARCH Pitfall 2 — raw Date math fails DST; `formatInTimeZone` doesn't exist in `@date-fns/tz` | ✓ Good — March 8 + Nov 1 2026 DST tests green |
+| CSP lives ONLY in `proxy.ts` (never `next.config.ts`) | `next.config.ts` cannot conditionally delete `X-Frame-Options` at runtime | ✓ Good — locked across Phases 7+; embed CSP works |
+| Vercel Pro tier for hourly cron | Hobby tier deploys at most daily; cron-job.org fallback dropped during Plan 08-08 | ✓ Good — `vercel.json` `0 * * * *` deployed (production verification deferred to v1.1) |
+| Token rotation on every reminder send | Prevents stale-token replay; same UPDATE that claims `reminder_sent_at` | ✓ Good — accepted side-effect: original confirmation tokens stop working post-reminder (v1.1 may add resend UI) |
+| Reminder retry on send failure = NONE | RESEARCH Pitfall 4 — clearing `reminder_sent_at` on failure causes retry spam | ✓ Good — at-most-once delivery acceptable for v1 |
+| Marathon QA scope-cut to v1.1 by project-owner discretion | "Other problems are more pressing and will be addressed in the next milestone" | — Pending — v1.1 will close the 6 ROADMAP criteria + 9 dashboard sub-criteria + 6-row branding sub-table |
 
 ---
-*Last updated: 2026-04-18 after initialization*
+*Last updated: 2026-04-27 after v1.0 milestone*
