@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Plan 08-04 complete — reminder pipeline end-to-end: branded reminder sender + Bearer-authenticated cron route with compare-and-set claim + atomic token rotation + immediate-send hook in POST /api/bookings for in-window bookings + Hobby-tier vercel.json daily fallback. Closes EMAIL-05, INFRA-01, INFRA-02, INFRA-03. New shared facade `lib/booking-tokens.ts` re-exports the canonical hashToken from `lib/bookings/tokens.ts` (avoided plan's divergent `node:crypto` impl that would have broken existing token verification). 14 new tests (6 content-quality + 8 cron integration); 83 → 97 green. Three task commits: dc2ccd4, 0548ce7, a4ba982.)
+**Last updated:** 2026-04-26 (Plans 08-04 + 08-05 + 08-07 all complete in Wave 2. 08-04: end-to-end reminders pipeline (cron + immediate hook + branded sender). 08-05: event-type location field on editor + thread location through actions. 08-07: bookings detail extension — full custom-answers, owner-note autosave with two-stage RPC auth + service-role write, and booking-history timeline with synthesized "Created" entry. Closes DASH-04. 7 new owner-note tests added (97 → 104 green). Note: 08-07's five files were bundled into a parallel agent's commit f4a6cbf due to a shared git-index race in concurrent wave execution; the work is intact and tested but the commit message attribution is not 08-07-specific. See 08-07-SUMMARY.md deviations.)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 1 complete + first Wave 2 plan (08-04 reminders pipeline) complete. Plans 08-01 + 08-02 + 08-03 + 08-04 all done (schema additions live; hardening prereqs shipped; bookings rate-limit landed; reminders cron + immediate-send hook + branded sender shipped). Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 97/97 tests green.
+**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 2 mostly complete. Plans 08-01 + 08-02 + 08-03 + 08-04 + 08-05 + 08-07 done (schema; hardening prereqs; bookings rate-limit; reminders pipeline; reminder settings + event location; bookings detail extension). 08-06 (dashboard list) remaining in Wave 2; 08-08 in Wave 3. Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 104/104 tests green.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 8 (Reminders + Hardening + Dashboard List) — Wave 2 in progress
-**Plan:** 08-04 complete (4 / 8 Phase 8 plans done)
-**Status:** Plans 08-01 + 08-02 + 08-03 + 08-04 complete. Wave 2 remaining plans (08-05 settings UI, 08-06 dashboard list, 08-07 bookings detail) unblocked and independent of 08-04 — can run in parallel. 08-08 (RLS matrix + ops hardening) now unblocked because the cron route exists; 08-08 will configure cron-job.org hourly driver + production CRON_SECRET in Vercel env + run mail-tester live verification.
-**Last activity:** 2026-04-26 — Plan 08-04 complete (reminder cron route GET /api/cron/send-reminders with Bearer CRON_SECRET auth + compare-and-set claim + atomic token rotation + after()-driven email send; immediate-send hook in POST /api/bookings for bookings starting within next 24h; sendReminderBooker email sender with three account-toggle-gated content blocks; lib/booking-tokens.ts shared facade re-exporting canonical hashToken; vercel.json with daily Hobby-tier-safe schedule; 14 new tests (6 content-quality + 8 cron integration); 83 → 97 green; commits dc2ccd4, 0548ce7, a4ba982)
+**Plan:** 08-04 + 08-05 + 08-07 complete (6 / 8 Phase 8 plans done)
+**Status:** Plans 08-01 through 08-05 + 08-07 complete. 08-06 (dashboard list page) is the only remaining Wave 2 plan; 08-08 (RLS matrix + ops hardening) is Wave 3.
+**Last activity:** 2026-04-26 — Plan 08-07 complete (extended /app/bookings/[id] with owner_note autosave + custom answers + history timeline + kebab action-bar slot; preserved Phase 6 CancelButton; new saveOwnerNoteAction mirrors Phase 7 branding two-stage auth pattern via current_owner_account_ids() RPC + RLS-scoped ownership pre-check + service-role UPDATE; new BookingHistory component synthesizes a "Created" entry from bookings.created_at when no event_type='created' row exists; 7 new tests cover the auth boundary; 97 → 104 green. NOTE: implementation files committed under parallel agent's commit f4a6cbf due to wave-2 git-index race — work is intact, see 08-07-SUMMARY.md.)
 **Progress:** [██████░░░] 6 / 9 phases complete (Phase 7 now done = 7/9 code-complete; Phases 8-9 pending)
 
 ```
@@ -39,7 +39,7 @@ Phase 9  [ ] Manual QA & Verification
 | Phases planned | 7 / 9 |
 | Phases complete | 7 / 9 |
 | Requirements mapped | 73 / 73 |
-| Requirements complete | 60 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; EMAIL-05 reminder; LIFE-01..05; BRAND-01..04; EMBED-01..06; EMBED-08; INFRA-01; INFRA-02; INFRA-03; INFRA-04) |
+| Requirements complete | 61 / 73 (FOUND-01..06; AUTH-01..04; DASH-01; DASH-04; EVENT-01..06; AVAIL-01..09; BOOK-01..07; EMAIL-01..07; EMAIL-05 reminder; LIFE-01..05; BRAND-01..04; EMBED-01..06; EMBED-08; INFRA-01; INFRA-02; INFRA-03; INFRA-04) |
 
 ## Accumulated Context
 
@@ -286,7 +286,19 @@ None.
 **Stopped at:** Plan 08-04 complete (commits dc2ccd4, 0548ce7, a4ba982). Wave 2 remaining plans (08-05 settings UI, 08-06 dashboard list, 08-07 bookings detail) unblocked and independent of 08-04. Plan 08-08 (RLS matrix + ops hardening) now unblocked because cron route exists.
 **Resume file:** None
 
-Latest session note (Plan 08-04 execution):
+Latest session note (Plan 08-07 execution):
+- 08-07 Task 1: Extended `app/(shell)/app/bookings/[id]/page.tsx` to (a) widen the existing booking SELECT with `owner_note` + `event_types.location`, (b) add a second RLS-scoped query for `booking_events` ordered by `occurred_at ASC`, (c) restructure the header into an action bar containing the unchanged Phase 6 CancelButton + a kebab DropdownMenu placeholder ("More actions coming soon"), (d) phone surfaces as a `tel:` link (was plain text), (e) new sections for Location, Owner note, History.
+- 08-07 Task 2: Created `app/(shell)/app/bookings/[id]/_components/booking-history.tsx` (Server Component) — renders booking_events as a vertical timeline with dot indicators, formats timestamps in the OWNER's account timezone (matches the page header convention), maps `event_type` enum to friendly labels (Created / Cancelled / Rescheduled / Reminder sent), synthesizes a "Created" entry from `bookings.created_at` when no `event_type='created'` row exists.
+- 08-07 Task 2: Created `app/(shell)/app/bookings/[id]/_components/owner-note.tsx` (Client Component) — controlled Textarea, 800ms debounced save via `useDebouncedCallback` from use-debounce (installed in 08-02), `save.flush()` on blur, inline "Saved" pill auto-clears after 2s via useEffect timer (NO Sonner toast on success per RESEARCH Pattern 6), error path uses `toast.error`, 5000-char client cap matches server cap.
+- 08-07 Task 2: Created `app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts` — exports `saveOwnerNoteAction` (Server Action) AND `saveOwnerNoteCore` (DI-friendly inner logic for tests). Two-stage owner authorization: (1) `current_owner_account_ids()` RPC returns caller's account ids; (2) RLS-scoped SELECT proves the booking belongs to one of those ids; (3) service-role admin client performs the UPDATE. Identical "Booking not found." error for not-found and forbidden — no UUID-existence leakage. Empty string normalizes to NULL. 5000-char server-side cap before any DB call.
+- 08-07 Task 2: Created `tests/owner-note-action.test.ts` (7 cases) — calls `saveOwnerNoteCore` directly with structural mock clients (mirrors Phase 6 cancel-test pattern from STATE.md line 178; bypasses next/headers + next/cache request-scope dependency). Coverage: no-owner / wrong-account / missing-booking / happy-path / empty-string / length-cap / DB-error. All 7 pass; full suite 97 → 104 green.
+- 08-07 deviation #1 (parallel-execution race): commit attribution. Staged my 5 files and ran `git commit`, but a parallel Wave 2 agent (08-05) committed the entire git index moments before, bundling my staged files into their commit `f4a6cbf` ("feat(08-05): event-type location field on editor + thread location through actions"). My files ARE in HEAD (verified via `git show --stat f4a6cbf` — booking-history.tsx, owner-note.tsx, owner-note-action.ts, page.tsx, owner-note-action.test.ts all listed). NOT a destructive deviation — code is correct, tests pass, files are versioned — but the commit message does not reflect the 08-07 work. Did NOT rewrite history (would have been destructive across parallel branches per agent instructions). Future wave-2+ executions should serialize commit operations or use per-plan worktrees to avoid this race.
+- 08-07 deviation #2 (orchestrator instruction honored): skipped `npm run build` per spawning instruction. Relied on `npm test` (104/104 green) as verification floor.
+- 08-07 deviation #3 (clarification): plan suggested `useState + setTimeout` for the "Saved" indicator timer at render time. Moved to `useEffect` to avoid the side-effect-during-render anti-pattern (would have spammed timers on every re-render).
+- 08-07 SUMMARY.md created at .planning/phases/08-reminders-hardening-and-dashboard-list/08-07-SUMMARY.md
+- Test count 97 → 104 (+7 owner-note auth-boundary cases). Closes DASH-04.
+
+Previous session note (Plan 08-04 execution):
 - 08-04 Task 1 (commit dc2ccd4): Created `lib/booking-tokens.ts` (37 LOC) as a thin facade re-exporting `hashToken` from `lib/bookings/tokens.ts` and adding `generateRawToken()` returning `crypto.randomUUID()` (UUIDv4 — same format as Phase 5 tokens). DEVIATED from plan's `node:crypto.randomBytes(32).toString("base64url")` + `node:crypto.createHash("sha256")` example because that would have produced different hashes than the existing Web Crypto resolvers compute, breaking every existing cancel/reschedule token verification. Created `lib/email/send-reminder-booker.ts` (~210 LOC) mirroring `send-booking-confirmation.ts` shape — locked subject `Reminder: {event} tomorrow at {time_local}` (booker timezone via TZDate); three account-toggle-gated blocks (location with non-empty guard, custom answers with non-empty-keys guard, lifecycle CTAs); self-contained `escapeHtml` + `stripHtml` helpers (matches Phase 5/6 pattern). Created `tests/reminder-email-content.test.ts` (~155 LOC, 6 cases) — content-quality automated guard for EMAIL-08: every href https/path-only, text alt non-empty, logo wired, subject not spammy, toggles correctly omit, empty/whitespace values omit cleanly. All 6 pass.
 - 08-04 Task 2 (commit 0548ce7): Created `app/api/cron/send-reminders/route.ts` (~230 LOC) — `runtime='nodejs'` + `dynamic='force-dynamic'` + `revalidate=0`; Bearer `CRON_SECRET` check is first line of work (401 + Cache-Control: no-store on miss); service-role scan with `event_types !inner` + `accounts !inner` joins (toggles + location); per-row UPDATE doing CAS claim AND token rotation in one statement (`SET reminder_sent_at = now(), cancel_token_hash = ?, reschedule_token_hash = ? WHERE id = ? AND reminder_sent_at IS NULL`); booking_events insert with `event_type='reminder_sent'`, `actor='system'`, `account_id` denormalized (NOT NULL — required by RLS), `metadata={source:'cron'}`; after() callback ships emails after response flush. DEVIATED from plan's example booking_events insert which omitted `account_id` and `actor` — both NOT NULL per the schema; missing them would have failed insert. Created `vercel.json` with daily `0 8 * * *` schedule (Hobby-tier safe — Plan 08-08 will configure cron-job.org hourly driver). Added `CRON_SECRET` to `.env.local` with placeholder (gitignored); production rotation procedure documented in 08-04 SUMMARY.
 - 08-04 Task 3 (commit a4ba982): Modified `app/api/bookings/route.ts` to add immediate-send hook as new step "8b" between the existing 08-02 `after(() => sendBookingEmails(...))` block and the 201 return. Same CAS pattern as cron route. Added imports for `generateRawToken`, `hashToken` (from `lib/booking-tokens`), `sendReminderBooker`. 24h-window check via `startMs <= horizonMs`. Re-fetches enriched account toggles + event_type location via single join (the local `account` / `eventType` selects in steps 5-6 don't include those columns). Audit row with `metadata={source:'immediate'}` distinguishes from cron sends. 08-03's rate-limit guard at top of POST handler PRESERVED untouched. Created `tests/reminder-cron.test.ts` (~280 LOC, 8 cases) — auth (no Bearer / wrong Bearer / valid + empty window), claim+email+token rotation+audit-row, idempotency on rapid re-invocation (CAS guard prevents double-send), 24h+1h boundary, past bookings, cancelled bookings. Real DB writes/reads against test Supabase project (mirrors Phase 6 cancel-reschedule integration test pattern). All 8 pass.
@@ -353,11 +365,11 @@ Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file
 - ✅ Plan 08-01 (schema additions migration: 3 reminder toggles + event_types.location + bookings.owner_note) — complete (2026-04-26, aa6ac14)
 - ✅ Plan 08-02 (hardening prereqs: use-debounce + ESLint flat config + after() migration) — complete (2026-04-26, fe2c3de + 211fff1 + 8d3af15)
 - ✅ Plan 08-03 (bookings rate limit at 20/5min/ip; INFRA-04 closed) — complete (2026-04-26, 9a5a573)
-- ⬜ Plan 08-04 (reminder cron + immediate send) — Wave 2
-- ⬜ Plan 08-05 (reminder settings + event location UI) — Wave 2
-- ⬜ Plan 08-06 (bookings list page)
-- ⬜ Plan 08-07 (bookings detail extension) — Wave 2
-- ⬜ Plan 08-08 (RLS matrix + ops hardening)
+- ✅ Plan 08-04 (reminder cron + immediate send) — complete (2026-04-26, dc2ccd4 + 0548ce7 + a4ba982)
+- ✅ Plan 08-05 (reminder settings + event location UI) — complete (2026-04-26, 9360e56 + f4a6cbf)
+- ⬜ Plan 08-06 (bookings list page) — Wave 2
+- ✅ Plan 08-07 (bookings detail extension) — complete (2026-04-26, files bundled into f4a6cbf via wave-2 git-index race; see 08-07-SUMMARY.md)
+- ⬜ Plan 08-08 (RLS matrix + ops hardening) — Wave 3
 
 **Phase 7 plan status:**
 - ✅ Plan 07-01 (branding lib: contrast.ts + types.ts + read-branding.ts + AccountSummary extension + RESERVED_SLUGS "embed") — complete, pushed (2026-04-26, bb4089a)
