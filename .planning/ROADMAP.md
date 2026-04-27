@@ -270,6 +270,13 @@ Plans:
 
 **Research flag:** None. Sequentially last.
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-pre-qa-prerequisites-and-pre-flight-fixes-PLAN.md — 5 prereqs (Squarespace trial, Vercel CRON_SECRET, Gmail aliasing, qa-test event type, mail-tester warm-up) + spam-folder copy edit + audit-row after() migration + lint cleanup + 09-CHECKLIST.md scaffold
+- [ ] 09-02-marathon-qa-execution-PLAN.md — Marathon QA: criteria #1-#6 + Apple Mail code review + Phase 8 dashboard 9-item walkthrough; fix-as-you-go on failures
+- [ ] 09-03-future-directions-and-sign-off-PLAN.md — Author + commit FUTURE_DIRECTIONS.md (criterion #7) + Andrew explicit ship sign-off (criterion #8)
+
 ---
 
 ## Progress
