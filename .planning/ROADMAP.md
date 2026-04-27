@@ -234,7 +234,19 @@ Plans:
 5. An automated RLS test matrix proves a second seeded tenant cannot read or write the first tenant's data via the anon client, the user-scoped client, or unscoped queries.
 6. The dashboard bookings page lists upcoming and past bookings with name, email, phone, event type, start time, status, and custom-question answers; filterable by status and date range; clicking a row shows full detail.
 
-**Research flag:** YES - needs `/gsd:research-phase` on current Vercel Cron hobby-tier interval limits and Resend domain-verification DNS format before plan-phase. Can run in parallel with Phases 6 and 7.
+**Research flag:** Done — see .planning/phases/08-reminders-hardening-and-dashboard-list/08-RESEARCH.md (2026-04-26).
+
+**Plans:** 8 plans
+
+Plans:
+- [ ] 08-01-schema-additions-PLAN.md — Phase 8 schema migration: account reminder toggles + event_types.location + bookings.owner_note
+- [ ] 08-02-hardening-prereqs-PLAN.md — install use-debounce + ESLint flat-config migration + after() fire-and-forget refactor
+- [ ] 08-03-bookings-rate-limit-PLAN.md — rate-limit POST /api/bookings at 20/5min/IP using existing checkRateLimit lib + integration test
+- [ ] 08-04-reminder-cron-and-immediate-send-PLAN.md — sendReminderBooker + /api/cron/send-reminders + immediate-send hook in /api/bookings + vercel.json + token rotation
+- [ ] 08-05-reminder-settings-and-event-location-PLAN.md — /app/settings/reminders toggles + event-type Location field + Server Action
+- [ ] 08-06-bookings-list-page-PLAN.md — /app/bookings list with URL-driven filters + numbered pagination + status badges
+- [ ] 08-07-bookings-detail-extension-PLAN.md — /app/bookings/[id] answers + owner-note autosave + history timeline + action bar
+- [ ] 08-08-rls-matrix-and-ops-hardening-PLAN.md — RLS cross-tenant test matrix + render harness + cron-job.org + mail-tester + key swap (manual checkpoints)
 
 ---
 
