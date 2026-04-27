@@ -31,7 +31,7 @@ must_haves:
     - path: "app/(shell)/app/bookings/[id]/_components/booking-history.tsx"
       provides: "Timeline rendering booking_events"
     - path: "app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts"
-      provides: "saveOwnerNoteAction Server Action with two-stage owner auth"
+      provides: "saveOwnerNoteAction Server Action with two-stage owner auth via current_owner_account_ids RPC"
       exports: ["saveOwnerNoteAction"]
   key_links:
     - from: "app/(shell)/app/bookings/[id]/_components/owner-note.tsx"
@@ -40,8 +40,8 @@ must_haves:
       pattern: "useDebouncedCallback"
     - from: "app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts"
       to: "bookings.owner_note column"
-      via: "two-stage auth: RLS pre-check → service-role UPDATE"
-      pattern: "owner_note"
+      via: "two-stage auth: current_owner_account_ids RPC pre-check → service-role UPDATE"
+      pattern: "current_owner_account_ids"
     - from: "app/(shell)/app/bookings/[id]/_components/booking-history.tsx"
       to: "booking_events table"
       via: "server-side query in page.tsx, passed as prop"
@@ -53,7 +53,7 @@ Extend the existing /app/bookings/[id] detail page (Phase 6 placeholder with can
 
 Purpose: Detail is where the owner does real work (call the booker, prep notes, see what they asked). Phase 6 left this URL as a stub with only a cancel button. Phase 8 fills in the working detail surface.
 
-Output: Extended page.tsx + two new components + one Server Action + one integration test. Reuses use-debounce from 08-02 and two-stage auth pattern from Phase 7.
+Output: Extended page.tsx + two new components + one Server Action + one integration test. Reuses use-debounce from 08-02 and two-stage auth pattern from Phase 7 (current_owner_account_ids RPC + service-role write).
 </objective>
 
 <execution_context>
@@ -68,6 +68,7 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
 @.planning/phases/08-reminders-hardening-and-dashboard-list/08-02-SUMMARY.md
 @app/(shell)/app/bookings/[id]/page.tsx
 @app/(shell)/app/bookings/[id]/_components
+@app/(shell)/app/bookings/[id]/_lib/actions.ts
 @app/(shell)/app/branding/_lib/actions.ts
 @components/ui/textarea.tsx
 @components/ui/dropdown-menu.tsx
@@ -85,6 +86,8 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
     - The Supabase query that loads the booking
     - Where the Cancel button is rendered
     - The auth gate / not-found logic
+
+    Also read `app/(shell)/app/bookings/[id]/_lib/actions.ts` (the actual Phase 6 owner-cancel Server Action filename — confirmed by codebase scan) to understand the existing two-stage auth pattern using `current_owner_account_ids` RPC. Plan 08-07's new `owner-note-action.ts` will mirror this pattern exactly.
 
     Step B — extend the booking query:
 
@@ -214,10 +217,10 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
 </task>
 
 <task type="auto">
-  <name>Task 2: OwnerNote autosave component + Server Action</name>
+  <name>Task 2: OwnerNote autosave component + Server Action (two-stage auth via current_owner_account_ids RPC)</name>
   <files>app/(shell)/app/bookings/[id]/_components/owner-note.tsx, app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts</files>
   <action>
-    Step A — Server Action (mirrors Phase 7 branding two-stage auth):
+    Step A — Server Action (mirrors Phase 7 branding + Plan 08-05 reminder-toggles two-stage auth):
 
     Create `app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts`:
 
@@ -227,6 +230,19 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
     import { createClient } from "@/lib/supabase/server";
     import { createAdminClient } from "@/lib/supabase/admin";
 
+    /**
+     * Two-stage owner authorization (mirrors Phase 7 branding + Plan 08-05 reminder-toggles):
+     * 1. RLS-scoped client confirms current owner via current_owner_account_ids() RPC.
+     * 2. Pre-check that the target booking belongs to one of the caller's account ids.
+     * 3. Service-role admin client performs the UPDATE.
+     *
+     * Why the RPC + ownership pre-check (instead of just an RLS-scoped SELECT):
+     * - Matches the established pattern across Phase 6 owner-cancel + Phase 7 branding +
+     *   Plan 08-05 reminder-toggles. Consistent owner-write auth across phases.
+     * - Surfaces a clear "not your booking" denial path without leaking which UUIDs exist.
+     * - Service-role UPDATE bypasses RLS once authorization is proved, avoiding a second
+     *   round-trip through RLS policies.
+     */
     export async function saveOwnerNoteAction(args: {
       bookingId: string;
       note: string;  // empty string is valid (means "clear note")
@@ -234,19 +250,29 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
       // Sanity: cap length to prevent abuse
       const note = args.note.length > 5000 ? args.note.slice(0, 5000) : args.note;
 
-      // Stage 1: RLS-scoped check that the caller can SEE this booking
+      // Stage 1: RLS-scoped owner identity via RPC
       const supabase = await createClient();
+      const { data: ids } = await supabase.rpc("current_owner_account_ids");
+      const ownerAccountIds: string[] = Array.isArray(ids) ? ids : [];
+      if (ownerAccountIds.length === 0) {
+        return { ok: false, error: "Booking not found." };
+      }
+
+      // Stage 2: ownership pre-check — does the booking belong to one of caller's accounts?
+      // Use the RLS-scoped client so RLS itself enforces the boundary; no chance of
+      // a permissive query leaking another tenant's booking id.
       const { data: booking } = await supabase
         .from("bookings")
-        .select("id")
+        .select("id, account_id")
         .eq("id", args.bookingId)
         .maybeSingle();
 
-      if (!booking) {
-        return { ok: false, error: "Booking not found." }; // 404-equivalent (matches Phase 6 cancel pattern)
+      if (!booking || !ownerAccountIds.includes(booking.account_id)) {
+        // Identical error string for not-found and forbidden — no UUID-existence leakage.
+        return { ok: false, error: "Booking not found." };
       }
 
-      // Stage 2: service-role UPDATE — RLS already proved authorization
+      // Stage 3: service-role UPDATE — RLS already proved authorization
       const admin = createAdminClient();
       const { error } = await admin
         .from("bookings")
@@ -261,10 +287,14 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
     ```
 
     Critical:
-    - Two-stage auth: RLS-scoped pre-check using `createClient()` proves the caller is logged-in and owns this booking via Phase 1 RLS policies. Then service-role write. Same shape as Phase 7 branding action and Phase 6 owner cancel.
+    - **Two-stage auth via RPC + service-role**: identical pattern to Phase 7 `app/(shell)/app/branding/_lib/actions.ts` (`getOwnerAccountIdOrThrow`) and Plan 08-05 `saveReminderTogglesAction`. Do NOT use a direct `.from("bookings").select("id")` RLS pre-check without the RPC — that pattern was rejected in revision 1 for inconsistency with the rest of the owner-write surface.
+    - The RPC call is FIRST. It establishes which account ids the caller owns.
+    - The booking pre-check uses `account_id` to verify ownership against the RPC result.
+    - Service-role UPDATE happens AFTER both checks pass.
     - Empty string normalizes to NULL.
     - 5000-char cap is generous but bounded.
     - Both 404-equivalent and forbidden return identical error string (no information leakage about UUIDs that exist in other tenants — matches Phase 6 cancel convention from STATE.md line 169).
+    - Verify the booking schema has `account_id` column (confirmed by Phase 1 schema). If somehow the column is named differently, match the existing schema convention.
 
     Step B — Client component with autosave:
 
@@ -335,14 +365,18 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
     Step C — integration test `tests/owner-note-action.test.ts`:
 
     Cover:
-    1. Booking not visible to caller (RLS returns null) → action returns `{ ok: false, error: "Booking not found." }`.
-    2. Happy path: RLS finds booking, admin UPDATE called with `owner_note: <note>`.
-    3. Empty string normalizes to NULL: caller passes `note: ""` → admin UPDATE called with `owner_note: null`.
-    4. Length cap: caller passes 6000-char note → admin UPDATE called with note truncated to 5000.
+    1. **No owner accounts**: RPC returns `[]` → action returns `{ ok: false, error: "Booking not found." }`.
+    2. **Booking belongs to different account**: RPC returns `["account-A"]`, booking has `account_id: "account-B"` → action returns `{ ok: false, error: "Booking not found." }` (NOT a different error — UUID-existence leakage prevention).
+    3. **Booking does not exist**: RPC returns `["account-A"]`, RLS-scoped select returns null → action returns `{ ok: false, error: "Booking not found." }`.
+    4. **Happy path**: RPC returns `["account-A"]`, booking has `account_id: "account-A"` → admin UPDATE called with `owner_note: <note>`, returns `{ ok: true }`.
+    5. **Empty string normalizes to NULL**: caller passes `note: ""` → admin UPDATE called with `owner_note: null`.
+    6. **Length cap**: caller passes 6000-char note → admin UPDATE called with note truncated to 5000.
 
     Match the Phase 6 owner-cancel test pattern for Server Actions (STATE.md line 178: caller imports the inner logic to bypass Next request-context dependency in vitest, OR uses the same workaround the existing tests use).
 
-    Run: `npm test -- owner-note-action`. All 4 cases pass.
+    Mock the supabase RPC: `supabase.rpc("current_owner_account_ids")` should be mockable via the existing `tests/__mocks__/` infrastructure used by Phase 7 branding tests.
+
+    Run: `npm test -- owner-note-action`. All 6 cases pass.
 
     Commit:
     ```bash
@@ -357,12 +391,13 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
   <verify>
     `grep -n "useDebouncedCallback" app/(shell)/app/bookings/[id]/_components/owner-note.tsx` shows the hook.
     `grep -n "save.flush\|onBlur" app/(shell)/app/bookings/[id]/_components/owner-note.tsx` shows blur flush.
-    `grep -n "current_owner_account_ids\|createAdminClient" app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts` shows two-stage auth.
-    `npm test -- owner-note-action` all 4 cases pass.
+    `grep -n "current_owner_account_ids" app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts` shows the RPC pre-check.
+    `grep -n "createAdminClient" app/(shell)/app/bookings/[id]/_lib/owner-note-action.ts` shows service-role UPDATE.
+    `npm test -- owner-note-action` all 6 cases pass.
     Manual: type into the textarea, see "Saved" appear ~800ms later; refresh page, note persists.
   </verify>
   <done>
-    Owner-note textarea autosaves at 800ms debounce + flush on blur. Two-stage auth prevents cross-tenant writes. Empty string clears note. 5000-char cap enforced. "Saved" indicator visible on success, error toast on failure.
+    Owner-note textarea autosaves at 800ms debounce + flush on blur. Two-stage auth via current_owner_account_ids RPC + ownership pre-check + service-role UPDATE prevents cross-tenant writes. Empty string clears note. 5000-char cap enforced. "Saved" indicator visible on success, error toast on failure.
   </done>
 </task>
 
@@ -372,17 +407,17 @@ Output: Extended page.tsx + two new components + one Server Action + one integra
 1. /app/bookings/[id] for an existing booking renders booker contact (with mailto + tel), location (if set), answers, owner-note textarea, history timeline, action bar.
 2. Type into note, "Saved" indicator appears within ~1s.
 3. Refresh page — note value persists from DB.
-4. Owner of a different account cannot save a note to a booking they don't own (test verifies).
+4. Owner of a different account cannot save a note to a booking they don't own (test verifies via mocked RPC returning a different account id list).
 5. `npm test` full suite green.
 6. `npm run build` succeeds.
 </verification>
 
 <success_criteria>
 - DASH-04: Owner can view full booking detail (booker contact, all answers, location, history, owner note).
-- New capability: per-booking owner notes editable via autosave with two-stage auth.
+- New capability: per-booking owner notes editable via autosave with two-stage auth via current_owner_account_ids RPC (consistent with Phase 7 branding + Plan 08-05).
 - Phase 6 Cancel button still works (relocated into action bar but unchanged).
 - Reuses use-debounce from 08-02.
-- Tests cover the 4 edge cases of the Server Action.
+- Tests cover the 6 edge cases of the Server Action (no owner, wrong account, missing booking, happy path, empty-note, length cap).
 </success_criteria>
 
 <output>
@@ -391,4 +426,17 @@ After completion, create `.planning/phases/08-reminders-hardening-and-dashboard-
 - booking_events column-name confirmation (event_type vs kind vs type)
 - Whether the kebab menu was left empty or populated with a "coming soon" placeholder
 - Server Action test workaround used (matches Phase 6 pattern or new approach)
+- RPC + service-role two-stage auth pattern verified consistent with Plan 08-05 + Phase 7 branding
+
+---
+
+## Phase 8 Wave Layout (current as of revision 1)
+
+| Wave | Plans | Notes |
+|------|-------|-------|
+| 1 | 08-01, 08-02, 08-03 | All independent (no depends_on) — run in parallel |
+| 2 | 08-04, 08-05, 08-06, 08-07 | All depend on Wave 1; 08-04 has extra dep on 08-03 |
+| 3 | 08-08 | Depends on 08-04 |
+
+08-07 wave assignment unchanged (still wave 2).
 </output>

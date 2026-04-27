@@ -232,7 +232,7 @@ Plans:
 3. The sending domain has verified SPF, DKIM, and DMARC DNS; sending the confirmation and reminder emails through `mail-tester.com` returns a score of 9/10 or better.
 4. `/api/bookings` is rate-limited per IP and rejects abusive request patterns with a 429.
 5. An automated RLS test matrix proves a second seeded tenant cannot read or write the first tenant's data via the anon client, the user-scoped client, or unscoped queries.
-6. The dashboard bookings page lists upcoming and past bookings with name, email, phone, event type, start time, status, and custom-question answers; filterable by status and date range; clicking a row shows full detail.
+6. The dashboard bookings page lists upcoming and past bookings with name, email, phone, event type, start time, and status; filterable by status and date range; clicking a row shows full detail (with custom-question answers shown on the detail page only — answers are intentionally NOT in the list view per CONTEXT.md decision to keep the list compact and scannable).
 
 **Research flag:** Done — see .planning/phases/08-reminders-hardening-and-dashboard-list/08-RESEARCH.md (2026-04-26).
 

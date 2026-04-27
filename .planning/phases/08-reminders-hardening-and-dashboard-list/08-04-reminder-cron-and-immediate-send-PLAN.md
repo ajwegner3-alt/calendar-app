@@ -3,9 +3,10 @@ phase: 08-reminders-hardening-and-dashboard-list
 plan: "08-04"
 type: execute
 wave: 2
-depends_on: ["08-01", "08-02"]
+depends_on: ["08-01", "08-02", "08-03"]
 files_modified:
   - lib/email/send-reminder-booker.ts
+  - lib/booking-tokens.ts
   - app/api/cron/send-reminders/route.ts
   - app/api/bookings/route.ts
   - vercel.json
@@ -20,7 +21,7 @@ must_haves:
     - "Each claimed booking receives exactly one reminder email, even if cron fires twice in rapid succession"
     - "Reminder email subject is 'Reminder: {event_name} tomorrow at {time_local}' formatted in booker timezone"
     - "Reminder email content respects per-account toggles (custom_answers, location, lifecycle_links)"
-    - "Reminder email cancel/reschedule links use freshly generated raw tokens (cron rotates cancel_token_hash + reschedule_token_hash on send)"
+    - "Booker receives reminder email with working cancel and reschedule links that resolve to the existing /cancel/[token] and /reschedule/[token] flows"
     - "Bookings created inside the 24h window get an immediate reminder fire-and-forget at booking creation (no wait for next cron tick)"
     - "vercel.json declares /api/cron/send-reminders with daily schedule (Hobby fallback)"
     - "Branding (logo, brand H1, branded button, NSI footer) matches Phase 7 confirmation email"
@@ -28,6 +29,9 @@ must_haves:
     - path: "lib/email/send-reminder-booker.ts"
       provides: "Reminder email sender mirroring send-booking-confirmation.ts shape"
       exports: ["sendReminderBooker"]
+    - path: "lib/booking-tokens.ts"
+      provides: "Shared token helpers (generateRawToken + hashToken) used by cron route and bookings route"
+      exports: ["generateRawToken", "hashToken"]
     - path: "app/api/cron/send-reminders/route.ts"
       provides: "GET handler with CRON_SECRET auth + compare-and-set claim + after() email send"
       exports: ["GET"]
@@ -45,10 +49,18 @@ must_haves:
       to: "Supabase bookings table"
       via: "UPDATE ... WHERE id = ? AND reminder_sent_at IS NULL"
       pattern: "reminder_sent_at"
+    - from: "app/api/cron/send-reminders/route.ts"
+      to: "lib/booking-tokens.ts"
+      via: "import { generateRawToken, hashToken } from '@/lib/booking-tokens'"
+      pattern: "from.*booking-tokens"
     - from: "app/api/bookings/route.ts"
       to: "lib/email/send-reminder-booker.ts"
       via: "after(() => sendReminderBooker(...)) when start_at < now()+24h"
       pattern: "sendReminderBooker"
+    - from: "app/api/bookings/route.ts"
+      to: "lib/booking-tokens.ts"
+      via: "import { generateRawToken, hashToken } from '@/lib/booking-tokens'"
+      pattern: "from.*booking-tokens"
 ---
 
 <objective>
@@ -56,7 +68,7 @@ Build the reminders pipeline end-to-end: a new email sender, a cron-authenticate
 
 Purpose: This is the critical Phase 8 deliverable. Reminders are the difference between a calendar tool and a usable scheduling product for trade contractors. The cron must be exactly-once even on double-fire (RESEARCH.md Pitfall 3) and must rotate cancel/reschedule tokens because confirmation tokens were not stored after Phase 5 send (RESEARCH.md Open Question 3).
 
-Output: One sender, one cron route, one updated booking route, one vercel.json, one integration test, and an updated email mock.
+Output: One sender, one cron route, one shared token-helper module, one updated booking route, one vercel.json, one integration test, and an updated email mock.
 </objective>
 
 <execution_context>
@@ -69,19 +81,46 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
 @.planning/phases/08-reminders-hardening-and-dashboard-list/08-RESEARCH.md
 @.planning/phases/08-reminders-hardening-and-dashboard-list/08-01-SUMMARY.md
 @.planning/phases/08-reminders-hardening-and-dashboard-list/08-02-SUMMARY.md
+@.planning/phases/08-reminders-hardening-and-dashboard-list/08-03-SUMMARY.md
 @lib/email/send-booking-confirmation.ts
 @lib/email/branding-blocks.ts
 @lib/email/send-cancel-emails.ts
 @app/api/bookings/route.ts
 </context>
 
+**DEPENDENCY NOTE:** Plan 08-03 also modifies `app/api/bookings/route.ts` (adding rate-limit guard). This plan MUST run after 08-03 so that this plan's edits build on top of the rate-limit guard rather than overwriting it. Both 08-03 and 08-04 are in different waves now (08-03 = wave 1, 08-04 = wave 2 due to depends_on 08-01/08-02/08-03), so wave-based execution sequencing already enforces this.
+
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Build sendReminderBooker email sender</name>
-  <files>lib/email/send-reminder-booker.ts, tests/__mocks__/email-sender.ts</files>
+  <name>Task 1: Build sendReminderBooker email sender + extract shared token helpers</name>
+  <files>lib/email/send-reminder-booker.ts, lib/booking-tokens.ts, tests/__mocks__/email-sender.ts</files>
   <action>
-    Mirror the shape of `lib/email/send-booking-confirmation.ts` (Phase 5) and `lib/email/send-cancel-emails.ts` (Phase 6). Reuse all branding helpers from `lib/email/branding-blocks.ts`.
+    Step A — extract shared token helpers to `lib/booking-tokens.ts` (used by both cron route and bookings route — single source of truth):
+
+    ```typescript
+    // lib/booking-tokens.ts
+    import "server-only";
+    import crypto from "node:crypto";
+
+    /**
+     * Generate a fresh raw token. 32 random bytes -> base64url.
+     * Matches the format used in Phase 5/6 email lifecycle links.
+     */
+    export function generateRawToken(): string {
+      return crypto.randomBytes(32).toString("base64url");
+    }
+
+    /**
+     * SHA-256 hash a raw token for DB storage.
+     * Storage column convention: cancel_token_hash, reschedule_token_hash (Phase 5 schema).
+     */
+    export function hashToken(raw: string): string {
+      return crypto.createHash("sha256").update(raw).digest("hex");
+    }
+    ```
+
+    Step B — build `lib/email/send-reminder-booker.ts`. Mirror the shape of `lib/email/send-booking-confirmation.ts` (Phase 5) and `lib/email/send-cancel-emails.ts` (Phase 6). Reuse all branding helpers from `lib/email/branding-blocks.ts`.
 
     File: `lib/email/send-reminder-booker.ts`
 
@@ -208,17 +247,35 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
     - Time formatting MUST use the booker's submitted timezone (TZDate + format), matching the convention used in confirmation/cancel/reschedule senders.
     - Branding: identical visual structure to Phase 7 confirmation email — logo header, brand H1, branded button, NSI-attribution footer. The reminder is the SAME visual frame with different content.
 
+    Step C — content-quality test (Warning 9 — automated content guard for EMAIL-08):
+
+    Add a small Vitest unit test (in the same file or a new `tests/reminder-email-content.test.ts`) that:
+    1. Calls `sendReminderBooker(...)` with a mocked `sendEmail` that captures `{html, text, subject}`.
+    2. Asserts on the captured HTML:
+       - Every `href="..."` value is either `https://...` or starts with `/` (no `href="undefined"` or `href=""`).
+       - Has a non-empty `text` plain-text alternative.
+       - When `account.logo_url` is set, the rendered HTML contains an `<img>` tag with that exact URL (logo wired correctly).
+       - Subject does NOT contain three or more consecutive uppercase words (no "REMINDER: BOOK YOUR" style spam).
+    3. Runs against three fixture configurations: all toggles on, all toggles off, mixed.
+
+    This is a content-quality automated guard since mail-tester score (CONTEXT.md decision: Gmail SMTP handles SPF/DKIM, content is the main remaining variable). The full mail-tester score is still part of 08-08 manual checkpoint, but this test catches obvious content regressions in CI.
+
+    Step D — update email-sender mock:
+
     Update `tests/__mocks__/email-sender.ts` (or wherever the email mock lives) to include a `sendReminderBooker` named export that records its args, mirroring how `sendBookingEmails` is mocked in the Phase 5 tests.
   </action>
   <verify>
+    `cat lib/booking-tokens.ts | head -10` shows `import "server-only"` at top.
+    `grep -n "generateRawToken\|hashToken" lib/booking-tokens.ts` shows both exports.
     `cat lib/email/send-reminder-booker.ts | head -10` shows `import "server-only"` at top.
     `grep -n "Reminder:" lib/email/send-reminder-booker.ts` shows the subject template.
     `grep -n "reminder_include_" lib/email/send-reminder-booker.ts` shows three toggle checks.
     `grep -n "renderEmailLogoHeader\|renderEmailFooter\|renderBrandedButton" lib/email/send-reminder-booker.ts` shows all three branding helpers used.
     Type-check: `npx tsc --noEmit` passes.
+    Content-quality test passes: `npm test -- reminder-email-content` (or whatever filename you use).
   </verify>
   <done>
-    `sendReminderBooker(args)` is callable from cron route + booking creation route. Output email visually matches Phase 7 confirmation. All three toggles correctly omit content when false. Mock is updated for downstream tests.
+    `sendReminderBooker(args)` is callable from cron route + booking creation route. Output email visually matches Phase 7 confirmation. All three toggles correctly omit content when false. Content-quality automated test guards against broken hrefs / missing text alt / missing logo / spammy subject. Shared token helpers live in `lib/booking-tokens.ts`. Mock is updated for downstream tests.
   </done>
 </task>
 
@@ -231,19 +288,10 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
     ```typescript
     import { after, type NextRequest } from "next/server";
     import { createAdminClient } from "@/lib/supabase/admin"; // adjust path to actual admin-client factory
-    import crypto from "node:crypto";
+    import { generateRawToken, hashToken } from "@/lib/booking-tokens";
     import { sendReminderBooker } from "@/lib/email/send-reminder-booker";
 
     const NO_STORE = { "Cache-Control": "no-store, no-transform" } as const;
-
-    function generateRawToken(): string {
-      // 32 random bytes → base64url, matches Phase 5/6 token format
-      return crypto.randomBytes(32).toString("base64url");
-    }
-
-    function hashToken(raw: string): string {
-      return crypto.createHash("sha256").update(raw).digest("hex");
-    }
 
     export const runtime = "nodejs";
 
@@ -381,6 +429,7 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
     - Token rotation: cron generates fresh `rawCancel` + `rawReschedule`, stores SHA-256 hashes via UPDATE, and includes raw tokens in the email body. This intentionally invalidates the original confirmation-email tokens — RESEARCH Open Q 3 chose this approach (simple, stateless).
     - `booking_events` insert with type `reminder_sent` (RESEARCH Pitfall 7) — use the existing column name from the Phase 6 booking_events schema; if column is named `kind` or `type` instead of `event_type`, match the existing convention. Read `supabase/migrations/20260419120000_initial_schema.sql` for the booking_events column definition.
     - Use the admin client (service-role) — RLS on bookings would block a system-level cron from reading other accounts' bookings.
+    - Token helpers `generateRawToken` and `hashToken` come from `lib/booking-tokens.ts` (Task 1). Do NOT redefine them inline here.
 
     Then create / update `vercel.json` at project root:
 
@@ -407,6 +456,7 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
     `grep -n "reminder_sent_at.*IS NULL\|.is(.reminder_sent_at., null)" app/api/cron/send-reminders/route.ts` shows compare-and-set.
     `grep -n "after(" app/api/cron/send-reminders/route.ts` shows after().
     `grep -n "cancel_token_hash\|reschedule_token_hash" app/api/cron/send-reminders/route.ts` shows token rotation.
+    `grep -n "from.*booking-tokens" app/api/cron/send-reminders/route.ts` shows shared helper import.
     `npx tsc --noEmit` passes.
   </verify>
   <done>
@@ -422,15 +472,21 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
 
     In `app/api/bookings/route.ts`, after the booking is successfully created and confirmation emails are scheduled (the existing `after(() => sendBookingEmails(...))` from 08-02), add a second `after()` block that fires the reminder email immediately IF the booking starts within the next 24 hours.
 
+    IMPORTANT precondition: Plan 08-03 must already have run (it's now an explicit dependency in this plan's frontmatter), so `app/api/bookings/route.ts` already has the rate-limit guard inserted at the top of the POST handler. The immediate-send hook is added LATER in the function body, after the booking has been successfully committed. Preserve the rate-limit guard from 08-03 — do NOT remove or relocate it.
+
     ```typescript
+    // At top of file:
+    import { generateRawToken, hashToken } from "@/lib/booking-tokens";
+    import { sendReminderBooker } from "@/lib/email/send-reminder-booker";
+
     // After booking is committed and after(() => sendBookingEmails(...)) is scheduled:
 
     const startMs = new Date(booking.start_at).getTime();
     const horizonMs = Date.now() + 24 * 60 * 60 * 1000;
 
     if (startMs <= horizonMs) {
-      // Generate fresh tokens (or reuse the ones from booking creation if available)
-      const rawCancel = generateRawToken();      // import / inline the same helper as cron
+      // Generate fresh tokens (using shared helpers from lib/booking-tokens.ts)
+      const rawCancel = generateRawToken();
       const rawReschedule = generateRawToken();
       const cancelHash = hashToken(rawCancel);
       const rescheduleHash = hashToken(rawReschedule);
@@ -487,7 +543,8 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
     - This runs ONLY if `start_at` is within 24h of now (INFRA-03 wording).
     - Compare-and-set claim ensures the next cron tick won't re-send for the same booking.
     - Token rotation here ALSO invalidates the just-sent confirmation email's lifecycle links. Acceptable trade-off: same-day bookings rarely need to use the confirmation-email token because the reminder arrives within seconds with newer links. This matches RESEARCH Open Q 3 design choice.
-    - Refactor: extract `generateRawToken` and `hashToken` into a shared util at `lib/booking-tokens.ts` (or similar) so both cron and bookings route import from one place. Don't duplicate.
+    - Token helpers come from `lib/booking-tokens.ts` (created in Task 1). Do NOT duplicate inline.
+    - Rate-limit guard from 08-03 stays untouched at the top of the POST handler.
 
     Step B — integration test `tests/reminder-cron.test.ts`:
 
@@ -522,11 +579,13 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
     `npm test -- reminder-cron` — all 8 cases pass.
     `grep -n "after(" app/api/bookings/route.ts` shows TWO after() blocks (sendBookingEmails from 08-02 + reminder block).
     `grep -n "horizonMs\|24 \* 60" app/api/bookings/route.ts` shows the 24h check.
+    `grep -n "from.*booking-tokens" app/api/bookings/route.ts` shows shared helper import.
+    `grep -n "checkRateLimit\|RATE_LIMITED" app/api/bookings/route.ts` confirms 08-03's rate-limit guard is still present (not accidentally removed).
     `npm run build` succeeds.
     `npm test` full suite green.
   </verify>
   <done>
-    Bookings created within 24h get an immediate reminder. Future-cron does not double-send because immediate-send claim populated `reminder_sent_at`. Integration tests cover auth, claim, idempotency, window, status, toggles, token rotation.
+    Bookings created within 24h get an immediate reminder. Future-cron does not double-send because immediate-send claim populated `reminder_sent_at`. Integration tests cover auth, claim, idempotency, window, status, toggles, token rotation. Rate-limit guard from 08-03 preserved.
   </done>
 </task>
 
@@ -539,6 +598,7 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
 4. `vercel.json` declares the cron path.
 5. `npm test` full suite green; new `reminder-cron` test passes.
 6. `npm run build` succeeds.
+7. Rate-limit guard from 08-03 still in place at top of POST /api/bookings handler.
 </verification>
 
 <success_criteria>
@@ -547,13 +607,27 @@ Output: One sender, one cron route, one updated booking route, one vercel.json, 
 - INFRA-03: Bookings inside 24h window get an immediate reminder.
 - EMAIL-05: Booker receives reminder ~24h before appointment with branded styling, conditional toggle blocks, and working cancel/reschedule links.
 - vercel.json daily fallback in place; ready for cron-job.org hourly driver in Plan 08-08.
+- Content-quality automated test guards reminder email HTML in CI (broken hrefs, missing text alt, missing logo, spammy subject).
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/08-reminders-hardening-and-dashboard-list/08-04-SUMMARY.md` documenting:
 - Token-rotation strategy chosen and side effect on confirmation-email tokens
-- Whether `lib/booking-tokens.ts` was extracted (or how token helpers were shared)
+- Confirmation that `lib/booking-tokens.ts` was extracted as shared helper module
 - Integration test count and what cases are covered
+- Content-quality test outcomes (which assertions passed/failed)
 - Vercel.json schedule chosen and Hobby-tier rationale
 - Any deviations from RESEARCH.md patterns
+
+---
+
+## Phase 8 Wave Layout (current as of this revision)
+
+| Wave | Plans | Notes |
+|------|-------|-------|
+| 1 | 08-01, 08-02, 08-03 | All independent (no depends_on) — run in parallel |
+| 2 | 08-04, 08-05, 08-06, 08-07 | All depend on Wave 1 plans; 08-04 also depends on 08-03 (shared file: app/api/bookings/route.ts) |
+| 3 | 08-08 | Depends on 08-04 (cron exists before ops checkpoints) |
+
+08-04's added `08-03` dependency does NOT change wave assignment (08-03 is wave 1; max-of-deps + 1 = 2, same as before).
 </output>

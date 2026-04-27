@@ -11,7 +11,7 @@ files_modified:
   - app/api/bookings/route.ts
   - app/api/cancel/route.ts
   - app/api/reschedule/route.ts
-  - app/(shell)/app/bookings/[id]/_lib/owner-cancel-action.ts
+  - app/(shell)/app/bookings/[id]/_lib/actions.ts
 autonomous: true
 
 must_haves:
@@ -46,6 +46,8 @@ Resolve three cross-cutting hardening prerequisites that unblock later Phase 8 p
 
 Purpose: These three small concerns share the property of being independent, low-risk, and Wave-1-eligible — none of them touches the new Phase 8 schema columns. Bundling them avoids spawning three trivial plans and gets all three off the backlog before Wave 2 starts.
 
+The dependency install (Task 1a) and the ESLint migration (Task 1b) are split into separate commits so that if ESLint surfaces unrelated lint violations and stalls, Task 1a still ships and unblocks 08-07.
+
 Output: Updated package.json, working `npm run lint`, and three API routes + one Server Action using `after()` instead of `void promise`.
 </objective>
 
@@ -60,23 +62,45 @@ Output: Updated package.json, working `npm run lint`, and three API routes + one
 @app/api/bookings/route.ts
 @app/api/cancel/route.ts
 @app/api/reschedule/route.ts
+@app/(shell)/app/bookings/[id]/_lib/actions.ts
 @package.json
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Install use-debounce and migrate ESLint to flat config</name>
-  <files>package.json, package-lock.json, eslint.config.mjs, .eslintrc.json (delete if present)</files>
+  <name>Task 1a: Install use-debounce</name>
+  <files>package.json, package-lock.json</files>
   <action>
-    Step A — install use-debounce:
+    Single small step — install `use-debounce` as a runtime dependency (NOT devDependency; it's used in client components by Plan 08-07).
+
     ```bash
     npm install use-debounce
     ```
-    Verify it appears in `package.json` dependencies (NOT devDependencies; it's used in client component).
 
-    Step B — migrate ESLint to flat config:
+    Verify it appears in `package.json` `dependencies` (not `devDependencies`).
 
+    Commit:
+    ```bash
+    git add package.json package-lock.json
+    git commit -m "chore(08-02): install use-debounce (08-07 owner-note autosave dep)"
+    ```
+
+    Why this is its own atomic task: Plan 08-07 is blocked until `use-debounce` is in `package.json`. If the ESLint flat-config migration in Task 1b surfaces unrelated lint violations and stalls, Task 1a still ships and unblocks downstream work. Splitting the commits costs nothing and de-risks Task 1b.
+  </action>
+  <verify>
+    `npm ls use-debounce` shows the package installed.
+    `grep -n '"use-debounce"' package.json` shows entry under `"dependencies"` (NOT `"devDependencies"`).
+  </verify>
+  <done>
+    use-debounce is a runtime dependency in package.json. 08-07 is unblocked.
+  </done>
+</task>
+
+<task type="auto">
+  <name>Task 1b: Migrate ESLint to flat config</name>
+  <files>eslint.config.mjs, .eslintrc.json (delete if present)</files>
+  <action>
     The project has a pre-existing circular-JSON error in `npm run lint` (STATE.md backlog line 236). Root cause: legacy `.eslintrc.*` config under ESLint v9 + flat-config requirement.
 
     1. Identify current ESLint config: look for `.eslintrc.json`, `.eslintrc.js`, or `eslint.config.*`. Read whatever exists.
@@ -110,10 +134,12 @@ Output: Updated package.json, working `npm run lint`, and three API routes + one
        export default eslintConfig;
        ```
     3. Delete legacy config: `git rm .eslintrc.json` (or whichever legacy file existed).
-    4. Run `npm run lint`. Confirm:
-       - No "circular structure converted to JSON" error.
-       - Either zero violations OR a clear, actionable list of violations.
-       - If real violations surface in production code, fix them. If they're in `.next/` or generated files, expand the `ignores` array.
+    4. Run `npm run lint`. Three possible outcomes:
+       - **Clean**: zero violations → proceed to commit.
+       - **Real production violations**: fix them inline and proceed to commit.
+       - **Volume too large or violations are in generated code**:
+         - If violations are in `.next/` or generated files, expand the `ignores` array and re-run.
+         - If real production violations are too numerous to fix in this task without scope creep, document the count + categories in the SUMMARY and defer fixes to a follow-up Phase 9 hardening task. The migration itself (no more circular-JSON crash) is the deliverable; surfacing actionable violations is the success state.
 
     Why FlatCompat: `eslint-config-next` 16.x still ships as a legacy config. FlatCompat is the official Next.js recommendation for bridging until next/core-web-vitals ships native flat config.
 
@@ -121,25 +147,26 @@ Output: Updated package.json, working `npm run lint`, and three API routes + one
 
     Commit:
     ```bash
-    git add package.json package-lock.json eslint.config.mjs
+    git add eslint.config.mjs
     git rm .eslintrc.json 2>/dev/null || true
-    git commit -m "chore(08-02): install use-debounce + migrate ESLint to flat config"
+    git commit -m "chore(08-02): migrate ESLint to flat config (clears circular-JSON crash)"
     ```
+
+    If lint surfaces unrelated production violations and you choose to defer their fixes: explicitly note in the SUMMARY which categories/files have outstanding violations + a recommendation for Phase 9 hardening pickup. Do NOT block the commit on those fixes.
   </action>
   <verify>
-    `npm ls use-debounce` shows the package installed.
     `npm run lint` completes with exit code 0 (or non-zero with a normal violation list — NOT a stack trace mentioning "circular structure converted to JSON").
     `cat eslint.config.mjs` shows valid flat config.
     Legacy `.eslintrc.*` no longer present (`ls .eslintrc* 2>/dev/null` returns empty).
   </verify>
   <done>
-    use-debounce installed as a runtime dep. ESLint flat config in place. `npm run lint` no longer crashes with circular-JSON; either passes or returns a normal violation list.
+    ESLint flat config in place. `npm run lint` no longer crashes with circular-JSON; either passes or returns a normal violation list. If violations surfaced, either fixed inline or documented for Phase 9 deferral.
   </done>
 </task>
 
 <task type="auto">
   <name>Task 2: Migrate fire-and-forget email patterns to after() from next/server</name>
-  <files>app/api/bookings/route.ts, app/api/cancel/route.ts, app/api/reschedule/route.ts, app/(shell)/app/bookings/[id]/_lib/owner-cancel-action.ts</files>
+  <files>app/api/bookings/route.ts, app/api/cancel/route.ts, app/api/reschedule/route.ts, app/(shell)/app/bookings/[id]/_lib/actions.ts</files>
   <action>
     Replace `void someEmailPromise(...)` patterns with `after(() => someEmailPromise(...))` from `next/server`. RESEARCH.md Pattern 4 documents this is stable in Next.js 15.1+ and this project is 16.2.4.
 
@@ -163,14 +190,14 @@ Output: Updated package.json, working `npm run lint`, and three API routes + one
        ```
     5. Keep the response statement BELOW the `after()` call. `after()` schedules work to run AFTER the response is flushed; calling order matters for clarity but execution semantics are correct as long as `after()` is called before the function returns.
 
-    Specific files (search the codebase for actual occurrences — these are the four flagged in STATE.md backlog line 237):
+    Specific files (verified against codebase scan):
 
     - `app/api/bookings/route.ts` — likely has `void sendBookingEmails(...)` after success path. Replace with `after(() => sendBookingEmails(...))`.
     - `app/api/cancel/route.ts` — has fire-and-forget cancel email. Replace.
     - `app/api/reschedule/route.ts` — has fire-and-forget reschedule email. Replace.
-    - `app/(shell)/app/bookings/[id]/_lib/owner-cancel-action.ts` (or whatever the Phase 6 owner cancel Server Action filename actually is — search for `cancelBookingAsOwner` definition). Server Actions also support `after()` from `next/server`. Replace any `void`-style fire-and-forget there.
+    - `app/(shell)/app/bookings/[id]/_lib/actions.ts` — Phase 6 owner-cancel Server Action. Filename confirmed via codebase scan during revision 1 (NOT `owner-cancel-action.ts` as previously guessed). Search for the `cancelBookingAsOwner` (or similar) export and replace any `void`-style fire-and-forget calls.
 
-    NOTE on Server Actions: `after()` IS supported in Server Actions per Next.js 15.1+ docs. If the lookup finds the cancel action lives at a different path, update files_modified frontmatter accordingly in SUMMARY.
+    NOTE on Server Actions: `after()` IS supported in Server Actions per Next.js 15.1+ docs. Same import from `next/server`.
 
     NOTE on runtime: All four files run on Node.js runtime (NOT edge). `after()` is fully supported. Do not change runtime declarations.
 
@@ -186,7 +213,10 @@ Output: Updated package.json, working `npm run lint`, and three API routes + one
 
     Commit:
     ```bash
-    git add app/api/bookings/route.ts app/api/cancel/route.ts app/api/reschedule/route.ts app/\(shell\)/app/bookings/\[id\]/_lib/*.ts
+    git add app/api/bookings/route.ts \
+            app/api/cancel/route.ts \
+            app/api/reschedule/route.ts \
+            app/\(shell\)/app/bookings/\[id\]/_lib/actions.ts
     git commit -m "refactor(08-02): replace void-promise fire-and-forget with next/server after()"
     ```
   </action>
@@ -212,17 +242,17 @@ Output: Updated package.json, working `npm run lint`, and three API routes + one
 </verification>
 
 <success_criteria>
-- use-debounce in package.json runtime dependencies.
-- ESLint flat config in place; `npm run lint` runs without crashing.
-- Four files using `after()` from `next/server` instead of `void promise`.
+- use-debounce in package.json runtime dependencies (Task 1a).
+- ESLint flat config in place; `npm run lint` runs without crashing (Task 1b — committable independently of 1a).
+- Four files using `after()` from `next/server` instead of `void promise` (Task 2).
 - All existing 80 tests still pass.
-- Three commits pushed (or one squashed commit covering all changes).
+- Three commits pushed (Task 1a, Task 1b, Task 2 — independent commits so any single task that stalls does not block the others).
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/08-reminders-hardening-and-dashboard-list/08-02-SUMMARY.md` documenting:
 - ESLint config migration approach (FlatCompat vs native — depends on what next-config-next supports)
-- Any lint violations surfaced and how resolved
+- Any lint violations surfaced and how resolved (or deferred to Phase 9 with category breakdown)
 - Exact list of fire-and-forget call sites migrated (file + function called)
 - Test count before/after (should be same — 80/80 expected)
 </output>

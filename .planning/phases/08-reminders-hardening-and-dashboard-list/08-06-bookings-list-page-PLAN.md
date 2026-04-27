@@ -133,9 +133,13 @@ Output: One Server Component page + three client components + one query helper. 
         .order("start_at", { ascending: true })
         .range(offset, offset + params.pageSize - 1);
 
-      // Status filter (CONTEXT.md decision: default upcoming-only)
+      // Status filter (CONTEXT.md decision: default = upcoming-only).
+      // "upcoming" applies ONLY a time filter (start_at >= now); it does NOT constrain status.
+      // Future cancelled/rescheduled bookings remain visible in the upcoming view so the owner
+      // can see lifecycle changes that have already happened to future bookings. Status filtering
+      // is user-controlled via the dropdown (confirmed/cancelled/rescheduled options).
       if (params.statusFilter === "upcoming") {
-        q = q.gte("start_at", new Date().toISOString()).eq("status", "confirmed");
+        q = q.gte("start_at", new Date().toISOString());
       } else if (params.statusFilter !== "all") {
         q = q.eq("status", params.statusFilter);
       }

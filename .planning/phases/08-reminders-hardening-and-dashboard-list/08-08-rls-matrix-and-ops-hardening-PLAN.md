@@ -231,10 +231,84 @@ Output: New RLS matrix test, render harness test, helpers extended, .env.local.e
 
       let nsiClient: Awaited<ReturnType<typeof signInAsNsiOwner>>;
       let test2Client: Awaited<ReturnType<typeof signInAsNsiTest2Owner>>;
+      let test2EventTypeId: string | null = null;
+      let test2AccountId: string | null = null;
 
       beforeAll(async () => {
         nsiClient = await signInAsNsiOwner();
         test2Client = await signInAsNsiTest2Owner();
+
+        // Seed nsi-rls-test with at least one row in event_types so isolation
+        // assertions exercise RLS meaningfully. Without seeded data, an empty
+        // result trivially passes "test2 sees no nsi rows" because test2 sees
+        // NOTHING — which would also be the (broken) outcome if RLS denied
+        // its own account's rows. We need real test2 data to prove the
+        // policy correctly ALLOWS own-account access AND DENIES cross-account.
+        const admin = adminClient();
+
+        // Look up nsi-rls-test account id (created in Task 1 prereq B)
+        const { data: acct } = await admin
+          .from("accounts")
+          .select("id")
+          .eq("slug", "nsi-rls-test")
+          .maybeSingle();
+        if (!acct) {
+          throw new Error(
+            "nsi-rls-test account not found. Run Task 1 prereq B SQL to insert account row.",
+          );
+        }
+        test2AccountId = acct.id;
+
+        // Idempotent seed: insert event_type if not already present
+        const { data: existing } = await admin
+          .from("event_types")
+          .select("id")
+          .eq("account_id", test2AccountId)
+          .eq("slug", "rls-isolation-fixture")
+          .maybeSingle();
+
+        if (existing) {
+          test2EventTypeId = existing.id;
+        } else {
+          const { data: inserted, error: insertErr } = await admin
+            .from("event_types")
+            .insert({
+              account_id: test2AccountId,
+              name: "RLS isolation fixture",
+              slug: "rls-isolation-fixture",
+              duration_minutes: 30,
+              active: true,
+            })
+            .select("id")
+            .single();
+          if (insertErr || !inserted) {
+            throw new Error(`Failed to seed nsi-rls-test event_type: ${insertErr?.message}`);
+          }
+          test2EventTypeId = inserted.id;
+        }
+      });
+
+      // Positive control: prove RLS allows own-account access.
+      // Without this, an empty result is ambiguous (could be RLS denying everything).
+      it("nsi-rls-test owner CAN see their own seeded event_type (positive control)", async () => {
+        const { data, error } = await test2Client
+          .from("event_types")
+          .select("id")
+          .eq("id", test2EventTypeId!)
+          .maybeSingle();
+        expect(error).toBeNull();
+        expect(data?.id).toBe(test2EventTypeId);
+      });
+
+      // Cross-tenant isolation: nsi owner must NOT see the seeded test2 event_type.
+      it("nsi owner CANNOT see nsi-rls-test's seeded event_type (cross-tenant isolation)", async () => {
+        const { data } = await nsiClient
+          .from("event_types")
+          .select("id")
+          .eq("id", test2EventTypeId!)
+          .maybeSingle();
+        // RLS hides the row → maybeSingle() returns null data, no error
+        expect(data).toBeNull();
       });
 
       // Anon SELECT lockout (already covered by rls-anon-lockout.test.ts but re-asserted for matrix completeness)
@@ -394,12 +468,38 @@ Output: New RLS matrix test, render harness test, helpers extended, .env.local.e
       });
 
       // Specific: TooltipProvider was the regression that motivated this harness
-      // (Plan 02-04). Add a child component that tries to use a tooltip and
-      // assert no provider error.
+      // (Plan 02-04). Render a small child that USES <Tooltip> from the project
+      // Tooltip primitives. If TooltipProvider is missing from ShellLayout's tree,
+      // radix-ui throws at render with "Tooltip must be used within TooltipProvider".
       it("provides TooltipProvider context for descendants", () => {
-        // Use the actual Tooltip primitive from radix-ui to assert provider is present
-        // If TooltipProvider is missing, this throws at render
-        // ... see test details below ...
+        // Lazy import the project Tooltip primitive (path may differ by codebase
+        // — adjust to the actual location, e.g. @/components/ui/tooltip).
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { Tooltip, TooltipTrigger, TooltipContent } = require("@/components/ui/tooltip");
+
+        // Render a Tooltip-using child INSIDE ShellLayout. If the layout fails to
+        // mount TooltipProvider, this render call throws synchronously.
+        const TooltipChild = () => (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button data-testid="tooltip-trigger">trigger</button>
+            </TooltipTrigger>
+            <TooltipContent>tip</TooltipContent>
+          </Tooltip>
+        );
+
+        // The render should NOT throw. If it does, jest/vitest surfaces the error
+        // and the test fails — exactly the regression class Plan 02-04 motivated.
+        expect(() => {
+          render(
+            <ShellLayout>
+              <TooltipChild />
+            </ShellLayout>
+          );
+        }).not.toThrow();
+
+        // Also assert the trigger actually rendered (no silent provider stub).
+        expect(document.querySelector('[data-testid="tooltip-trigger"]')).toBeTruthy();
       });
     });
     ```
