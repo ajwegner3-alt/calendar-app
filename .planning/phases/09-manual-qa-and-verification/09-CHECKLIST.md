@@ -31,8 +31,8 @@
 | 4   | DST/timezone correctness verified — Notes column MUST record (a) Andrew's substitution-approval signal verbatim if applicable and (b) the substitute method used (e.g., "cross-timezone NY/Chicago"); if not substituted, record actual method used                | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Remaining verification work consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
 | 5   | Responsive at 320 / 768 / 1024 (hosted + embed)                                                                                                                                                                                                                    | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Remaining verification work consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
 | 6   | Multi-tenant UI isolation (manual login as 2nd test user)                                                                                                                                                                                                          | DEFERRED                                                                | 2026-04-27 | Andrew elected to defer to v1.1 / next milestone — other priorities pressing. Not a failure; explicit scope-cut by project owner. Note: automated RLS cross-tenant matrix (Plan 08-08, `tests/rls-cross-tenant-matrix.test.ts`) provides backend isolation coverage. Live UI-layer multi-tenant login walkthrough deferred. Consolidated into FUTURE_DIRECTIONS.md (Plan 09-03). |
-| 7   | FUTURE_DIRECTIONS.md committed to repo root (Plan 09-03)                                                                                                                                                                                                           | PENDING                                                                 | __         | Plan 09-03 work. |
-| 8   | Andrew explicit ship sign-off                                                                                                                                                                                                                                      | PENDING                                                                 | __         | Plan 09-03 work. |
+| 7   | FUTURE_DIRECTIONS.md committed to repo root (Plan 09-03)                                                                                                                                                                                                           | PASS                                                                    | 2026-04-27 | Committed at repo root in `5f9e725`. 213 lines, all 6 required sections + Untested Email Clients + Commit Reference appendix. |
+| 8   | Andrew explicit ship sign-off                                                                                                                                                                                                                                      | PASS                                                                    | 2026-04-27 | Andrew verbatim: "ship v1". |
 
 ### Criterion #2 — per-template body branding smoke (6 transactional emails)
 
@@ -135,6 +135,9 @@ _Any criterion downgraded by Andrew during the Plan 09-02 marathon will be appen
 
 ## Sign-off
 
-- [ ] Andrew reviewed all entries above
-- [ ] Andrew explicit verbal sign-off ("ship v1")
-- **Sign-off timestamp:** __
+- [x] Andrew reviewed all entries above
+- [x] Andrew explicit verbal sign-off ("ship v1")
+- **Sign-off timestamp:** 2026-04-27
+- **Sign-off commit:** _populated when this commit lands; see `git log -1 --format=%H -- .planning/phases/09-manual-qa-and-verification/09-CHECKLIST.md`_
+
+**v1 SHIPPED.** Phase 9 complete; v1.0 milestone closed.
