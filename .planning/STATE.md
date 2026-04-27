@@ -1,12 +1,12 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-26 (Plan 08-01 complete — Phase 8 schema additions migration applied to live remote DB: 3 reminder toggles on accounts + location on event_types + owner_note on bookings; 5 columns verified via information_schema; existing nsi + nsi-test rows backfilled with defaults; 80/80 tests still green; commit aa6ac14)
+**Last updated:** 2026-04-26 (Plan 08-02 complete — three Wave-1 hardening prereqs shipped: use-debounce@10.1.1 installed for 08-07; ESLint flat config migrated off FlatCompat to native eslint-config-next 16 imports (clears the Phase 1 circular-JSON crash and surfaces 19 pre-existing violations now deferred to Phase 9); all `void sendXxxEmails(...)` patterns swapped to `after()` from `next/server` across app/api/bookings/route.ts + lib/bookings/{cancel,reschedule}.ts with a tests/setup.ts shim for Vitest; 80/80 tests still green; 3 atomic commits: fe2c3de + 211fff1 + 8d3af15)
 
 ## Project Reference
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox - no phone tag, no back-and-forth.
 
-**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 1 in progress; Plan 08-01 complete (schema additions live). Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 80/80 tests green.
+**Current focus:** Phase 8 (Reminders + Hardening + Dashboard List) — Wave 1 progressing; Plans 08-01 + 08-02 complete (schema additions live; hardening prereqs shipped). Phase 7 COMPLETE (all 9 plans 07-01 through 07-09 complete, live-verified 2026-04-26). 80/80 tests green.
 
 **Mode:** yolo
 **Depth:** standard
@@ -15,9 +15,9 @@
 ## Current Position
 
 **Phase:** 8 (Reminders + Hardening + Dashboard List) — Wave 1 in progress
-**Plan:** 08-01 complete (1 / 8 Phase 8 plans done)
-**Status:** Plan 08-01 complete; Wave 2 plans (08-04, 08-05, 08-07) unblocked
-**Last activity:** 2026-04-26 — Plan 08-01 complete (Phase 8 schema migration applied to live DB: 3 reminder toggles + location + owner_note; 5 columns verified; 80/80 tests green; commit aa6ac14)
+**Plan:** 08-02 complete (2 / 8 Phase 8 plans done)
+**Status:** Plans 08-01 + 08-02 complete; Wave 2 plans (08-04, 08-05, 08-07) unblocked. Plan 08-03 (rate limiting on /api/bookings) ready next — no collision with 08-02's after() block.
+**Last activity:** 2026-04-26 — Plan 08-02 complete (use-debounce installed; ESLint flat config migrated; void sendXxxEmails → after() across 3 production files; tests/setup.ts after() shim; 80/80 tests green; commits fe2c3de + 211fff1 + 8d3af15)
 **Progress:** [██████░░░] 6 / 9 phases complete (Phase 7 now done = 7/9 code-complete; Phases 8-9 pending)
 
 ```
@@ -224,6 +224,11 @@ Phase 9  [ ] Manual QA & Verification
 - **Migration drift workaround LOCKED (Plan 08-01 confirms 03-01 + 05-01 + 06-01)** — `npx supabase db push --linked` continues to fail with "Remote migration versions not found in local migrations directory" due to three orphan timestamps in the supabase_migrations.schema_migrations table on the remote DB (20251223162516, 20260419144234, 20260419144302). Locked workaround: `npx supabase db query --linked -f <migration-file>`. Same Management API path; bypasses the schema_migrations tracking table. Phase 8 hardening could add a "fix migrations drift" cleanup task — until then, all new migrations MUST use the db query fallback.
 - **Forward contract: NULL location semantics (Plan 08-01 → 08-04)** — `event_types.location IS NULL` means "no location set". 08-04 reminder cron MUST omit the location block from the email when location is null, regardless of `accounts.reminder_include_location`. The toggle gates the block when location IS set; nullness wins absolutely.
 - **Forward contract: empty-string → null at action boundary (Plan 08-01 → 08-05 + 08-07)** — Settings UI (08-05) writes to `event_types.location` should normalize empty string to `null` before calling the action. Same convention for `bookings.owner_note` autosave (08-07). Mirrors the locked Plan 04-04 daily_cap pattern.
+- **ESLint config: native flat imports, NOT FlatCompat** (Plan 08-02) — `eslint-config-next` 16.x ships `core-web-vitals` and `typescript` as native flat-config arrays. Use `import nextCoreWebVitals from "eslint-config-next/core-web-vitals"` directly; FlatCompat caused the circular-JSON crash inside `@eslint/eslintrc`'s ConfigValidator (couldn't JSON-serialize `eslint-plugin-react`'s self-referencing config). Direct imports skip the validator. Future ESLint config edits MUST NOT re-introduce FlatCompat.
+- **`after()` from `next/server` is the canonical fire-and-forget primitive** (Plan 08-02) — Replaces all `void promise` patterns. Chosen over `@vercel/functions` `waitUntil` per RESEARCH §State of the Art. Production wraps: `app/api/bookings/route.ts` (sendBookingEmails), `lib/bookings/cancel.ts` (sendCancelEmails), `lib/bookings/reschedule.ts` (sendRescheduleEmails). Plan 08-04 reminder cron + any future fire-and-forget paths MUST use `after()`.
+- **`after()` IS safe in `lib/bookings/*.ts`** (Plan 08-02) — Even though `after()` requires a request scope, calling it from shared lib functions is safe IFF every caller is request-scoped. `cancelBooking()` is called from `/api/cancel` (Route Handler) + `cancelBookingAsOwner` (Server Action); `rescheduleBooking()` is called from `/api/reschedule` (Route Handler). Both qualify. When adding new lib functions that call `after()`, document this caller invariant in JSDoc.
+- **Vitest `after()` shim in tests/setup.ts** (Plan 08-02) — Raw Vitest invocations of `POST(req)` aren't inside a Next.js request scope, so `after()` throws "outside a request scope". `tests/setup.ts` adds a `vi.mock("next/server", ...)` block that re-exports the real module but stubs `after()` to fire the callback as a microtask. The existing 100ms drain wait in `bookings-api.test.ts` continues to observe `__mockSendCalls`. Future test setup rewrites MUST preserve this shim.
+- **Plan 08-02 file-list deviation** (Plan 08-02) — Plan 08-02's `files_modified` listed `app/api/cancel/route.ts`, `app/api/reschedule/route.ts`, and `app/(shell)/app/bookings/[id]/_lib/actions.ts` for the `after()` migration, but those files do NOT contain `void send` patterns — they delegate to `cancelBooking()` / `rescheduleBooking()` in `lib/bookings/`. Migration was applied at the real call sites in `lib/bookings/{cancel,reschedule}.ts`. Honored the plan's intent ("kill all void-promise patterns") rather than its file list. See 08-02-SUMMARY.md Deviation #1.
 
 ### Carried Concerns / Todos
 
@@ -237,8 +242,10 @@ Phase 9  [ ] Manual QA & Verification
 - ~~Confirm `@nsi/email-sender` attachment signature before Phase 5 plan.~~ RESOLVED: vendored in Plan 05-02; attachment API in EmailAttachment interface (filename, content, contentType).
 - **CHECKPOINT PENDING (Plan 05-02 Task 2):** Andrew must set TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL in both .env.local AND Vercel Production env before Plans 05-03+ can proceed. Resume signal: "env vars set".
 - **Phase 8 backlog: render-test harness** — Vitest + React Testing Library coverage for shell layout. The TooltipProvider regression in Plan 02-04 would have been caught at CI instead of user smoke. Add a render test that mounts `ShellLayout` and asserts no missing context providers.
-- **Phase 8 backlog: ESLint flat-config migration** — pre-existing circular-JSON error in `npm run lint` carries forward from Phase 1. Doesn't block phases 2-7 builds, but blocks lint hygiene.
-- **Phase 8 backlog: `waitUntil()` adoption (INFRA-01/INFRA-04 candidate)** — During Phase 6 manual QA, the second booking confirmation email took longer than expected (arrived eventually; no code change). If lambda-timeout symptoms appear in Phase 9 hardening, adopt `waitUntil()` from `@vercel/functions` on fire-and-forget email paths in: `app/api/bookings/route.ts`, `app/api/cancel/route.ts`, `app/api/reschedule/route.ts`, and `cancelBookingAsOwner` Server Action. Not a Phase 6 blocker.
+- ~~**Phase 8 backlog: ESLint flat-config migration**~~ RESOLVED in Plan 08-02 (commit 211fff1) — migrated to native `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript` flat exports; no more circular-JSON crash. 19 pre-existing lint violations now visible and deferred to Phase 9 cleanup (see 08-02-SUMMARY.md for full breakdown).
+- ~~**Phase 8 backlog: `waitUntil()` adoption (INFRA-01/INFRA-04 candidate)**~~ RESOLVED in Plan 08-02 (commit 8d3af15) — chose `after()` from `next/server` over `@vercel/functions` `waitUntil` (RESEARCH §State of the Art). Migrated `void sendBookingEmails(...)` in `app/api/bookings/route.ts`, `void sendCancelEmails(...)` in `lib/bookings/cancel.ts`, and `void sendRescheduleEmails(...)` in `lib/bookings/reschedule.ts` to `after(() => ...)`. Audit-row `void supabase.from('booking_events').insert(...)` patterns in lib/bookings/{cancel,reschedule}.ts intentionally left on `void` to keep 08-02 diff narrow — candidate for follow-up commit (Phase 8 or Phase 9).
+- **Phase 9 backlog: lint cleanup (19 violations surfaced by 08-02)** — Now that `npm run lint` runs, the following pre-existing violations need attention: 8 errors (`react-hooks/set-state-in-effect` × 6 in booking-shell/slot-picker/reschedule-shell/use-mobile, `react-hooks/refs` × 1 in booking-form for turnstileRef inside effect, `react-hooks/incompatible-library` × 1) + 11 warnings (`@typescript-eslint/no-unused-vars` × 8 — mostly underscore-prefixed args in test mocks; `react-hooks/exhaustive-deps` "unused disable" × 2). Recommended approach: configure `argsIgnorePattern: "^_"` to clear 8 warnings; remove stale eslint-disable comments to clear 2 more; refactor 4 set-state-in-effect hits with useSyncExternalStore + lazy initial state patterns. None affect runtime — production has been live with all of them since Phase 7.
+- **Phase 9 backlog: audit-row `void` cleanup (08-02 follow-up)** — Two `void supabase.from('booking_events').insert(...).then(...)` patterns remain in `lib/bookings/cancel.ts` and `lib/bookings/reschedule.ts`. Same lambda-mid-flight-kill risk as the email sends. Migrate to `after()` in a follow-up commit.
 - **Phase 9 backlog: .ics iTIP calendar-client removal/update** — Deferred from Phase 6 manual QA step 4. Verify METHOD:CANCEL auto-removes event in Apple Mail / Gmail web / Outlook web; verify METHOD:REQUEST + same UID + SEQUENCE:1 updates event in-place on reschedule. Consolidates with Phase 5's "ICS file structure for Gmail inline card" and QA-03 mail-tester items.
 - **Phase 9 backlog: rate-limit live verification** — Deferred from Phase 6 manual QA step 8. Integration test #7 proves the code path. Live check: hit `/api/cancel` and `/api/reschedule` 11+ times rapidly from same IP; confirm 429 + Retry-After in real browser DevTools; confirm rate_limit_events accumulates in Supabase under real network load.
 - **Phase 9 backlog: branding editor file-rejection edge cases (Plan 07-04 steps 8–10)** — Server-side validation code is correct and committed. Deferred because Andrew did not have the right test files during the 2026-04-26 smoke session. Three checks needed: (1) upload a real JPG → expect toast "PNG only" (MIME check); (2) upload a PNG > 2 MB → expect toast "File too large" (size check); (3) rename a JPEG to `.png`, upload → expect toast "PNG only" (magic-byte server check catches spoofed MIME, proving the security backstop works).
@@ -261,11 +268,19 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-04-26 — Plan 08-01 complete: Phase 8 schema additions migration applied to live remote Supabase (3 reminder toggles on accounts + location on event_types + owner_note on bookings); 5 columns verified via information_schema; existing nsi + nsi-test rows backfilled with `true` defaults; 80/80 tests still green.
-**Stopped at:** Plan 08-01 complete (commit aa6ac14). Wave 2 plans (08-04, 08-05, 08-07) unblocked. Next: Plan 08-02 (hardening prereqs) or Wave 2 parallel execution.
+**Last session:** 2026-04-26 — Plan 08-02 complete: three Wave-1 hardening prereqs shipped as atomic commits — `use-debounce@10.1.1` installed (08-07 unblocked); ESLint flat config migrated off FlatCompat to native `eslint-config-next` 16 imports (clears the long-standing circular-JSON crash; 19 pre-existing violations now visible and deferred to Phase 9 cleanup); all `void sendXxxEmails(...)` patterns replaced with `after()` from `next/server` across `app/api/bookings/route.ts` + `lib/bookings/{cancel,reschedule}.ts`. Required two auto-fixed deviations: file-list mismatch with reality (the route/action files don't have `void send`; the lib functions do) and a Vitest `next/server` after() shim because raw `POST(req)` invocations aren't request-scoped. 80/80 tests still green.
+**Stopped at:** Plan 08-02 complete (commits fe2c3de + 211fff1 + 8d3af15). Plan 08-03 (rate limiting on /api/bookings) ready next — collision-free with 08-02's after() block at the bottom of the handler. Wave 2 plans (08-04, 08-05, 08-07) unblocked.
 **Resume file:** None
 
-Latest session note (Plan 08-01 execution):
+Latest session note (Plan 08-02 execution):
+- 08-02 Task 1a: `npm install use-debounce` — landed at `^10.1.1` under `dependencies` (commit fe2c3de)
+- 08-02 Task 1b: Replaced FlatCompat-based eslint.config.mjs with direct `import nextCoreWebVitals from "eslint-config-next/core-web-vitals"` + `import nextTypescript from "eslint-config-next/typescript"`. eslint-config-next 16 already publishes both as native flat configs; FlatCompat was both unnecessary AND the source of the circular-JSON crash (commit 211fff1). 19 violations surfaced and deferred to Phase 9 (full breakdown in 08-02-SUMMARY.md).
+- 08-02 Task 2: Migrated `void sendBookingEmails(...)` (app/api/bookings/route.ts), `void sendCancelEmails(...)` (lib/bookings/cancel.ts), `void sendRescheduleEmails(...)` (lib/bookings/reschedule.ts) to `after(() => ...)`. Plan listed `app/api/cancel/route.ts` + `app/api/reschedule/route.ts` + `app/(shell)/.../actions.ts` but those just delegate — actual `void send` calls live in lib/bookings/. Honored plan intent (kill all void-promise patterns) at the real call sites. Audit-row `void supabase.from('booking_events').insert(...)` patterns left untouched to keep diff narrow. (commit 8d3af15)
+- 08-02 deviation #2: Vitest `POST(req)` invocations aren't inside a request scope; `after()` throws "outside a request scope". Fixed via `vi.mock("next/server", ...)` block in `tests/setup.ts` that re-exports the real module but stubs `after()` to fire the callback as a microtask. 80/80 tests pass.
+- 08-02 deviation #3: Orphan `event_types.slug='phase5-bookings-test'` row from the first failing test run blocked subsequent setup; manually hard-deleted via service-role one-off Node script.
+- 08-02 SUMMARY.md created at .planning/phases/08-reminders-hardening-and-dashboard-list/08-02-SUMMARY.md
+
+Previous session note (Plan 08-01 execution):
 - 08-01 Task 1: Authored supabase/migrations/20260427120001_phase8_schema_additions.sql (3 ALTER blocks, all IF NOT EXISTS)
 - 08-01 Task 2: Applied via `supabase db query --linked -f` (db push failed with same migration-drift issue as 03-01/05-01/06-01); information_schema returned all 5 columns with correct types/defaults; nsi + nsi-test rows show toggles=true; no generated types file in repo so regeneration step skipped
 - 08-01 commit aa6ac14: feat(08-01): add phase 8 schema columns (reminder toggles + location + owner_note)
@@ -297,11 +312,11 @@ Andrew approved smoke steps 1–7, 11, 12 live on 2026-04-26. Steps 8–10 (file
 - 07-08 Task 2: Card + empty-state components (413131c)
 - 07-08 Task 3: Wire account index page.tsx (d84c5ee)
 
-**Next action:** Execute Plan 08-02 (hardening prereqs) sequentially or proceed to Wave 2 parallel execution (08-04 reminder cron, 08-05 settings UI, 08-07 bookings detail extension) once 08-02 + 08-03 are done. Refer to ROADMAP.md for the full Phase 8 wave plan.
+**Next action:** Execute Plan 08-03 (rate limiting on /api/bookings) — diff-clean against 08-02's after() block (insertion point at top of POST(); after() block lives at the bottom). Then proceed to Wave 2 parallel execution (08-04 reminder cron, 08-05 settings UI, 08-07 bookings detail extension). Refer to ROADMAP.md for the full Phase 8 wave plan.
 
 **Phase 8 plan status:**
 - ✅ Plan 08-01 (schema additions migration: 3 reminder toggles + event_types.location + bookings.owner_note) — complete (2026-04-26, aa6ac14)
-- ⬜ Plan 08-02 (hardening prereqs)
+- ✅ Plan 08-02 (hardening prereqs: use-debounce + ESLint flat config + after() migration) — complete (2026-04-26, fe2c3de + 211fff1 + 8d3af15)
 - ⬜ Plan 08-03 (bookings rate limit)
 - ⬜ Plan 08-04 (reminder cron + immediate send) — Wave 2
 - ⬜ Plan 08-05 (reminder settings + event location UI) — Wave 2
