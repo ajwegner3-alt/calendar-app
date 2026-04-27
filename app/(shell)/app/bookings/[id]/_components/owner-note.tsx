@@ -56,7 +56,11 @@ export function OwnerNote({ bookingId, initialNote }: OwnerNoteProps) {
     return () => clearTimeout(handle);
   }, [savedAt]);
 
-  const showSaved = savedAt !== null && Date.now() - savedAt < 2000;
+  // Plan 09-01: Date.now() during render is impure (lint react-hooks/purity).
+  // Since the useEffect above schedules a setTimeout that nulls savedAt after
+  // 2s, savedAt !== null is already a sufficient guard for the "Saved"
+  // visibility window — the timer enforces the 2s ceiling.
+  const showSaved = savedAt !== null;
 
   return (
     <div className="space-y-1">

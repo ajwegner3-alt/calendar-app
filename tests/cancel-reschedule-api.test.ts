@@ -7,10 +7,7 @@ import {
   getOrCreateTestAccount,
   getOrCreateTestEventType,
 } from "@/tests/helpers/supabase";
-import {
-  createConfirmedBooking,
-  type BookingFixture,
-} from "@/tests/helpers/booking-fixtures";
+import { createConfirmedBooking } from "@/tests/helpers/booking-fixtures";
 
 import { POST as cancelPOST } from "@/app/api/cancel/route";
 import { POST as reschedulePOST } from "@/app/api/reschedule/route";

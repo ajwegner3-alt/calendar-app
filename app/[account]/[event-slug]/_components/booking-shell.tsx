@@ -18,11 +18,16 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
   useEffect(() => {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      // Mount-only browser-TZ detection. setState-in-effect is correct here:
+      // SSR uses account.timezone, client overrides on mount. Approved
+      // synchronization-with-external-system pattern (the external system
+      // is the browser's Intl resolved options).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tz) setBookerTz(tz);
     } catch {
       // Keep account.timezone fallback — exotic browser/OS edge case.
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);

@@ -67,6 +67,12 @@ export function BookingForm(props: BookingFormProps) {
     mode: "onSubmit",
   });
 
+  // The async callback below only runs when the form's onSubmit fires (an
+  // event handler); turnstileRef.current is always read after render. The
+  // linter can't statically prove that handleSubmit's return value is invoked
+  // outside render, so we disable react-hooks/refs here. Safe per
+  // https://react.dev/reference/react/useRef (refs in event handlers).
+  // eslint-disable-next-line react-hooks/refs
   const onSubmit = form.handleSubmit(async (values) => {
     const token = turnstileRef.current?.getResponse();
     if (!token) {

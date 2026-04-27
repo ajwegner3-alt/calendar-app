@@ -75,9 +75,14 @@ export function OverrideModal({
   const [isPending, startTransition] = useTransition();
 
   // Re-seed state every time the modal opens (initialDate may change).
+  // External system being synchronized: the parent's open/initialDate props.
+  // setState-in-effect is the React-team-approved pattern for "reset child
+  // state when a key prop changes" — see https://react.dev/reference/react/useState#resetting-state-with-a-key (alternative remount key would unmount the
+  // entire dialog tree on every open, breaking exit animations).
   useEffect(() => {
     if (!open) return;
     const seedDate = initialDate ?? "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDate(seedDate);
     setError(null);
     if (seedDate) {

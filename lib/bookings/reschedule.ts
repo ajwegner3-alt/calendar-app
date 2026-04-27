@@ -210,8 +210,8 @@ export async function rescheduleBooking(
   // ── 5. Fire-and-forget audit row ──────────────────────────────────────────
   // Plan 09-01: scheduled via next/server after() (matches sendRescheduleEmails
   // above). Same request-scope guarantee — caller is /api/reschedule route.
-  after(() =>
-    supabase
+  after(async () => {
+    const { error } = await supabase
       .from("booking_events")
       .insert({
         booking_id: pre.id,
@@ -223,11 +223,9 @@ export async function rescheduleBooking(
           new_start_at: updated.start_at,
           ip: ip ?? null,
         },
-      })
-      .then(({ error }) => {
-        if (error) console.error("[reschedule] audit insert error:", error);
-      }),
-  );
+      });
+    if (error) console.error("[reschedule] audit insert error:", error);
+  });
 
   return {
     ok: true,

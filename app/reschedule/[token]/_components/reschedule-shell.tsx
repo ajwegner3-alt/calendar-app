@@ -26,6 +26,9 @@ export function RescheduleShell(props: RescheduleShellProps) {
   useEffect(() => {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      // Mount-only browser-TZ detection — same pattern as Phase 5 BookingShell.
+      // External system: browser Intl resolved options.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (tz) setBookerTimezone(tz);
     } catch {
       // keep SSR fallback

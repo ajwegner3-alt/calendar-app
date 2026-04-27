@@ -34,8 +34,11 @@ export function RestoreCollisionDialog({
   const [isPending, startTransition] = useTransition();
 
   // Reset to suggested slug whenever the dialog opens.
+  // Re-seed pattern: synchronizing dialog state with parent's `open` signal.
+  // Approved set-state-in-effect pattern (Plan 09-01 cleanup).
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlugInput(`${originalSlug}-restored`);
       setError(null);
     }

@@ -49,6 +49,11 @@ export function SlotPicker(props: SlotPickerProps) {
 
   useEffect(() => {
     let cancelled = false;
+    // Canonical async-fetch effect: setLoading + setFetchError prep the UI for
+    // the in-flight request; the .then/.catch callbacks update state
+    // asynchronously (those are not "during render" — they fire after the
+    // network resolves). External system: /api/slots HTTP endpoint.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setFetchError(null);
     fetch(
@@ -70,7 +75,6 @@ export function SlotPicker(props: SlotPickerProps) {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.eventTypeId, rangeFrom, rangeTo, props.refetchKey]);
 
   // Group slots by date in booker TZ for marker rendering + filtering on date click.

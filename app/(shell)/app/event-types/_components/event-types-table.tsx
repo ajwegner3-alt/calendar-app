@@ -14,7 +14,10 @@ import { RowActionsMenu } from "./row-actions-menu";
 
 export function EventTypesTable({
   eventTypes,
-  showArchived,
+  // showArchived is part of the table's API contract (parent passes it for
+  // future filter UI hints) but is currently unused inside this component —
+  // filtering is server-driven via searchParams. Keep prop, mark intentional.
+  showArchived: _showArchived,
   accountSlug,
   appUrl,
 }: {

@@ -192,8 +192,8 @@ export async function cancelBooking(
   // above) so the serverless worker keeps the audit-insert alive past the
   // response flush. Same request-scope guarantee — caller is /api/cancel route
   // or cancelBookingAsOwner Server Action.
-  after(() =>
-    supabase
+  after(async () => {
+    const { error } = await supabase
       .from("booking_events")
       .insert({
         booking_id: pre.id,
@@ -204,11 +204,9 @@ export async function cancelBooking(
           reason: reason ?? null,
           ip: ip ?? null,
         },
-      })
-      .then(({ error }) => {
-        if (error) console.error("[cancel] audit insert error:", error);
-      }),
-  );
+      });
+    if (error) console.error("[cancel] audit insert error:", error);
+  });
 
   return {
     ok: true,

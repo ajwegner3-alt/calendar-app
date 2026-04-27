@@ -208,7 +208,7 @@ describe("POST /api/bookings — Turnstile gate", () => {
 
     // Verify NO booking was inserted for the slot we attempted
     const admin = adminClient();
-    const { count } = await admin
+    const { count: _count } = await admin
       .from("bookings")
       .select("id", { count: "exact", head: true })
       .eq("event_type_id", testEventTypeId);

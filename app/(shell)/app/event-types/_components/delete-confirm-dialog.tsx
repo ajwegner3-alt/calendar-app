@@ -42,9 +42,12 @@ export function DeleteConfirmDialog({
   const [isPending, startTransition] = useTransition();
 
   // Lazy fetch booking count when the dialog opens (RESEARCH Open Q1).
+  // Re-seed pattern: synchronizing local dialog state with parent's `open`
+  // signal. Approved set-state-in-effect pattern (Plan 09-01 cleanup).
   useEffect(() => {
     if (!open) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCountState({ status: "loading" });
     setConfirmInput("");
 

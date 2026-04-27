@@ -18,6 +18,23 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
+    // Plan 09-01: honor underscore-prefixed names as intentional-unused for
+    // both args (mock fns, test dest-arg holes) and caught errors. Clears 6
+    // warnings in tests/__mocks__ + tests without touching the test files.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          args: "after-used",
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
     ignores: [
       ".next/**",
       "node_modules/**",
