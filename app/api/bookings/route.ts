@@ -51,8 +51,10 @@ import { NextResponse, after, type NextRequest } from "next/server";
 
 import { bookingInputSchema } from "@/lib/bookings/schema";
 import { generateBookingTokens } from "@/lib/bookings/tokens";
+import { generateRawToken, hashToken } from "@/lib/booking-tokens";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { sendBookingEmails } from "@/lib/email/send-booking-emails";
+import { sendReminderBooker } from "@/lib/email/send-reminder-booker";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -274,6 +276,123 @@ export async function POST(req: NextRequest) {
       },
     },
   }));
+
+  // ── 8b. Immediate reminder for in-window bookings (Plan 08-04 / INFRA-03) ─
+  // If start_at falls inside the next 24h, fire a reminder immediately so the
+  // booker doesn't wait for the next cron tick (which could be up to a day
+  // away on the Hobby-tier daily fallback). The compare-and-set claim mirrors
+  // the cron route so a future cron tick won't double-send for the same row.
+  //
+  // Token rotation side effect: this also invalidates the just-sent
+  // confirmation-email lifecycle links. Acceptable trade-off — same-day
+  // bookings rarely need the confirmation tokens because the reminder
+  // arrives within seconds with newer links (RESEARCH Open Q 3).
+  const startMs = new Date(booking.start_at).getTime();
+  const horizonMs = Date.now() + 24 * 60 * 60 * 1000;
+
+  if (startMs <= horizonMs) {
+    const rawCancel = generateRawToken();
+    const rawReschedule = generateRawToken();
+    const cancelHash = await hashToken(rawCancel);
+    const rescheduleHash = await hashToken(rawReschedule);
+
+    // Atomic claim — UPDATE only when reminder_sent_at is still NULL. Same
+    // CAS pattern as the cron route. Returns null if a concurrent invocation
+    // (or future cron) somehow already claimed (extremely unlikely here
+    // because we just inserted the row, but defensive).
+    const { data: claimedRow } = await supabase
+      .from("bookings")
+      .update({
+        reminder_sent_at: new Date().toISOString(),
+        cancel_token_hash: cancelHash,
+        reschedule_token_hash: rescheduleHash,
+      })
+      .eq("id", booking.id)
+      .is("reminder_sent_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (claimedRow) {
+      // Audit log — same shape as cron route. account_id is denormalized
+      // (NOT NULL — RLS owners-read policy). Errors logged, not propagated.
+      const { error: auditErr } = await supabase.from("booking_events").insert({
+        booking_id: booking.id,
+        account_id: account.id,
+        event_type: "reminder_sent",
+        actor: "system",
+        metadata: { source: "immediate" },
+      });
+      if (auditErr) {
+        console.error("[/api/bookings] reminder audit log error:", auditErr);
+      }
+
+      // Fetch enriched account + event_type fields needed by sendReminderBooker
+      // that aren't in the local `account` / `eventType` variables. Specifically:
+      //   - accounts.reminder_include_* toggles (Plan 08-01)
+      //   - event_types.location (Plan 08-01)
+      // Single round-trip: SELECT both via a join keyed off the just-inserted
+      // booking row.
+      const { data: enriched, error: enrichErr } = await supabase
+        .from("bookings")
+        .select(`
+          event_types!inner(name, duration_minutes, location),
+          accounts!inner(
+            slug, name, logo_url, brand_primary, owner_email,
+            reminder_include_custom_answers,
+            reminder_include_location,
+            reminder_include_lifecycle_links
+          )
+        `)
+        .eq("id", booking.id)
+        .single();
+
+      if (enrichErr || !enriched) {
+        // Should never happen — we just inserted this row. Log + skip the
+        // immediate reminder; the future cron tick is now also a no-op
+        // (reminder_sent_at populated). Tradeoff: this booking gets no
+        // reminder. Defensive logging makes this visible.
+        console.error("[/api/bookings] reminder enrich error:", enrichErr);
+      } else {
+        const enrichedEventType = Array.isArray(enriched.event_types)
+          ? enriched.event_types[0]
+          : enriched.event_types;
+        const enrichedAccount = Array.isArray(enriched.accounts)
+          ? enriched.accounts[0]
+          : enriched.accounts;
+
+        const reminderAppUrl = resolveAppUrl(req);
+        after(() => sendReminderBooker({
+          booking: {
+            id: booking.id,
+            start_at: booking.start_at,
+            end_at: booking.end_at,
+            booker_name: booking.booker_name,
+            booker_email: booking.booker_email,
+            booker_timezone: booking.booker_timezone,
+            answers: (booking.answers ?? null) as Record<string, string> | null,
+          },
+          eventType: {
+            name: enrichedEventType.name,
+            duration_minutes: enrichedEventType.duration_minutes,
+            location: enrichedEventType.location,
+          },
+          account: {
+            slug: enrichedAccount.slug,
+            name: enrichedAccount.name,
+            logo_url: enrichedAccount.logo_url,
+            brand_primary: enrichedAccount.brand_primary,
+            owner_email: enrichedAccount.owner_email,
+            reminder_include_custom_answers: enrichedAccount.reminder_include_custom_answers,
+            reminder_include_location: enrichedAccount.reminder_include_location,
+            reminder_include_lifecycle_links: enrichedAccount.reminder_include_lifecycle_links,
+          },
+          rawCancelToken: rawCancel,
+          rawRescheduleToken: rawReschedule,
+          appUrl: reminderAppUrl,
+        }));
+      }
+    }
+  }
 
   // ── 9. Return 201 ────────────────────────────────────────────────────────
   // redirectTo follows the LOCKED confirmation route format (CONTEXT decision #10):
