@@ -238,7 +238,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | EMBED-04 | Phase 7 | Complete |
 | EMBED-05 | Phase 7 | Complete |
 | EMBED-06 | Phase 7 | Complete |
-| EMBED-07 | Phase 9 | Pending |
+| EMBED-07 | Phase 9 | Deferred to v1.1 |
 | EMBED-08 | Phase 7 | Complete |
 | DASH-01 | Phase 2 | Complete |
 | DASH-02 | Phase 8 | Complete |
@@ -249,14 +249,14 @@ Which phases cover which requirements. Populated during roadmap creation.
 | INFRA-03 | Phase 8 | Complete |
 | INFRA-04 | Phase 8 | Complete |
 | INFRA-05 | Phase 8 | Complete |
-| QA-01 | Phase 9 | Pending |
-| QA-02 | Phase 9 | Pending |
-| QA-03 | Phase 9 | Pending |
-| QA-04 | Phase 9 | Pending |
-| QA-05 | Phase 9 | Pending |
-| QA-06 | Phase 9 | Pending |
-| QA-07 | Phase 9 | Pending |
-| QA-08 | Phase 9 | Pending |
+| QA-01 | Phase 9 | Deferred to v1.1 |
+| QA-02 | Phase 9 | Deferred to v1.1 |
+| QA-03 | Phase 9 | Deferred to v1.1 |
+| QA-04 | Phase 9 | Deferred to v1.1 |
+| QA-05 | Phase 9 | Deferred to v1.1 |
+| QA-06 | Phase 9 | Deferred to v1.1 |
+| QA-07 | Phase 9 | Complete |
+| QA-08 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 73 total

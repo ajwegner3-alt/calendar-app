@@ -291,7 +291,7 @@ Plans:
 | 6 - Cancel + Reschedule Lifecycle | Booker manages their own booking via email links | ✓ Complete (2026-04-25, human_needed for Phase 9) |
 | 7 - Widget + Branding | Branded embeddable widget for client sites | ✓ Complete (2026-04-26) |
 | 8 - Reminders + Hardening + Dashboard List | Reliable reminders, hardened production, bookings UI | ✓ Complete (2026-04-26, human_needed for Phase 9) |
-| 9 - Manual QA & Verification | Andrew signs off v1 is shippable | Pending |
+| 9 - Manual QA & Verification | Andrew signs off v1 is shippable | ✓ Complete (2026-04-27, marathon QA scope-cut to v1.1) |
 
 ## Coverage Summary
 
