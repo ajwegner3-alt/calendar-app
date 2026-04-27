@@ -171,6 +171,11 @@ export async function sendReminderBooker(args: SendReminderBookerArgs): Promise<
   </p>`);
   }
 
+  // Spam-folder deliverability nudge — Phase 9 fix-as-you-go (Plan 09-01 Task 2).
+  // Generic line, no toggle gate, rendered for ALL recipients. Plain-text version
+  // auto-derives via stripHtml(html) below — no separate text edit needed.
+  segments.push(`<p style="margin: 0 0 16px 0; font-size: 13px; color: #888;">If you don't see this email, check your spam or junk folder and mark it as "Not Spam."</p>`);
+
   // Footer — always present (NSI attribution, CONTEXT lock)
   segments.push(`
   <hr style="border: none; border-top: 1px solid #eee; margin: 0 0 16px 0;"/>

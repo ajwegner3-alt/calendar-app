@@ -118,6 +118,7 @@ export async function sendBookingConfirmation(
     ${renderBrandedButton({ href: cancelUrl, label: "Cancel", primaryColor: account.brand_primary })}
   </p>
 
+  <p style="margin: 0 0 16px 0; font-size: 13px; color: #888;">If you don't see this email, check your spam or junk folder and mark it as "Not Spam."</p>
   <hr style="border: none; border-top: 1px solid #eee; margin: 0 0 16px 0;"/>
   <p style="margin: 0; font-size: 12px; color: #888;">
     ${escapeHtml(account.name)}${account.owner_email ? " &nbsp;·&nbsp; " + escapeHtml(account.owner_email) : ""}
