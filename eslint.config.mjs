@@ -1,16 +1,35 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+// ESLint flat config for Next.js 16 + ESLint 9.
+//
+// eslint-config-next 16.x ships native flat configs (CommonJS modules that
+// export an array of flat config objects). We import them directly and
+// concat — no FlatCompat shim needed.
+//
+// Plan 08-02 background: prior config used `FlatCompat.extends()` to bridge
+// the legacy preset surface, but that path triggered a circular-JSON crash
+// inside @eslint/eslintrc's ConfigValidator on this codebase. Since the
+// next-config-next 16 entry points are already flat, the shim is dead weight
+// AND the source of the crash. Direct imports fix both problems.
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
+/** @type {import("eslint").Linter.Config[]} */
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "supabase/migrations/**",
+      ".planning/**",
+      ".playwright-mcp/**",
+      "tmp/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+    ],
+  },
 ];
 
 export default eslintConfig;
