@@ -1,6 +1,6 @@
 # Phase 9 Manual QA Checklist
 
-**Session start:** _[TIMESTAMP — fill at start of Plan 09-02]_
+**Session start:** 2026-04-27T23:16:12Z (Plan 09-02 begin)
 **Driver:** Andrew (executor) + Claude (proposer / scribe)
 **Pass bar:** Strict by default. Any item may be downgraded to "deferred to v1.1" by Andrew at the time of surface — captured in the Notes column and propagated to FUTURE_DIRECTIONS.md.
 
@@ -34,6 +34,19 @@
 | 7   | FUTURE_DIRECTIONS.md committed to repo root (Plan 09-03)                                                                                                                                                                                                           | __     | __        | __    |
 | 8   | Andrew explicit ship sign-off                                                                                                                                                                                                                                      | __     | __        | __    |
 
+### Criterion #2 — per-template body branding smoke (6 transactional emails)
+
+Per CONTEXT.md / Plan 09-02 Task 3 Phase D. Each row evaluates one rendered email body for: logo (centered top, or absent if `logo_url` null), brand-colored H1 (or NSI navy fallback), brand-colored CTA buttons, "Powered by NSI" text-link footer, and (for booker confirmation only) the spam-folder copy line.
+
+| #   | Surface (recipient × email type)             | Status | Timestamp | Notes |
+| --- | -------------------------------------------- | ------ | --------- | ----- |
+| 2a  | Booker — confirmation (with .ics)            | __     | __        | __    |
+| 2b  | Owner  — confirmation notification           | __     | __        | __    |
+| 2c  | Booker — cancellation (with cancelled.ics)   | __     | __        | __    |
+| 2d  | Owner  — cancellation notification           | __     | __        | __    |
+| 2e  | Booker — reschedule (with .ics SEQUENCE:1)   | __     | __        | __    |
+| 2f  | Owner  — reschedule notification             | __     | __        | __    |
+
 ---
 
 ## Phase 8 dashboard walkthrough (sub-criteria, part of #1-#6 evidence collection)
@@ -52,7 +65,29 @@
 
 ## Apple Mail code review findings (logged here, propagated to FUTURE_DIRECTIONS.md §5)
 
-_Filled in by Plan 09-02 — code review of `lib/email/`, `lib/email/build-ics.ts`, `lib/email/branding-blocks.ts`._
+**Reviewed:** 2026-04-27 (Plan 09-02 Task 1)
+**Scope:** `lib/email/build-ics.ts`, `lib/email/branding-blocks.ts`, `lib/email/send-booking-confirmation.ts`, `lib/email/send-owner-notification.ts`, `lib/email/send-cancel-emails.ts`, `lib/email/send-reschedule-emails.ts`, `lib/email/send-reminder-booker.ts`.
+
+**Verdict:** LIKELY PASS in Apple Mail (Mac + iOS). No high-risk patterns found. One low-risk cosmetic note documented below. Live verification still deferred per CONTEXT.md no-device-access constraint.
+
+**Findings (fact-bullets):**
+
+1. **HTML email patterns — clean for Apple Mail.** Grepped `lib/email/` for known-bad patterns: `position:absolute`, `display:flex`, `linear-gradient`, `var(--`, `@font-face`. **All absent.** Email layout uses inline-styled `<table role="presentation">` (Outlook/Apple Mail safe), inline `style="..."` only, system font stack `-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif` (native to Apple Mail).
+2. **`border-radius: 6px` is present** on CTA `<a>` button elements in `lib/email/branding-blocks.ts:70` and on the cancel-reason callout `<div>` in `lib/email/send-cancel-emails.ts:111` and `:205`. **Low-risk cosmetic in older Apple Mail (pre-macOS 10.13 / iOS 11):** the property is silently ignored, buttons render with square corners. Modern Apple Mail (macOS 10.13+ / iOS 11+) supports `border-radius` natively. No layout breakage on older clients — corners are just square. Acceptable v1.
+3. **`.ics` PRODID auto-inserted by ical-generator** (`lib/email/build-ics.ts:65` `ical({ name: opts.summary })`). The library default PRODID is `-//sebbo.net//ical-generator//EN` — RFC 5545 compliant. Apple Mail / Calendar.app reads PRODID; absence would be flagged as malformed.
+4. **`.ics` METHOD set per scenario** — `REQUEST` for confirmation + reschedule (`build-ics.ts:67-68`), `CANCEL` for cancellation (`build-ics.ts:97-99`, paired with `STATUS:CANCELLED`). Apple Mail / Calendar.app honors `METHOD:CANCEL` to auto-remove events matched by UID — critical for Phase 6 cancel flow rendering correctly in Apple Mail.
+5. **`.ics` SEQUENCE explicit** — `event.sequence(opts.sequence ?? 0)` on every invocation (`build-ics.ts:93`). SEQUENCE:0 on initial confirmation, SEQUENCE:1 on reschedule + cancel. Apple Mail rejects updates without SEQUENCE increment (RFC 5546 Pitfall 2 from Plan 06-02 RESEARCH).
+6. **`.ics` UID stable** = `booking.id` (Postgres UUID v4). Reschedule + cancel send the same UID, enabling Apple Mail / Calendar.app to update or remove the existing event in place.
+7. **VTIMEZONE block embedded** via `tzlib_get_ical_block(tz)[0]` from `timezones-ical-library` (`build-ics.ts:73-76`), set BEFORE `createEvent()` per the comment on line 72. Apple Mail strictly requires VTIMEZONE for non-floating times — confirmed present.
+8. **CRLF + 75-octet line folding handled by ical-generator** (per `build-ics.ts` line 61 comment). Hand-rolled `.ics` strings fail RFC 5545 line-folding rules in Apple Mail; using the library is correct.
+9. **ORGANIZER email = `account.owner_email`** = `ajwegner3@gmail.com` (NSI seed). SMTP From = `Andrew @ NSI <ajwegner3@gmail.com>` via `lib/email-sender/providers/gmail.ts:17` (`${fromName} <${user}>`). **ORGANIZER email matches SMTP From.** This is critical for Apple Mail's `METHOD:CANCEL` auto-removal (Apple Mail will refuse to remove an event whose ORGANIZER does not match the sender of the CANCEL message).
+10. **NSI mark image is null** in `lib/email/branding-blocks.ts:44` (`const NSI_MARK_URL: string | null = null`). The footer renders text-only "Powered by **North Star Integrations**" — no `<img>` tag, no broken-image risk. Apple Mail (especially iOS) is the strictest about broken-image rendering; text-only footer is the safe choice.
+11. **Logo header gracefully omitted when `logo_url` is null** — `renderEmailLogoHeader` returns `""` (`branding-blocks.ts:20`). No empty `<table>`, no broken `<img>`. Apple Mail renders cleanly whether or not Andrew's nsi account has a logo set.
+
+**Carry-forward to FUTURE_DIRECTIONS.md §5 (Plan 09-03):**
+
+- Live Apple Mail testing remains untested (no device access). All known-risk patterns reviewed clean except border-radius on older Apple Mail (cosmetic only). Recommend a v1.x verification pass when device access becomes available.
+- If a future Apple Mail user reports broken cancel auto-removal: first thing to check is ORGANIZER email vs SMTP From alignment (currently both = `ajwegner3@gmail.com`). If Andrew's email config changes, that alignment must be preserved.
 
 ---
 
