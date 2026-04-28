@@ -14,7 +14,12 @@ import { loginAction, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** Set to true when redirected from /auth/reset-password after a successful password update. */
+  resetSuccess?: boolean;
+}
+
+export function LoginForm({ resetSuccess }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
   const {
@@ -42,6 +47,13 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
+          {resetSuccess && (
+            <Alert role="status">
+              <AlertDescription>
+                Password updated. Please sign in with your new password.
+              </AlertDescription>
+            </Alert>
+          )}
           {state.formError && (
             <Alert variant="destructive" role="alert">
               <AlertDescription>{state.formError}</AlertDescription>

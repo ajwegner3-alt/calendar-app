@@ -2,10 +2,16 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
+interface Props {
+  searchParams: Promise<{ reset?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: Props) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (data?.claims) redirect("/app");
+
+  const { reset } = await searchParams;
 
   return (
     <main className="min-h-screen grid place-items-center bg-muted px-4 py-12">
@@ -16,7 +22,7 @@ export default async function LoginPage() {
             North Star Integrations
           </div>
         </div>
-        <LoginForm />
+        <LoginForm resetSuccess={reset === "success"} />
       </div>
     </main>
   );
