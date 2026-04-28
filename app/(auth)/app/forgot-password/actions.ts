@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkAuthRateLimit } from "@/lib/auth/rate-limits";
 import { forgotPasswordSchema } from "./schema";
 
 export type ForgotPasswordState = {
@@ -35,20 +35,18 @@ export async function requestPasswordReset(
   }
   const { email } = parsed.data;
 
-  // 2. Rate limit: 3 per IP per hour
+  // 2. Rate limit: 3 per (IP + email) per hour (AUTH-11).
+  //    Keying on IP+email prevents burst-requesting resets for many different
+  //    emails from a single IP while avoiding over-penalizing shared IPs.
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     headersList.get("x-real-ip") ??
     "unknown";
 
-  const rateLimit = await checkRateLimit(
-    `forgot-password:${ip}`,
-    3,
-    60 * 60 * 1000,
-  );
+  const rateLimit = await checkAuthRateLimit("forgotPassword", `${ip}:${email}`);
   if (!rateLimit.allowed) {
-    return { formError: "Too many attempts. Please wait." };
+    return { formError: "Too many attempts. Please wait an hour and try again." };
   }
 
   // 3. Send reset email via Supabase
