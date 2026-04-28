@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-08 (email-change-with-reverification) — 2026-04-28.
-**Status:** In progress — Plans 10-01..10-08 complete; Wave 5 (10-08) done; 10-09 next.
-**Last activity:** 2026-04-28 — Plan 10-08 executed: sync_account_email_on_auth_update SECURITY DEFINER trigger applied to production, /app/settings/profile/email route + requestEmailChangeAction (rate-limited 3/hr ip:uid, quota-guarded, P-A1 generic), "Change email" link wired. 148 tests passing.
+**Last completed plan:** 10-09 (rls-matrix-extension-and-checklist) — 2026-04-28.
+**Status:** Phase 10 auto-executable work complete. Task 1 of 10-09 (3rd RLS test user creation) deferred to milestone-end QA. Phase 11 ready to start.
+**Last activity:** 2026-04-28 — Plan 10-09 executed: N=3 RLS matrix (24 new cases, skip-guarded); OnboardingChecklist component + dismissChecklistAction Server Action; /app dashboard renders checklist above WelcomeCard; FUTURE_DIRECTIONS.md §7 added. 148 tests passing + 24 skipped.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 8/9 plans done)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 auto portions complete — all 9/9 plans committed)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -37,16 +37,16 @@ Phase 8  [✓] Reminders + Hardening + Dashboard List  (Complete 2026-04-27)
 Phase 9  [✓] Manual QA & Verification                (Complete 2026-04-27 — "ship v1")
 
 v1.1 — IN PROGRESS (started 2026-04-27)
-Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 7/9 plans done)
+Phase 10 [✓~] Multi-User Signup + Onboarding         (auto complete 2026-04-28; 3 deferred QA items)
   10-01 [✓] reserved-slugs-consolidation             (Complete 2026-04-28)
   10-02 [✓] auth-confirm-and-password-reset          (Complete 2026-04-28)
-  10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
-  10-04 [✓] gmail-smtp-quota-cap-and-alert            (Complete 2026-04-28)
-  10-05 [✓*] signup-page-and-email-confirm-toggle      (auto done 2026-04-28; P-A8 checkpoint deferred)
+  10-03 [✓] accounts-rls-and-provisioning-trigger    (Complete 2026-04-28)
+  10-04 [✓] gmail-smtp-quota-cap-and-alert           (Complete 2026-04-28)
+  10-05 [✓*] signup-page-and-email-confirm-toggle    (auto done 2026-04-28; P-A8 checkpoint deferred)
   10-06 [✓] onboarding-wizard-and-provisioning       (Complete 2026-04-28 — resumed execution)
   10-07 [✓] profile-settings-and-soft-delete         (Complete 2026-04-28)
   10-08 [✓] email-change-with-reverification         (Complete 2026-04-28)
-  10-09 [ ] rls-matrix-extension-and-checklist
+  10-09 [✓*] rls-matrix-extension-and-checklist      (auto done 2026-04-28; Task 1 + browser QA deferred)
 Phase 11 [ ] Booking Capacity + Double-Booking Fix   (Not started)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
@@ -109,6 +109,8 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
 - **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
 - **Email-change trigger + route shipped** (Plan 10-08, 2026-04-28) — `sync_account_email_on_auth_update` SECURITY DEFINER trigger on `auth.users AFTER UPDATE OF email` propagates to `accounts.owner_email`. `/app/settings/profile/email` route with `requestEmailChangeAction` Server Action: rate-limited 3/hr per `${ip}:${uid}` (authenticated flow, uid available), quota-guarded (`email-change` category), P-A1 generic response (never leaks "email already in use"). `emailRedirectTo` points to `${origin}/auth/confirm?next=/app/settings/profile`. E2E deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. 148 tests passing.
+- **RLS matrix extended to N=3 tenants** (Plan 10-09, 2026-04-28) — `tests/rls-cross-tenant-matrix.test.ts` now has a second `describe.skipIf(skipIfNoThreeUsers)` suite with 24 new cases (positive control, anon lockout, cross-tenant SELECT in 8 table×direction combos, UPDATE deny in 2 directions, admin sees-all-3). `tests/helpers/auth.ts` exports `signInAsNsiTest3Owner()` + `TEST_RLS_3_ACCOUNT_SLUG`. Third test user provisioning deferred to milestone-end QA (see MILESTONE_V1_1_DEFERRED_CHECKS.md). 148 passing + 24 skipped.
+- **OnboardingChecklist component shipped** (Plan 10-09, 2026-04-28) — `components/onboarding-checklist.tsx` (`'use client'`): 7-day post-onboarding dismissible card with 3 items (Set availability, Customize event type, Share link + copy button). Visibility gate: `onboarding_complete=true` + `dismissed_at=null` + `created_at+7d>now()`. `app/(shell)/app/onboarding-checklist-actions.ts` exports `dismissChecklistAction` (RLS-scoped UPDATE). `/app` dashboard loads checklist above WelcomeCard with lazy count loading (2 parallel queries only when window open). Browser QA deferred to milestone-end QA.
 - **3-step /onboarding wizard shipped** (Plan 10-06, 2026-04-28) — `/onboarding/step-1-account` (name+slug), `/onboarding/step-2-timezone` (auto-detect), `/onboarding/step-3-event-type` (required, pre-filled "Consultation"/30min). Step 3 atomically: INSERT 5 Mon-Fri 9-5 availability_rules + INSERT event_types + UPDATE accounts onboarding_complete=true. Welcome email fire-and-forget after. /app now redirects to /onboarding when onboarding_complete=false.
 - **slug_is_taken() SECURITY DEFINER RPC** (Plan 10-06, 2026-04-28) — Bypasses RLS (wizard user can only SELECT own row). Used by /api/check-slug route handler (auth-gated, reserved short-circuit, fail-open on DB error). 300ms debounced in step-1 account-form.tsx.
 - **sendWelcomeEmail uses accounts.name column** (Plan 10-06, 2026-04-28) — Interface `{ owner_email, name, slug }` matches 10-03 schema deviation. UI label is "Display Name" / "Business name"; DB column is `name`. 148 tests passing.
@@ -151,11 +153,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-08 complete. Wave 5 done. sync_account_email_on_auth_update trigger live + /app/settings/profile/email route + requestEmailChangeAction. 148 tests passing.
+**Last session:** 2026-04-28 — Plan 10-09 complete. Phase 10 auto-executable work done. RLS N=3 matrix extended (skip-guarded), OnboardingChecklist + dismiss action shipped, FUTURE_DIRECTIONS.md §7 added. 148 tests passing + 24 skipped.
 
-**Stopped at:** Plan 10-08 complete. Wave 5 done.
+**Stopped at:** Plan 10-09 complete. Phase 10 auto portions done. 3 deferred QA items in `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`.
 
-**Resume:** Execute Plan 10-09 (rls-matrix-extension-and-checklist). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-09-rls-matrix-extension-and-checklist-PLAN.md`.
+**Resume:** Execute Phase 11 (Booking Capacity + Double-Booking Fix). Plans not yet created — use `/gsd:plan-phase 11` first.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)

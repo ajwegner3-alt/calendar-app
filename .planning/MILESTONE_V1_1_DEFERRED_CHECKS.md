@@ -85,8 +85,74 @@ curl -i "https://<prod>/auth/confirm?token_hash=test&type=signup"
 
 ---
 
+## Phase 10 — Plan 10-09 — RLS Test User 3 Creation
+
+**Source:** `.planning/phases/10-multi-user-signup-and-onboarding/10-09-rls-matrix-extension-and-checklist-PLAN.md` Task 1 (checkpoint:human-action).
+
+**Why deferred:** Per Andrew 2026-04-28, all human-action checkpoints across Phase 10–13 are batched for milestone-end QA. The N=3 RLS matrix test code is committed and skips gracefully when `TEST_OWNER_3_EMAIL`/`PASSWORD` are absent. These steps enable the full N=3 run locally.
+
+**Pre-condition:** Phase 10 code fully deployed.
+
+**Steps to execute (in order):**
+
+1. **Supabase Dashboard → Authentication → Users → Add user → "Create new user":**
+   - Email: `nsi-rls-test-3@andrewwegner.example`
+   - Password: pick a strong password (record it for step 3).
+   - Auto-confirm email: **ON**.
+   - Note the new user's UUID (visible after creation in the Users table).
+
+2. **Supabase SQL Editor** — seed the matching `accounts` row (or UPDATE if the 10-03 provisioning trigger already created a stub):
+   ```sql
+   -- First check if a stub row was auto-created by the trigger:
+   SELECT id, slug, onboarding_complete
+   FROM accounts
+   WHERE owner_user_id = '{NEW_USER_UUID_FROM_STEP_1}';
+
+   -- If no row exists → INSERT:
+   INSERT INTO accounts (
+     owner_user_id,
+     owner_email,
+     slug,
+     name,
+     timezone,
+     onboarding_complete
+   ) VALUES (
+     '{NEW_USER_UUID_FROM_STEP_1}',
+     'nsi-rls-test-3@andrewwegner.example',
+     'nsi-rls-test-3',
+     'NSI RLS Test 3',
+     'America/Chicago',
+     true
+   );
+
+   -- If a stub row EXISTS (onboarding_complete=false, slug=null):
+   -- Delete it first, then re-INSERT above:
+   -- DELETE FROM accounts WHERE owner_user_id = '{NEW_USER_UUID_FROM_STEP_1}' AND onboarding_complete = false;
+   ```
+   Note: the column is `name` (NOT `display_name`) per the 10-03 schema deviation.
+
+3. **Local `.env.test.local`** (or wherever `TEST_OWNER_2_EMAIL` is set — check `tests/helpers/auth.ts`) — add:
+   ```
+   TEST_OWNER_3_EMAIL=nsi-rls-test-3@andrewwegner.example
+   TEST_OWNER_3_PASSWORD={password from step 1}
+   ```
+
+4. **Optionally add to Vercel project env vars** (for CI parity) the same `TEST_OWNER_3_EMAIL` + `TEST_OWNER_3_PASSWORD` pair. The matrix test is `describe.skipIf(!hasThreeUsers)` so omitting CI is acceptable — tests skip in CI but run locally for Andrew.
+
+**Verification after completing steps:**
+```bash
+# Confirm accounts row:
+npx supabase db query --linked -c "SELECT slug, owner_email, name FROM accounts WHERE slug = 'nsi-rls-test-3';"
+
+# Run the extended N=3 matrix test locally:
+npm test -- tests/rls-cross-tenant-matrix.test.ts
+# Expect: all new N=3 cases pass (approx 28-30 total cases).
+```
+
+---
+
 ## (Add additional deferred checks here as later plans emit them)
 
 ---
 
-*Last updated: 2026-04-28 — updated during /gsd:execute-phase 10-08 (email-change-with-reverification).*
+*Last updated: 2026-04-28 — updated during /gsd:execute-phase 10-09 (rls-matrix-extension-and-checklist).*
