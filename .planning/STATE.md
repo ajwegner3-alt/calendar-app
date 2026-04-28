@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plan 10-04 complete (parallel wave 2). email_send_log table live. quota-guard.ts exports SIGNUP_DAILY_EMAIL_CAP/QuotaExceededError/getDailySendCount/checkAndConsumeQuota. ARCH DECISION #2 committed in code. 4 new tests (135 passing total).
+**Last updated:** 2026-04-28 — Plans 10-02 + 10-04 complete (parallel wave 2 fully done). /auth/confirm verifyOtp handler live, closes v1.0 BLOCKER. Full forgot/reset-password + verify-email flows shipped. email_send_log table live. quota-guard.ts exports SIGNUP_DAILY_EMAIL_CAP/QuotaExceededError/getDailySendCount/checkAndConsumeQuota. ARCH DECISION #2 committed in code. 135 tests passing.
 
 ## Project Reference
 
@@ -18,9 +18,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-04 (gmail-smtp-quota-cap-and-alert) — 2026-04-28. [Also: 10-01, 10-03 complete; 10-02 parallel wave done]
+**Last completed plan:** 10-02 (auth-confirm-and-password-reset) — 2026-04-28. [Also: 10-01, 10-03, 10-04 complete; full wave 2 done]
 **Status:** In progress — Plans 10-01, 10-02, 10-03, 10-04 complete (wave 2 done); 10-05 next.
-**Last activity:** 2026-04-28 — Plan 10-04 executed (parallel wave 2). email_send_log migration applied. quota-guard.ts live. ARCH DECISION #2 committed. 135 tests passing.
+**Last activity:** 2026-04-28 — Plan 10-02 executed (parallel wave 2). /auth/confirm verifyOtp route + forgot/reset-password + verify-email flows shipped. v1.0 BLOCKER /auth/callback 404 closed. 135 tests passing.
 
 **Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 4/9 plans done)
 
@@ -39,7 +39,7 @@ Phase 9  [✓] Manual QA & Verification                (Complete 2026-04-27 — 
 v1.1 — IN PROGRESS (started 2026-04-27)
 Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 1/9 plans complete)
   10-01 [✓] reserved-slugs-consolidation             (Complete 2026-04-28)
-  10-02 [ ] auth-confirm-and-password-reset
+  10-02 [✓] auth-confirm-and-password-reset          (Complete 2026-04-28)
   10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
   10-04 [✓] gmail-smtp-quota-cap-and-alert            (Complete 2026-04-28)
   10-05 [ ] signup-page-and-email-confirm-toggle
@@ -92,6 +92,9 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Postgres-backed rate limiting** — single `rate_limit_events` table; `checkRateLimit` fails OPEN on DB error. AUTH-11 reuses this table for `/api/auth/*` endpoints.
 - **Migration drift workaround LOCKED** — `npx supabase db query --linked -f <migration.sql>` (CLI `db push` fails with orphan tracking-table timestamps).
 - **`RESERVED_SLUGS` consolidated to `lib/reserved-slugs.ts`** (Plan 10-01, 2026-04-28) — `ReadonlySet<string>` with v1.0 entries + Phase 10 additions (signup, onboarding, login, forgot-password, settings). Both v1.0 consumers migrated. `isReservedSlug()` helper available. ONBOARD-05 consolidation portion COMPLETE.
+- **`/auth/callback` 404 BLOCKER CLOSED** (Plan 10-02, 2026-04-28) — `app/auth/confirm/route.ts` is the canonical handler using `verifyOtp({ type, token_hash })` pattern (NOT `exchangeCodeForSession`). Handles signup, recovery, magiclink, email_change. Recovery type hard-overrides `next` param → always `/auth/reset-password`. Plans 10-05 and 10-08 route through this handler.
+- **Forgot-password + reset-password flows live** (Plan 10-02, 2026-04-28) — `/app/forgot-password` with P-A1 generic success; `/auth/reset-password` with 8-char password min, getClaims() session guard, expired-link fallback. Both pages unstyled-but-functional; Phase 12 restyles.
+- **Verify-email page live** (Plan 10-02, 2026-04-28) — `/app/verify-email` with resend button rate-limited 1/min + 5/hour per email+IP. `resendVerification` Server Action shared by auth-error page. Plan 10-05 redirects here after signup.
 - **ARCH DECISION #1 COMMITTED in code** (Plan 10-03, 2026-04-28) — Postgres SECURITY DEFINER trigger `provision_account_on_signup` creates stub accounts row (`slug=null, name=null, onboarding_complete=false`) on every `auth.users` INSERT. Wizard (10-06) UPDATEs stub. Live in production. Andrew's NSI row has `onboarding_complete=true`.
 - **ARCH DECISION #2 COMMITTED in code** (Plan 10-04, 2026-04-28) — Gmail SMTP quota plan: Cap signup-side emails at 200/day via `email_send_log` Postgres counter. 80% threshold logs `[GMAIL_SMTP_QUOTA_APPROACHING]` once/day. Fail-closed at cap (throws `QuotaExceededError`). Booking/reminder paths bypass guard. `checkAndConsumeQuota()` in `lib/email-sender/quota-guard.ts`. v1.2: migrate to Resend. Note for future callers: import from `@/lib/email-sender/quota-guard` (NOT from `@/lib/email-sender` — that path is the vitest mock alias).
 - **accounts.slug + accounts.name are now nullable** (Plan 10-03, 2026-04-28) — both had NOT NULL dropped to support stub rows. CHECK constraints enforce `(col IS NOT NULL) OR (onboarding_complete = false)` — values required before wizard can mark complete.
@@ -119,7 +122,7 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 - **Plain-text alternative on confirmation email** — folds into Phase 12 (EMAIL-10).
 - **NSI mark image in email footer** — folds into Phase 12 (EMAIL-11).
 - **`RESERVED_SLUGS` deduplication** — RESOLVED in Plan 10-01 (2026-04-28). `lib/reserved-slugs.ts` is the single source of truth.
-- **`/auth/callback` 404** — folds into Phase 10 as `/auth/confirm` Route Handler (verifyOtp pattern; closes v1.0 BLOCKER).
+- **`/auth/callback` 404** — RESOLVED in Plan 10-02 (2026-04-28). `/auth/confirm` Route Handler live with verifyOtp pattern. v1.0 BLOCKER closed.
 - **`react-hooks/incompatible-library` warning** on `event-type-form.tsx:99` — v1.2 tech debt.
 - **Pre-existing `tsc --noEmit` test-mock alias errors** — v1.2 tech debt.
 - **Supabase service-role key still legacy JWT** — v1.2 (waiting on Supabase rollout).
@@ -141,9 +144,9 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-04 executed (parallel wave 2). email_send_log migration applied. quota-guard.ts live with 4 exports and 4 passing tests. ARCH DECISION #2 committed.
+**Last session:** 2026-04-28 — Plans 10-02, 10-03, 10-04 executed in parallel (wave 2 complete). /auth/confirm + forgot/reset-password + verify-email live (10-02). accounts RLS + provisioning trigger live (10-03). email_send_log + quota-guard.ts live (10-04). 135 tests passing.
 
-**Stopped at:** Plan 10-04 complete. Wave 2 (10-02, 10-03, 10-04) all done.
+**Stopped at:** Plan 10-02 complete. Wave 2 (10-02, 10-03, 10-04) all done.
 
 **Resume:** Execute Plan 10-05 (signup-page-and-email-confirm-toggle). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-05-signup-page-and-email-confirm-toggle-PLAN.md`. Note: 10-05 Task 3 wires `checkAndConsumeQuota('signup-verify')` — import from `@/lib/email-sender/quota-guard` (not from `@/lib/email-sender` which is the vitest mock alias).
 
