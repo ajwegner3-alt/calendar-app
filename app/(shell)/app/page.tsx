@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WelcomeCard } from "@/components/welcome-card";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default async function DashboardHome() {
   const supabase = await createClient();
@@ -11,13 +14,13 @@ export default async function DashboardHome() {
   }
 
   // Load the user's account row directly (RLS-scoped: only their own row is
-  // returned). This replaces the v1.0 current_owner_account_ids() RPC which
-  // only checked whether an account row existed — it did not check
-  // onboarding_complete, so new users would land on the dashboard before
-  // completing the wizard.
+  // returned). Selects all columns needed for the onboarding checklist
+  // visibility gate plus the 10-06 onboarding_complete redirect.
   const { data: accounts, error } = await supabase
     .from("accounts")
-    .select("onboarding_complete")
+    .select(
+      "id, slug, onboarding_complete, onboarding_checklist_dismissed_at, created_at",
+    )
     .eq("owner_user_id", claims.claims.sub)
     .is("deleted_at", null)
     .limit(1);
@@ -33,10 +36,52 @@ export default async function DashboardHome() {
     redirect("/app/unlinked");
   }
 
+  const account = accounts[0];
+
   // New users (onboarding_complete=false) must complete the wizard first.
-  if (!accounts[0].onboarding_complete) {
+  // Preserved from 10-06 — do not remove.
+  if (!account.onboarding_complete) {
     redirect("/onboarding");
   }
 
-  return <WelcomeCard />;
+  // Determine whether the onboarding checklist should be shown at all before
+  // fetching the extra counts (avoids two round-trips for established users).
+  const checklistWindowOpen =
+    account.onboarding_checklist_dismissed_at === null &&
+    new Date(account.created_at).getTime() + SEVEN_DAYS_MS > Date.now();
+
+  // Only load availability + event_type counts when the checklist window is
+  // open — no-op for users who have already dismissed or are past 7 days.
+  let availabilityCount = 0;
+  let eventTypeCount = 0;
+
+  if (checklistWindowOpen) {
+    const [availResult, evtResult] = await Promise.all([
+      supabase
+        .from("availability_rules")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", account.id),
+      supabase
+        .from("event_types")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", account.id)
+        .eq("is_active", true),
+    ]);
+
+    availabilityCount = availResult.count ?? 0;
+    eventTypeCount = evtResult.count ?? 0;
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Onboarding checklist — renders only within first 7 days, before dismiss */}
+      <OnboardingChecklist
+        account={account}
+        availabilityCount={availabilityCount}
+        eventTypeCount={eventTypeCount}
+      />
+
+      <WelcomeCard />
+    </div>
+  );
 }
