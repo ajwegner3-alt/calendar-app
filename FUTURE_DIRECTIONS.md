@@ -211,4 +211,32 @@ Source: `09-CHECKLIST.md` Apple Mail code review findings section + Marathon Cri
 
 ---
 
+---
+
+## 7. v1.1 Phase 10 — Multi-User Signup + Onboarding (Carry-overs)
+
+*Added 2026-04-28, Plan 10-09. Items deferred from Phase 10 scope to v1.2 backlog.*
+
+- **Gmail SMTP → Resend/Postmark migration.** Phase 10 capped signup-side emails at 200/day via `lib/email-sender/quota-guard.ts` with 80%-threshold warning + fail-closed-at-cap. v1.2 should migrate to Resend (~$10/mo for 5k emails) for higher headroom and proper SPF/DKIM/DMARC posture (also closes EMAIL-08 v1.2 backlog item). Booking/reminder paths bypass the quota guard and would need a separate migration strategy.
+
+- **OAuth signup (Google / GitHub).** Deferred per Phase 10 CONTEXT.md — v1.1 ships email+password only. Supabase supports Google + GitHub OAuth providers; the `auth/confirm` route handler already handles the `magiclink` type. Adding OAuth would require: Supabase Dashboard provider config, a new "Sign in with Google" button on the login/signup pages, and ensuring the provisioning trigger fires on OAuth-created users.
+
+- **Magic-link / passwordless login.** Deferred per CONTEXT.md. The 10-02 `auth/confirm` route handler already supports `type=magiclink`. Enabling it requires a Supabase Dashboard toggle + UI surface.
+
+- **Slug 301 redirect for old slugs after change.** In v1.1 (Plan 10-07), changing a slug produces a 404 for the old URL. v1.2 could store `previous_slug` and serve a 301 from `app/[account]/page.tsx`. Revisit if contractors report broken-link complaints after promoting their booking page.
+
+- **Soft-delete reversibility / "restore on login within N days".** Plan 10-07 chose immediate-no-undo: `accounts.deleted_at = now()` + signOut + redirect to `/account-deleted`. Post-delete re-login lands on `/app/unlinked` (documented UX hole). v1.2 could offer a grace period where re-login triggers an account restore prompt.
+
+- **Hard-delete cron purge.** v1.1 ships soft-delete only; `auth.users` rows are preserved indefinitely. v1.2 cron should purge `auth.users` + `accounts` rows where `deleted_at < now() - interval '30 days'`. Requires a SECURITY DEFINER function since `auth.users` is not directly writable via RLS policies.
+
+- **Pick-from-templates first event type.** Plan 10-06 ships a single pre-filled "Consultation / 30 min" default in the wizard. v1.2 could offer 3–4 template cards (Consultation, Discovery Call, Site Visit, etc.) for contractors to choose from. Revisit if onboarding analytics show users bouncing at wizard step 3.
+
+- **Onboarding analytics.** Phase 10 captures no metrics on wizard step progression or checklist dismissal rates. Add a `booking_events`-style event log (or use Supabase Realtime + a lightweight `onboarding_events` table) to track step transitions, drop-off points, and checklist item completion for v1.2 data-driven improvements.
+
+- **Constant-time delay on signup + forgot-password forms.** P-A1 prevention recommends ~500ms artificial delay regardless of outcome to defeat timing oracles (attacker learns whether an email is registered by response time). v1.1 ships rate limiting + generic messaging (`P-A1` pattern), which is sufficient table-stakes. Add a `setTimeout(resolve, 500)` wrapper to `signUpAction` + `requestPasswordResetAction` for stronger posture in v1.2.
+
+- **RLS matrix N=3 test user provisioning.** Plan 10-09 extended the cross-tenant matrix test to N=3 tenants in code, but the third test user (`nsi-rls-test-3@andrewwegner.example`) and its `accounts` row are deferred to milestone-end QA (see `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`). Until provisioned, the 24 new N=3 test cases skip gracefully.
+
+---
+
 *v1 sign-off: Phase 9 Plan 09-03, 2026-04-27. Future Claude Code sessions: read this file after CLAUDE.md, then proceed.*
