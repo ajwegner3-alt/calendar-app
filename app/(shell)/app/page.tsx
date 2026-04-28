@@ -4,32 +4,39 @@ import { WelcomeCard } from "@/components/welcome-card";
 
 export default async function DashboardHome() {
   const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
 
-  // RESEARCH Open Question #1: verify the RPC return shape at runtime.
-  // current_owner_account_ids() is `returns setof uuid`, which in supabase-js
-  // returns an array of raw UUID strings (not wrapped objects). A length check
-  // is correct. If this surprises in practice (e.g., shape is
-  // [{current_owner_account_ids: uuid}, ...]), fall back to the direct query:
-  //
-  //   const { data } = await supabase
-  //     .from("accounts")
-  //     .select("id")
-  //     .eq("owner_user_id", claims.sub);
-  //
-  // Plan 04 Task 3 inspects this shape end-to-end with a transient console.log
-  // and documents the observed form in the plan-04 SUMMARY. If wrapped, the
-  // length check below should become:
-  //   data.filter(r => r.current_owner_account_ids).length === 0
-  // Do NOT ship the console.log — it's transient, removed in the same commit.
-  const { data, error } = await supabase.rpc("current_owner_account_ids");
+  if (!claims?.claims) {
+    redirect("/app/login");
+  }
+
+  // Load the user's account row directly (RLS-scoped: only their own row is
+  // returned). This replaces the v1.0 current_owner_account_ids() RPC which
+  // only checked whether an account row existed — it did not check
+  // onboarding_complete, so new users would land on the dashboard before
+  // completing the wizard.
+  const { data: accounts, error } = await supabase
+    .from("accounts")
+    .select("onboarding_complete")
+    .eq("owner_user_id", claims.claims.sub)
+    .is("deleted_at", null)
+    .limit(1);
 
   if (error) {
     // Infrastructure failure — surface rather than silently hide.
-    throw new Error(`Failed to load account linkage: ${error.message}`);
+    throw new Error(`Failed to load account: ${error.message}`);
   }
 
-  const linkedCount = Array.isArray(data) ? data.length : 0;
-  if (linkedCount === 0) redirect("/app/unlinked");
+  // Defense in depth: trigger should have created the stub, but if it's missing
+  // fall back to the v1.0 /app/unlinked route rather than a blank dashboard.
+  if (!accounts || accounts.length === 0) {
+    redirect("/app/unlinked");
+  }
+
+  // New users (onboarding_complete=false) must complete the wizard first.
+  if (!accounts[0].onboarding_complete) {
+    redirect("/onboarding");
+  }
 
   return <WelcomeCard />;
 }
