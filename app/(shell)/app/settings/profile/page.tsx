@@ -37,14 +37,12 @@ export default async function ProfileSettingsPage() {
           {email}
         </p>
         <p className="text-xs text-muted-foreground">
-          {/* 10-08 wires the email-change flow */}
           <Link
             href="/app/settings/profile/email"
             className="text-primary underline-offset-4 hover:underline"
           >
             Change email
-          </Link>{" "}
-          <span className="opacity-60">(coming soon)</span>
+          </Link>
         </p>
       </section>
 
