@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-27 — v1.0 milestone archived. All 9 phases complete; v1.0 SHIPPED with Andrew's verbatim sign-off "ship v1" on 2026-04-27. ROADMAP/REQUIREMENTS archived to `.planning/milestones/v1.0-*`. PROJECT.md fully evolved (Validated section populated with 25 shipped capabilities; Active section = v1.1 backlog of 8 deferred requirements + 6 dashboard walkthrough items). v1.1 not yet planned.
+**Last updated:** 2026-04-27 — v1.1 milestone STARTED. Andrew approved scope (multi-user signup → capacity bug fix → branded UI overhaul → QA + sign-off) and selected "research first". Phases 10-13 will continue numbering from v1.0. v1.0 marathon QA carry-overs RE-DEFERRED to v1.2 per Andrew (his words: "We aren't going to do any of that right now"). v1.1 active scope: open signup (free, no Stripe), close prod double-booking observation + add per-event-type capacity, apply tailwind-landing-page Cruip "Simple Light" style across all 5 surfaces with per-account `background_color` + `background_shade` tokens.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Planning v1.1 — close deferred QA items (canonical backlog in `FUTURE_DIRECTIONS.md` at repo root).
+**Current focus:** v1.1 — multi-user signup (Phase 10) → capacity / double-booking fix (Phase 11) → branded UI overhaul (Phase 12) → manual QA + sign-off (Phase 13). v1.0 marathon-QA backlog carried to v1.2.
 
 **Mode:** yolo
 **Depth:** standard
@@ -16,10 +16,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 ## Current Position
 
-**Milestone:** v1.0 SHIPPED 2026-04-27.
-**Phase:** Not started — v1.1 not yet planned. Next: `/gsd:new-milestone` for v1.1 questioning → research → requirements → roadmap.
-**Status:** Ready to plan v1.1.
-**Last activity:** 2026-04-27 — v1.0 milestone archived. `.planning/milestones/v1.0-ROADMAP.md` + `.planning/milestones/v1.0-REQUIREMENTS.md` written; `.planning/MILESTONES.md` created with v1.0 entry; `.planning/PROJECT.md` evolved (Validated populated, Active = v1.1 backlog); `.planning/ROADMAP.md` collapsed to one-line summary; `.planning/REQUIREMENTS.md` deleted (will be re-created during `/gsd:new-milestone` for v1.1).
+**Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
+**Phase:** Not started — defining requirements (research running). Next phases will be 10-13 (continues from v1.0 phase 9).
+**Status:** Researching domain (4 parallel agents); requirements + roadmap to follow.
+**Last activity:** 2026-04-27 — v1.1 milestone scope confirmed by Andrew (multi-user → capacity → UI overhaul → QA). Research phase spawning. `PROJECT.md` updated with Current Milestone section + Active requirements scaffold + 4 new Key Decisions; `STATE.md` updated for v1.1 readiness. `REQUIREMENTS.md` will be created post-research.
 
 **Progress:** [█████████] 9 / 9 phases complete (v1.0 SHIPPED 2026-04-27)
 

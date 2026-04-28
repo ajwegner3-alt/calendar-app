@@ -42,27 +42,52 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 - ✓ Cloudflare Turnstile bot protection on booking form — v1.0
 - ✓ `FUTURE_DIRECTIONS.md` authored at repo root — v1.0 (213 lines; canonical v1.1 backlog)
 
-### Active
+## Current Milestone: v1.1
 
-**v1.1 — deferred from v1.0, see FUTURE_DIRECTIONS.md for canonical enumeration:**
+**Goal:** Open the tool to anyone (multi-user signup), close the double-booking correctness bug + add per-event-type capacity, and rebrand every owner-facing surface with the Cruip "Simple Light" tailwind-landing-page aesthetic (gradient backgrounds + per-account color/shade tokens).
 
-- [ ] **EMBED-07** — Live Squarespace/Wix/WordPress embed test on real https:// host (file:// fails CSP `frame-ancestors *` — opaque origin). See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **EMAIL-08** — Sending domain SPF/DKIM/DMARC verified; `mail-tester.com` ≥ 9/10 for confirmation AND reminder. See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **QA-01** — Live end-to-end booking completed on NSI Squarespace or WordPress page with no JS errors. See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **QA-02** — `.ics` import verified in Gmail web, Gmail iOS, Apple Mail, Outlook (live device verification, not just code review). Apple Mail code-review LIKELY PASS in v1 (FUTURE_DIRECTIONS.md §5). See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **QA-03** — `mail-tester.com` scoring run. See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **QA-04** — Live DST / cross-timezone booking E2E with real email confirmation. Algorithmic correctness covered in v1 (`tests/availability/compute-slots*.test.ts`); live human E2E deferred. See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **QA-05** — Responsive 320 / 768 / 1024 pass on hosted page AND embed (live multi-viewport human verification). See FUTURE_DIRECTIONS.md §1, §3.
-- [ ] **QA-06** — Live multi-tenant UI isolation walkthrough (login as 2nd test user; confirm dashboard shows zero of Andrew's data). Backend RLS automated coverage in v1; UI-layer walkthrough deferred. See FUTURE_DIRECTIONS.md §1, §3.
+**Ordering rationale:** Multi-user is most urgent (per Andrew 2026-04-27); capacity bug investigation runs second so the correctness fix is in place before broad UI rework; UI overhaul comes last because IA must cover the full onboarded-user surface; QA + sign-off as always.
 
-**v1.1 also includes (per FUTURE_DIRECTIONS.md §3 Future Improvements):**
+**Target features (in order):**
 
-- [ ] Phase 8 dashboard 9-item human walkthrough (bookings list filters/pagination/sort, booking detail page, reminder settings toggles, event-type Location field, reminder email branding live in inbox, Vercel Cron green-tick verification, rate-limit live smoke on 3 endpoints, Settings group sidebar entry, branding editor file-rejection edge cases).
-- [ ] Cron-fired-in-production functional proof (Vercel Crons UI tab not surfacing schedule despite `vercel.json` deployed; verify via real reminder arrival).
-- [ ] Per-template branding 6-row smoke (booker × owner × confirm/cancel/reschedule).
-- [ ] Apple Mail live device verification (currently code-review LIKELY PASS only).
-- [ ] Plain-text alternative on confirmation email (low-risk small commit; mirror reminder email pattern).
-- [ ] NSI mark image in "Powered by NSI" email footer (currently text-only because `NSI_MARK_URL = null`).
+1. **Multi-user signup + onboarding** — public `/signup`, email verification, account auto-provisioning (slug picker, default availability), first-login wizard. Free tier (no Stripe in v1.1). Includes a defensive race-guard verification task at start so multi-user does not ship double-booking exposed to new accounts.
+2. **Booking capacity** — investigate Andrew's prod observation that double-booking succeeded; add `max_bookings_per_slot` on `event_types` (default 1, owner-toggleable); slot API + booking API enforce.
+3. **Branded UI overhaul (5 surfaces)** — apply `website-creation/.claude/skills/tailwind-landing-page` (Inter + gray-50 base + gradient accents) to dashboard + public booking page + `/[account]` index + embed widget + emails. Per-account branding tokens grow: `background_color` + `background_shade` (gradient intensity). Sidebar IA fix so Settings is reachable. Home tab = monthly calendar with click-day → drawer of that day's bookings. Embed snippet dialog overlap fix folds in here.
+4. **Manual QA + Andrew sign-off.**
+
+**Active requirements being built:**
+
+- [ ] **AUTH-05** through AUTH-NN (multi-user signup, email verify, password reset, account provisioning) — Phase 10
+- [ ] **CAP-01..NN** — booking capacity per event type + double-booking root cause fix — Phase 11
+- [ ] **BRAND-05..NN** — per-account `background_color` + `background_shade` tokens — Phase 12
+- [ ] **UI-01..NN** — sidebar IA, Home tab monthly calendar + day-drawer, embed dialog widening, settings discoverability, full-surface tailwind-landing-page styling — Phase 12
+- [ ] **QA-09..NN** — v1.1-specific manual QA + Andrew sign-off — Phase 13
+
+(Specific REQ-IDs assigned during requirements definition.)
+
+### Carried-forward (deferred to v1.2 or later)
+
+The 8 v1.0-deferred items below remain deferred — Andrew confirmed v1.1 does NOT include them:
+
+- [ ] **EMBED-07** — Live Squarespace/Wix/WordPress embed test (deferred; Andrew is using own Next.js sites only).
+- [ ] **EMAIL-08** — SPF/DKIM/DMARC verified; mail-tester ≥9/10 (deferred to live-deliverability QA cycle).
+- [ ] **QA-01..QA-06** — Marathon QA criteria (live email-client cross-test, mail-tester scoring, DST live E2E, responsive multi-viewport pass, multi-tenant UI walkthrough). Note: QA-06 (multi-tenant UI walkthrough) becomes naturally exercised by v1.1 multi-user flow, but the formal walkthrough remains deferred unless v1.1 Phase 13 picks it up.
+
+**v1.1 also includes from FUTURE_DIRECTIONS.md §3 Future Improvements:**
+
+- [ ] Per-template branding 6-row smoke (booker × owner × confirm/cancel/reschedule) — folds into Phase 12 emails work.
+- [ ] Plain-text alternative on confirmation email — mirrors reminder pattern; folds into Phase 12 emails work.
+- [ ] NSI mark image in "Powered by NSI" email footer — folds into Phase 12 emails work.
+- [ ] `RESERVED_SLUGS` deduplication — Phase 10 needs this for slug-picker validation; fold in.
+
+**Tech debt deferred:**
+
+- [ ] `react-hooks/incompatible-library` warning on `event-type-form.tsx:99` (RHF `watch()` → `useWatch`).
+- [ ] `tsc --noEmit` test-mock alias errors (alias only in `vitest.config.ts`, not `tsconfig.json`).
+- [ ] `/auth/callback` route 404s (blocks Supabase password-reset flow). **Becomes v1.1 BLOCKER** — multi-user signup needs working email-confirmation callback. Phase 10 must fix.
+- [ ] Supabase service-role key migration to `sb_secret_*` (waiting on Supabase rollout).
+- [ ] Plan 08-05/06/07 wave-2 git-index race (multi-agent commits swept untracked siblings).
+- [ ] `generateMetadata` double-load on public booking page.
 
 ### Out of Scope
 
@@ -168,7 +193,10 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 | Vercel Pro tier for hourly cron | Hobby tier deploys at most daily; cron-job.org fallback dropped during Plan 08-08 | ✓ Good — `vercel.json` `0 * * * *` deployed (production verification deferred to v1.1) |
 | Token rotation on every reminder send | Prevents stale-token replay; same UPDATE that claims `reminder_sent_at` | ✓ Good — accepted side-effect: original confirmation tokens stop working post-reminder (v1.1 may add resend UI) |
 | Reminder retry on send failure = NONE | RESEARCH Pitfall 4 — clearing `reminder_sent_at` on failure causes retry spam | ✓ Good — at-most-once delivery acceptable for v1 |
-| Marathon QA scope-cut to v1.1 by project-owner discretion | "Other problems are more pressing and will be addressed in the next milestone" | — Pending — v1.1 will close the 6 ROADMAP criteria + 9 dashboard sub-criteria + 6-row branding sub-table |
+| Marathon QA scope-cut to v1.1 by project-owner discretion | "Other problems are more pressing and will be addressed in the next milestone" | — Pending — v1.1 deprioritizes marathon QA; carried into v1.2 backlog instead |
+| v1.1 scope-cut on 2026-04-27 to focus on multi-user + capacity bug + branding overhaul | Andrew flagged a real prod double-booking, no UI for settings discovery, plain UI lacking "website feel", and most urgent need = open signup. Marathon QA recarried to v1.2. | — Pending |
+| Multi-user signup ships free in v1.1 (no Stripe / billing) | Distribution first; monetization layer in later milestone | — Pending |
+| Branding tokens grow to include `background_color` + `background_shade` per-account | Andrew explicitly named tailwind-landing-page Cruip "Simple Light" gradient style as the target; per-account customization keeps multi-user theme-able | — Pending |
 
 ---
-*Last updated: 2026-04-27 after v1.0 milestone*
+*Last updated: 2026-04-27 after starting v1.1 milestone*
