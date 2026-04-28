@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plan 10-01 complete. RESERVED_SLUGS consolidated to lib/reserved-slugs.ts. Both v1.0 consumers migrated. Phase 10 build-order step 1 landed.
+**Last updated:** 2026-04-28 — Plan 10-03 complete (parallel wave 2). Onboarding columns + RLS policies + provisioning trigger live. accounts.slug and accounts.name now nullable. ARCH DECISION #1 committed in code.
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-01 (reserved-slugs-consolidation) — 2026-04-28.
-**Status:** In progress — Plan 10-01 complete, 10-02 next.
-**Last activity:** 2026-04-28 — Plan 10-01 executed. RESERVED_SLUGS consolidated to lib/reserved-slugs.ts. Phase 10 build-order step 1 done.
+**Last completed plan:** 10-03 (accounts-rls-and-provisioning-trigger) — 2026-04-28. [Also: 10-01 complete; 10-02, 10-04 parallel wave in progress]
+**Status:** In progress — Plans 10-01, 10-03 complete; 10-02, 10-04 running in parallel.
+**Last activity:** 2026-04-28 — Plan 10-03 executed (parallel wave 2). Onboarding columns migration applied. RLS+trigger migration applied. ARCH DECISION #1 in production.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 1/9 plans done)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 2/9 plans done, 2 more in parallel wave)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -40,7 +40,7 @@ v1.1 — IN PROGRESS (started 2026-04-27)
 Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 1/9 plans complete)
   10-01 [✓] reserved-slugs-consolidation             (Complete 2026-04-28)
   10-02 [ ] auth-confirm-and-password-reset
-  10-03 [ ] accounts-rls-and-provisioning-trigger
+  10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
   10-04 [ ] gmail-smtp-quota-cap-and-alert
   10-05 [ ] signup-page-and-email-confirm-toggle
   10-06 [ ] onboarding-wizard-and-provisioning
@@ -92,6 +92,10 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Postgres-backed rate limiting** — single `rate_limit_events` table; `checkRateLimit` fails OPEN on DB error. AUTH-11 reuses this table for `/api/auth/*` endpoints.
 - **Migration drift workaround LOCKED** — `npx supabase db query --linked -f <migration.sql>` (CLI `db push` fails with orphan tracking-table timestamps).
 - **`RESERVED_SLUGS` consolidated to `lib/reserved-slugs.ts`** (Plan 10-01, 2026-04-28) — `ReadonlySet<string>` with v1.0 entries + Phase 10 additions (signup, onboarding, login, forgot-password, settings). Both v1.0 consumers migrated. `isReservedSlug()` helper available. ONBOARD-05 consolidation portion COMPLETE.
+- **ARCH DECISION #1 COMMITTED in code** (Plan 10-03, 2026-04-28) — Postgres SECURITY DEFINER trigger `provision_account_on_signup` creates stub accounts row (`slug=null, name=null, onboarding_complete=false`) on every `auth.users` INSERT. Wizard (10-06) UPDATEs stub. Live in production. Andrew's NSI row has `onboarding_complete=true`.
+- **accounts.slug + accounts.name are now nullable** (Plan 10-03, 2026-04-28) — both had NOT NULL dropped to support stub rows. CHECK constraints enforce `(col IS NOT NULL) OR (onboarding_complete = false)` — values required before wizard can mark complete.
+- **accounts onboarding columns live** (Plan 10-03, 2026-04-28) — `onboarding_complete BOOLEAN NOT NULL DEFAULT false`, `onboarding_step INTEGER NOT NULL DEFAULT 1 CHECK (1..3)`, `onboarding_checklist_dismissed_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `accounts_slug_active_idx` partial index (where deleted_at is null).
+- **accounts RLS: INSERT + UPDATE policies added** (Plan 10-03, 2026-04-28) — `accounts_owner_insert` (INSERT, authenticated, auth.uid()=owner_user_id) and `accounts_owner_update` (UPDATE, same check) now live alongside v1.0 SELECT + UPDATE policies.
 - **Supabase project + ref locked** — `mogfnutxrrbtvnaupoun`, region West US 2, Postgres 17.6.1.
 - **Seeded NSI account** — `slug=nsi`, `id=ba8e712d-28b7-4071-b3d4-361fb6fb7a60`, timezone `America/Chicago`, `owner_email=ajwegner3@gmail.com`, `owner_user_id=1a8c687f-73fd-4085-934f-592891f51784`. ⚠ Phase 10 P-A8: pre-flight UPDATE on `email_confirmed_at` if null BEFORE flipping email-confirm toggle.
 - **v1.1 scope-cut 2026-04-27** — multi-user signup + capacity bug + branding overhaul; marathon QA RE-deferred to v1.2.
@@ -125,10 +129,10 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ### Active Blockers / Decisions Required Before Planning
 
-- **Phase 10 — three decisions to surface during plan-phase:**
-  1. Account auto-provisioning pattern: Postgres `on auth.users` trigger vs. Server Action after `/auth/confirm`.
-  2. Gmail SMTP quota plan (P-A12 highest under-mitigated v1.1 risk).
-  3. P-A8 pre-flight UPDATE on Andrew's `email_confirmed_at` BEFORE flipping email-confirm toggle.
+- **Phase 10 — decisions status:**
+  1. ~~Account auto-provisioning pattern~~ — RESOLVED (Plan 10-03): Postgres trigger committed in production.
+  2. Gmail SMTP quota plan (P-A12 highest under-mitigated v1.1 risk) — handled in Plan 10-04 (parallel wave).
+  3. P-A8 pre-flight UPDATE on Andrew's `email_confirmed_at` BEFORE flipping email-confirm toggle — handled in Plan 10-02 (parallel wave).
 - **Phase 11 — `/gsd:research-phase` flagged**: advisory-lock-trigger vs. slot_index pattern; verify v1.0 race test layer (supabase-js vs pg-driver); root-cause prod double-booking before designing replacement.
 - **Phase 12 — two decisions during plan-phase**: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope (~1 day cheap insurance vs accept Andrew-eyes-only QA in Phase 13).
 
@@ -136,11 +140,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-01 executed. RESERVED_SLUGS consolidated from 2 files to lib/reserved-slugs.ts. Both consumers migrated. Phase 10 build-order step 1 complete.
+**Last session:** 2026-04-28 — Plan 10-03 executed (parallel wave 2). Onboarding columns + RLS policies + provisioning trigger applied to live Supabase. ARCH DECISION #1 committed in code.
 
-**Stopped at:** Plan 10-01 complete. Phase 10 in progress.
+**Stopped at:** Plan 10-03 complete. Plans 10-02 and 10-04 running in parallel wave.
 
-**Resume:** Execute Plan 10-02 (auth-confirm-and-password-reset). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-02-auth-confirm-and-password-reset-PLAN.md`.
+**Resume:** After 10-02 and 10-04 complete, execute Plan 10-05 (signup-page-and-email-confirm-toggle). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-05-signup-page-and-email-confirm-toggle-PLAN.md`.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
