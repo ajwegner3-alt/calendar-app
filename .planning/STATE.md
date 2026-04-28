@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plans 10-02 + 10-04 complete (parallel wave 2 fully done). /auth/confirm verifyOtp handler live, closes v1.0 BLOCKER. Full forgot/reset-password + verify-email flows shipped. email_send_log table live. quota-guard.ts exports SIGNUP_DAILY_EMAIL_CAP/QuotaExceededError/getDailySendCount/checkAndConsumeQuota. ARCH DECISION #2 committed in code. 135 tests passing.
+**Last updated:** 2026-04-28 — Plan 10-07 complete. /app/settings/profile + soft-delete (ACCT-01/02/03) + ACCT-03 filter on public loaders + /account-deleted page + sidebar Profile link. 141 tests passing (6 new from account-soft-delete.test.ts).
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-05 (signup-page-and-email-confirm-toggle) — 2026-04-28 (auto portion; P-A8 checkpoint DEFERRED to milestone-end QA).
-**Status:** In progress — Plans 10-01..10-05 auto portions complete; Wave 4 (10-06, 10-07) next.
-**Last activity:** 2026-04-28 — Plan 10-05 executed: /app/signup page + lib/auth/rate-limits.ts centralized helper + scripts/phase10-pre-flight-andrew-email-confirmed.sql created. P-A8 (Supabase Dashboard email-confirm toggle) DEFERRED per Andrew 2026-04-28 — all manual checks batched for milestone-end QA. Tracked in .planning/MILESTONE_V1_1_DEFERRED_CHECKS.md.
+**Last completed plan:** 10-07 (profile-settings-and-soft-delete) — 2026-04-28.
+**Status:** In progress — Plans 10-01..10-07 complete (10-06 running in parallel wave 4); 10-08 and 10-09 next.
+**Last activity:** 2026-04-28 — Plan 10-07 executed: /app/settings/profile (4 sections), softDeleteAccountAction, ACCT-03 deleted_at filters on loadAccountListing + loadEventTypeForBookingPage, /account-deleted page, Profile sidebar link. 141 tests passing.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 5/9 plans done)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 7/9 plans done)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -37,14 +37,14 @@ Phase 8  [✓] Reminders + Hardening + Dashboard List  (Complete 2026-04-27)
 Phase 9  [✓] Manual QA & Verification                (Complete 2026-04-27 — "ship v1")
 
 v1.1 — IN PROGRESS (started 2026-04-27)
-Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 1/9 plans complete)
+Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 7/9 plans done)
   10-01 [✓] reserved-slugs-consolidation             (Complete 2026-04-28)
   10-02 [✓] auth-confirm-and-password-reset          (Complete 2026-04-28)
   10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
   10-04 [✓] gmail-smtp-quota-cap-and-alert            (Complete 2026-04-28)
   10-05 [✓*] signup-page-and-email-confirm-toggle      (auto done 2026-04-28; P-A8 checkpoint deferred)
-  10-06 [ ] onboarding-wizard-and-provisioning
-  10-07 [ ] profile-settings-and-soft-delete
+  10-06 [~] onboarding-wizard-and-provisioning       (wave-4 parallel — in progress)
+  10-07 [✓] profile-settings-and-soft-delete         (Complete 2026-04-28)
   10-08 [ ] email-change-with-reverification
   10-09 [ ] rls-matrix-extension-and-checklist
 Phase 11 [ ] Booking Capacity + Double-Booking Fix   (Not started)
@@ -105,6 +105,9 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **v1.1 scope-cut 2026-04-27** — multi-user signup + capacity bug + branding overhaul; marathon QA RE-deferred to v1.2.
 - **Multi-user signup ships free in v1.1 (no Stripe / billing).**
 - **Branding tokens grow** — `accounts.background_color` + `accounts.background_shade` (none/subtle/bold) added in Phase 12.
+- **`/app/settings/profile` ships with 4 sections** (Plan 10-07, 2026-04-28) — Display Name (writes `accounts.name`, labeled "Display Name" in UI), Slug (UNIQUE constraint 23505 for collision), Password change (transient cookie-less Supabase client for current-password challenge), and Danger Zone soft-delete (type-slug-to-confirm). Email read-only with "Change email" link placeholder for 10-08.
+- **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
+- **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
 
 ### Pending Todos
 
@@ -144,11 +147,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plans 10-02, 10-03, 10-04 executed in parallel (wave 2 complete). /auth/confirm + forgot/reset-password + verify-email live (10-02). accounts RLS + provisioning trigger live (10-03). email_send_log + quota-guard.ts live (10-04). 135 tests passing.
+**Last session:** 2026-04-28 — Plan 10-07 (continuation) complete. /app/settings/profile + softDeleteAccountAction + ACCT-03 deleted_at filters + /account-deleted + sidebar Profile link. 141 tests passing.
 
-**Stopped at:** Plan 10-02 complete. Wave 2 (10-02, 10-03, 10-04) all done.
+**Stopped at:** Plan 10-07 complete. Wave 4 (10-06 + 10-07) — 10-07 done; 10-06 completing in parallel.
 
-**Resume:** Execute Plan 10-05 (signup-page-and-email-confirm-toggle). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-05-signup-page-and-email-confirm-toggle-PLAN.md`. Note: 10-05 Task 3 wires `checkAndConsumeQuota('signup-verify')` — import from `@/lib/email-sender/quota-guard` (not from `@/lib/email-sender` which is the vitest mock alias).
+**Resume:** After 10-06 completes, execute Plan 10-08 (email-change-with-reverification). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-08-email-change-with-reverification-PLAN.md`.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
