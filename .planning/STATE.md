@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-27 — v1.1 ROADMAP created. Phases 10-13 structured: (10) Multi-User Signup + Onboarding, (11) Booking Capacity + Double-Booking Root-Cause Fix, (12) Branded UI Overhaul (5 Surfaces), (13) Manual QA + Andrew Ship Sign-Off. All 53 v1.1 requirements mapped, zero unmapped. Ready to plan Phase 10.
+**Last updated:** 2026-04-28 — Plan 10-01 complete. RESERVED_SLUGS consolidated to lib/reserved-slugs.ts. Both v1.0 consumers migrated. Phase 10 build-order step 1 landed.
 
 ## Project Reference
 
@@ -18,10 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Status:** Not started — Ready to plan (`/gsd:plan-phase 10`).
-**Last activity:** 2026-04-27 — v1.1 ROADMAP.md authored with Phases 10-13. 53 requirements mapped, zero unmapped. Phase 11 flagged for `/gsd:research-phase` (advisory-lock vs slot_index decision); Phases 10 + 12 have decisions-required-during-planning (auto-provisioning pattern, Gmail SMTP quota plan, P-A8 pre-flight; email gradient strategy, visual regression scope).
+**Last completed plan:** 10-01 (reserved-slugs-consolidation) — 2026-04-28.
+**Status:** In progress — Plan 10-01 complete, 10-02 next.
+**Last activity:** 2026-04-28 — Plan 10-01 executed. RESERVED_SLUGS consolidated to lib/reserved-slugs.ts. Phase 10 build-order step 1 done.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 1/9 plans done)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -36,7 +37,16 @@ Phase 8  [✓] Reminders + Hardening + Dashboard List  (Complete 2026-04-27)
 Phase 9  [✓] Manual QA & Verification                (Complete 2026-04-27 — "ship v1")
 
 v1.1 — IN PROGRESS (started 2026-04-27)
-Phase 10 [ ] Multi-User Signup + Onboarding          (Not started — ready to plan)
+Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 1/9 plans complete)
+  10-01 [✓] reserved-slugs-consolidation             (Complete 2026-04-28)
+  10-02 [ ] auth-confirm-and-password-reset
+  10-03 [ ] accounts-rls-and-provisioning-trigger
+  10-04 [ ] gmail-smtp-quota-cap-and-alert
+  10-05 [ ] signup-page-and-email-confirm-toggle
+  10-06 [ ] onboarding-wizard-and-provisioning
+  10-07 [ ] profile-settings-and-soft-delete
+  10-08 [ ] email-change-with-reverification
+  10-09 [ ] rls-matrix-extension-and-checklist
 Phase 11 [ ] Booking Capacity + Double-Booking Fix   (Not started)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
@@ -81,7 +91,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Reminder retry on send failure = NONE by design** (RESEARCH Pitfall 4).
 - **Postgres-backed rate limiting** — single `rate_limit_events` table; `checkRateLimit` fails OPEN on DB error. AUTH-11 reuses this table for `/api/auth/*` endpoints.
 - **Migration drift workaround LOCKED** — `npx supabase db query --linked -f <migration.sql>` (CLI `db push` fails with orphan tracking-table timestamps).
-- **`RESERVED_SLUGS` duplicated across 2 files** in v1.0 — Phase 10 consolidates to `lib/reserved-slugs.ts` FIRST (slug picker is 3rd consumer; consolidation now avoids drift).
+- **`RESERVED_SLUGS` consolidated to `lib/reserved-slugs.ts`** (Plan 10-01, 2026-04-28) — `ReadonlySet<string>` with v1.0 entries + Phase 10 additions (signup, onboarding, login, forgot-password, settings). Both v1.0 consumers migrated. `isReservedSlug()` helper available. ONBOARD-05 consolidation portion COMPLETE.
 - **Supabase project + ref locked** — `mogfnutxrrbtvnaupoun`, region West US 2, Postgres 17.6.1.
 - **Seeded NSI account** — `slug=nsi`, `id=ba8e712d-28b7-4071-b3d4-361fb6fb7a60`, timezone `America/Chicago`, `owner_email=ajwegner3@gmail.com`, `owner_user_id=1a8c687f-73fd-4085-934f-592891f51784`. ⚠ Phase 10 P-A8: pre-flight UPDATE on `email_confirmed_at` if null BEFORE flipping email-confirm toggle.
 - **v1.1 scope-cut 2026-04-27** — multi-user signup + capacity bug + branding overhaul; marathon QA RE-deferred to v1.2.
@@ -103,7 +113,7 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 - **Per-template branding 6-row smoke** — folds into Phase 12 (EMAIL-12).
 - **Plain-text alternative on confirmation email** — folds into Phase 12 (EMAIL-10).
 - **NSI mark image in email footer** — folds into Phase 12 (EMAIL-11).
-- **`RESERVED_SLUGS` deduplication** — folds into Phase 10 (ONBOARD-05; build-order step 1).
+- **`RESERVED_SLUGS` deduplication** — RESOLVED in Plan 10-01 (2026-04-28). `lib/reserved-slugs.ts` is the single source of truth.
 - **`/auth/callback` 404** — folds into Phase 10 as `/auth/confirm` Route Handler (verifyOtp pattern; closes v1.0 BLOCKER).
 - **`react-hooks/incompatible-library` warning** on `event-type-form.tsx:99` — v1.2 tech debt.
 - **Pre-existing `tsc --noEmit` test-mock alias errors** — v1.2 tech debt.
@@ -126,11 +136,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-27 — v1.1 milestone scope confirmed → research synthesized → REQUIREMENTS.md authored (53 reqs) → ROADMAP.md authored (Phases 10-13).
+**Last session:** 2026-04-28 — Plan 10-01 executed. RESERVED_SLUGS consolidated from 2 files to lib/reserved-slugs.ts. Both consumers migrated. Phase 10 build-order step 1 complete.
 
-**Stopped at:** v1.1 ROADMAP committed-ready. Phase 10 ready to plan.
+**Stopped at:** Plan 10-01 complete. Phase 10 in progress.
 
-**Resume:** `/gsd:plan-phase 10` (or `/gsd:research-phase` first if planner wants the architectural decisions explored independently before plan breakdown).
+**Resume:** Execute Plan 10-02 (auth-confirm-and-password-reset). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-02-auth-confirm-and-password-reset-PLAN.md`.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
