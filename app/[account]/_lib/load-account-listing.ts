@@ -22,6 +22,8 @@ export async function loadAccountListing(
     .from("accounts")
     .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
     .eq("slug", accountSlug)
+    // ACCT-03: soft-deleted accounts return 404 on all public surfaces (Plan 10-07)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (accountError || !account) return null;

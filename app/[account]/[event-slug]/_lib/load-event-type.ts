@@ -19,11 +19,14 @@ export async function loadEventTypeForBookingPage(
 
   const supabase = createAdminClient();
 
-  // 1. Account
+  // 1. Account — filter soft-deleted accounts (ACCT-03, Plan 10-07).
+  // This loader is shared by /[account]/[event-slug] AND /embed/[account]/[event-slug],
+  // so a single .is('deleted_at', null) here covers all three public surfaces.
   const { data: accountRow, error: accountError } = await supabase
     .from("accounts")
     .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
     .eq("slug", accountSlug)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (accountError || !accountRow) return null;
