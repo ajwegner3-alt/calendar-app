@@ -8,6 +8,7 @@ import {
   Palette,
   Inbox,
   BellRing,
+  User,
   LogOut,
 } from "lucide-react";
 import {
@@ -31,6 +32,11 @@ const NAV_ITEMS = [
 ] as const;
 
 const SETTINGS_NAV_ITEMS = [
+  {
+    href: "/app/settings/profile",
+    label: "Profile",
+    icon: User,
+  },
   {
     href: "/app/settings/reminders",
     label: "Reminder Settings",
