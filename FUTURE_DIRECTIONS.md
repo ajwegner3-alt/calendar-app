@@ -92,6 +92,7 @@ Audience: future Claude Code sessions. NOT a human-readable changelog. NOT marke
 
 ## 3. Future Improvements
 
+- **Gmail SMTP → Resend/Postmark migration.** Phase 10 ships a 200/day cap + 80%-threshold warning + fail-closed-at-cap (`lib/email-sender/quota-guard.ts`) to mitigate P-A12. v1.2 should migrate to Resend ($10/mo for 5k transactional emails) for higher headroom and proper SPF/DKIM/DMARC posture (closes EMAIL-08 v1.2 backlog item).
 - **v2: multi-tenant signup + onboarding flow** (out of scope for v1; per CONTEXT.md no further detail).
 - **Reminder retry/resend UI.** "Resend reminder" action on `/app/bookings/[id]` detail page (08-07 surfaces the page already). Critical caveat: do NOT clear `reminder_sent_at` automatically on send failure — would cause retry spam (RESEARCH Pitfall 4). Manual one-shot resend is the safe shape.
   - Source: STATE.md "Phase 9 backlog: reminder retry/resend UI" line.

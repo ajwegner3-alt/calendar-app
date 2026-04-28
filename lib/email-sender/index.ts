@@ -64,6 +64,15 @@ function getDefaultClient(): EmailClient {
   return _defaultClient;
 }
 
+/**
+ * Send an email via the configured provider (Gmail SMTP in v1.x).
+ *
+ * QUOTA GUARD CONTRACT (Phase 10): signup-side callers (signup, welcome,
+ * password-reset, email-change) MUST call `checkAndConsumeQuota(category)`
+ * from `@/lib/email-sender/quota-guard` BEFORE calling sendEmail(). Booking
+ * and reminder paths bypass the guard intentionally — they have their own
+ * retry semantics and protecting them is the design goal of the cap.
+ */
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   try {
     const client = getDefaultClient();
