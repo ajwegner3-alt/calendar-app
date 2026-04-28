@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plan 10-03 complete (parallel wave 2). Onboarding columns + RLS policies + provisioning trigger live. accounts.slug and accounts.name now nullable. ARCH DECISION #1 committed in code.
+**Last updated:** 2026-04-28 — Plan 10-04 complete (parallel wave 2). email_send_log table live. quota-guard.ts exports SIGNUP_DAILY_EMAIL_CAP/QuotaExceededError/getDailySendCount/checkAndConsumeQuota. ARCH DECISION #2 committed in code. 4 new tests (135 passing total).
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-03 (accounts-rls-and-provisioning-trigger) — 2026-04-28. [Also: 10-01 complete; 10-02, 10-04 parallel wave in progress]
-**Status:** In progress — Plans 10-01, 10-03 complete; 10-02, 10-04 running in parallel.
-**Last activity:** 2026-04-28 — Plan 10-03 executed (parallel wave 2). Onboarding columns migration applied. RLS+trigger migration applied. ARCH DECISION #1 in production.
+**Last completed plan:** 10-04 (gmail-smtp-quota-cap-and-alert) — 2026-04-28. [Also: 10-01, 10-03 complete; 10-02 parallel wave done]
+**Status:** In progress — Plans 10-01, 10-02, 10-03, 10-04 complete (wave 2 done); 10-05 next.
+**Last activity:** 2026-04-28 — Plan 10-04 executed (parallel wave 2). email_send_log migration applied. quota-guard.ts live. ARCH DECISION #2 committed. 135 tests passing.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 2/9 plans done, 2 more in parallel wave)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 4/9 plans done)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -41,7 +41,7 @@ Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 1/9 plans 
   10-01 [✓] reserved-slugs-consolidation             (Complete 2026-04-28)
   10-02 [ ] auth-confirm-and-password-reset
   10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
-  10-04 [ ] gmail-smtp-quota-cap-and-alert
+  10-04 [✓] gmail-smtp-quota-cap-and-alert            (Complete 2026-04-28)
   10-05 [ ] signup-page-and-email-confirm-toggle
   10-06 [ ] onboarding-wizard-and-provisioning
   10-07 [ ] profile-settings-and-soft-delete
@@ -93,6 +93,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Migration drift workaround LOCKED** — `npx supabase db query --linked -f <migration.sql>` (CLI `db push` fails with orphan tracking-table timestamps).
 - **`RESERVED_SLUGS` consolidated to `lib/reserved-slugs.ts`** (Plan 10-01, 2026-04-28) — `ReadonlySet<string>` with v1.0 entries + Phase 10 additions (signup, onboarding, login, forgot-password, settings). Both v1.0 consumers migrated. `isReservedSlug()` helper available. ONBOARD-05 consolidation portion COMPLETE.
 - **ARCH DECISION #1 COMMITTED in code** (Plan 10-03, 2026-04-28) — Postgres SECURITY DEFINER trigger `provision_account_on_signup` creates stub accounts row (`slug=null, name=null, onboarding_complete=false`) on every `auth.users` INSERT. Wizard (10-06) UPDATEs stub. Live in production. Andrew's NSI row has `onboarding_complete=true`.
+- **ARCH DECISION #2 COMMITTED in code** (Plan 10-04, 2026-04-28) — Gmail SMTP quota plan: Cap signup-side emails at 200/day via `email_send_log` Postgres counter. 80% threshold logs `[GMAIL_SMTP_QUOTA_APPROACHING]` once/day. Fail-closed at cap (throws `QuotaExceededError`). Booking/reminder paths bypass guard. `checkAndConsumeQuota()` in `lib/email-sender/quota-guard.ts`. v1.2: migrate to Resend. Note for future callers: import from `@/lib/email-sender/quota-guard` (NOT from `@/lib/email-sender` — that path is the vitest mock alias).
 - **accounts.slug + accounts.name are now nullable** (Plan 10-03, 2026-04-28) — both had NOT NULL dropped to support stub rows. CHECK constraints enforce `(col IS NOT NULL) OR (onboarding_complete = false)` — values required before wizard can mark complete.
 - **accounts onboarding columns live** (Plan 10-03, 2026-04-28) — `onboarding_complete BOOLEAN NOT NULL DEFAULT false`, `onboarding_step INTEGER NOT NULL DEFAULT 1 CHECK (1..3)`, `onboarding_checklist_dismissed_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `accounts_slug_active_idx` partial index (where deleted_at is null).
 - **accounts RLS: INSERT + UPDATE policies added** (Plan 10-03, 2026-04-28) — `accounts_owner_insert` (INSERT, authenticated, auth.uid()=owner_user_id) and `accounts_owner_update` (UPDATE, same check) now live alongside v1.0 SELECT + UPDATE policies.
@@ -131,7 +132,7 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 - **Phase 10 — decisions status:**
   1. ~~Account auto-provisioning pattern~~ — RESOLVED (Plan 10-03): Postgres trigger committed in production.
-  2. Gmail SMTP quota plan (P-A12 highest under-mitigated v1.1 risk) — handled in Plan 10-04 (parallel wave).
+  2. ~~Gmail SMTP quota plan (P-A12 highest under-mitigated v1.1 risk)~~ — RESOLVED (Plan 10-04): 200/day cap + 80% warning + fail-closed committed in production.
   3. P-A8 pre-flight UPDATE on Andrew's `email_confirmed_at` BEFORE flipping email-confirm toggle — handled in Plan 10-02 (parallel wave).
 - **Phase 11 — `/gsd:research-phase` flagged**: advisory-lock-trigger vs. slot_index pattern; verify v1.0 race test layer (supabase-js vs pg-driver); root-cause prod double-booking before designing replacement.
 - **Phase 12 — two decisions during plan-phase**: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope (~1 day cheap insurance vs accept Andrew-eyes-only QA in Phase 13).
@@ -140,11 +141,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-03 executed (parallel wave 2). Onboarding columns + RLS policies + provisioning trigger applied to live Supabase. ARCH DECISION #1 committed in code.
+**Last session:** 2026-04-28 — Plan 10-04 executed (parallel wave 2). email_send_log migration applied. quota-guard.ts live with 4 exports and 4 passing tests. ARCH DECISION #2 committed.
 
-**Stopped at:** Plan 10-03 complete. Plans 10-02 and 10-04 running in parallel wave.
+**Stopped at:** Plan 10-04 complete. Wave 2 (10-02, 10-03, 10-04) all done.
 
-**Resume:** After 10-02 and 10-04 complete, execute Plan 10-05 (signup-page-and-email-confirm-toggle). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-05-signup-page-and-email-confirm-toggle-PLAN.md`.
+**Resume:** Execute Plan 10-05 (signup-page-and-email-confirm-toggle). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-05-signup-page-and-email-confirm-toggle-PLAN.md`. Note: 10-05 Task 3 wires `checkAndConsumeQuota('signup-verify')` — import from `@/lib/email-sender/quota-guard` (not from `@/lib/email-sender` which is the vitest mock alias).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
