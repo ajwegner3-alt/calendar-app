@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plan 10-07 complete. /app/settings/profile + soft-delete (ACCT-01/02/03) + ACCT-03 filter on public loaders + /account-deleted page + sidebar Profile link. 141 tests passing (6 new from account-soft-delete.test.ts).
+**Last updated:** 2026-04-28 — Plans 10-06 + 10-07 complete (wave 4 done). /onboarding 3-step wizard + slug_is_taken RPC + /api/check-slug + welcome-email + /app redirect. 148 tests passing (7 new from slug-suggestions.test.ts).
 
 ## Project Reference
 
@@ -18,9 +18,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-07 (profile-settings-and-soft-delete) — 2026-04-28.
-**Status:** In progress — Plans 10-01..10-07 complete (10-06 running in parallel wave 4); 10-08 and 10-09 next.
-**Last activity:** 2026-04-28 — Plan 10-07 executed: /app/settings/profile (4 sections), softDeleteAccountAction, ACCT-03 deleted_at filters on loadAccountListing + loadEventTypeForBookingPage, /account-deleted page, Profile sidebar link. 141 tests passing.
+**Last completed plan:** 10-06 (onboarding-wizard-and-provisioning) — 2026-04-28 (10-07 also complete same day).
+**Status:** In progress — Plans 10-01..10-07 complete; Wave 4 (10-06 + 10-07) fully done; 10-08 and 10-09 next.
+**Last activity:** 2026-04-28 — Plan 10-06 executed (resumed): 3-step /onboarding wizard, slug_is_taken() SECURITY DEFINER RPC, /api/check-slug route, lib/slug-suggestions.ts + 7 tests, lib/onboarding/welcome-email.ts (quota-guarded fire-and-forget), /app redirect to /onboarding for new users. 148 tests passing.
 
 **Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 7/9 plans done)
 
@@ -43,7 +43,7 @@ Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 7/9 plans 
   10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
   10-04 [✓] gmail-smtp-quota-cap-and-alert            (Complete 2026-04-28)
   10-05 [✓*] signup-page-and-email-confirm-toggle      (auto done 2026-04-28; P-A8 checkpoint deferred)
-  10-06 [~] onboarding-wizard-and-provisioning       (wave-4 parallel — in progress)
+  10-06 [✓] onboarding-wizard-and-provisioning       (Complete 2026-04-28 — resumed execution)
   10-07 [✓] profile-settings-and-soft-delete         (Complete 2026-04-28)
   10-08 [ ] email-change-with-reverification
   10-09 [ ] rls-matrix-extension-and-checklist
@@ -108,6 +108,9 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **`/app/settings/profile` ships with 4 sections** (Plan 10-07, 2026-04-28) — Display Name (writes `accounts.name`, labeled "Display Name" in UI), Slug (UNIQUE constraint 23505 for collision), Password change (transient cookie-less Supabase client for current-password challenge), and Danger Zone soft-delete (type-slug-to-confirm). Email read-only with "Change email" link placeholder for 10-08.
 - **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
 - **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
+- **3-step /onboarding wizard shipped** (Plan 10-06, 2026-04-28) — `/onboarding/step-1-account` (name+slug), `/onboarding/step-2-timezone` (auto-detect), `/onboarding/step-3-event-type` (required, pre-filled "Consultation"/30min). Step 3 atomically: INSERT 5 Mon-Fri 9-5 availability_rules + INSERT event_types + UPDATE accounts onboarding_complete=true. Welcome email fire-and-forget after. /app now redirects to /onboarding when onboarding_complete=false.
+- **slug_is_taken() SECURITY DEFINER RPC** (Plan 10-06, 2026-04-28) — Bypasses RLS (wizard user can only SELECT own row). Used by /api/check-slug route handler (auth-gated, reserved short-circuit, fail-open on DB error). 300ms debounced in step-1 account-form.tsx.
+- **sendWelcomeEmail uses accounts.name column** (Plan 10-06, 2026-04-28) — Interface `{ owner_email, name, slug }` matches 10-03 schema deviation. UI label is "Display Name" / "Business name"; DB column is `name`. 148 tests passing.
 
 ### Pending Todos
 
@@ -147,11 +150,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-07 (continuation) complete. /app/settings/profile + softDeleteAccountAction + ACCT-03 deleted_at filters + /account-deleted + sidebar Profile link. 141 tests passing.
+**Last session:** 2026-04-28 — Plan 10-06 resumed (prior executor hit usage limit). Wave 4 (10-06 + 10-07) fully complete. /onboarding wizard + slug_is_taken RPC + /api/check-slug + welcome-email + /app redirect. 148 tests passing.
 
-**Stopped at:** Plan 10-07 complete. Wave 4 (10-06 + 10-07) — 10-07 done; 10-06 completing in parallel.
+**Stopped at:** Plan 10-06 complete. Wave 4 done.
 
-**Resume:** After 10-06 completes, execute Plan 10-08 (email-change-with-reverification). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-08-email-change-with-reverification-PLAN.md`.
+**Resume:** Execute Plan 10-08 (email-change-with-reverification). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-08-email-change-with-reverification-PLAN.md`.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
