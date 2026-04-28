@@ -10,24 +10,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { loginSchema, type LoginInput } from "./schema";
-import { loginAction, type LoginState } from "./actions";
+import { signupSchema, type SignupInput } from "./schema";
+import { signUpAction, type SignupState } from "./actions";
 
-const initialState: LoginState = {};
+const initialState: SignupState = {};
 
-interface LoginFormProps {
-  /** Set to true when redirected from /auth/reset-password after a successful password update. */
-  resetSuccess?: boolean;
-}
-
-export function LoginForm({ resetSuccess }: LoginFormProps) {
-  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+/**
+ * Signup form (AUTH-05).
+ *
+ * Fields: email + password ONLY per CONTEXT.md lock.
+ * Post-submit: always redirects to /app/verify-email (handled in Server Action).
+ * Visual restyle deferred to Phase 12 (UI-12).
+ */
+export function SignupForm() {
+  const [state, formAction, isPending] = useActionState(
+    signUpAction,
+    initialState,
+  );
 
   const {
     register,
     formState: { errors },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
     mode: "onBlur",
     errors: state.fieldErrors
       ? {
@@ -44,17 +49,10 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sign in</CardTitle>
+        <CardTitle>Create your account</CardTitle>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
-          {resetSuccess && (
-            <Alert role="status">
-              <AlertDescription>
-                Password updated. Please sign in with your new password.
-              </AlertDescription>
-            </Alert>
-          )}
           {state.formError && (
             <Alert variant="destructive" role="alert">
               <AlertDescription>{state.formError}</AlertDescription>
@@ -67,6 +65,7 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
               id="email"
               type="email"
               autoComplete="email"
+              placeholder="you@example.com"
               {...register("email")}
             />
             {errors.email && (
@@ -79,26 +78,39 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
             <Input
               id="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
               {...register("password")}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.password.message}
+              </p>
             )}
           </div>
 
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isPending ? "Signing in…" : "Sign in"}
+            {isPending ? "Creating account…" : "Create account"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+            Already have an account?{" "}
             <Link
-              href="/app/signup"
+              href="/app/login"
               className="underline underline-offset-4 hover:text-foreground"
             >
-              Sign up
+              Log in
+            </Link>
+          </p>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Forgot password?{" "}
+            <Link
+              href="/app/forgot-password"
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Reset it
             </Link>
           </p>
         </form>

@@ -13,9 +13,7 @@ interface Props {
  * Reads ?email= from query string to display the address to the user and
  * pre-fill the resend form.
  *
- * Note: /signup resolves in Plan 10-05. The "Use a different email" link is
- * rendered as-is now so the page is complete; it will resolve correctly once
- * 10-05 ships.
+ * "Use a different email" link resolves to /app/signup (Plan 10-05).
  */
 export default async function VerifyEmailPage({ searchParams }: Props) {
   const { email } = await searchParams;
@@ -46,7 +44,7 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
 
         <p className="text-center text-sm text-muted-foreground">
           Wrong address?{" "}
-          <Link href="/signup" className="underline underline-offset-4">
+          <Link href="/app/signup" className="underline underline-offset-4">
             Use a different email
           </Link>
         </p>
