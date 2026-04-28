@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-02 (auth-confirm-and-password-reset) — 2026-04-28. [Also: 10-01, 10-03, 10-04 complete; full wave 2 done]
-**Status:** In progress — Plans 10-01, 10-02, 10-03, 10-04 complete (wave 2 done); 10-05 next.
-**Last activity:** 2026-04-28 — Plan 10-02 executed (parallel wave 2). /auth/confirm verifyOtp route + forgot/reset-password + verify-email flows shipped. v1.0 BLOCKER /auth/callback 404 closed. 135 tests passing.
+**Last completed plan:** 10-05 (signup-page-and-email-confirm-toggle) — 2026-04-28 (auto portion; P-A8 checkpoint DEFERRED to milestone-end QA).
+**Status:** In progress — Plans 10-01..10-05 auto portions complete; Wave 4 (10-06, 10-07) next.
+**Last activity:** 2026-04-28 — Plan 10-05 executed: /app/signup page + lib/auth/rate-limits.ts centralized helper + scripts/phase10-pre-flight-andrew-email-confirmed.sql created. P-A8 (Supabase Dashboard email-confirm toggle) DEFERRED per Andrew 2026-04-28 — all manual checks batched for milestone-end QA. Tracked in .planning/MILESTONE_V1_1_DEFERRED_CHECKS.md.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 4/9 plans done)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 5/9 plans done)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -42,7 +42,7 @@ Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 1/9 plans 
   10-02 [✓] auth-confirm-and-password-reset          (Complete 2026-04-28)
   10-03 [✓] accounts-rls-and-provisioning-trigger       (Complete 2026-04-28)
   10-04 [✓] gmail-smtp-quota-cap-and-alert            (Complete 2026-04-28)
-  10-05 [ ] signup-page-and-email-confirm-toggle
+  10-05 [✓*] signup-page-and-email-confirm-toggle      (auto done 2026-04-28; P-A8 checkpoint deferred)
   10-06 [ ] onboarding-wizard-and-provisioning
   10-07 [ ] profile-settings-and-soft-delete
   10-08 [ ] email-change-with-reverification
