@@ -66,7 +66,21 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
   7. `/app/page.tsx` redirect change (0 accounts → `/onboarding`).
   8. RLS cross-tenant matrix test extension to N=3 tenants (gates Phase 10 close).
 
-**Plans**: ~7-9 plans (largest surface area in v1.1; auth flows + onboarding wizard + provisioning + RLS extension + profile settings).
+**Plans**: 9 plans in 6 waves (per `/gsd:plan-phase 10` 2026-04-28).
+  - [ ] 10-01-PLAN.md — RESERVED_SLUGS consolidation (Wave 1)
+  - [ ] 10-02-PLAN.md — /auth/confirm + /forgot-password + /auth/reset-password + /auth/verify-email + /auth/auth-error (Wave 2)
+  - [ ] 10-03-PLAN.md — accounts INSERT/UPDATE RLS + provisioning trigger + onboarding state columns (Wave 2)
+  - [ ] 10-04-PLAN.md — Gmail SMTP quota cap (200/day) + 80% warning + fail-closed (Wave 2)
+  - [ ] 10-05-PLAN.md — /signup page + P-A8 pre-flight + Supabase email-confirm toggle + auth rate limits (Wave 3, NOT autonomous — pre-flight checkpoint)
+  - [ ] 10-06-PLAN.md — 3-step onboarding wizard + slug picker + provisioning Server Actions + welcome email (Wave 4)
+  - [ ] 10-07-PLAN.md — /app/settings/profile + soft-delete + public-surface 404 enforcement (Wave 4)
+  - [ ] 10-08-PLAN.md — Email change with re-verification (Wave 5; carved out per CONTEXT.md Specifics)
+  - [ ] 10-09-PLAN.md — RLS cross-tenant matrix N=3 extension + onboarding checklist + FUTURE_DIRECTIONS update (Wave 6, NOT autonomous — 3rd test user setup)
+
+**Architectural decisions committed during planning:**
+  1. **Account auto-provisioning pattern: Postgres trigger (stub row) + wizard UPDATE.** Trigger creates `accounts(onboarding_complete=false, slug=null)` on `auth.users` insert (atomicity-first); wizard UPDATEs to (slug=..., onboarding_complete=true) via RLS-scoped Server Action (UX-error-clarity). Resolves the friction between STACK.md/PITFALLS.md trigger preference and ARCHITECTURE.md Server-Action preference.
+  2. **Gmail SMTP quota plan: Cap at 200/day + 80% warning log + fail-closed-at-cap.** Postgres-counter-backed (`email_send_log` table). Bookings/reminders bypass the guard (protect core flow). Resend migration documented as v1.2 backlog.
+  3. **P-A8 pre-flight: Mandatory checkpoint task in Plan 10-05** before email-confirm toggle is flipped. Andrew runs SELECT, conditional UPDATE if null, re-SELECT to verify, then flips toggle.
 
 ---
 
@@ -149,7 +163,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 10. Multi-User Signup + Onboarding | v1.1 | 0 / TBD | Not started | - |
+| 10. Multi-User Signup + Onboarding | v1.1 | 0 / 9 | Plans created (2026-04-28) | - |
 | 11. Booking Capacity + Double-Booking Fix | v1.1 | 0 / TBD | Not started | - |
 | 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 0 / TBD | Not started | - |
 | 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started | - |
