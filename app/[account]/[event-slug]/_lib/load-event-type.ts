@@ -1,12 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { RESERVED_SLUGS } from "@/lib/reserved-slugs";
 import type { BookingPageData, CustomQuestion } from "./types";
-
-// Phase 7: added "embed" — /embed/[account]/[event-slug] is a new top-level route.
-// Next.js 16 static segments take precedence over dynamic, but the guard is
-// belt-and-suspenders per RESEARCH.md Pitfall 8. Must also be added to any future
-// /[account]/page.tsx loader (Plan 07-08).
-const RESERVED_SLUGS = new Set(["app", "api", "_next", "auth", "embed"]);
 
 /**
  * Loads account + event_type for the public booking page.

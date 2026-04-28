@@ -1,11 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { RESERVED_SLUGS } from "@/lib/reserved-slugs";
 import type { AccountListingData, EventTypeCardData } from "./types";
-
-// Must mirror RESERVED_SLUGS in load-event-type.ts (DRY tradeoff: not exported
-// because both files are public route loaders; duplication is bounded).
-// Both sets MUST be kept in sync manually — see 07-08-SUMMARY.md for rationale.
-const RESERVED_SLUGS = new Set(["app", "api", "_next", "auth", "embed"]);
 
 /**
  * Loads account + all active, non-soft-deleted event types for the public /[account] index.
