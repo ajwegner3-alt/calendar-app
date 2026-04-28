@@ -48,8 +48,45 @@ curl -i "https://<prod>/auth/confirm?token_hash=test&type=signup"
 
 ---
 
+---
+
+## Phase 10 — Plan 10-08 — Email-Change E2E Verification
+
+**Source:** `.planning/phases/10-multi-user-signup-and-onboarding/10-08-email-change-with-reverification-PLAN.md` Task 2 verification.
+
+**Pre-condition:** Plan 10-05 deferred items (email confirm toggle ON, Supabase URL config, email templates) must be completed first, AND the "Confirm Email Change" template must use the token-hash pattern (already listed in the 10-05 deferred steps above).
+
+**Steps to execute (in order):**
+
+1. **Log in** as a test user at `https://<prod>/app/login`.
+
+2. **Navigate** to `/app/settings/profile` and confirm the "Change email" link is active (not "(coming soon)").
+
+3. **Visit** `/app/settings/profile/email`. Verify the page shows the current email address and the request form.
+
+4. **Submit a new email address.** The form should return the generic success message:
+   > "If that email address is available, you will receive a confirmation link. Your email won't change until you click it."
+
+5. **Check the NEW email inbox** for a confirmation link from Supabase.
+
+6. **Click the confirmation link.** Verify it routes through `/auth/confirm?token_hash=...&type=email_change` (the 10-02 handler).
+
+7. **After redirect**, confirm you land on `/app/settings/profile` (the `next` param set by the action).
+
+8. **Verify both columns updated:**
+   - In Supabase Dashboard → Auth → Users: `email` column updated for the test user.
+   - In Supabase Dashboard → Table Editor → accounts: `owner_email` column updated (via the `sync_account_email_on_auth_update` trigger from the 10-08 migration).
+
+9. **Rate-limit burst test:** Attempt 4 email-change requests within 1 hour. The 4th request should return "Too many email-change attempts. Please wait an hour before trying again."
+
+10. **Restore:** If using a throwaway test user, no cleanup needed. If using Andrew's NSI account, repeat steps 3–7 to change back to `ajwegner3@gmail.com`.
+
+**Why deferred:** Requires email confirm toggle to be ON (10-05 deferred item) plus a live email inbox to click the confirmation link. Cannot be automated in code-level testing.
+
+---
+
 ## (Add additional deferred checks here as later plans emit them)
 
 ---
 
-*Last updated: 2026-04-28 — created during /gsd:execute-phase 10 wave 3.*
+*Last updated: 2026-04-28 — updated during /gsd:execute-phase 10-08 (email-change-with-reverification).*

@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plans 10-06 + 10-07 complete (wave 4 done). /onboarding 3-step wizard + slug_is_taken RPC + /api/check-slug + welcome-email + /app redirect. 148 tests passing (7 new from slug-suggestions.test.ts).
+**Last updated:** 2026-04-28 — Plan 10-08 complete (wave 5 done). Email-change route + SECURITY DEFINER trigger + P-A1 generic action. 148 tests passing.
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-06 (onboarding-wizard-and-provisioning) — 2026-04-28 (10-07 also complete same day).
-**Status:** In progress — Plans 10-01..10-07 complete; Wave 4 (10-06 + 10-07) fully done; 10-08 and 10-09 next.
-**Last activity:** 2026-04-28 — Plan 10-06 executed (resumed): 3-step /onboarding wizard, slug_is_taken() SECURITY DEFINER RPC, /api/check-slug route, lib/slug-suggestions.ts + 7 tests, lib/onboarding/welcome-email.ts (quota-guarded fire-and-forget), /app redirect to /onboarding for new users. 148 tests passing.
+**Last completed plan:** 10-08 (email-change-with-reverification) — 2026-04-28.
+**Status:** In progress — Plans 10-01..10-08 complete; Wave 5 (10-08) done; 10-09 next.
+**Last activity:** 2026-04-28 — Plan 10-08 executed: sync_account_email_on_auth_update SECURITY DEFINER trigger applied to production, /app/settings/profile/email route + requestEmailChangeAction (rate-limited 3/hr ip:uid, quota-guarded, P-A1 generic), "Change email" link wired. 148 tests passing.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 7/9 plans done)
+**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 in progress — 8/9 plans done)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -45,7 +45,7 @@ Phase 10 [~] Multi-User Signup + Onboarding          (In progress — 7/9 plans 
   10-05 [✓*] signup-page-and-email-confirm-toggle      (auto done 2026-04-28; P-A8 checkpoint deferred)
   10-06 [✓] onboarding-wizard-and-provisioning       (Complete 2026-04-28 — resumed execution)
   10-07 [✓] profile-settings-and-soft-delete         (Complete 2026-04-28)
-  10-08 [ ] email-change-with-reverification
+  10-08 [✓] email-change-with-reverification         (Complete 2026-04-28)
   10-09 [ ] rls-matrix-extension-and-checklist
 Phase 11 [ ] Booking Capacity + Double-Booking Fix   (Not started)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
@@ -108,6 +108,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **`/app/settings/profile` ships with 4 sections** (Plan 10-07, 2026-04-28) — Display Name (writes `accounts.name`, labeled "Display Name" in UI), Slug (UNIQUE constraint 23505 for collision), Password change (transient cookie-less Supabase client for current-password challenge), and Danger Zone soft-delete (type-slug-to-confirm). Email read-only with "Change email" link placeholder for 10-08.
 - **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
 - **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
+- **Email-change trigger + route shipped** (Plan 10-08, 2026-04-28) — `sync_account_email_on_auth_update` SECURITY DEFINER trigger on `auth.users AFTER UPDATE OF email` propagates to `accounts.owner_email`. `/app/settings/profile/email` route with `requestEmailChangeAction` Server Action: rate-limited 3/hr per `${ip}:${uid}` (authenticated flow, uid available), quota-guarded (`email-change` category), P-A1 generic response (never leaks "email already in use"). `emailRedirectTo` points to `${origin}/auth/confirm?next=/app/settings/profile`. E2E deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. 148 tests passing.
 - **3-step /onboarding wizard shipped** (Plan 10-06, 2026-04-28) — `/onboarding/step-1-account` (name+slug), `/onboarding/step-2-timezone` (auto-detect), `/onboarding/step-3-event-type` (required, pre-filled "Consultation"/30min). Step 3 atomically: INSERT 5 Mon-Fri 9-5 availability_rules + INSERT event_types + UPDATE accounts onboarding_complete=true. Welcome email fire-and-forget after. /app now redirects to /onboarding when onboarding_complete=false.
 - **slug_is_taken() SECURITY DEFINER RPC** (Plan 10-06, 2026-04-28) — Bypasses RLS (wizard user can only SELECT own row). Used by /api/check-slug route handler (auth-gated, reserved short-circuit, fail-open on DB error). 300ms debounced in step-1 account-form.tsx.
 - **sendWelcomeEmail uses accounts.name column** (Plan 10-06, 2026-04-28) — Interface `{ owner_email, name, slug }` matches 10-03 schema deviation. UI label is "Display Name" / "Business name"; DB column is `name`. 148 tests passing.
@@ -150,11 +151,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-06 resumed (prior executor hit usage limit). Wave 4 (10-06 + 10-07) fully complete. /onboarding wizard + slug_is_taken RPC + /api/check-slug + welcome-email + /app redirect. 148 tests passing.
+**Last session:** 2026-04-28 — Plan 10-08 complete. Wave 5 done. sync_account_email_on_auth_update trigger live + /app/settings/profile/email route + requestEmailChangeAction. 148 tests passing.
 
-**Stopped at:** Plan 10-06 complete. Wave 4 done.
+**Stopped at:** Plan 10-08 complete. Wave 5 done.
 
-**Resume:** Execute Plan 10-08 (email-change-with-reverification). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-08-email-change-with-reverification-PLAN.md`.
+**Resume:** Execute Plan 10-09 (rls-matrix-extension-and-checklist). Path: `.planning/phases/10-multi-user-signup-and-onboarding/10-09-rls-matrix-extension-and-checklist-PLAN.md`.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
