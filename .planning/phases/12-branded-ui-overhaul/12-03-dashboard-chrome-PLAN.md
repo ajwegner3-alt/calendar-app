@@ -59,7 +59,7 @@ must_haves:
 <objective>
 Refactor the dashboard chrome to the Cruip "Simple Light" aesthetic: swap Geist for Inter at the root, set `bg-gray-50` page background, replace the existing `<header>` with a floating glass pill (Cruip pattern), rebuild `app-sidebar.tsx` with the new flat IA (Home / Event Types / Availability / Bookings / Branding / Settings — Settings as inline accordion expanding to Reminders + Profile), and wire the account's `background_color` + `background_shade` tokens through to a `GradientBackdrop` rendered behind every dashboard surface.
 
-Purpose: The dashboard is the owner's daily-use surface. This plan delivers Phase success criteria #1 (Inter + gray-50 + glass pill + sidebar IA) and the dashboard portion of #3 (gradient updates live across surfaces). It also unblocks Plan 12-04 (Home tab) which plugs into the new Home item in the sidebar.
+Purpose: The dashboard is the owner's daily-use surface. This plan delivers Phase success criteria #1 (Inter + gray-50 + glass pill + sidebar IA) and the dashboard portion of #3 (gradient updates live across surfaces). It also unblocks Plan 12-04a (Home tab) which plugs into the new Home item in the sidebar.
 
 Output:
 - Inter loaded globally via `next/font/google`
@@ -94,6 +94,12 @@ Output:
 # - lib/branding/types.ts        (Branding now has backgroundColor/backgroundShade)
 # - app/_components/gradient-backdrop.tsx
 # - app/_components/branded-page.tsx (new CSS vars)
+
+# Verified canonical auth/account access pattern (no helper wrappers exist):
+#   - Auth claims: `await supabase.auth.getClaims()` (Supabase SDK method, called directly)
+#   - Account-for-user lookup: inline SELECT from accounts WHERE owner_user_id = claims.claims.sub
+#     Reference: app/(shell)/app/page.tsx lines 9-26 + app/(shell)/layout.tsx lines 19-21
+#   - Branding-for-account: `readBrandingForAccount(accountId)` from `lib/branding/read-branding.ts`
 </context>
 
 <tasks>
@@ -201,24 +207,47 @@ Output:
     }
     ```
 
-    **app/(shell)/layout.tsx** — read existing file. The current pattern: `<SidebarProvider>` → `<AppSidebar>` → `<SidebarInset>` → `<main>`, with a separate mobile-only `md:hidden` header. **Replace** the mobile-only header with the new `FloatingHeaderPill` rendered always (Cruip pattern is fixed-position on all viewports — research §Pattern 1).
+    **app/(shell)/layout.tsx** — read existing file (verified canonical pattern, lines 19-21):
+    ```ts
+    const supabase = await createClient();
+    const { data: claimsData } = await supabase.auth.getClaims();
+    if (!claimsData?.claims) redirect("/app/login");
+    ```
 
-    Inside the layout (server component), fetch the account's branding to drive the `GradientBackdrop`:
+    The current pattern: `<SidebarProvider>` → `<AppSidebar>` → `<SidebarInset>` → mobile-only `md:hidden` `<header>` → `<div className="p-6">{children}</div>`. **Replace** the mobile-only header with the new `FloatingHeaderPill` rendered always (Cruip pattern is fixed-position on all viewports — research §Pattern 1).
+
+    To drive the `GradientBackdrop` and `FloatingHeaderPill`, fetch the user's account row + branding using the verified canonical inline pattern (no `loadAccountForUser` helper exists — use the same SELECT pattern as `app/(shell)/app/page.tsx` lines 19-26):
 
     ```tsx
-    // Pseudo-pattern — adapt to existing imports/auth helpers in the file:
-    const claims = await getClaims();
-    const accountId = await resolveAccountIdForUser(claims.user);  // existing helper
-    const branding = await readBrandingForAccount(accountId);
+    // VERIFIED CANONICAL PATTERN — no helper wrapper exists; replicate inline.
+    const supabase = await createClient();
+    const { data: claimsData } = await supabase.auth.getClaims();
+    if (!claimsData?.claims) redirect("/app/login");
+
+    // Inline account lookup (matches app/(shell)/app/page.tsx pattern).
+    const { data: accounts } = await supabase
+      .from("accounts")
+      .select("id, slug, name, logo_url, brand_primary, background_color, background_shade")
+      .eq("owner_user_id", claimsData.claims.sub)
+      .is("deleted_at", null)
+      .limit(1);
+
+    if (!accounts || accounts.length === 0) {
+      redirect("/app/unlinked"); // matches existing fallback in /app/page.tsx
+    }
+    const account = accounts[0];
+
+    // Branding read (canonical helper exists — use it for the brand-derived fields).
+    const branding = await readBrandingForAccount(account.id);
 
     return (
-      <SidebarProvider defaultOpen={...}>
-        <AppSidebar />
+      <SidebarProvider defaultOpen={sidebarOpen}>
+        <AppSidebar email={email} />
         <SidebarInset className="relative overflow-hidden bg-background">
           <GradientBackdrop color={branding.backgroundColor} shade={branding.backgroundShade} />
           <FloatingHeaderPill
-            accountName={branding.accountName ?? "Dashboard"}  // adapt to actual field
-            logoUrl={branding.logoUrl}
+            accountName={account.name ?? "Dashboard"}
+            logoUrl={account.logo_url}
           />
           <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-20 sm:px-6 md:pt-28">
             {children}
@@ -228,9 +257,12 @@ Output:
     );
     ```
 
-    **Critical preservation:** Whatever auth-loading helper is currently in `(shell)/layout.tsx` MUST be kept (e.g. `requireAuthAccount` or similar — read the file first). Do not break logged-out → `/login` redirect.
+    **Critical preservation:**
+    - The existing `supabase.auth.getClaims()` + `if (!claimsData?.claims) redirect("/app/login")` guard MUST be kept verbatim (lines 19-21 of current file).
+    - The existing `cookieStore.get("sidebar_state")` SSR cookie read (lines 30-31) MUST be kept — Phase 7 contract for sidebar collapse persistence.
+    - The existing `email` extraction from claims MUST be kept and passed to `<AppSidebar email={email} />`.
 
-    **Padding adjustment:** The fixed glass pill takes ~3.5rem of vertical space + top offset. Add `pt-20 md:pt-28` to the main content area so content isn't hidden behind the pill.
+    **Padding adjustment:** The fixed glass pill takes ~3.5rem of vertical space + top offset. Add `pt-20 md:pt-28` to the main content area so content isn't hidden behind the pill. This replaces the existing `<div className="p-6">` wrapper.
 
     **Embed routes are NOT under (shell):** `/embed/[account]/[event-slug]` lives at `app/embed/...` outside the (shell) group. Plan 12-05 handles embed restyle separately. This plan does not affect embed.
   </action>
@@ -241,10 +273,11 @@ Output:
     4. Confirm: GradientBackdrop renders subtle blue circles in the background (Andrew's account is `background_color=null, background_shade='subtle'` → defaults to gray-50 fallback color in shadeToGradient → soft circles visible).
     5. Resize to mobile (375px) → confirm pill is still rendered + hamburger present.
     6. Click hamburger on mobile → confirm sidebar opens as full-screen drawer (occupies 100vw — verified via `--sidebar-width-mobile: 100vw` from Task 1).
-    7. Logged-out user visits `/app` → still redirects to `/login`.
+    7. Logged-out user visits `/app` → still redirects to `/app/login` (matches existing redirect target in current layout.tsx, NOT `/login`).
+    8. Sidebar collapse cookie still works: collapse sidebar, refresh page, verify state persists (Phase 7 contract).
   </verify>
   <done>
-    Dashboard chrome (header pill + gradient backdrop) renders on every dashboard route; auth-redirect logic preserved; mobile drawer is full-screen.
+    Dashboard chrome (header pill + gradient backdrop) renders on every dashboard route; auth-redirect logic preserved; mobile drawer is full-screen; sidebar SSR cookie state preserved.
   </done>
 </task>
 
@@ -357,22 +390,28 @@ Output:
 
     **Active-state rule for Home (`/app`):** Use exact-match (`pathname === '/app'`) so other dashboard routes don't bleed into Home highlight (since every dashboard route prefix-matches `/app`).
 
-    **Cookie state collision (research Pitfall 5):** Settings expansion uses local `useState` only — no cookie. Existing `sidebar_state` cookie tracks the WHOLE-sidebar collapsed/expanded state and is untouched. Owner expectation per CONTEXT lock: Settings collapses on every page navigation (no persistence). If Andrew complains, follow up by adding `sidebar_settings_open` cookie — flag in summary.
+    **PITFALL 5 — Sidebar SSR cookie state collision (research §Pitfall 5):** This is a KNOWN risk to keep visible during execution.
+    - Existing `sidebar_state` cookie (set by shadcn `SidebarProvider`, read in `(shell)/layout.tsx` line 31) tracks the WHOLE-sidebar collapsed/expanded state and MUST remain untouched. Do NOT alter cookie name or read/write semantics.
+    - Settings expansion uses local `useState` ONLY — no cookie. Owner expectation per CONTEXT lock: Settings collapses on every page navigation (no persistence).
+    - **Verification command (run during task):** `grep -n "sidebar_state" components/ui/sidebar.tsx app/(shell)/layout.tsx` — should return at least 2 hits (the SIDEBAR_COOKIE_NAME constant + the layout.tsx read). Both must remain.
+    - If Andrew complains about Settings collapse-on-nav, follow up by adding a separate `sidebar_settings_open` cookie — flag in summary as a known v1.2 follow-up if requested.
 
-    **Verify SidebarMenuSub export** — research said this needed grep-confirmation. Confirmed during planning: `components/ui/sidebar.tsx` exports `SidebarMenuSub`, `SidebarMenuSubItem`, `SidebarMenuSubButton` at lines 694-696. No additional install needed.
+    **Verify SidebarMenuSub export** — research said this needed grep-confirmation. Confirmed during planning: `components/ui/sidebar.tsx` exports `SidebarMenuSub`, `SidebarMenuSubItem`, `SidebarMenuSubButton`. No additional install needed.
   </action>
   <verify>
     1. `npx tsc --noEmit` clean.
-    2. `npm run dev` → log in → visit `/app` → confirm sidebar shows 6 items in order: Home (highlighted) / Event Types / Availability / Bookings / Branding / Settings (chevron pointing right).
-    3. Click Settings → chevron rotates 180° → Reminders + Profile appear underneath.
-    4. Click Settings again → collapses.
-    5. Click Profile → navigates to `/app/settings/profile` → reload page → confirm Settings auto-expanded (defaultOpen logic via `pathname.startsWith('/app/settings')`).
-    6. Click Home → navigate to `/app` → confirm Settings collapses (state reset on remount; acceptable per CONTEXT).
-    7. Mobile (375px) → tap hamburger → full-screen sidebar drawer → tap Settings → expansion works inside drawer.
-    8. Verify all top item active-states fire on their respective routes (Branding active on `/app/branding`, etc.).
+    2. `grep "SIDEBAR_COOKIE_NAME\|sidebar_state" components/ui/sidebar.tsx app/(shell)/layout.tsx` — at least 2 hits remain (cookie persistence intact).
+    3. `npm run dev` → log in → visit `/app` → confirm sidebar shows 6 items in order: Home (highlighted) / Event Types / Availability / Bookings / Branding / Settings (chevron pointing right).
+    4. Click Settings → chevron rotates 180° → Reminders + Profile appear underneath.
+    5. Click Settings again → collapses.
+    6. Click Profile → navigates to `/app/settings/profile` → reload page → confirm Settings auto-expanded (defaultOpen logic via `pathname.startsWith('/app/settings')`).
+    7. Click Home → navigate to `/app` → confirm Settings collapses (state reset on remount; acceptable per CONTEXT).
+    8. Collapse the whole sidebar (top trigger), refresh → sidebar still collapsed (sidebar_state cookie preserved — Phase 7 contract NOT regressed).
+    9. Mobile (375px) → tap hamburger → full-screen sidebar drawer → tap Settings → expansion works inside drawer.
+    10. Verify all top item active-states fire on their respective routes (Branding active on `/app/branding`, etc.).
   </verify>
   <done>
-    Sidebar renders 6 flat items in the correct order; Settings is an inline accordion with Reminders + Profile; mobile drawer is full-screen; cookie state for whole-sidebar persistence is preserved (Phase 7 contract).
+    Sidebar renders 6 flat items in the correct order; Settings is an inline accordion with Reminders + Profile; mobile drawer is full-screen; cookie state for whole-sidebar persistence is preserved (Phase 7 contract — verified by grep + manual refresh test).
   </done>
 </task>
 
@@ -388,7 +427,8 @@ Output:
 - Sidebar shows 6 flat items in correct order.
 - Settings is an inline accordion (NOT flyout, NOT separate group).
 - Mobile sidebar opens full-screen.
-- Auth redirect for logged-out users still fires.
+- Auth redirect for logged-out users still fires (target: `/app/login`, matching existing).
+- Sidebar SSR cookie state preserved across reloads (Pitfall 5 — verified by grep + refresh test).
 - `npx tsc --noEmit` clean; Vitest baseline (148+ passing) preserved.
 
 **Requirements satisfied:**
@@ -412,7 +452,8 @@ Output:
 6. Mobile sidebar full-screen via `--sidebar-width-mobile: 100vw`.
 7. `<GradientBackdrop>` renders inside `(shell)/layout.tsx` consuming the account's `background_color` + `background_shade`.
 8. No regressions in Vitest or `npx tsc --noEmit`.
-9. Auth-redirect logic for logged-out users preserved.
+9. Auth-redirect logic for logged-out users preserved (target `/app/login`).
+10. `sidebar_state` cookie persistence preserved (Phase 7 contract — Pitfall 5 flag closed).
 </success_criteria>
 
 <output>
@@ -422,7 +463,9 @@ After completion, create `.planning/phases/12-branded-ui-overhaul/12-03-SUMMARY.
 - Decisions: Settings expansion is local `useState` only (research recommendation; flag for revisit if Andrew asks for persistence)
 - Decisions: Mobile sidebar is `100vw` full-screen (research recommendation; flag for revisit)
 - Tech-stack additions: none (no new packages; SidebarMenuSub already exported from existing shadcn install)
+- Auth/account access pattern used: inline `supabase.auth.getClaims()` + accounts SELECT (no helper wrapper exists in this codebase — replicated app/(shell)/app/page.tsx pattern)
+- Pitfall 5 (sidebar_state cookie) closed: cookie name + read/write semantics untouched; verified by grep + manual refresh test
 - Key files: list above
-- For Plan 12-04: Home item links to `/app` — Plan 12-04 refactors `/app/page.tsx` to be the calendar landing.
+- For Plan 12-04a/b: Home item links to `/app` — Plan 12-04a refactors `/app/page.tsx` to be the calendar landing.
 - For Plan 12-05: GradientBackdrop pattern established here applies to public surfaces (BrandedPage already wires it via Plan 12-01).
 </output>

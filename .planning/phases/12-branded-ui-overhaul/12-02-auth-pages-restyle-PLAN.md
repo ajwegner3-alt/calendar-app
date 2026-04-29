@@ -2,8 +2,8 @@
 phase: 12-branded-ui-overhaul
 plan: 02
 type: execute
-wave: 1
-depends_on: []
+wave: 2
+depends_on: ["12-01"]
 files_modified:
   - app/(auth)/app/login/page.tsx
   - app/(auth)/app/signup/page.tsx
@@ -62,7 +62,7 @@ must_haves:
 <objective>
 Restyle all 6 auth pages (`/login`, `/signup`, `/forgot-password`, `/verify-email`, `/auth/reset-password`, `/auth/auth-error`) to the Cruip "Simple Light" aesthetic with **NSI tokens fixed** (CONTEXT.md lock — pre-signup users have no account context). Each page becomes a split-panel layout: form on left, marketing-y NSI hero panel (gradient + headline + value-prop copy) on right (`lg:` and up; stacked on mobile). All existing data-loading logic, redirects, flash banners, and Server Actions are preserved verbatim — this is a JSX-shell restyle only.
 
-Purpose: Auth pages double as a soft NSI sales surface for visiting trade contractors (CONTEXT lock). They must feel like the same product as the Cruip dashboard restyle landing in Wave 2/3. Restyling them in Wave 1 in parallel with Plan 12-01 (branding-tokens foundation) lets us ship visible polish to the public surfaces (signup is the entry point for every new account) without blocking on the dashboard IA refactor.
+Purpose: Auth pages double as a soft NSI sales surface for visiting trade contractors (CONTEXT lock). They must feel like the same product as the Cruip dashboard restyle landing in Wave 2/3. Wave 2 plan — depends on 12-01 for `NSIGradientBackdrop` (committed by 12-01 Task 2).
 
 Output:
 - New `AuthHero` component (NSI marketing panel)
@@ -82,6 +82,7 @@ Output:
 @.planning/STATE.md
 @.planning/phases/12-branded-ui-overhaul/12-CONTEXT.md
 @.planning/phases/12-branded-ui-overhaul/12-RESEARCH.md
+@.planning/phases/12-branded-ui-overhaul/12-01-SUMMARY.md
 
 # Existing pages to restyle (preserve all logic — restyle is JSX-only)
 @app/(auth)/app/login/page.tsx
@@ -90,6 +91,10 @@ Output:
 @app/(auth)/app/verify-email/page.tsx
 @app/auth/reset-password/page.tsx
 @app/auth/auth-error/page.tsx
+
+# Plan 12-01 outputs (REQUIRED — Wave 2 depends on Wave 1)
+# - components/nsi-gradient-backdrop.tsx (NSIGradientBackdrop export)
+# - app/_components/gradient-backdrop.tsx
 </context>
 
 <tasks>
@@ -155,22 +160,13 @@ Output:
     }
     ```
 
-    Note: This component does NOT depend on Plan 12-01 — it imports `NSIGradientBackdrop` which Plan 12-01 will create. Since both plans are Wave 1, execute order matters: Plan 12-01 must commit `NSIGradientBackdrop` BEFORE Plan 12-02 imports it. If wave ordering inside execute-phase doesn't enforce this, this task will fail import and the executor must finish 12-01 Task 2 first.
-
-    **Defensive contingency:** If `components/nsi-gradient-backdrop.tsx` does not exist when Plan 12-02 runs (parallel-execution race), inline a temporary 5-line `NSIGradientBackdrop` directly in `auth-hero.tsx`:
-    ```tsx
-    function NSIGradientBackdropInline() {
-      return (
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_20%,#0A254040,transparent_60%)]" />
-      );
-    }
-    ```
-    This is a Tailwind-static-class fallback (no DB-driven hex, so JIT works). When Plan 12-01 lands, swap back to the proper import in a follow-up commit.
+    Plan 12-01 (Wave 1) commits `components/nsi-gradient-backdrop.tsx` before this plan runs. The wave-2 dependency declared in frontmatter (`depends_on: ["12-01"]`) ensures execute-phase orders this correctly — no defensive fallback is needed.
   </action>
   <verify>
     1. `app/(auth)/_components/auth-hero.tsx` exists.
-    2. `npx tsc --noEmit` clean (assuming Plan 12-01's NSIGradientBackdrop is committed; otherwise contingency-fallback inline).
-    3. Component renders without errors (will be verified in Task 2 when imported into login).
+    2. `npx tsc --noEmit` clean (Plan 12-01's NSIGradientBackdrop is a hard dependency — must already be on disk).
+    3. `grep "NSIGradientBackdrop" components/nsi-gradient-backdrop.tsx` returns the export (sanity check 12-01 landed).
+    4. Component renders without errors (will be verified in Task 2 when imported into login).
   </verify>
   <done>
     `AuthHero` ships as a reusable server component for the 6 auth pages.
@@ -188,7 +184,7 @@ Output:
   <action>
     **Critical preservation rule (research Pitfall 9):** For each page, READ the existing file first. Identify and preserve verbatim:
     - All imports of Server Actions, Supabase clients
-    - `getClaims()` + `redirect("/app")` checks at the top of the page function
+    - `supabase.auth.getClaims()` + `redirect("/app")` checks at the top of the page function
     - `searchParams` parsing (e.g. `?reset=success`, `?verified=true`, `?error=...`)
     - The form's existing `action={...}` prop binding to its Server Action
     - Any `useFormState` / `useFormStatus` hooks (these are inside the form-component, often a sibling client component)
@@ -266,7 +262,7 @@ Output:
     **Same preservation + restyle pattern as Task 2.** These two routes live under `app/auth/` (not `app/(auth)/app/`) — they don't go through the `(auth)` route group's layout.
 
     **/auth/reset-password** — preserve:
-    - `getClaims()` recovery-session guard
+    - `supabase.auth.getClaims()` recovery-session guard (verified canonical: invoked directly off the SSR Supabase client; no `getClaims` wrapper helper exists in this codebase)
     - 8-character password validation
     - Expired-link fallback rendering
     - Form's POST to `/auth/confirm` (Server Action or form action — read existing file)
