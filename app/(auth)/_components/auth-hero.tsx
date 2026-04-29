@@ -1,0 +1,49 @@
+import { NSIGradientBackdrop } from "@/components/nsi-gradient-backdrop";
+
+interface AuthHeroProps {
+  /** Page-specific headline override (e.g. "Welcome back" on login). */
+  headline?: string;
+  /** Page-specific subtext override. */
+  subtext?: string;
+}
+
+/**
+ * NSI marketing hero panel for auth pages.
+ * CONTEXT.md lock: NSI tokens fixed (auth pages have no account context).
+ * Renders on lg: as the right-side panel of a split-panel layout;
+ * hidden on smaller breakpoints (form-only on mobile).
+ */
+export function AuthHero({
+  headline = "Bookings without the back-and-forth.",
+  subtext = "A multi-tenant scheduling tool built for trade contractors. Branded booking pages, capacity-aware slots, and email confirmations — done.",
+}: AuthHeroProps) {
+  return (
+    <aside className="relative hidden overflow-hidden bg-gray-50 lg:flex lg:flex-col lg:items-start lg:justify-center lg:px-12 lg:py-20">
+      <NSIGradientBackdrop />
+      <div className="relative z-10 max-w-md">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/80 px-3 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Powered by NSI
+        </div>
+        <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
+          {headline}
+        </h1>
+        <p className="mt-4 text-base text-gray-600">{subtext}</p>
+        <ul className="mt-8 space-y-3 text-sm text-gray-700">
+          <li className="flex items-start gap-2">
+            <span aria-hidden className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
+            Free for new owners — no card, no trial gates.
+          </li>
+          <li className="flex items-start gap-2">
+            <span aria-hidden className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
+            Brand it your way — colors, logo, embed widget.
+          </li>
+          <li className="flex items-start gap-2">
+            <span aria-hidden className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
+            Built for trade contractors, by NSI in Omaha.
+          </li>
+        </ul>
+      </div>
+    </aside>
+  );
+}
