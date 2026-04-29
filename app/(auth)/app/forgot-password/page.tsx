@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthHero } from "@/app/(auth)/_components/auth-hero";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
 /**
@@ -6,31 +7,37 @@ import { ForgotPasswordForm } from "./forgot-password-form";
  *
  * Lives in the (auth)/app/ route group so it inherits the auth layout shell
  * (no sidebar). Served at /app/forgot-password.
- *
- * UI-12 (Phase 12) will restyle all auth pages — this ships unstyled-but-functional.
  */
 export default function ForgotPasswordPage() {
   return (
-    <main className="min-h-screen grid place-items-center bg-muted px-4 py-12">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="mb-2 text-center">
-          <div className="text-2xl font-semibold text-primary">NSI</div>
-          <div className="text-sm text-muted-foreground mt-1">
-            North Star Integrations
-          </div>
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Left: form column */}
+      <main className="flex flex-col items-center justify-center bg-white px-6 py-12 md:py-20 lg:px-12">
+        <div className="w-full max-w-sm">
+          <header className="mb-8">
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+              Forgot your password?
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Enter your email and we'll send a reset link if it's registered.
+            </p>
+          </header>
+          <ForgotPasswordForm />
+          <p className="mt-6 text-center text-sm text-gray-600">
+            <Link
+              href="/app/login"
+              className="underline underline-offset-4 hover:text-gray-900"
+            >
+              Back to login
+            </Link>
+          </p>
         </div>
-
-        <ForgotPasswordForm />
-
-        <p className="text-center text-sm text-muted-foreground">
-          <Link
-            href="/app/login"
-            className="underline underline-offset-4"
-          >
-            Back to login
-          </Link>
-        </p>
-      </div>
-    </main>
+      </main>
+      {/* Right: NSI hero (lg+ only) */}
+      <AuthHero
+        headline="We've got your back"
+        subtext="Enter your email and we'll send a reset link if it's registered."
+      />
+    </div>
   );
 }
