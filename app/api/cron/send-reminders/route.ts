@@ -85,6 +85,10 @@ interface ScanRow {
     name: string;
     logo_url: string | null;
     brand_primary: string | null;
+    /** Phase 12-01 column: accounts.background_color. */
+    background_color: string | null;
+    /** Phase 12.5 column: accounts.chrome_tint_intensity. */
+    chrome_tint_intensity: string | null;
     owner_email: string | null;
     reminder_include_custom_answers: boolean;
     reminder_include_location: boolean;
@@ -125,7 +129,8 @@ export async function GET(request: NextRequest) {
       id, account_id, start_at, end_at, booker_name, booker_email, booker_timezone, answers,
       event_types!inner(name, duration_minutes, location),
       accounts!inner(
-        slug, name, logo_url, brand_primary, owner_email,
+        slug, name, logo_url, brand_primary, background_color, chrome_tint_intensity,
+        owner_email,
         reminder_include_custom_answers,
         reminder_include_location,
         reminder_include_lifecycle_links
@@ -249,6 +254,8 @@ export async function GET(request: NextRequest) {
             name: c.accounts.name,
             logo_url: c.accounts.logo_url,
             brand_primary: c.accounts.brand_primary,
+            background_color: c.accounts.background_color ?? null,
+            chrome_tint_intensity: c.accounts.chrome_tint_intensity ?? null,
             owner_email: c.accounts.owner_email,
             reminder_include_custom_answers: c.accounts.reminder_include_custom_answers,
             reminder_include_location: c.accounts.reminder_include_location,

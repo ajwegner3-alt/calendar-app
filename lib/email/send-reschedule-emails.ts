@@ -36,6 +36,8 @@ interface AccountRecord {
   brand_primary: string | null;
   /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
   background_color?: string | null;
+  /** Phase 12.5 column: accounts.chrome_tint_intensity. Controls header band color. */
+  chrome_tint_intensity?: string | null;
 }
 
 export interface SendRescheduleEmailsArgs {
@@ -102,6 +104,7 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
     backgroundColor: account.background_color ?? null,
+    chromeTintIntensity: (account.chrome_tint_intensity as "none" | "subtle" | "full" | undefined) ?? "subtle",
   };
 
   const html = `
@@ -201,6 +204,7 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
     backgroundColor: account.background_color ?? null,
+    chromeTintIntensity: (account.chrome_tint_intensity as "none" | "subtle" | "full" | undefined) ?? "subtle",
   };
 
   const html = `

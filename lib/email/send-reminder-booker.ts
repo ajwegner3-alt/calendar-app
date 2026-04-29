@@ -68,6 +68,8 @@ interface ReminderAccountRecord {
   brand_primary: string | null;
   /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
   background_color?: string | null;
+  /** Phase 12.5 column: accounts.chrome_tint_intensity. Controls header band color. */
+  chrome_tint_intensity?: string | null;
   owner_email?: string | null;
   /** Phase 8 toggles — Plan 08-01 added these as boolean NOT NULL DEFAULT true. */
   reminder_include_custom_answers: boolean;
@@ -110,6 +112,7 @@ export async function sendReminderBooker(args: SendReminderBookerArgs): Promise<
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
     backgroundColor: account.background_color ?? null,
+    chromeTintIntensity: (account.chrome_tint_intensity as "none" | "subtle" | "full" | undefined) ?? "subtle",
   };
 
   // Build the body in segments so toggle-gated blocks can be omitted entirely
