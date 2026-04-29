@@ -147,3 +147,14 @@ Skipped — Step 2 returned 0 rows.
 1. The CONCURRENTLY build can proceed without any pre-cleanup step.
 2. Plan 04 (`/api/slots` route fix) MUST change `.neq("status", "cancelled")` to `.eq("status", "confirmed")` as specified in RESEARCH Pitfall 4. This is a correctness fix (over-blocking of rescheduled slots) that is independent of the double-booking root cause but is a required part of the capacity feature work.
 3. No timestamp normalization is needed at the INSERT site (Step 3 confirms correct type; Step 2 found no precision-drift duplicates).
+
+---
+
+## Approval
+
+**Approver:** Andrew
+**Date:** 2026-04-28
+**Verdict:** (c) rescheduled-status slot reuse gap — pre-existing structural gap; no confirmed duplicates currently exist on prod.
+**Plan 03 gate:** PROCEED
+**Prod data modified:** NONE
+**Verbatim approval:** "approved — proceed to Wave 2"
