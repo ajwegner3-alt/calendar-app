@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadMonthBookings } from "./_lib/load-month-bookings";
-import { HomeCalendar } from "./_components/home-calendar";
+import { HomeDashboard } from "./_components/home-dashboard";
 import { OnboardingBanner } from "./_components/onboarding-banner";
 
 // 7-day onboarding checklist visibility window (matches OnboardingChecklist
@@ -19,10 +19,11 @@ export default async function DashboardHome() {
   // Load the user's account row directly (RLS-scoped: only their own row is
   // returned). Selects all columns needed for the onboarding checklist
   // visibility gate plus the 10-06 onboarding_complete redirect.
+  // timezone added for 12-04b DayDetailSheet time formatting.
   const { data: accounts, error } = await supabase
     .from("accounts")
     .select(
-      "id, slug, onboarding_complete, onboarding_checklist_dismissed_at, created_at",
+      "id, slug, timezone, onboarding_complete, onboarding_checklist_dismissed_at, created_at",
     )
     .eq("owner_user_id", claims.claims.sub)
     .is("deleted_at", null)
@@ -115,11 +116,10 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* Calendar — shows capped booking-day dots; 12-04b adds DayDetailSheet drawer */}
+      {/* Calendar with day-detail drawer — HomeDashboard owns Sheet open state;
+          clicking any day opens DayDetailSheet (empty-state for days with no bookings). */}
       <div className="rounded-xl border bg-white p-4 sm:p-6">
-        <HomeCalendar bookings={bookings} />
-        {/* 12-04b: wrap HomeCalendar with a client-component that supplies
-            onDayClick and renders the DayDetailSheet alongside the calendar. */}
+        <HomeDashboard bookings={bookings} accountTimezone={account.timezone} />
       </div>
     </div>
   );
