@@ -15,11 +15,12 @@ v1.1 layers three tightly-scoped capability areas on top of the locked v1.0 foun
 
 ## v1.1 Parallelization Notes
 
-Phases execute strictly sequentially: **Phase 10 → Phase 11 → Phase 12 → Phase 13**. No within-milestone parallelization because each phase depends structurally on the prior:
+Phases execute strictly sequentially: **Phase 10 → Phase 11 → Phase 12 → Phase 12.5 → Phase 13**. No within-milestone parallelization because each phase depends structurally on the prior:
 
 - Phase 11's capacity migration is easier to land while only 1 tenant exists in production (post-Phase 10 multi-user volume increases the risk surface for `event_types` schema changes).
 - Phase 12's IA refactor needs the Profile route (Phase 10 ACCT-01) AND the `max_bookings_per_slot` column (Phase 11 CAP-02) to ship cleanly.
-- Phase 13 manual QA needs all three capability areas wired before walkthrough is meaningful.
+- Phase 12.5 extends Phase 12's branding token foundation with per-account chrome tinting — depends on Phase 12 code-complete.
+- Phase 13 manual QA needs all capability areas wired before walkthrough is meaningful.
 
 Within each phase, plan-level parallelization is enabled via `parallelization=true` (per `config.json`). Plan-phase will derive parallelizable plan groupings during planning.
 
@@ -29,8 +30,9 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 - [✓~] **Phase 10: Multi-User Signup + Onboarding** — Code complete 2026-04-28 (9/9 plans); 6 manual checks deferred to milestone-end QA per `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`. Public `/signup`, email verification, atomic account provisioning, 3-step onboarding wizard, password reset, profile settings.
 - [✓~] **Phase 11: Booking Capacity + Double-Booking Root-Cause Fix** — Code complete 2026-04-29 (8/8 plans); 4 manual checks deferred to milestone-end QA per `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`. CAP-01 verdict (c): rescheduled-status slot reuse gap (no prod duplicates). slot_index + bookings_capacity_slot_idx replaces v1.0 bookings_no_double_book. Pitfall 4 closed. CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED branching live.
-- [ ] **Phase 12: Branded UI Overhaul (5 Surfaces)** — Cruip "Simple Light" aesthetic across dashboard + public booking + embed + emails + auth, plus per-account `background_color`/`background_shade` tokens, sidebar IA refactor, Home tab monthly calendar.
-- [ ] **Phase 13: Manual QA + Andrew Ship Sign-Off** — End-to-end signup walkthrough, multi-tenant UI isolation check, capacity E2E, branded smoke across 3 test accounts, explicit "ship v1.1" sign-off.
+- [✓] **Phase 12: Branded UI Overhaul (5 Surfaces)** — Code complete 2026-04-29 (7/7 plans). Cruip "Simple Light" aesthetic across dashboard + public booking + embed + emails + auth, plus per-account `background_color`/`background_shade` tokens, sidebar IA refactor, Home tab monthly calendar. Chrome was locked to gray-50 by design in this phase.
+- [ ] **Phase 12.5: Per-Account Heavy Chrome Theming + Header Removal + Email Token Unification** — Scope extension (not a gap). Inserts cleanly between Phase 12 and Phase 13. Per-account `chrome_tint_intensity` (none/subtle/full) tints sidebar + page bg; FloatingHeaderPill removed; email senders unified on same tokens as UI.
+- [ ] **Phase 13: Manual QA + Andrew Ship Sign-Off** — End-to-end signup walkthrough, multi-tenant UI isolation check, capacity E2E, branded smoke across 3 test accounts (including chrome tinting), explicit "ship v1.1" sign-off.
 
 ---
 
@@ -148,11 +150,44 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ---
 
+### Phase 12.5: Per-Account Heavy Chrome Theming + Header Removal + Email Token Unification
+
+**Goal**: An owner who picks a brand color and intensity sees that color reflected across the entire dashboard chrome — sidebar, page background — with auto-WCAG text contrast flipping, configurable per-account intensity (none/subtle/full), and email branding that derives from the same tokens (no separate email-branding user controls). The floating header pill is removed everywhere; sidebar trigger moves to a plain mobile-only hamburger.
+
+**Depends on**: Phase 12 code-complete (extends the branding token foundation from Plan 12-01; modifies the dashboard chrome from Plan 12-03; extends email senders from Plan 12-06).
+
+**Why 12.5 not a Phase 12 gap**: Phase 12 verified at code level (5/5 must_haves, 20/20 requirements). The gray-chrome behavior was what Phase 12 was scoped to deliver. Phase 12.5 is a scope extension inserted between Phase 12 and Phase 13 so Phase 13 QA still runs against the final intended UI.
+
+**Requirements** (6 new): BRAND-08, BRAND-09, UI-14, UI-15, UI-16, UI-17, EMAIL-13
+
+**Success Criteria** (what must be TRUE):
+  1. An owner who sets `brand_primary='#0A2540'` + `background_color='#0A2540'` + `chrome_tint_intensity='full'` sees the dashboard sidebar, page background, and email headers all reflect that navy — with black text auto-selected for contrast on the lightly tinted sidebar.
+  2. An owner who sets `chrome_tint_intensity='none'` sees the original Phase 12 gray-50 chrome (regression-safe path).
+  3. The floating header pill is gone from every dashboard route. The sidebar trigger is reachable on mobile.
+  4. The 6 transactional emails inherit the same per-account tokens — no user-facing email-branding fields exist.
+  5. `npx vitest run` ≥225 passing plus new tests for chromeTintToCss helper and intensity picker.
+  6. `npx tsc --noEmit` clean on production code.
+
+**Architectural decisions committed during planning:**
+  1. **Tinting strategy**: `color-mix(in oklch, ${color} N%, white)`. NOT opacity overlays. Percentages locked in `lib/branding/chrome-tint.ts`: sidebar-full=14%, sidebar-subtle=6%, page-full=8%, page-subtle=3%. Cards always white.
+  2. **WCAG helper**: `lib/branding/contrast.ts` with `pickTextColor` was already extracted in Plan 12-01 and is already shared by both UI (read-branding.ts) and email (branding-blocks.ts). No code movement required.
+  3. **Header trigger relocation**: Option (c) — plain hamburger `<SidebarTrigger>` in a `fixed top-3 left-3 z-20 md:hidden` div inside SidebarInset. FloatingHeaderPill file deleted.
+  4. **Branding editor preview**: Option (a) — REPLACE gradient-only mini-preview with chrome-aware preview showing faux-sidebar + faux-page-bg + faux-card (card always white). Single source of truth.
+  5. **Email intensity semantics**: intensity='none' → header band uses brand_primary; intensity='subtle'/'full' → uses backgroundColor (current Phase 12 behavior, preserved as default).
+
+**Plans**: 4 plans in 2 waves (per /gsd:plan-phase 12.5 2026-04-29).
+  - [ ] 12.5-01-PLAN.md — Foundation: DB migration (chrome_tint_intensity column) + Branding type extension + getBrandingForAccount reader + chromeTintToCss pure helper + unit tests (Wave 1)
+  - [ ] 12.5-02-PLAN.md — Dashboard chrome: sidebar tinting + page bg tinting + FloatingHeaderPill removal + plain hamburger trigger (Wave 2)
+  - [ ] 12.5-03-PLAN.md — Branding editor: intensity picker UI + chrome-aware mini-preview-card (Wave 2)
+  - [ ] 12.5-04-PLAN.md — Email tokens: EmailBranding.chromeTintIntensity + renderEmailBrandedHeader intensity-aware + all 6 senders wired (Wave 2)
+
+---
+
 ### Phase 13: Manual QA + Andrew Ship Sign-Off
 
 **Goal**: Andrew personally verifies each v1.1 capability area end-to-end across the production deployment and gives explicit "ship v1.1" sign-off; FUTURE_DIRECTIONS.md is updated with anything deferred during QA.
 
-**Depends on**: Phase 10 + Phase 11 + Phase 12 (all v1.1 capability areas wired before walkthrough begins).
+**Depends on**: Phase 10 + Phase 11 + Phase 12 + Phase 12.5 (all v1.1 capability areas wired before walkthrough begins).
 
 **Requirements** (7): QA-09, QA-10, QA-11, QA-12, QA-13, QA-14, QA-15
 
@@ -160,7 +195,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
   1. A brand-new test user completes signup → email-verify → onboarding wizard → first booking received end-to-end with no errors (QA-09).
   2. A 2nd test owner logged into the dashboard sees ZERO of Andrew's data on every surface (Home calendar, Event Types, Availability, Bookings, Branding, Settings) — multi-tenant UI isolation walkthrough complete (QA-10).
   3. Capacity end-to-end: an event with capacity=3 accepts exactly 3 bookings from different sessions; the 4th attempt returns the right `SLOT_CAPACITY_REACHED` error message in the UI (QA-11).
-  4. Branded UI smoke: 3 different test accounts (different `brand_primary`, `background_color`, `background_shade` combinations) render correctly on dashboard + public booking page + embed + emails (QA-12); embed snippet dialog widening verified at 320 / 768 / 1024 viewports without horizontal overflow (QA-13).
+  4. Branded UI smoke: 3 different test accounts (different `brand_primary`, `background_color`, `background_shade`, `chrome_tint_intensity` combinations) render correctly on dashboard + public booking page + embed + emails (QA-12); embed snippet dialog widening verified at 320 / 768 / 1024 viewports without horizontal overflow (QA-13).
   5. Andrew gives explicit "ship v1.1" sign-off (QA-14) and `FUTURE_DIRECTIONS.md` is updated with v1.1 carry-overs to v1.2 (QA-15).
 
 **Scope NOT in Phase 13** (explicit RE-deferral per Andrew 2026-04-27): EMAIL-08 (SPF/DKIM/DMARC + mail-tester), QA-01..QA-06 (v1.0 marathon QA — live email-client cross-test, mail-tester scoring, DST live E2E, responsive multi-viewport pass, multi-tenant UI walkthrough). These remain in v1.2 backlog. QA-10 partially closes the v1.0 multi-tenant walkthrough as a side-effect of v1.1 multi-user work but does not retire QA-06 formally.
@@ -173,25 +208,27 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ## Progress
 
-**Execution Order:** Phase 10 → Phase 11 → Phase 12 → Phase 13 (locked sequential)
+**Execution Order:** Phase 10 → Phase 11 → Phase 12 → Phase 12.5 → Phase 13 (locked sequential)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 10. Multi-User Signup + Onboarding | v1.1 | 9 / 9 | Code complete; 6 manual checks deferred | 2026-04-28 (code) |
 | 11. Booking Capacity + Double-Booking Fix | v1.1 | 8 / 8 | Code complete; 4 manual checks deferred | 2026-04-29 (code) |
-| 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 0 / 6 | Plans created (6 plans, 3 waves) | - |
+| 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 7 / 7 | Code complete (all 7 plans done) | 2026-04-29 (code) |
+| 12.5. Per-Account Chrome Theming + Header + Email | v1.1 | 0 / 4 | Plans created (4 plans, 2 waves) | - |
 | 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started | - |
 
 ## Coverage Summary
 
-- v1.1 requirements: **53 total**
-- Mapped to phases: **53**
-- Unmapped: **0** ✓
+- v1.1 requirements: **60 total** (53 original + 7 new in Phase 12.5)
+- Mapped to phases: **60**
+- Unmapped: **0**
 - Phase 10: 19 requirements (AUTH-05..11, ONBOARD-01..09, ACCT-01..03)
 - Phase 11: 9 requirements (CAP-01..09)
 - Phase 12: 20 requirements (BRAND-05..07, UI-01..13, EMAIL-09..12)
+- Phase 12.5: 7 requirements (BRAND-08..09, UI-14..17, EMAIL-13)
 - Phase 13: 7 requirements (QA-09..15)
 
 ---
 
-*Roadmap last updated: 2026-04-29 — Phase 11 code-complete (8/8 plans, 9/9 requirements verified at code level); 4 deferred manual checks appended to `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md` for milestone-end QA. v1.1 cumulative: 28/53 requirements complete (Phase 10 19 + Phase 11 9). Phase 12 next.*
+*Roadmap last updated: 2026-04-29 — Phase 12.5 planned (4 plans, 2 waves). Phase 12 code-complete (7/7 plans). Phase 12.5 inserts between Phase 12 and Phase 13 as a scope extension for per-account chrome tinting, FloatingHeaderPill removal, and email token unification.*
