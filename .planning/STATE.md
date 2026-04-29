@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12-02 complete (backfilled). Auth pages restyle: AuthHero component + 6 pages (login, signup, forgot-password, verify-email, reset-password, auth-error) adopt Cruip split-panel layout with NSI tokens. 173+ tests passing + 26 skipped.
+**Last updated:** 2026-04-29 — Plan 12-05 complete. Public surfaces restyle: /[account] hero card (ListingHero), /[account]/[event-slug] py-12 md:py-20 + max-w-3xl booking card, /embed single-circle gradient (Pitfall 10 safe), EmbedCodeDialog sm:max-w-2xl. All public callers pass backgroundColor/backgroundShade to BrandedPage. UI-09/10/11/13 satisfied.
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 12 — Branded UI Overhaul.
-**Last completed plan:** 12-02 (auth-pages-restyle) — 2026-04-29 (backfilled; 12-03 already done in prior session).
-**Status:** Phase 12 IN PROGRESS (Wave 1 + Wave 2 complete; Wave 3 public-surfaces, emails remain). Plans 12-01, 12-02, 12-03 done; 12-05 (public booking), 12-06 (emails) partially done per git history.
-**Last activity:** 2026-04-29 — Plan 12-02 backfilled. AuthHero + 6 auth pages restyled. All getClaims redirects + searchParams + Server Action bindings preserved. UI-12 satisfied for auth subset. TSC clean. 173+ tests passing + 26 skipped.
+**Last completed plan:** 12-05 (public-surfaces-restyle) — 2026-04-29.
+**Status:** Phase 12 IN PROGRESS (Wave 1 + Wave 2 complete; 12-05 complete; 12-06 emails remaining). Plans 12-01, 12-02, 12-03, 12-05 done.
+**Last activity:** 2026-04-29 — Plan 12-05 complete. ListingHero, booking-shell Cruip restyle, embed single-circle gradient, EmbedCodeDialog sm:max-w-2xl. TSC clean. 178 tests passing + 26 skipped (pre-existing failures in bookings-api/rate-limit from concurrent 12-06 email wave).
 
-**Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete; Phase 12 in progress (12-01 ✓, 12-02 ✓, 12-03 ✓ done; 12-05/12-06 partial) (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete; Phase 12 in progress (12-01 ✓, 12-02 ✓, 12-03 ✓, 12-05 ✓ done; 12-06 emails remaining) (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -56,10 +56,11 @@ Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — 
   11-06 [✓] pg-driver-race-test                       (Complete 2026-04-29 — CAP-06 pg-driver race test; postgres.js devDep; pg-direct helper; skip-guarded; 148 tests + 26 skipped)
   11-07 [✓] event-type-form-capacity                  (Complete 2026-04-29 — CAP-03 input + CAP-08 toggle + CAP-09 modal; in-JS group-by; fail-closed; 148 tests + 26 skipped)
   11-08 [✓] booker-ui-capacity                        (Complete 2026-04-29 — CAP-08 'X spots left' badge + CAP-07 409 branching on body.code; RaceLoserBanner message prop; 148 tests + 26 skipped)
-Phase 12 [~] Branded UI Overhaul (5 Surfaces)        (In Progress — 12-01, 12-02, 12-03 done; 12-05/12-06 partial)
+Phase 12 [~] Branded UI Overhaul (5 Surfaces)        (In Progress — 12-01, 12-02, 12-03, 12-05 done; 12-06 remaining)
   12-01 [✓] branding-tokens-foundation               (Complete 2026-04-29 — background_color + background_shade columns; GradientBackdrop/NSIGradientBackdrop primitives; BrandedPage extended; /app/branding editor wired; 173 tests + 26 skipped)
   12-02 [✓] auth-pages-restyle                       (Complete 2026-04-29 — AuthHero component; 6 auth pages (login/signup/forgot-password/verify-email/reset-password/auth-error) Cruip split-panel; NSIGradientBackdrop in hero; all auth logic preserved; UI-12 satisfied)
   12-03 [✓] dashboard-chrome                         (Complete 2026-04-29 — Inter font + gray-50 + Cruip glass header pill + GradientBackdrop in shell layout + flat sidebar IA (Home/Event Types/Availability/Bookings/Branding/Settings accordion); 184 tests + 26 skipped)
+  12-05 [✓] public-surfaces-restyle                  (Complete 2026-04-29 — ListingHero + /[account] hero card; BookingShell py-12 md:py-20 + max-w-3xl card; embed single-circle gradient Pitfall-10-safe; EmbedCodeDialog sm:max-w-2xl; all public BrandedPage callers pass backgroundColor/backgroundShade; UI-09/10/11/13 satisfied)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
 
@@ -122,6 +123,11 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **shadeToGradient pure helper** (Plan 12-01, 2026-04-29) — `lib/branding/gradient.ts`. No React, no DOM. shade=none: flatTint=color-mix(in oklch, ${color} 4%, white), circles=[]. subtle: opacity=0.25, blurPx=200. bold: opacity=0.5, blurPx=160. gray-50 (#F8FAFC) fallback when color=null. 8 unit tests.
 - **saveBrandingAction treats empty string as null** (Plan 12-01, 2026-04-29) — defensive coercion before Zod validation so clearing background color in UI correctly persists DB null.
 - **Wave 2/3 consumer pattern locked** (Plan 12-01, 2026-04-29) — Public surfaces: pass `branding.backgroundColor + branding.backgroundShade` to `<BrandedPage>`. Dashboard chrome: pass to `<GradientBackdrop>` directly. Auth pages: use `<NSIGradientBackdrop>` directly.
+- **Public surfaces branding tokens live** (Plan 12-05, 2026-04-29) — `AccountSummary` extended with `background_color` + `background_shade`; `loadEventTypeForBookingPage` + `loadAccountListing` both SELECT and return these fields. All public BrandedPage callers pass `backgroundColor`/`backgroundShade`. UI-09/10/11/13 satisfied.
+- **ListingHero inner gradient pattern** (Plan 12-05, 2026-04-29) — `/[account]` hero card has its own `GradientBackdrop` (inner spotlight) separate from page-level `BrandedPage` backdrop. Color fallback chain: `backgroundColor ?? brandPrimary ?? null`.
+- **Embed single-circle gradient pattern** (Plan 12-05, 2026-04-29) — Embed iframes use inline single-circle (not 3-circle GradientBackdrop) at `-top-32` inside `relative overflow-hidden`. Pitfall 10 safe: EmbedHeightReporter measures `documentElement.scrollHeight` correctly.
+- **Footer accents deferred** (Plan 12-05, 2026-04-29) — Page-level BrandedPage backdrop extends down naturally; explicit footer accent layer omitted. v1.2 enhancement candidate if Andrew wants it.
+- **EmbedCodeDialog sm:max-w-2xl** (Plan 12-05, 2026-04-29) — Changed from `max-w-3xl` to `sm:max-w-2xl`. UI-09 satisfied.
 - **Auth pages adopt Cruip split-panel with AuthHero** (Plan 12-02, 2026-04-29) — `AuthHero` server component at `app/(auth)/_components/auth-hero.tsx`: NSIGradientBackdrop in aside, "Powered by NSI" pill, headline/subtext overrides. 6 pages restyled (login, signup, forgot-password, verify-email, reset-password, auth-error) — all getClaims redirects, searchParams, Server Action bindings preserved verbatim. Import path: `@/app/(auth)/_components/auth-hero` (valid from both route group and app/auth/ paths). UI-12 satisfied for auth surface.
 - **Dashboard chrome shipped — Inter + glass pill + flat sidebar IA** (Plan 12-03, 2026-04-29) — Geist swapped for Inter (next/font/google, `--font-sans`, `display: swap`, `tracking-tight` on `<html>`). `--background: oklch(0.985 0.002 247)` (gray-50) + `--sidebar-width-mobile: 100vw` added to `@theme`. `FloatingHeaderPill` at `app/(shell)/_components/floating-header-pill.tsx` — Cruip glass pill, `fixed top-2 z-30 w-full md:top-6`, hamburger via `SidebarTrigger`. `(shell)/layout.tsx` fetches account row inline + calls `getBrandingForAccount(account.id)` + renders `<GradientBackdrop>` + `<FloatingHeaderPill>`. `app-sidebar.tsx` rebuilt: single flat group, 6 items in exact order (Home/Event Types/Availability/Bookings/Branding/Settings), Settings is inline accordion via `useState` (defaults open on `/app/settings/*`). Sidebar footer (email + logout) preserved. `main` gets `pt-20 md:pt-28` to clear pill. 184 tests passing + 26 skipped.
 - **Settings accordion is local useState only** (Plan 12-03, 2026-04-29) — No cookie persistence; collapses on navigation per CONTEXT.md lock. v1.2 follow-up: add `sidebar_settings_open` cookie if Andrew requests persistence.
@@ -182,9 +188,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12-02 backfilled. Auth-pages-restyle complete. 173+ tests passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 12-05 complete. Public surfaces restyle: ListingHero, BookingShell Cruip rhythm, embed single-circle gradient, EmbedCodeDialog sm:max-w-2xl. 178+ tests passing + 26 skipped.
 
-**Stopped at:** Plan 12-02 (auth-pages-restyle) complete. SUMMARY.md created. STATE.md updated.
+**Stopped at:** Plan 12-05 (public-surfaces-restyle) complete. SUMMARY.md created. STATE.md updated.
+
+**Resume:** Execute Phase 12 Plan 12-06 (email branding). All branding tokens (background_color/backgroundShade) now in AccountSummary via loadEventTypeForBookingPage — email plan can read these for solid-color blocks (not gradient, different rendering path).
 
 **Resume:** Phase 12 remaining: 12-04a (home-tab-server-and-calendar), and confirm 12-05/12-06 status from git history. Two open architectural decisions: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope — address in respective plans.
 
