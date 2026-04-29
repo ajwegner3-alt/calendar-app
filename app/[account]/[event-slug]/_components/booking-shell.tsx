@@ -57,39 +57,56 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      {/* Left panel: race-loser banner + slot picker */}
-      <div className="space-y-4">
-        <RaceLoserBanner visible={showRaceLoser} message={raceLoserMessage} />
-        <SlotPicker
-          eventTypeId={eventType.id}
-          accountTimezone={account.timezone}
-          bookerTimezone={bookerTz}
-          ownerEmail={account.owner_email}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          selectedSlot={selectedSlot}
-          onSelectSlot={handleSelectSlot}
-          refetchKey={refetchKey}
-        />
-      </div>
+    <main className="mx-auto w-full">
+      {/* Hero header: Cruip section rhythm py-12 md:py-20 */}
+      <header className="mx-auto max-w-3xl px-6 pt-12 pb-8 text-center md:pt-20 md:pb-12">
+        <p className="text-sm font-medium text-gray-500 mb-2">{account.name}</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">
+          {eventType.name}
+        </h1>
+        <p className="mt-3 text-sm text-gray-600 md:text-base">
+          {eventType.duration_minutes} min
+          {eventType.description ? ` · ${eventType.description}` : ""}
+        </p>
+      </header>
 
-      {/* Right panel: booking form (shows when a slot is selected) */}
-      <aside className="rounded-lg border p-4 h-fit">
-        {selectedSlot ? (
-          <BookingForm
-            accountSlug={account.slug}
-            eventType={eventType}
-            selectedSlot={selectedSlot}
-            bookerTimezone={bookerTz}
-            onRaceLoss={handleRaceLoss}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Pick a time on the left to continue.
-          </p>
-        )}
-      </aside>
-    </div>
+      {/* Slot-picker section: clean white card, max-w-3xl (UI-10 lock) */}
+      <section className="mx-auto max-w-3xl px-6 pb-12 md:pb-20">
+        <RaceLoserBanner visible={showRaceLoser} message={raceLoserMessage} />
+        <div className="mt-4 rounded-2xl border bg-white shadow-sm">
+          <div className="grid gap-8 p-6 lg:grid-cols-[1fr_320px]">
+            {/* Left panel: slot picker */}
+            <SlotPicker
+              eventTypeId={eventType.id}
+              accountTimezone={account.timezone}
+              bookerTimezone={bookerTz}
+              ownerEmail={account.owner_email}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              selectedSlot={selectedSlot}
+              onSelectSlot={handleSelectSlot}
+              refetchKey={refetchKey}
+            />
+
+            {/* Right panel: booking form (shows when a slot is selected) */}
+            <aside className="border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+              {selectedSlot ? (
+                <BookingForm
+                  accountSlug={account.slug}
+                  eventType={eventType}
+                  selectedSlot={selectedSlot}
+                  bookerTimezone={bookerTz}
+                  onRaceLoss={handleRaceLoss}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Pick a time on the left to continue.
+                </p>
+              )}
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

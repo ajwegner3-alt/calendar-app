@@ -24,7 +24,7 @@ export async function loadEventTypeForBookingPage(
   // so a single .is('deleted_at', null) here covers all three public surfaces.
   const { data: accountRow, error: accountError } = await supabase
     .from("accounts")
-    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
+    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary, background_color, background_shade")
     .eq("slug", accountSlug)
     .is("deleted_at", null)
     .maybeSingle();
@@ -60,6 +60,9 @@ export async function loadEventTypeForBookingPage(
       // Phase 7 branding fields — additive; downstream callers may ignore
       logo_url: accountRow.logo_url ?? null,
       brand_primary: accountRow.brand_primary ?? null,
+      // Phase 12: gradient backdrop tokens
+      background_color: accountRow.background_color ?? null,
+      background_shade: accountRow.background_shade ?? "subtle",
     },
     eventType: {
       id: eventTypeRow.id,

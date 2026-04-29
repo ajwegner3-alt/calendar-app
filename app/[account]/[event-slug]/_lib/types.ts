@@ -10,6 +10,9 @@ export interface AccountSummary {
   // Phase 7: branding columns — additive; existing Phase 5/6 callers unaffected
   logo_url: string | null;
   brand_primary: string | null;
+  // Phase 12: gradient backdrop tokens
+  background_color: string | null;
+  background_shade: string;
 }
 
 export interface CustomQuestion {
