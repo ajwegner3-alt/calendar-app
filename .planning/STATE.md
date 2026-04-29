@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plan 10-08 complete (wave 5 done). Email-change route + SECURITY DEFINER trigger + P-A1 generic action. 148 tests passing.
+**Last updated:** 2026-04-28 — Plan 11-01 complete (Wave 1 gate-opened). CAP-01 6-step diagnostic: verdict (c) rescheduled-status slot reuse gap, 0 duplicate confirmed rows on prod, Plan 03 PROCEED. Andrew approved "proceed to Wave 2".
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 10 — Multi-User Signup + Onboarding (most urgent per Andrew 2026-04-27).
+**Current focus:** v1.1 Phase 11 — Booking Capacity + Double-Booking Fix (Wave 1 complete; Wave 2 gate-opened 2026-04-28).
 
 **Mode:** yolo
 **Depth:** standard
@@ -17,10 +17,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 ## Current Position
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
-**Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** Phase 10 — code complete (9/9 plans; verifier passed at code level with status `human_needed`) — 2026-04-28.
-**Status:** Phase 10 CODE-COMPLETE. 6 manual checks deferred to milestone-end QA per Andrew 2026-04-28. Phase 11 (Booking Capacity + Double-Booking Fix) ready to plan.
-**Last activity:** 2026-04-28 — Phase 10 verifier ran goal-backward analysis; all 19 requirements have shipping code; 6 walkthroughs queued in `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md` (P-A8 + email-confirm toggle, signup E2E, password reset E2E, profile/soft-delete UI, email-change E2E, N=3 RLS test user setup). Roadmap + REQUIREMENTS marked Complete (with manual-deferred annotation). 148 tests passing + 24 skip-guarded.
+**Phase:** Phase 11 — Booking Capacity + Double-Booking Fix.
+**Last completed plan:** 11-01 (CAP-01 root-cause investigation) — 2026-04-28.
+**Status:** Phase 11 IN PROGRESS. Wave 1 complete; Wave 2 (Plans 11-02 through 11-05) gate-opened. Phase 10 code-complete with 6 manual checks deferred to milestone-end QA.
+**Last activity:** 2026-04-28 — Plan 11-01 complete. 6-step diagnostic ran against prod; verdict (c) rescheduled-status slot reuse gap; 0 duplicate confirmed rows on prod; Plan 03 PROCEED; Andrew approved "approved — proceed to Wave 2". No prod data modified.
 
 **Progress (across both v1.0 and v1.1):** [██████████░░] 10 / 13 phases code-complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28 — milestone-end QA pending)
 
@@ -47,7 +47,8 @@ Phase 10 [✓~] Multi-User Signup + Onboarding         (auto complete 2026-04-28
   10-07 [✓] profile-settings-and-soft-delete         (Complete 2026-04-28)
   10-08 [✓] email-change-with-reverification         (Complete 2026-04-28)
   10-09 [✓*] rls-matrix-extension-and-checklist      (auto done 2026-04-28; Task 1 + browser QA deferred)
-Phase 11 [ ] Booking Capacity + Double-Booking Fix   (Not started)
+Phase 11 [~] Booking Capacity + Double-Booking Fix   (Wave 1 complete 2026-04-28; Wave 2 in progress)
+  11-01 [✓] cap-01-root-cause-investigation           (Complete 2026-04-28 — verdict (c), gate PROCEED)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
@@ -109,6 +110,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
 - **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
 - **Email-change trigger + route shipped** (Plan 10-08, 2026-04-28) — `sync_account_email_on_auth_update` SECURITY DEFINER trigger on `auth.users AFTER UPDATE OF email` propagates to `accounts.owner_email`. `/app/settings/profile/email` route with `requestEmailChangeAction` Server Action: rate-limited 3/hr per `${ip}:${uid}` (authenticated flow, uid available), quota-guarded (`email-change` category), P-A1 generic response (never leaks "email already in use"). `emailRedirectTo` points to `${origin}/auth/confirm?next=/app/settings/profile`. E2E deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. 148 tests passing.
+- **CAP-01 root-cause: verdict (c) rescheduled-status slot reuse gap** (Plan 11-01, 2026-04-28) — 6-step diagnostic against prod confirmed zero duplicate confirmed bookings. `bookings_no_double_book` unique index is present and correct. The structural gap (rescheduled status does not trigger the unique index guard, so a bypassed availability check could double-book a rescheduled slot) is accepted behavior — rescheduled bookings hold their original slot for audit purposes. Plan 03 (slot_index migration) gate = PROCEED. Plan 05 must change `.neq("status","cancelled")` → `.eq("status","confirmed")` per Pitfall 4.
 - **RLS matrix extended to N=3 tenants** (Plan 10-09, 2026-04-28) — `tests/rls-cross-tenant-matrix.test.ts` now has a second `describe.skipIf(skipIfNoThreeUsers)` suite with 24 new cases (positive control, anon lockout, cross-tenant SELECT in 8 table×direction combos, UPDATE deny in 2 directions, admin sees-all-3). `tests/helpers/auth.ts` exports `signInAsNsiTest3Owner()` + `TEST_RLS_3_ACCOUNT_SLUG`. Third test user provisioning deferred to milestone-end QA (see MILESTONE_V1_1_DEFERRED_CHECKS.md). 148 passing + 24 skipped.
 - **OnboardingChecklist component shipped** (Plan 10-09, 2026-04-28) — `components/onboarding-checklist.tsx` (`'use client'`): 7-day post-onboarding dismissible card with 3 items (Set availability, Customize event type, Share link + copy button). Visibility gate: `onboarding_complete=true` + `dismissed_at=null` + `created_at+7d>now()`. `app/(shell)/app/onboarding-checklist-actions.ts` exports `dismissChecklistAction` (RLS-scoped UPDATE). `/app` dashboard loads checklist above WelcomeCard with lazy count loading (2 parallel queries only when window open). Browser QA deferred to milestone-end QA.
 - **3-step /onboarding wizard shipped** (Plan 10-06, 2026-04-28) — `/onboarding/step-1-account` (name+slug), `/onboarding/step-2-timezone` (auto-detect), `/onboarding/step-3-event-type` (required, pre-filled "Consultation"/30min). Step 3 atomically: INSERT 5 Mon-Fri 9-5 availability_rules + INSERT event_types + UPDATE accounts onboarding_complete=true. Welcome email fire-and-forget after. /app now redirects to /onboarding when onboarding_complete=false.
@@ -146,18 +148,18 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
   1. ~~Account auto-provisioning pattern~~ — RESOLVED (Plan 10-03): Postgres trigger committed in production.
   2. ~~Gmail SMTP quota plan (P-A12 highest under-mitigated v1.1 risk)~~ — RESOLVED (Plan 10-04): 200/day cap + 80% warning + fail-closed committed in production.
   3. P-A8 pre-flight UPDATE on Andrew's `email_confirmed_at` BEFORE flipping email-confirm toggle — handled in Plan 10-02 (parallel wave).
-- **Phase 11 — `/gsd:research-phase` flagged**: advisory-lock-trigger vs. slot_index pattern; verify v1.0 race test layer (supabase-js vs pg-driver); root-cause prod double-booking before designing replacement.
+- **Phase 11 — Wave 1 COMPLETE (2026-04-28):** CAP-01 verdict (c) rescheduled-status slot reuse gap; 0 duplicate confirmed rows on prod; Plan 03 PROCEED (CONCURRENTLY index build clean); no prod data modified. Structural gap (rescheduled holds slot for audit) is accepted behavior documented in FINDINGS.md. Plan 05 `.neq("status","cancelled")` → `.eq("status","confirmed")` fix confirmed still in scope (Pitfall 4 capacity-accuracy fix).
 - **Phase 12 — two decisions during plan-phase**: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope (~1 day cheap insurance vs accept Andrew-eyes-only QA in Phase 13).
 
 ---
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 10-09 complete. Phase 10 auto-executable work done. RLS N=3 matrix extended (skip-guarded), OnboardingChecklist + dismiss action shipped, FUTURE_DIRECTIONS.md §7 added. 148 tests passing + 24 skipped.
+**Last session:** 2026-04-28 — Plan 11-01 complete. CAP-01 6-step diagnostic ran against prod; verdict (c); Plan 03 gate-opened. Andrew approved Wave 2 proceed.
 
-**Stopped at:** Plan 10-09 complete. Phase 10 auto portions done. 3 deferred QA items in `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`.
+**Stopped at:** Plan 11-01 complete. Wave 1 gate-opened. Wave 2 (Plans 11-02 through 11-05) ready to execute.
 
-**Resume:** Execute Phase 11 (Booking Capacity + Double-Booking Fix). Plans not yet created — use `/gsd:plan-phase 11` first.
+**Resume:** Execute Wave 2 plans for Phase 11 (Plans 11-02, 11-03, 11-04, 11-05 per ROADMAP).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
