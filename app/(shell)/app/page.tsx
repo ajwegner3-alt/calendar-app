@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { WelcomeCard } from "@/components/welcome-card";
-import { OnboardingChecklist } from "@/components/onboarding-checklist";
+import { loadMonthBookings } from "./_lib/load-month-bookings";
+import { HomeCalendar } from "./_components/home-calendar";
+import { OnboardingBanner } from "./_components/onboarding-banner";
 
+// 7-day onboarding checklist visibility window (matches OnboardingChecklist
+// client-side gate in components/onboarding-checklist.tsx).
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default async function DashboardHome() {
@@ -72,16 +75,52 @@ export default async function DashboardHome() {
     eventTypeCount = evtResult.count ?? 0;
   }
 
+  const today = new Date();
+  const bookings = await loadMonthBookings(today);
+
+  const currentMonth = today.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Onboarding checklist — renders only within first 7 days, before dismiss */}
-      <OnboardingChecklist
-        account={account}
-        availabilityCount={availabilityCount}
-        eventTypeCount={eventTypeCount}
-      />
+      {/* Onboarding banner — renders only within first 7 days, before dismiss.
+          Wraps the existing OnboardingChecklist in a compact above-calendar layout. */}
+      {checklistWindowOpen && (
+        <OnboardingBanner
+          account={account}
+          availabilityCount={availabilityCount}
+          eventTypeCount={eventTypeCount}
+        />
+      )}
 
-      <WelcomeCard />
+      {/* Month header */}
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          {currentMonth}
+        </h1>
+        <p className="text-sm text-gray-600 mt-1">
+          Your bookings at a glance.
+        </p>
+      </header>
+
+      {/* Empty state — shown above the calendar so owner can still navigate months */}
+      {bookings.length === 0 && (
+        <div className="rounded-xl border bg-white p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            No bookings in {currentMonth}. Bookings will appear here as
+            they&apos;re scheduled.
+          </p>
+        </div>
+      )}
+
+      {/* Calendar — shows capped booking-day dots; 12-04b adds DayDetailSheet drawer */}
+      <div className="rounded-xl border bg-white p-4 sm:p-6">
+        <HomeCalendar bookings={bookings} />
+        {/* 12-04b: wrap HomeCalendar with a client-component that supplies
+            onDayClick and renders the DayDetailSheet alongside the calendar. */}
+      </div>
     </div>
   );
 }
