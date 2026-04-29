@@ -35,11 +35,13 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
   // Used by the 409 race-loser path: slot was taken → show fresh availability.
   const [refetchKey, setRefetchKey] = useState(0);
   const [showRaceLoser, setShowRaceLoser] = useState(false);
+  const [raceLoserMessage, setRaceLoserMessage] = useState<string | undefined>(undefined);
 
-  /** Called by BookingForm when POST /api/bookings returns 409 SLOT_TAKEN. */
-  const handleRaceLoss = () => {
+  /** Called by BookingForm when POST /api/bookings returns 409. */
+  const handleRaceLoss = (message?: string) => {
     setSelectedSlot(null);
     setShowRaceLoser(true);
+    setRaceLoserMessage(message);
     setRefetchKey((k) => k + 1);
     // Banner persists until the user picks a new slot — see handleSelectSlot.
   };
@@ -48,14 +50,17 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
   const handleSelectSlot = (s: Slot | null) => {
     setSelectedSlot(s);
     // Dismiss race-loser banner once the user has picked a fresh slot.
-    if (s) setShowRaceLoser(false);
+    if (s) {
+      setShowRaceLoser(false);
+      setRaceLoserMessage(undefined);
+    }
   };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       {/* Left panel: race-loser banner + slot picker */}
       <div className="space-y-4">
-        <RaceLoserBanner visible={showRaceLoser} />
+        <RaceLoserBanner visible={showRaceLoser} message={raceLoserMessage} />
         <SlotPicker
           eventTypeId={eventType.id}
           accountTimezone={account.timezone}

@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 export interface Slot {
   start_at: string; // ISO UTC string
   end_at: string; // ISO UTC string
+  remaining_capacity?: number; // CAP-08: present only when owner has show_remaining_capacity=true
 }
 
 interface SlotPickerProps {
@@ -176,6 +177,13 @@ export function SlotPicker(props: SlotPickerProps) {
                     }
                   >
                     {label}
+                    {typeof s.remaining_capacity === "number" && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {s.remaining_capacity === 1
+                          ? "1 spot left"
+                          : `${s.remaining_capacity} spots left`}
+                      </span>
+                    )}
                   </button>
                 </li>
               );
