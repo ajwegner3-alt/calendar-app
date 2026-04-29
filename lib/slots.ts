@@ -176,6 +176,23 @@ function countBookingsOnLocalDate(
 }
 
 /**
+ * Count confirmed bookings that start at exactly the given UTC instant (slot start).
+ *
+ * CAP-04 (Plan 11-05): used to enforce N-per-slot capacity in computeSlots.
+ * The caller (route handler) MUST pre-filter the bookings array to
+ * status='confirmed' before passing them in — this helper does NOT inspect
+ * booking status, it just counts matches at the given start_at epoch.
+ */
+function slotConfirmedCount(slotStartUtc: Date, bookings: SlotInput["bookings"]): number {
+  const slotMs = slotStartUtc.getTime();
+  let n = 0;
+  for (const b of bookings) {
+    if (new Date(b.start_at).getTime() === slotMs) n++;
+  }
+  return n;
+}
+
+/**
  * Buffer-overlap check: would this slot collide with any existing booking once
  * buffer_minutes is added on each side?
  *
@@ -206,7 +223,7 @@ function slotConflictsWithBookings(
  * production caller; tests call it directly with hand-crafted inputs.
  */
 export function computeSlots(input: SlotInput): Slot[] {
-  const { account, durationMinutes, rules, overrides, bookings, now } = input;
+  const { account, durationMinutes, rules, overrides, bookings, now, maxBookingsPerSlot, showRemainingCapacity } = input;
   const TZ = account.timezone;
   const earliest = addMinutes(now, account.min_notice_hours * 60);
   const latest = addDays(now, account.max_advance_days);
@@ -262,7 +279,22 @@ export function computeSlots(input: SlotInput): Slot[] {
               )
             ) continue;
 
-            results.push(slot);
+            // CAP-04 (Plan 11-05): exclude slot when confirmed count meets cap.
+            // bookings array has already been filtered to status='confirmed' by
+            // the route handler (Pitfall 4 fix — see route.ts Task 2).
+            const confirmedCount = slotConfirmedCount(slotStartUtc, bookings);
+            if (confirmedCount >= maxBookingsPerSlot) continue;
+
+            // CAP-08 (Plan 11-05): conditionally include remaining_capacity.
+            const outputSlot: Slot = {
+              start_at: slot.start_at,
+              end_at: slot.end_at,
+            };
+            if (showRemainingCapacity) {
+              outputSlot.remaining_capacity = maxBookingsPerSlot - confirmedCount;
+            }
+
+            results.push(outputSlot);
           }
         }
       }

@@ -52,6 +52,10 @@ function input(partial: Partial<SlotInput>): SlotInput {
     // Pin "now" far in the past so min-notice/max-advance never reject anything
     // unless the test explicitly overrides these fields.
     now: new Date("2025-01-01T00:00:00Z"),
+    // CAP-04 (Plan 11-05): default to 1 for v1.0 single-capacity behavior.
+    // All existing tests pass bookings=[] or bookings with confirmed rows;
+    // confirmedCount >= 1 path is identical to v1.0 "any booking blocks the slot".
+    maxBookingsPerSlot: 1,
     ...partial,
   };
 }

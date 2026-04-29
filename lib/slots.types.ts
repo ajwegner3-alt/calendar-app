@@ -62,14 +62,36 @@ export interface SlotInput {
   account: AccountSettings;
   rules: AvailabilityRuleRow[];
   overrides: DateOverrideRow[];
-  /** Confirmed bookings in/near the range (caller must filter status != 'cancelled') */
+  /**
+   * Confirmed bookings in/near the range. As of Plan 11-05 (Pitfall 4 fix),
+   * the route handler filters to status='confirmed' only (NOT .neq('cancelled')).
+   * Rescheduled bookings are excluded so they no longer over-block freed slots.
+   */
   bookings: BookingRow[];
   /** Current UTC instant. Inject as parameter so unit tests can pin "now". */
   now: Date;
+  /**
+   * CAP-04 (Plan 11-05): maximum number of confirmed bookings allowed per slot.
+   * Slots are excluded once confirmed_count >= maxBookingsPerSlot.
+   * Default: 1 (v1.0 single-capacity behavior preserved).
+   */
+  maxBookingsPerSlot: number;
+  /**
+   * CAP-08 backend (Plan 11-05): when true, each output slot includes a
+   * remaining_capacity field (maxBookingsPerSlot - confirmedCount).
+   * When false (default), the field is omitted from slot objects.
+   */
+  showRemainingCapacity?: boolean;
 }
 
 /** Single output slot. Both endpoints in UTC ISO. */
 export interface Slot {
   start_at: string;
   end_at: string;
+  /**
+   * CAP-08 (Plan 11-05): only present when showRemainingCapacity=true.
+   * Value = maxBookingsPerSlot - confirmedCount (always >= 1; 0-capacity
+   * slots are excluded before this field is set).
+   */
+  remaining_capacity?: number;
 }
