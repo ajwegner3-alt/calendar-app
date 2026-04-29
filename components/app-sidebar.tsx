@@ -1,103 +1,119 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  CalendarRange,
   CalendarDays,
   Clock,
   Palette,
-  Inbox,
-  BellRing,
-  User,
+  Settings,
+  Home,
+  ChevronDown,
   LogOut,
 } from "lucide-react";
 import {
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 
-const NAV_ITEMS = [
-  { href: "/app/event-types", label: "Event Types", icon: CalendarDays },
-  { href: "/app/availability", label: "Availability", icon: Clock },
-  { href: "/app/branding", label: "Branding", icon: Palette },
-  { href: "/app/bookings", label: "Bookings", icon: Inbox },
-] as const;
+/**
+ * Sidebar IA — Phase 12 Plan 03 flat list (UI-05):
+ * Home / Event Types / Availability / Bookings / Branding / Settings (accordion)
+ *
+ * Settings expands in-place (inline accordion) to Reminders + Profile.
+ * Defaults open when pathname.startsWith('/app/settings').
+ * Mobile: full-screen drawer via --sidebar-width-mobile: 100vw (globals.css).
+ */
 
-const SETTINGS_NAV_ITEMS = [
-  {
-    href: "/app/settings/profile",
-    label: "Profile",
-    icon: User,
-  },
-  {
-    href: "/app/settings/reminders",
-    label: "Reminder Settings",
-    icon: BellRing,
-  },
+const TOP_ITEMS = [
+  { label: "Home",         href: "/app",               Icon: Home },
+  { label: "Event Types",  href: "/app/event-types",   Icon: CalendarRange },
+  { label: "Availability", href: "/app/availability",  Icon: Clock },
+  { label: "Bookings",     href: "/app/bookings",      Icon: CalendarDays },
+  { label: "Branding",     href: "/app/branding",      Icon: Palette },
 ] as const;
 
 export function AppSidebar({ email }: { email: string }) {
   const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(
+    pathname.startsWith("/app/settings"),
+  );
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <Link href="/app" className="flex items-center gap-2 px-2 py-2">
-          <span className="text-lg font-semibold text-primary">NSI</span>
-          <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Bookings
-          </span>
-        </Link>
-      </SidebarHeader>
-
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link href={item.href}>
-                        <Icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              {/* Flat nav items */}
+              {TOP_ITEMS.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.label}
+                    isActive={
+                      item.href === "/app"
+                        ? pathname === "/app"
+                        : pathname === item.href ||
+                          pathname.startsWith(item.href + "/")
+                    }
+                  >
+                    <Link href={item.href}>
+                      <item.Icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {SETTINGS_NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link href={item.href}>
-                        <Icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {/* Settings inline accordion */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setSettingsOpen((v) => !v)}
+                  isActive={pathname.startsWith("/app/settings")}
+                  aria-expanded={settingsOpen}
+                  tooltip="Settings"
+                >
+                  <Settings />
+                  <span>Settings</span>
+                  <ChevronDown
+                    className={`ml-auto transition-transform duration-200 ${
+                      settingsOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </SidebarMenuButton>
+                {settingsOpen && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
+                        isActive={pathname === "/app/settings/reminders"}
+                      >
+                        <Link href="/app/settings/reminders">Reminders</Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
+                        isActive={pathname === "/app/settings/profile"}
+                      >
+                        <Link href="/app/settings/profile">Profile</Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
