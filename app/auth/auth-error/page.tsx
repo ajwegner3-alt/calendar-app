@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthHero } from "@/app/(auth)/_components/auth-hero";
 import { ResendVerificationButton } from "@/app/(auth)/app/verify-email/resend-verification-button";
 import { resendVerification } from "@/app/(auth)/app/verify-email/actions";
 
@@ -33,25 +34,38 @@ export default async function AuthErrorPage({ searchParams }: Props) {
     : "Something went wrong with your confirmation link. You can request a new one below.";
 
   return (
-    <main className="min-h-screen grid place-items-center bg-muted px-4 py-12">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-semibold">{headline}</h1>
-          <p className="text-sm text-muted-foreground">{body}</p>
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Left: form column */}
+      <main className="flex flex-col items-center justify-center bg-white px-6 py-12 md:py-20 lg:px-12">
+        <div className="w-full max-w-sm">
+          <header className="mb-8">
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+              {headline}
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">{body}</p>
+          </header>
+
+          <ResendVerificationButton
+            action={resendVerification}
+            initialEmail={email}
+          />
+
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Already confirmed?{" "}
+            <Link
+              href="/app/login"
+              className="underline underline-offset-4 hover:text-gray-900"
+            >
+              Sign in
+            </Link>
+          </p>
         </div>
-
-        <ResendVerificationButton
-          action={resendVerification}
-          initialEmail={email}
-        />
-
-        <p className="text-center text-sm text-muted-foreground">
-          Already confirmed?{" "}
-          <Link href="/app/login" className="underline underline-offset-4">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </main>
+      </main>
+      {/* Right: NSI hero (lg+ only) */}
+      <AuthHero
+        headline="That link didn't work"
+        subtext="Auth links expire after a set time or when used. Sign in or request a fresh one below."
+      />
+    </div>
   );
 }
