@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 11-08 complete. CAP-08 booker UI ('X spots left' badge) + CAP-07 booker UI (409 message branches on body.code). Phase 11 ALL 8 PLANS COMPLETE. 148 tests passing + 26 skipped.
+**Last updated:** 2026-04-29 — Phase 11 verifier passed at code level (CAP-01..CAP-09); 4 manual items deferred to milestone-end QA. ROADMAP + REQUIREMENTS marked Complete. 148 tests passing + 26 skipped. Phase 12 ready to plan.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 11 — Booking Capacity + Double-Booking Fix (Wave 1 complete; Wave 2 gate-opened 2026-04-28).
+**Current focus:** v1.1 Phase 12 — Branded UI Overhaul (Phase 11 code-complete + verified 2026-04-29; 4 manual checks deferred to milestone-end QA).
 
 **Mode:** yolo
 **Depth:** standard
@@ -19,8 +19,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 11 — Booking Capacity + Double-Booking Fix.
 **Last completed plan:** 11-08 (booker-ui-capacity) — 2026-04-29.
-**Status:** Phase 11 COMPLETE (all 8 plans done). All waves complete. Phase 10 code-complete with 6 manual checks deferred to milestone-end QA. Phase 12 next.
-**Last activity:** 2026-04-29 — Plan 11-08 complete. CAP-08 booker 'X spots left' badge + CAP-07 409 message branching live. Full capacity feature stack shipped. 148 tests passing + 26 skipped.
+**Status:** Phase 11 CODE-COMPLETE + VERIFIED at code level (5/5 truths, 9/9 requirements). 4 manual checks deferred to milestone-end QA (`MILESTONE_V1_1_DEFERRED_CHECKS.md`). Phase 12 (Branded UI Overhaul) next.
+**Last activity:** 2026-04-29 — Phase 11 verifier ran goal-backward analysis; all CAP-01..CAP-09 satisfied at code level. Andrew approved deferring 4 manual items (capacity badge live render, 409 branching live trigger, pg-driver test execution, CAP-09 modal manual smoke) to milestone-end QA. ROADMAP + REQUIREMENTS marked Complete (with manual-deferred annotation). 148 tests passing + 26 skipped.
 
 **Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
 
@@ -70,7 +70,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 | Plans planned (v1.1) | TBD (estimates: P10 ~7-9, P11 ~3-4, P12 ~5-7, P13 ~2-3) |
 | v1.0 requirements complete | 66 / 73 (90.4%) — 7 deferred to v1.2 backlog |
 | v1.1 requirements mapped | 53 / 53 (100%) |
-| v1.1 requirements complete | 0 / 53 (Phase 10 ready to plan) |
+| v1.1 requirements complete | 28 / 53 (Phase 10: 19; Phase 11: 9) |
 | Files created/modified (v1.0) | 344 |
 | Lines inserted (v1.0) | 85,014 |
 | TS/TSX runtime LOC (v1.0 ship) | 20,417 |

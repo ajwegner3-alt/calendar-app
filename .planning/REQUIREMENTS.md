@@ -38,15 +38,15 @@ Numbering continues from v1.0 (FOUND-01..06, AUTH-01..04, EVENT-01..06, AVAIL-01
 
 ### Booking Capacity (Phase 11)
 
-- [ ] **CAP-01**: Investigate root cause of 2026-04-27 prod double-booking observation (partial-index gap, status-filter gap, or different code path); document findings in Phase 11 SUMMARY before designing the replacement
-- [ ] **CAP-02**: New `event_types.max_bookings_per_slot INTEGER NOT NULL DEFAULT 1 CHECK (max_bookings_per_slot >= 1)` column
-- [ ] **CAP-03**: Owner can set `max_bookings_per_slot` per event type from the event-type form (number input, default 1)
-- [ ] **CAP-04**: `/api/slots` excludes a slot once `confirmed_count >= max_bookings_per_slot` for that event type (existing single-capacity behavior preserved when capacity = 1)
-- [ ] **CAP-05**: `/api/bookings` is race-safe under concurrent submissions when capacity > 1; the v1.0 partial unique index `bookings_no_double_book` is replaced atomically with the new mechanism (advisory-lock trigger or slot-index pattern — planner picks during Phase 11 plan)
-- [ ] **CAP-06**: Race test: capacity=N, M concurrent submits (M > N) → exactly N bookings succeed and (M − N) return 409. Tested at the `pg` driver layer (not just supabase-js HTTP serialization). v1.0 capacity=1 race test must continue to pass as a regression check.
-- [ ] **CAP-07**: `/api/bookings` 409 responses distinguish `SLOT_TAKEN` (capacity 1 hit) from `SLOT_CAPACITY_REACHED` (capacity N hit) so the booker UX can show the right message
-- [ ] **CAP-08**: Owner can toggle `event_types.show_remaining_capacity` (default OFF). When on, `/api/slots` returns `remaining_capacity` and the booker UI shows "X spots left"
-- [ ] **CAP-09**: When the owner decreases `max_bookings_per_slot` on an event type with existing future bookings that would exceed the new cap, a confirmation modal warns before save
+- [x] **CAP-01**: Investigate root cause of 2026-04-27 prod double-booking observation (partial-index gap, status-filter gap, or different code path); document findings in Phase 11 SUMMARY before designing the replacement
+- [x] **CAP-02**: New `event_types.max_bookings_per_slot INTEGER NOT NULL DEFAULT 1 CHECK (max_bookings_per_slot >= 1)` column
+- [x] **CAP-03**: Owner can set `max_bookings_per_slot` per event type from the event-type form (number input, default 1)
+- [x] **CAP-04**: `/api/slots` excludes a slot once `confirmed_count >= max_bookings_per_slot` for that event type (existing single-capacity behavior preserved when capacity = 1)
+- [x] **CAP-05**: `/api/bookings` is race-safe under concurrent submissions when capacity > 1; the v1.0 partial unique index `bookings_no_double_book` is replaced atomically with the new mechanism (advisory-lock trigger or slot-index pattern — planner picks during Phase 11 plan)
+- [x] **CAP-06**: Race test: capacity=N, M concurrent submits (M > N) → exactly N bookings succeed and (M − N) return 409. Tested at the `pg` driver layer (not just supabase-js HTTP serialization). v1.0 capacity=1 race test must continue to pass as a regression check.
+- [x] **CAP-07**: `/api/bookings` 409 responses distinguish `SLOT_TAKEN` (capacity 1 hit) from `SLOT_CAPACITY_REACHED` (capacity N hit) so the booker UX can show the right message
+- [x] **CAP-08**: Owner can toggle `event_types.show_remaining_capacity` (default OFF). When on, `/api/slots` returns `remaining_capacity` and the booker UI shows "X spots left"
+- [x] **CAP-09**: When the owner decreases `max_bookings_per_slot` on an event type with existing future bookings that would exceed the new cap, a confirmation modal warns before save
 
 ### Branding Tokens (Phase 12)
 
@@ -157,15 +157,15 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 | ACCT-01 | Phase 10 | Complete (code; manual deferred) |
 | ACCT-02 | Phase 10 | Complete (code; manual deferred) |
 | ACCT-03 | Phase 10 | Complete (code; manual deferred) |
-| CAP-01 | Phase 11 | Pending |
-| CAP-02 | Phase 11 | Pending |
-| CAP-03 | Phase 11 | Pending |
-| CAP-04 | Phase 11 | Pending |
-| CAP-05 | Phase 11 | Pending |
-| CAP-06 | Phase 11 | Pending |
-| CAP-07 | Phase 11 | Pending |
-| CAP-08 | Phase 11 | Pending |
-| CAP-09 | Phase 11 | Pending |
+| CAP-01 | Phase 11 | Complete (code) |
+| CAP-02 | Phase 11 | Complete (code) |
+| CAP-03 | Phase 11 | Complete (code; manual deferred) |
+| CAP-04 | Phase 11 | Complete (code) |
+| CAP-05 | Phase 11 | Complete (code) |
+| CAP-06 | Phase 11 | Complete (code; manual deferred) |
+| CAP-07 | Phase 11 | Complete (code; manual deferred) |
+| CAP-08 | Phase 11 | Complete (code; manual deferred) |
+| CAP-09 | Phase 11 | Complete (code; manual deferred) |
 | BRAND-05 | Phase 12 | Pending |
 | BRAND-06 | Phase 12 | Pending |
 | BRAND-07 | Phase 12 | Pending |
@@ -201,4 +201,4 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 
 ---
 *Requirements defined: 2026-04-27 for v1.1 milestone*
-*Last updated: 2026-04-27 after initial definition*
+*Last updated: 2026-04-29 — Phase 11 (CAP-01..CAP-09) marked Complete after verifier passed at code level; 4 manual checks deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`.*

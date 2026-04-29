@@ -28,7 +28,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 ## Phases
 
 - [✓~] **Phase 10: Multi-User Signup + Onboarding** — Code complete 2026-04-28 (9/9 plans); 6 manual checks deferred to milestone-end QA per `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`. Public `/signup`, email verification, atomic account provisioning, 3-step onboarding wizard, password reset, profile settings.
-- [ ] **Phase 11: Booking Capacity + Double-Booking Root-Cause Fix** — Reproduce the prod double-booking, replace partial-unique-index with race-safe N-per-slot mechanism, expose `max_bookings_per_slot` per event type.
+- [✓~] **Phase 11: Booking Capacity + Double-Booking Root-Cause Fix** — Code complete 2026-04-29 (8/8 plans); 4 manual checks deferred to milestone-end QA per `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`. CAP-01 verdict (c): rescheduled-status slot reuse gap (no prod duplicates). slot_index + bookings_capacity_slot_idx replaces v1.0 bookings_no_double_book. Pitfall 4 closed. CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED branching live.
 - [ ] **Phase 12: Branded UI Overhaul (5 Surfaces)** — Cruip "Simple Light" aesthetic across dashboard + public booking + embed + emails + auth, plus per-account `background_color`/`background_shade` tokens, sidebar IA refactor, Home tab monthly calendar.
 - [ ] **Phase 13: Manual QA + Andrew Ship Sign-Off** — End-to-end signup walkthrough, multi-tenant UI isolation check, capacity E2E, branded smoke across 3 test accounts, explicit "ship v1.1" sign-off.
 
@@ -172,7 +172,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 10. Multi-User Signup + Onboarding | v1.1 | 9 / 9 | Code complete; 6 manual checks deferred | 2026-04-28 (code) |
-| 11. Booking Capacity + Double-Booking Fix | v1.1 | 0 / TBD | Not started | - |
+| 11. Booking Capacity + Double-Booking Fix | v1.1 | 8 / 8 | Code complete; 4 manual checks deferred | 2026-04-29 (code) |
 | 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 0 / TBD | Not started | - |
 | 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started | - |
 
@@ -188,4 +188,4 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ---
 
-*Roadmap last updated: 2026-04-28 — Phase 10 code-complete (9/9 plans, 19/19 requirements verified at code level); 6 deferred manual checks tracked in `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md` for milestone-end QA.*
+*Roadmap last updated: 2026-04-29 — Phase 11 code-complete (8/8 plans, 9/9 requirements verified at code level); 4 deferred manual checks appended to `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md` for milestone-end QA. v1.1 cumulative: 28/53 requirements complete (Phase 10 19 + Phase 11 9). Phase 12 next.*

@@ -151,8 +151,96 @@ npm test -- tests/rls-cross-tenant-matrix.test.ts
 
 ---
 
+## Phase 11 — Plan 11-08 — Remaining-Capacity Badge Live Render
+
+**Source:** `11-VERIFICATION.md` human-verification item 1 (CAP-08 booker UI).
+
+**Pre-condition:** Phase 11 deployed. At least one event type with `show_remaining_capacity=true` and `max_bookings_per_slot > 1`.
+
+**Steps:**
+
+1. Log in as the owner. Navigate to `/app/event-types/{id}/edit` for an existing event type.
+2. Set `Max bookings per slot` to a value > 1 (e.g., 3). Toggle `Show remaining capacity to bookers` ON. Save.
+3. Visit the public booking page: `https://<prod>/<account-slug>/<event-slug>`.
+4. Confirm each available slot button renders an "X spots left" / "1 spot left" sub-label.
+5. Toggle the owner-side switch OFF and re-save. Re-visit the booking page; confirm the badge no longer renders.
+
+---
+
+## Phase 11 — Plan 11-08 — 409 Message Branching Live Trigger
+
+**Source:** `11-VERIFICATION.md` human-verification item 2 (CAP-07 booker UI).
+
+**Pre-condition:** Phase 11 deployed. Two browser sessions / incognito windows.
+
+**Steps:**
+
+1. **SLOT_TAKEN path (capacity=1):** create or pick a capacity=1 event type. In Browser A, fill the booking form for slot S; do NOT submit. In Browser B, complete a booking for slot S. Then submit Browser A's form. Confirm the banner reads "That time was just taken by another booker. Please choose a different time."
+2. **SLOT_CAPACITY_REACHED path (capacity≥2):** create a capacity=2 event type. In two browser sessions complete bookings for slot S in parallel — both succeed. In a third session, attempt to book the same slot S. Confirm the banner reads "That time is fully booked. Please choose a different time."
+3. Confirm both error paths trigger a slot-list refresh — the now-unavailable slot disappears from the picker after the error.
+
+---
+
+## Phase 11 — Plan 11-06 — pg-Driver Race Test Execution (CAP-06)
+
+**Source:** `11-VERIFICATION.md` human-verification item 3 (CAP-06 race-safety proof at pg-driver layer).
+
+**Pre-condition:** Phase 11 deployed. Local clone of the repo with `npm install` complete. The CAP-06 describe block in `tests/race-guard.test.ts` is `describe.skipIf(!hasDirectUrl())`.
+
+**Steps:**
+
+1. **Get the direct connection string** from Supabase Dashboard → Project (`mogfnutxrrbtvnaupoun`) → Project Settings → Database → Connection string → **Direct connection** (port 5432, NOT 6543). Format: `postgresql://postgres.{ref}:{pwd}@db.{ref}.supabase.co:5432/postgres`.
+2. Add to `.env.local`:
+   ```
+   SUPABASE_DIRECT_URL=postgresql://postgres.mogfnutxrrbtvnaupoun:<password>@db.mogfnutxrrbtvnaupoun.supabase.co:5432/postgres
+   ```
+3. Run the focused test:
+   ```bash
+   npm run test -- race-guard.test.ts
+   ```
+4. Expected: the CAP-06 describe block UN-skips. Both `it()` cases pass:
+   - capacity=3, 10 concurrent pg-driver INSERTs → exactly 3 succeed, 7 exhaust capacity.
+   - capacity=1, 5 concurrent pg-driver INSERTs → exactly 1 succeeds, 4 exhaust capacity.
+5. Confirm cleanup ran: each test deletes its own bookings in a `finally` block. Spot-check via Supabase SQL Editor:
+   ```sql
+   SELECT count(*) FROM bookings WHERE booker_email LIKE 'pg-race-%@test.local' OR booker_email LIKE 'pg-cap1-%@test.local';
+   ```
+   Expected: 0.
+
+**Why deferred:** Requires user-only access to Supabase Dashboard credentials. Skip-guard keeps CI green; live execution is a one-time milestone-end check.
+
+---
+
+## Phase 11 — Plan 11-07 — CAP-09 Over-Cap Confirmation Modal Manual Smoke
+
+**Source:** `11-VERIFICATION.md` human-verification item 4 (CAP-09 form behavior).
+
+**Pre-condition:** Phase 11 deployed. An event type with at least 2 confirmed FUTURE bookings at the SAME `start_at` slot (capacity ≥ 2 to allow them).
+
+**Steps:**
+
+1. Set up: create or pick a capacity=3 event type. Use two browser sessions to book the same future slot twice (creates 2 confirmed bookings at one `(event_type_id, start_at)` pair).
+2. Owner UI: navigate to `/app/event-types/{id}/edit` for that event type.
+3. Decrease `Max bookings per slot` from 3 to 1. Click Save.
+4. **Confirm the AlertDialog appears** with:
+   - Title: "Reduce capacity to 1?"
+   - Description naming the affected-slot count (1 future slot has 2 bookings) + worst-affected count (2).
+   - Two buttons: "Cancel" and "Reduce capacity anyway".
+5. Click "Cancel" — modal closes, capacity remains at 3 (verify by re-loading the page).
+6. Repeat steps 3–4. This time click "Reduce capacity anyway".
+7. Confirm a success toast appears and capacity is now 1.
+8. Verify in Supabase SQL Editor:
+   ```sql
+   SELECT max_bookings_per_slot FROM event_types WHERE id = '<event-type-id>';
+   ```
+   Expected: 1. The 2 over-cap confirmed bookings are NOT cancelled — they remain on the books (modal warned this would happen).
+
+**Cleanup:** delete the test bookings or restore the event type's capacity per Andrew's preference.
+
+---
+
 ## (Add additional deferred checks here as later plans emit them)
 
 ---
 
-*Last updated: 2026-04-28 — updated during /gsd:execute-phase 10-09 (rls-matrix-extension-and-checklist).*
+*Last updated: 2026-04-29 — appended 4 Phase 11 deferred items during /gsd:execute-phase 11 wrap-up.*
