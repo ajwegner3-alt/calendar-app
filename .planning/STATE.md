@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12-01 complete. Branding tokens foundation: background_color + background_shade columns live on prod; GradientBackdrop + NSIGradientBackdrop primitives shipped; BrandedPage extended; /app/branding editor has swatches + shade picker + mini-preview. 173 tests passing + 26 skipped.
+**Last updated:** 2026-04-29 — Plan 12-03 complete. Dashboard chrome: Inter font, gray-50 baseline, Cruip glass header pill, GradientBackdrop wired in shell layout, sidebar rebuilt with flat IA + Settings inline accordion. 184 tests passing + 26 skipped.
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 12 — Branded UI Overhaul.
-**Last completed plan:** 12-01 (branding-tokens-foundation) — 2026-04-29.
-**Status:** Phase 12 IN PROGRESS (1 of ~5 plans complete). Wave 1 foundation complete; Wave 2 (auth-pages-restyle, dashboard-chrome) + Wave 3 (public surfaces, emails) ready to execute.
-**Last activity:** 2026-04-29 — Plan 12-01 complete. Migration 20260429120000_phase12_branding_columns.sql applied to prod (background_color + background_shade on accounts). GradientBackdrop, NSIGradientBackdrop, BrandedPage extension, /app/branding editor (swatches + shade picker + mini-preview + persistence) all shipped. 173 tests passing + 26 skipped.
+**Last completed plan:** 12-03 (dashboard-chrome) — 2026-04-29.
+**Status:** Phase 12 IN PROGRESS (2 of ~5 plans complete). Wave 1 + Wave 2 dashboard-chrome complete; Wave 2 auth-pages-restyle (12-02) + Wave 3 (public surfaces, emails) remain.
+**Last activity:** 2026-04-29 — Plan 12-03 complete. Inter font + gray-50 + Cruip glass header pill + GradientBackdrop in shell layout + flat sidebar IA (Home/Event Types/Availability/Bookings/Branding/Settings accordion) all shipped. 184 tests passing + 26 skipped.
 
-**Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete; Phase 12 in progress (1/~5 plans done) (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete; Phase 12 in progress (2/~5 plans done) (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -56,8 +56,9 @@ Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — 
   11-06 [✓] pg-driver-race-test                       (Complete 2026-04-29 — CAP-06 pg-driver race test; postgres.js devDep; pg-direct helper; skip-guarded; 148 tests + 26 skipped)
   11-07 [✓] event-type-form-capacity                  (Complete 2026-04-29 — CAP-03 input + CAP-08 toggle + CAP-09 modal; in-JS group-by; fail-closed; 148 tests + 26 skipped)
   11-08 [✓] booker-ui-capacity                        (Complete 2026-04-29 — CAP-08 'X spots left' badge + CAP-07 409 branching on body.code; RaceLoserBanner message prop; 148 tests + 26 skipped)
-Phase 12 [~] Branded UI Overhaul (5 Surfaces)        (In Progress — 12-01 done)
+Phase 12 [~] Branded UI Overhaul (5 Surfaces)        (In Progress — 12-01, 12-03 done)
   12-01 [✓] branding-tokens-foundation               (Complete 2026-04-29 — background_color + background_shade columns; GradientBackdrop/NSIGradientBackdrop primitives; BrandedPage extended; /app/branding editor wired; 173 tests + 26 skipped)
+  12-03 [✓] dashboard-chrome                         (Complete 2026-04-29 — Inter font + gray-50 + Cruip glass header pill + GradientBackdrop in shell layout + flat sidebar IA (Home/Event Types/Availability/Bookings/Branding/Settings accordion); 184 tests + 26 skipped)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
 
@@ -120,6 +121,9 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **shadeToGradient pure helper** (Plan 12-01, 2026-04-29) — `lib/branding/gradient.ts`. No React, no DOM. shade=none: flatTint=color-mix(in oklch, ${color} 4%, white), circles=[]. subtle: opacity=0.25, blurPx=200. bold: opacity=0.5, blurPx=160. gray-50 (#F8FAFC) fallback when color=null. 8 unit tests.
 - **saveBrandingAction treats empty string as null** (Plan 12-01, 2026-04-29) — defensive coercion before Zod validation so clearing background color in UI correctly persists DB null.
 - **Wave 2/3 consumer pattern locked** (Plan 12-01, 2026-04-29) — Public surfaces: pass `branding.backgroundColor + branding.backgroundShade` to `<BrandedPage>`. Dashboard chrome: pass to `<GradientBackdrop>` directly. Auth pages: use `<NSIGradientBackdrop>` directly.
+- **Dashboard chrome shipped — Inter + glass pill + flat sidebar IA** (Plan 12-03, 2026-04-29) — Geist swapped for Inter (next/font/google, `--font-sans`, `display: swap`, `tracking-tight` on `<html>`). `--background: oklch(0.985 0.002 247)` (gray-50) + `--sidebar-width-mobile: 100vw` added to `@theme`. `FloatingHeaderPill` at `app/(shell)/_components/floating-header-pill.tsx` — Cruip glass pill, `fixed top-2 z-30 w-full md:top-6`, hamburger via `SidebarTrigger`. `(shell)/layout.tsx` fetches account row inline + calls `getBrandingForAccount(account.id)` + renders `<GradientBackdrop>` + `<FloatingHeaderPill>`. `app-sidebar.tsx` rebuilt: single flat group, 6 items in exact order (Home/Event Types/Availability/Bookings/Branding/Settings), Settings is inline accordion via `useState` (defaults open on `/app/settings/*`). Sidebar footer (email + logout) preserved. `main` gets `pt-20 md:pt-28` to clear pill. 184 tests passing + 26 skipped.
+- **Settings accordion is local useState only** (Plan 12-03, 2026-04-29) — No cookie persistence; collapses on navigation per CONTEXT.md lock. v1.2 follow-up: add `sidebar_settings_open` cookie if Andrew requests persistence.
+- **`getBrandingForAccount` is the correct branding helper name** (Plan 12-03, 2026-04-29) — Plan docs incorrectly referenced `readBrandingForAccount`; actual export from `lib/branding/read-branding.ts` is `getBrandingForAccount`. Both `brandingFromRow` (row already in memory) and `getBrandingForAccount` (accountId only) are the canonical helpers. Future plans should use these names.
 - **`/app/settings/profile` ships with 4 sections** (Plan 10-07, 2026-04-28) — Display Name (writes `accounts.name`, labeled "Display Name" in UI), Slug (UNIQUE constraint 23505 for collision), Password change (transient cookie-less Supabase client for current-password challenge), and Danger Zone soft-delete (type-slug-to-confirm). Email read-only with "Change email" link placeholder for 10-08.
 - **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
 - **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
@@ -176,11 +180,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12-01 complete. Branding tokens foundation shipped. 173 tests passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 12-03 complete. Dashboard chrome shipped. 184 tests passing + 26 skipped.
 
-**Stopped at:** Plan 12-01 complete. Phase 12 Wave 1 foundation done.
+**Stopped at:** Plan 12-03 complete. Phase 12 Wave 2 dashboard-chrome done.
 
-**Resume:** Execute Phase 12 Wave 2: 12-02 (auth-pages-restyle) + 12-03 (dashboard-chrome). Both plans can now use GradientBackdrop/NSIGradientBackdrop primitives. Two open architectural decisions from STATE.md: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope — address in respective plans.
+**Resume:** Execute Phase 12 remaining plans: 12-02 (auth-pages-restyle) if not yet done, 12-04a (home-tab-server-and-calendar), 12-05 (public surfaces), 12-06 (email branding). Two open architectural decisions: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope — address in respective plans.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
