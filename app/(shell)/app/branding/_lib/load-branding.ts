@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { BackgroundShade } from "@/lib/branding/types";
+import type { BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
 
 export interface BrandingState {
   accountId: string;
@@ -11,9 +11,12 @@ export interface BrandingState {
   // Phase 12 additions
   backgroundColor: string | null;
   backgroundShade: BackgroundShade;
+  // Phase 12.5 additions
+  chromeTintIntensity: ChromeTintIntensity;
 }
 
 const VALID_SHADES: BackgroundShade[] = ["none", "subtle", "bold"];
+const VALID_INTENSITIES: ChromeTintIntensity[] = ["none", "subtle", "full"];
 
 /**
  * Loads branding state for the OWNER's account.
@@ -35,7 +38,7 @@ export async function loadBrandingForOwner(): Promise<BrandingState | null> {
   const { data: account } = await supabase
     .from("accounts")
     .select(
-      "id, slug, logo_url, brand_primary, background_color, background_shade",
+      "id, slug, logo_url, brand_primary, background_color, background_shade, chrome_tint_intensity",
     )
     .eq("id", accountId)
     .maybeSingle();
@@ -58,6 +61,11 @@ export async function loadBrandingForOwner(): Promise<BrandingState | null> {
     ? shade
     : "subtle";
 
+  const intensity = account.chrome_tint_intensity as ChromeTintIntensity;
+  const chromeTintIntensity: ChromeTintIntensity = VALID_INTENSITIES.includes(intensity)
+    ? intensity
+    : "subtle";
+
   return {
     accountId: account.id,
     accountSlug: account.slug,
@@ -66,5 +74,6 @@ export async function loadBrandingForOwner(): Promise<BrandingState | null> {
     firstActiveEventSlug: firstEvent?.slug ?? null,
     backgroundColor: account.background_color ?? null,
     backgroundShade,
+    chromeTintIntensity,
   };
 }

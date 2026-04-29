@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ChromeTintIntensity } from "@/lib/branding/types";
 
 export const primaryColorSchema = z
   .string()
@@ -40,7 +41,13 @@ export const backgroundShadeSchema = z
   .enum(["none", "subtle", "bold"])
   .default("subtle");
 
+// Phase 12.5: chrome tinting intensity
+export const chromeTintIntensitySchema = z
+  .enum(["none", "subtle", "full"])
+  .default("subtle") satisfies z.ZodType<ChromeTintIntensity>;
+
 export const brandingBackgroundSchema = z.object({
   background_color: backgroundColorSchema,
   background_shade: backgroundShadeSchema,
+  chrome_tint_intensity: chromeTintIntensitySchema,
 });

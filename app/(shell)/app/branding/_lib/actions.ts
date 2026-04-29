@@ -7,8 +7,9 @@ import {
   MAX_LOGO_BYTES,
   backgroundColorSchema,
   backgroundShadeSchema,
+  chromeTintIntensitySchema,
 } from "./schema";
-import type { BackgroundShade } from "@/lib/branding/types";
+import type { BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
 
 export interface ActionResult<T = void> {
   ok?: boolean;
@@ -133,14 +134,16 @@ export async function deleteLogoAction(): Promise<ActionResult> {
 }
 
 /**
- * Phase 12: persist background_color + background_shade to the owner's account.
+ * Phase 12 + 12.5: persist background_color, background_shade, and chrome_tint_intensity
+ * to the owner's account.
  *
  * Defensive: empty string backgroundColor is treated as null (clears the column).
- * Validates both fields via Zod before writing.
+ * Validates all three fields via Zod before writing.
  */
 export async function saveBrandingAction(payload: {
   backgroundColor: string | null;
   backgroundShade: BackgroundShade;
+  chromeTintIntensity: ChromeTintIntensity;
 }): Promise<ActionResult> {
   // Treat empty string as null (owner cleared the field)
   const rawColor =
@@ -164,6 +167,15 @@ export async function saveBrandingAction(payload: {
     };
   }
 
+  const intensityResult = chromeTintIntensitySchema.safeParse(payload.chromeTintIntensity);
+  if (!intensityResult.success) {
+    return {
+      fieldErrors: {
+        chromeTintIntensity: intensityResult.error.issues.map((i) => i.message),
+      },
+    };
+  }
+
   try {
     const accountId = await getOwnerAccountIdOrThrow();
     const admin = createAdminClient();
@@ -172,6 +184,7 @@ export async function saveBrandingAction(payload: {
       .update({
         background_color: colorResult.data ?? null,
         background_shade: shadeResult.data,
+        chrome_tint_intensity: intensityResult.data,
       })
       .eq("id", accountId);
 
