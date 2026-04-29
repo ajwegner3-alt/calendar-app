@@ -30,7 +30,7 @@ export function EmbedCodeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Embed: {eventName}</DialogTitle>
           <DialogDescription>
