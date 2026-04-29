@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pickTextColor } from "@/lib/branding/contrast";
-import type { Branding } from "@/lib/branding/types";
+import type { Branding, BackgroundShade } from "@/lib/branding/types";
 
 /**
  * Default primary brand color — NSI navy (matches Phase 2 lock:
@@ -17,18 +17,28 @@ export const DEFAULT_BRAND_PRIMARY = "#0A2540";
  * (e.g., booking page loader, /[account] index loader) to avoid a
  * redundant DB round-trip.
  *
- * @param row - Partial accounts row with logo_url and brand_primary columns.
+ * @param row - Partial accounts row with logo_url, brand_primary, and Phase 12 columns.
  * @returns Resolved Branding with fallback defaults.
  */
 export function brandingFromRow(row: {
   logo_url: string | null;
   brand_primary: string | null;
+  background_color?: string | null;
+  background_shade?: string | null;
 }): Branding {
   const primaryColor = row.brand_primary ?? DEFAULT_BRAND_PRIMARY;
+  const validShades: BackgroundShade[] = ["none", "subtle", "bold"];
+  const shade = row.background_shade as BackgroundShade;
+  const backgroundShade: BackgroundShade = validShades.includes(shade)
+    ? shade
+    : "subtle";
+
   return {
     logoUrl: row.logo_url ?? null,
     primaryColor,
     textColor: pickTextColor(primaryColor),
+    backgroundColor: row.background_color ?? null,
+    backgroundShade,
   };
 }
 
@@ -54,7 +64,7 @@ export async function getBrandingForAccount(
     const supabase = createAdminClient();
     const { data: row } = await supabase
       .from("accounts")
-      .select("logo_url, brand_primary")
+      .select("logo_url, brand_primary, background_color, background_shade")
       .eq("id", accountId)
       .maybeSingle();
 
