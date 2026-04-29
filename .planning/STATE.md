@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12.5-03 complete. IntensityPicker (3-button None/Subtle/Full) + chrome-aware MiniPreviewCard (faux-sidebar + faux-page + white faux-card) wired to saveBrandingAction; chromeTintIntensity round-trip live; 240 tests passing + 26 skipped.
+**Last updated:** 2026-04-29 — Plan 12.5-04 complete. EmailBranding.chromeTintIntensity field; renderEmailBrandedHeader intensity-aware (intensity='none'→brand_primary); all 6 senders wired; 240 tests + 26 skipped. Phase 12.5 Wave 2 COMPLETE (12.5-02/03/04 all done).
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 12.5 — Per-Account Chrome Theming (Wave 2 in progress). 12.5-02 done; 12.5-03 COMPLETE; 12.5-04 may be complete from parallel execution.
+**Current focus:** v1.1 Phase 12.5 — Per-Account Chrome Theming (Wave 2 COMPLETE). All 4 plans done. Next: Phase 13 (Manual QA + Andrew Ship Sign-Off).
 
 **Mode:** yolo
 **Depth:** standard
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 12.5 — Per-Account Chrome Theming (Wave 1 complete; Wave 2 next).
-**Last completed plan:** 12.5-03 (branding-editor) — 2026-04-29.
-**Status:** Phase 12.5 Wave 2 in progress — 12.5-02 COMPLETE; 12.5-03 COMPLETE; 12.5-04 running in parallel.
-**Last activity:** 2026-04-29 — Plan 12.5-03 complete. IntensityPicker + chrome-aware MiniPreviewCard + saveBrandingAction chromeTintIntensity round-trip; 240 tests passing + 26 skipped.
+**Last completed plan:** 12.5-04 (email-tokens) — 2026-04-29.
+**Status:** Phase 12.5 Wave 2 COMPLETE — 12.5-02 COMPLETE; 12.5-03 COMPLETE; 12.5-04 COMPLETE.
+**Last activity:** 2026-04-29 — Plan 12.5-04 complete. EmailBranding.chromeTintIntensity; renderEmailBrandedHeader intensity-aware; all 6 senders wired + route callers updated; 240 tests passing + 26 skipped.
 
-**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 Wave 1 COMPLETE (12.5-01 done); Phase 12.5 Wave 2 — 12.5-02 done; 12.5-03 COMPLETE; 12.5-04 parallel (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 Wave 1 code-complete 2026-04-29; milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 13 next (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29; milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -68,7 +68,7 @@ Phase 12.5 [~] Per-Account Chrome Theming            (Wave 1 done 2026-04-29; Wa
   12.5-01 [✓] foundation                             (Complete 2026-04-29 — chrome_tint_intensity enum + col; ChromeTintIntensity + chromeTintToCss; 240 tests + 26 skipped)
   12.5-02 [✓] dashboard-chrome                       (Complete 2026-04-29 — FloatingHeaderPill deleted; sidebar + page tinted via color-mix inline styles; WCAG --sidebar-foreground var override; plain SidebarTrigger hamburger md:hidden; 240 tests + 26 skipped)
   12.5-03 [✓] branding-editor                        (Complete 2026-04-29 — IntensityPicker (None/Subtle/Full); chrome-aware MiniPreviewCard (faux-sidebar + faux-page + white faux-card); chromeTintIntensity BrandingState + saveBrandingAction round-trip; 240 tests + 26 skipped)
-  12.5-04 [ ] email-tokens                           (Not started)
+  12.5-04 [✓] email-tokens                           (Complete 2026-04-29 — EmailBranding.chromeTintIntensity; intensity-aware renderEmailBrandedHeader; all 6 senders wired; 240 tests + 26 skipped)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
 
@@ -170,6 +170,8 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **IntensityPicker component + chrome-aware MiniPreviewCard pattern** (Plan 12.5-03, 2026-04-29) — `IntensityPicker` at `app/(shell)/app/branding/_components/intensity-picker.tsx`: 3-button (None/Subtle/Full) toggle matching ShadePicker styling. `MiniPreviewCard` REPLACED: no longer gradient-only; now faux-dashboard layout with faux-sidebar strip (tinted via `chromeTintToCss("sidebar")`), faux-page-bg (tinted via `chromeTintToCss("page")`), `GradientBackdrop` composited inside page area, white faux-card (card-stays-white invariant). All runtime colors via inline `style` only (Phase 7 pitfall).
 - **saveBrandingAction signature extended to require chromeTintIntensity** (Plan 12.5-03, 2026-04-29) — `saveBrandingAction({ backgroundColor, backgroundShade, chromeTintIntensity })` now writes all 3 fields in a single UPDATE. `chromeTintIntensitySchema = z.enum(["none","subtle","full"]).default("subtle")` validates. `BrandingState.chromeTintIntensity: ChromeTintIntensity` loaded from DB with VALID_INTENSITIES guard + 'subtle' fallback. MiniPreviewCard moved to "Chrome intensity" section so it renders below IntensityPicker (semantically correct).
 - **pickTextColor / contrast.ts no changes needed** (Plan 12.5-01, 2026-04-29) — Already extracted to `lib/branding/contrast.ts` in Plan 12-01. BRAND-09 DRY requirement satisfied. chrome-tint.ts imports pickTextColor directly. No relocation required.
+- **EMAIL-13: intensity-aware email header band** (Plan 12.5-04, 2026-04-29) — `EmailBranding.chromeTintIntensity?: "none"|"subtle"|"full"` added (optional, defaults to 'subtle'). `renderEmailBrandedHeader`: intensity='none' uses brand_primary (matches UI "no tint" chrome); 'subtle'|'full' use backgroundColor. Email clients can't render color-mix(); both use direct hex. All 6 senders wire `chrome_tint_intensity` from account row. Route callers (api/bookings, cron/send-reminders, shell actions, lib/bookings/cancel, lib/bookings/reschedule) SELECT this column. EMAIL-13 forward-lock: zero email_* branding override fields anywhere.
+- **cancel.ts + reschedule.ts were missing background_color** (Plan 12.5-04, 2026-04-29 deviation) — The cancel and reschedule email callers (lib/bookings/cancel.ts, lib/bookings/reschedule.ts) never had background_color in their accounts JOIN SELECT or account objects, meaning cancel/reschedule emails always used brand_primary (not background_color) for the header band. Fixed in this plan alongside chrome_tint_intensity wiring. Both columns now SELECT'ed and passed through.
 - **NSI mark PNG + NSI_MARK_URL live** (Plan 12-06, 2026-04-29) — `public/nsi-mark.png` committed (32x32 solid-navy placeholder; Andrew to swap with brand asset before Phase 13 QA). `NSI_MARK_URL` = `${NEXT_PUBLIC_APP_URL}/nsi-mark.png`; null in test env (NEXT_PUBLIC_APP_URL unset) so no broken-image test assertions.
 - **Live cross-client email QA deferred** (Plan 12-06, 2026-04-29) — Outlook desktop, Apple Mail iOS, Yahoo Mail rendering deferred to Phase 13 QA / v1.2 per CONTEXT.md lock and existing EMAIL-08 / QA-01..06 backlog.
 - **DayDetailSheet drawer + HomeDashboard shipped** (Plan 12-04b, 2026-04-29) — `HomeDashboard` owns open/selectedDate/selectedBookings state; `DayDetailSheet` renders shadcn Sheet (side=right, w-full sm:max-w-md) with `DayDetailRow` list or empty-state branch. All 4 row actions (View/Cancel/Copy-reschedule-link/Send-reminder) with AlertDialog confirmations. Clipboard fallback: if `navigator.clipboard.writeText` throws, shows `<input readOnly>` with the URL. Phase 12 ROADMAP must_have #2 fully satisfied. 17 new tests; 225 passing + 26 skipped.
@@ -220,11 +222,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12.5-03 complete. IntensityPicker + chrome-aware MiniPreviewCard + chromeTintIntensity round-trip via saveBrandingAction; 240 passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 12.5-04 complete. EmailBranding.chromeTintIntensity; renderEmailBrandedHeader intensity-aware; all 6 senders + 4 route callers wired; 240 passing + 26 skipped. Phase 12.5 Wave 2 COMPLETE.
 
-**Stopped at:** Plan 12.5-03 complete. SUMMARY.md created. STATE.md updated. 12.5-04 running in parallel.
+**Stopped at:** Plan 12.5-04 complete. SUMMARY.md created. STATE.md updated. Phase 12.5 fully done.
 
-**Resume:** Verify 12.5-04 (email-tokens) completion. If done, proceed to Phase 13 (Manual QA + Andrew Ship Sign-Off).
+**Resume:** Proceed to Phase 13 (Manual QA + Andrew Ship Sign-Off).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
