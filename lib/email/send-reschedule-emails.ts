@@ -5,10 +5,11 @@ import { ICalCalendarMethod } from "ical-generator";
 import { sendEmail } from "@/lib/email-sender";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
 import {
-  renderEmailLogoHeader,
+  renderEmailBrandedHeader,
   renderEmailFooter,
   renderBrandedButton,
   brandedHeadingStyle,
+  stripHtml,
 } from "./branding-blocks";
 
 interface BookingRecord {
@@ -33,6 +34,8 @@ interface AccountRecord {
   owner_email: string | null;
   logo_url: string | null;
   brand_primary: string | null;
+  /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
+  background_color?: string | null;
 }
 
 export interface SendRescheduleEmailsArgs {
@@ -63,6 +66,9 @@ export interface SendRescheduleEmailsArgs {
  * Both emails attach METHOD:REQUEST .ics with SAME UID as original booking +
  * SEQUENCE:1 + NEW startAt/endAt — calendar clients UPDATE the existing event
  * in place (RESEARCH §Pattern 7: no orphan events).
+ *
+ * Plan 12-06: Migrated to renderEmailBrandedHeader (solid-color header band, CONTEXT lock).
+ * Plan 12-06: Added text: stripHtml(html) to booker reschedule (EMAIL-10 extended).
  */
 export async function sendRescheduleEmails(args: SendRescheduleEmailsArgs): Promise<void> {
   const tasks: Array<Promise<void>> = [
@@ -95,11 +101,12 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  ${renderEmailLogoHeader(branding)}
+  ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">Your appointment was rescheduled</h1>
   <p style="margin: 0 0 8px 0;">Hi ${escapeHtml(booking.booker_name)},</p>
   <p style="margin: 0 0 24px 0;">Your appointment with <strong>${escapeHtml(account.name)}</strong> has been moved.</p>
@@ -160,6 +167,7 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     to:      booking.booker_email,
     subject: `Booking rescheduled: ${eventType.name}`,
     html,
+    text:    stripHtml(html), // EMAIL-10 extended: plain-text alt on booker reschedule (Plan 12-06)
     attachments: [
       {
         filename:    "invite.ics",
@@ -192,11 +200,12 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  ${renderEmailLogoHeader(branding)}
+  ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">Booking rescheduled</h1>
   <p style="margin: 0 0 24px 0;"><strong>${escapeHtml(booking.booker_name)}</strong> rescheduled their booking.</p>
 
