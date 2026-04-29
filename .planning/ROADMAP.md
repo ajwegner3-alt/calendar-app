@@ -106,7 +106,15 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 **Critical sequencing**: Migration applied via `npx supabase db query --linked -f` (LOCKED workaround). Drop `bookings_no_double_book` + create new mechanism MUST be in the same transaction (sub-millisecond exposure window) — or use `CREATE UNIQUE INDEX CONCURRENTLY` + `DROP INDEX` for the slot_index pattern. **CAP-01 (root-cause investigation) must lead** — do not design the replacement before reproducing the existing incident.
 
-**Plans**: ~3-4 plans (most contained phase; one investigation + one migration + one API/UI extension + one race-test harness).
+**Plans**: 8 plans in 4 waves (per /gsd:plan-phase 11 2026-04-28). Locked decision: Option B (slot_index + extended unique index) per RESEARCH.md verdict. CAP-01 root-cause leads in Wave 1 alone.
+  - [ ] 11-01-PLAN.md — CAP-01 root-cause investigation + findings + Plan 03 gate (Wave 1, NOT autonomous — verdict checkpoint)
+  - [ ] 11-02-PLAN.md — Migration A: event_types capacity columns (max_bookings_per_slot + show_remaining_capacity) (Wave 2)
+  - [ ] 11-03-PLAN.md — Migration B: bookings.slot_index column + bookings_capacity_slot_idx CONCURRENTLY + drop bookings_no_double_book (Wave 2; two SQL files because CONCURRENTLY cannot live in a transaction)
+  - [ ] 11-04-PLAN.md — /api/bookings slot_index retry loop + CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED distinguishing (Wave 3)
+  - [ ] 11-05-PLAN.md — /api/slots capacity-aware exclusion + remaining_capacity exposure + Pitfall 4 fix (status=confirmed filter) (Wave 3)
+  - [ ] 11-06-PLAN.md — pg-driver race test (postgres.js dev-dep + tests/helpers/pg-direct.ts + new describe block in race-guard.test.ts) (Wave 4)
+  - [ ] 11-07-PLAN.md — Event-type form: capacity input + show_remaining_capacity toggle + CAP-09 decrease-cap confirmation modal (SQL truth check) (Wave 4)
+  - [ ] 11-08-PLAN.md — Booker UI: X spots left rendering + 409 message branched on response.code (Wave 4)
 
 ---
 
