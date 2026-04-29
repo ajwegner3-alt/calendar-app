@@ -7,7 +7,7 @@
  *   - to   (YYYY-MM-DD local-date, required) — inclusive end of range
  *
  * Response:
- *   200 → { slots: Array<{ start_at: string; end_at: string }> }   // UTC ISO
+ *   200 → { slots: Array<{ start_at: string; end_at: string; remaining_capacity?: number }> }   // UTC ISO
  *   400 → { error: string }   // missing/malformed params
  *   404 → { error: string }   // event_type or account not found
  *   500 → { error: string }   // unexpected DB error
@@ -83,10 +83,10 @@ export async function GET(req: NextRequest) {
   // the resolved account_id and select only the columns the engine consumes.
   const supabase = createAdminClient();
 
-  // ── Step 1: load event_type to get duration + account_id ─────────────────
+  // ── Step 1: load event_type to get duration + account_id + capacity fields ──
   const { data: eventType, error: etError } = await supabase
     .from("event_types")
-    .select("id, account_id, duration_minutes")
+    .select("id, account_id, duration_minutes, max_bookings_per_slot, show_remaining_capacity")
     .eq("id", eventTypeId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -136,7 +136,11 @@ export async function GET(req: NextRequest) {
       .from("bookings")
       .select("start_at, end_at")
       .eq("account_id", eventType.account_id)
-      .neq("status", "cancelled")
+      // Pitfall 4 fix (Plan 11-05): filter to confirmed only (NOT .neq('cancelled')).
+      // The v1.0 .neq('cancelled') included 'rescheduled' rows, which over-blocked
+      // slots freed by reschedule. After a reschedule the old slot should be re-bookable.
+      // Semantic alignment: bookings_capacity_slot_idx ALSO uses WHERE status='confirmed'.
+      .eq("status", "confirmed")
       // Bookings range padded by ±1 day around requested range to cover
       // TZ-edge bookings (e.g. a Chicago-local 11pm booking on `from` is a
       // UTC date later than `from`). The engine then filters precisely.
@@ -184,6 +188,9 @@ export async function GET(req: NextRequest) {
     overrides,
     bookings,
     now: new Date(),
+    // CAP-04 + CAP-08 (Plan 11-05): pass capacity fields from event_types row.
+    maxBookingsPerSlot: eventType.max_bookings_per_slot,
+    showRemainingCapacity: eventType.show_remaining_capacity,
   });
 
   return NextResponse.json({ slots }, { status: 200, headers: NO_STORE });
