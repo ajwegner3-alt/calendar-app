@@ -30,6 +30,15 @@ export type EventTypeState = {
   fieldErrors?: Partial<Record<keyof EventTypeInput, string[]>>;
   formError?: string;
   redirectTo?: string;
+  // Phase 11 Plan 11-07: CAP-09 capacity-decrease warning variant.
+  // When present, the form shows a confirmation modal instead of surfacing an error.
+  warning?: "capacity_decrease_overflow";
+  details?: {
+    newCap: number;
+    currentCap: number;
+    affectedSlots: number;
+    maxAffected: number;
+  };
 };
 
 export type RestoreResult =
@@ -109,6 +118,9 @@ export async function createEventTypeAction(
     // Phase 8 Plan 08-05: location is edit-only in v1 UI but the schema accepts
     // it on create for symmetry; missing/empty input writes NULL.
     location: parsed.data.location ?? null,
+    // Phase 11 Plan 11-07: capacity fields (DB defaults match Zod defaults).
+    max_bookings_per_slot: parsed.data.max_bookings_per_slot,
+    show_remaining_capacity: parsed.data.show_remaining_capacity,
   });
 
   if (error) {
@@ -172,6 +184,63 @@ export async function updateEventTypeAction(
     };
   }
 
+  // CAP-09: Over-cap pre-check on capacity decrease (Phase 11 Plan 11-07).
+  //
+  // Fires only when:
+  //   (a) This is an UPDATE (has id)
+  //   (b) New cap < current cap (owner is decreasing capacity)
+  //   (c) confirmCapacityDecrease !== true (owner has not yet acknowledged modal)
+  //
+  // Uses JS group-by of supabase SELECT results per RESEARCH.md §Pitfall 6:
+  // supabase-js doesn't expose GROUP BY/HAVING; data volume is small (one
+  // owner's future bookings for one event type — typically <100 rows).
+  if (parsed.data.confirmCapacityDecrease !== true) {
+    const { data: currentRow } = await supabase
+      .from("event_types")
+      .select("max_bookings_per_slot")
+      .eq("id", id)
+      .single();
+
+    const currentCap = currentRow?.max_bookings_per_slot ?? 1;
+    const newCap = parsed.data.max_bookings_per_slot;
+
+    if (newCap < currentCap) {
+      const { data: overCapRows, error: overCapErr } = await supabase
+        .from("bookings")
+        .select("start_at")
+        .eq("event_type_id", id)
+        .eq("status", "confirmed")
+        .gt("start_at", new Date().toISOString());
+
+      if (overCapErr) {
+        // Fail closed — cannot verify, refuse to save silently.
+        return { formError: "Could not verify capacity change. Please try again." };
+      }
+
+      const slotCounts = new Map<string, number>();
+      for (const row of overCapRows ?? []) {
+        slotCounts.set(row.start_at, (slotCounts.get(row.start_at) ?? 0) + 1);
+      }
+
+      let maxAffected = 0;
+      let affectedSlots = 0;
+      for (const cnt of slotCounts.values()) {
+        if (cnt > newCap) {
+          affectedSlots++;
+          if (cnt > maxAffected) maxAffected = cnt;
+        }
+      }
+
+      if (affectedSlots > 0) {
+        // Return structured warning — form shows confirmation modal.
+        return {
+          warning: "capacity_decrease_overflow",
+          details: { newCap, currentCap, affectedSlots, maxAffected },
+        };
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("event_types")
     .update({
@@ -183,6 +252,9 @@ export async function updateEventTypeAction(
       custom_questions: parsed.data.custom_questions,
       // Phase 8 Plan 08-05: persist location/address. Empty input → NULL.
       location: parsed.data.location ?? null,
+      // Phase 11 Plan 11-07: capacity fields.
+      max_bookings_per_slot: parsed.data.max_bookings_per_slot,
+      show_remaining_capacity: parsed.data.show_remaining_capacity,
     })
     .eq("id", id);
 
