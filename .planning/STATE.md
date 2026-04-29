@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 11-07 complete. CAP-03 capacity input (1-50, default 1) + CAP-08 show-remaining toggle + CAP-09 SQL-truth confirmation modal live on event-type form. Phase 11 Wave 2 COMPLETE. 148 tests passing + 26 skipped.
+**Last updated:** 2026-04-29 — Plan 11-08 complete. CAP-08 booker UI ('X spots left' badge) + CAP-07 booker UI (409 message branches on body.code). Phase 11 ALL 8 PLANS COMPLETE. 148 tests passing + 26 skipped.
 
 ## Project Reference
 
@@ -18,9 +18,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 11 — Booking Capacity + Double-Booking Fix.
-**Last completed plan:** 11-07 (event-type-form-capacity) — 2026-04-29.
-**Status:** Phase 11 COMPLETE (all plans done). Wave 1 + Wave 2 complete. Phase 10 code-complete with 6 manual checks deferred to milestone-end QA. Phase 12 next.
-**Last activity:** 2026-04-29 — Plan 11-07 complete. CAP-03 capacity input + CAP-08 owner toggle + CAP-09 SQL-truth confirmation modal. 148 tests passing + 26 skipped.
+**Last completed plan:** 11-08 (booker-ui-capacity) — 2026-04-29.
+**Status:** Phase 11 COMPLETE (all 8 plans done). All waves complete. Phase 10 code-complete with 6 manual checks deferred to milestone-end QA. Phase 12 next.
+**Last activity:** 2026-04-29 — Plan 11-08 complete. CAP-08 booker 'X spots left' badge + CAP-07 409 message branching live. Full capacity feature stack shipped. 148 tests passing + 26 skipped.
 
 **Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
 
@@ -47,7 +47,7 @@ Phase 10 [✓~] Multi-User Signup + Onboarding         (auto complete 2026-04-28
   10-07 [✓] profile-settings-and-soft-delete         (Complete 2026-04-28)
   10-08 [✓] email-change-with-reverification         (Complete 2026-04-28)
   10-09 [✓*] rls-matrix-extension-and-checklist      (auto done 2026-04-28; Task 1 + browser QA deferred)
-Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — all 7 plans done)
+Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — all 8 plans done)
   11-01 [✓] cap-01-root-cause-investigation           (Complete 2026-04-28 — verdict (c), gate PROCEED)
   11-02 [✓] capacity-columns-migration                (Complete 2026-04-28 — max_bookings_per_slot + show_remaining_capacity live on prod)
   11-03 [✓] slot-index-migration                      (Complete 2026-04-28 — bookings.slot_index live; bookings_capacity_slot_idx replaces bookings_no_double_book; smoke 23505 confirmed)
@@ -55,6 +55,7 @@ Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — 
   11-05 [✓] slots-api-capacity-aware                  (Complete 2026-04-29 — Pitfall 4 closed (.eq("status","confirmed")); CAP-04 slot exclusion + CAP-08 remaining_capacity opt-in; 148 tests passing)
   11-06 [✓] pg-driver-race-test                       (Complete 2026-04-29 — CAP-06 pg-driver race test; postgres.js devDep; pg-direct helper; skip-guarded; 148 tests + 26 skipped)
   11-07 [✓] event-type-form-capacity                  (Complete 2026-04-29 — CAP-03 input + CAP-08 toggle + CAP-09 modal; in-JS group-by; fail-closed; 148 tests + 26 skipped)
+  11-08 [✓] booker-ui-capacity                        (Complete 2026-04-29 — CAP-08 'X spots left' badge + CAP-07 409 branching on body.code; RaceLoserBanner message prop; 148 tests + 26 skipped)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
@@ -120,6 +121,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED distinguishing live** (Plan 11-04, 2026-04-29) — POST /api/bookings now reads `max_bookings_per_slot` from event_types SELECT. INSERT retry loop: slot_index=1..N on Postgres 23505; fail fast on non-23505. After exhaustion: 409 `code=SLOT_TAKEN` (capacity=1) or `code=SLOT_CAPACITY_REACHED` (capacity>1). Booker UI can switch on `code` field uniformly. Backward-compatible: v1.0 capacity=1 path returns SLOT_TAKEN with original copy. 148 tests passing + 24 skipped.
 - **CAP-01 root-cause: verdict (c) rescheduled-status slot reuse gap** (Plan 11-01, 2026-04-28) — 6-step diagnostic against prod confirmed zero duplicate confirmed bookings. `bookings_no_double_book` unique index is present and correct. The structural gap (rescheduled status does not trigger the unique index guard, so a bypassed availability check could double-book a rescheduled slot) is accepted behavior — rescheduled bookings hold their original slot for audit purposes. Plan 03 (slot_index migration) gate = PROCEED. Plan 05 must change `.neq("status","cancelled")` → `.eq("status","confirmed")` per Pitfall 4.
 - **CAP-03 + CAP-08 + CAP-09 owner UI live** (Plan 11-07, 2026-04-29) — `eventTypeSchema` extended: `max_bookings_per_slot` (z.coerce, int, 1-50, default 1), `show_remaining_capacity` (z.coerce bool, default false), `confirmCapacityDecrease` optional bypass flag (default false). `EventTypeRow` type includes both capacity columns. `updateEventTypeAction` CAP-09 pre-check: fires on capacity decrease without confirm flag; fetches confirmed future bookings from `bookings`; groups by `start_at` in JS (supabase-js lacks GROUP BY/HAVING; data volume is small); returns `{ warning: "capacity_decrease_overflow", details: { newCap, currentCap, affectedSlots, maxAffected } }` when any slot exceeds new cap; fail-closed on DB error. Both create + update actions now persist capacity fields. Form: number input (min=1, max=50, valueAsNumber) + Controller+Switch toggle + AlertDialog confirmation modal. `confirmCapacityDecrease=true` re-submission bypasses CAP-09 and saves. Manual smoke deferred to Phase 13.
+- **CAP-08 + CAP-07 booker UI live** (Plan 11-08, 2026-04-29) — `Slot.remaining_capacity?: number` added to Slot interface in `slot-picker.tsx`; conditional "X spots left" badge (text-xs text-muted-foreground, pluralized). `booking-form.tsx` 409 handler reads body.code: `SLOT_CAPACITY_REACHED` → "fully booked" message; `SLOT_TAKEN` → "just taken" message; defensive fallback to body.error. `RaceLoserBanner` accepts optional `message?` prop (v1.0 copy is fallback). Phase 12 will restyle; no branded colors added here. 148 tests passing.
 - **CAP-06 pg-driver race test live** (Plan 11-06, 2026-04-29) — `tests/helpers/pg-direct.ts` exports `pgDirectClient(maxConnections)` + `hasDirectUrl()` for direct Postgres connection (port 5432, bypassing Supavisor). `postgres@3.4.9` installed as devDependency (NOT dependency). `tests/race-guard.test.ts` new `describe.skipIf(!hasDirectUrl())` block: capacity=3/N=10 + capacity=1/N=5 tests. Fixture path: Fallback B (inline admin-client INSERT with explicit `max_bookings_per_slot`). Skip-guard: CI-safe when `SUPABASE_DIRECT_URL` absent; runs against prod when set. SUPABASE_DIRECT_URL documented in `.env.example`; setup deferred to Andrew. 148 tests + 26 skipped.
 - **Pitfall 4 CLOSED + CAP-04 + CAP-08 backend live** (Plan 11-05, 2026-04-29) — `/api/slots` bookings query changed from `.neq("status","cancelled")` to `.eq("status","confirmed")`; rescheduled bookings no longer over-block freed slots. `slotConfirmedCount()` helper added to `lib/slots.ts`; `computeSlots()` inner loop skips slots where `confirmedCount >= maxBookingsPerSlot`. `remaining_capacity` field optionally included per slot when `show_remaining_capacity=true`. Semantically aligned with `bookings_capacity_slot_idx` (WHERE status='confirmed'). v1.0 behavior fully preserved (capacity=1 + show_remaining_capacity=false defaults). `cancel-reschedule-api.test.ts` required zero semantic updates. 148 tests passing.
 - **Capacity columns live on prod event_types** (Plan 11-02, 2026-04-28) — `max_bookings_per_slot integer NOT NULL DEFAULT 1 CHECK (>= 1)` + `show_remaining_capacity boolean NOT NULL DEFAULT false` added via locked workaround. All 4 existing rows defaulted to v1.0-safe values. No upper-bound CHECK on max_bookings_per_slot (Zod Plan-07 layer enforces <=50; DB keeps flexibility). Plans 04, 05, 07 can now read/write these columns without further schema work. 9 bookings-api tests still green.
@@ -167,9 +169,9 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 11-07 complete. CAP-03 capacity input + CAP-08 toggle + CAP-09 modal live on event-type form. Phase 11 COMPLETE. 148 tests passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 11-08 complete. CAP-08 booker badge + CAP-07 409 branching live. Phase 11 ALL 8 PLANS COMPLETE. 148 tests passing + 26 skipped.
 
-**Stopped at:** Plan 11-07 complete. Phase 11 (Booking Capacity + Double-Booking Fix) fully done.
+**Stopped at:** Plan 11-08 complete. Phase 11 (Booking Capacity + Double-Booking Fix) fully done — all 8 plans.
 
 **Resume:** Execute Phase 12 (Branded UI Overhaul). Two architectural decisions needed during plan-phase: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope.
 
