@@ -7,6 +7,9 @@
 /** Phase 12: gradient intensity for background blur-circle decoration. */
 export type BackgroundShade = "none" | "subtle" | "bold";
 
+/** Phase 12.5: per-account chrome tinting intensity. */
+export type ChromeTintIntensity = "none" | "subtle" | "full";
+
 export interface Branding {
   /** Logo URL from Supabase Storage (public bucket). Null if not uploaded. */
   logoUrl: string | null;
@@ -19,4 +22,7 @@ export interface Branding {
   backgroundColor: string | null;
   /** Gradient intensity. Never null (DB DEFAULT 'subtle'). */
   backgroundShade: BackgroundShade;
+  // Phase 12.5 additions
+  /** Chrome tint intensity. Never null (DB DEFAULT 'subtle'). */
+  chromeTintIntensity: ChromeTintIntensity;
 }

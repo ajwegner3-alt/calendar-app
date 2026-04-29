@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pickTextColor } from "@/lib/branding/contrast";
-import type { Branding, BackgroundShade } from "@/lib/branding/types";
+import type { Branding, BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
 
 /**
  * Default primary brand color — NSI navy (matches Phase 2 lock:
@@ -25,6 +25,7 @@ export function brandingFromRow(row: {
   brand_primary: string | null;
   background_color?: string | null;
   background_shade?: string | null;
+  chrome_tint_intensity?: string | null;
 }): Branding {
   const primaryColor = row.brand_primary ?? DEFAULT_BRAND_PRIMARY;
   const validShades: BackgroundShade[] = ["none", "subtle", "bold"];
@@ -33,12 +34,19 @@ export function brandingFromRow(row: {
     ? shade
     : "subtle";
 
+  const validIntensities: ChromeTintIntensity[] = ["none", "subtle", "full"];
+  const rawIntensity = row.chrome_tint_intensity as ChromeTintIntensity;
+  const chromeTintIntensity: ChromeTintIntensity = validIntensities.includes(rawIntensity)
+    ? rawIntensity
+    : "subtle";
+
   return {
     logoUrl: row.logo_url ?? null,
     primaryColor,
     textColor: pickTextColor(primaryColor),
     backgroundColor: row.background_color ?? null,
     backgroundShade,
+    chromeTintIntensity,
   };
 }
 
@@ -64,7 +72,7 @@ export async function getBrandingForAccount(
     const supabase = createAdminClient();
     const { data: row } = await supabase
       .from("accounts")
-      .select("logo_url, brand_primary, background_color, background_shade")
+      .select("logo_url, brand_primary, background_color, background_shade, chrome_tint_intensity")
       .eq("id", accountId)
       .maybeSingle();
 
