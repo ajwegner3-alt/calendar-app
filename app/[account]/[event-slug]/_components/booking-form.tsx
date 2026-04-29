@@ -39,7 +39,7 @@ interface BookingFormProps {
   eventType: EventTypeSummary;
   selectedSlot: { start_at: string; end_at: string };
   bookerTimezone: string;
-  onRaceLoss: () => void;
+  onRaceLoss: (message?: string) => void; // CAP-07: optional message for branched 409 copy
 }
 
 /** Stable key for a custom question — use id if present, fallback to label. */
@@ -120,9 +120,24 @@ export function BookingForm(props: BookingFormProps) {
     }
 
     if (res.status === 409) {
-      // Race-loser: another visitor booked the same slot.
+      // Race-loser / capacity-full: read code to surface the right message.
+      const body409 = (await res.json().catch(() => null)) as {
+        code?: string;
+        error?: string;
+      } | null;
+      let raceMessage: string;
+      if (body409?.code === "SLOT_CAPACITY_REACHED") {
+        // CAP-07: slot had capacity>1 but all seats are now taken
+        raceMessage = "That time is fully booked. Please choose a different time.";
+      } else if (body409?.code === "SLOT_TAKEN") {
+        // CAP-07: capacity=1 race (or any single-seat taken path)
+        raceMessage = "That time was just taken by another booker. Please choose a different time.";
+      } else {
+        // Defensive fallback — unknown code or missing body
+        raceMessage = body409?.error ?? "That time is no longer available. Please choose a different time.";
+      }
       // Parent clears selectedSlot + bumps refetchKey; preserve form values.
-      props.onRaceLoss();
+      props.onRaceLoss(raceMessage);
       turnstileRef.current?.reset();
       return;
     }
