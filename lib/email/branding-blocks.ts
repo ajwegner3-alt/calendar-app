@@ -11,6 +11,12 @@ export interface EmailBranding {
   /** Per-account background color for the header band (Plan 12-01 column: accounts.background_color).
    *  When null, falls back to brand_primary, then to DEFAULT_BRAND_PRIMARY. */
   backgroundColor: string | null;
+  /** Phase 12.5: chrome tint intensity (Plan 12.5 accounts.chrome_tint_intensity).
+   *  Drives whether backgroundColor or brand_primary is used in the header band:
+   *  'none' → use brand_primary (owner chose no tint — email matches UI chrome);
+   *  'subtle'|'full' → use backgroundColor (current Phase 12 behavior).
+   *  Optional: callers that haven't been updated yet default to 'subtle' (backward compat). */
+  chromeTintIntensity?: "none" | "subtle" | "full";
 }
 
 /**
@@ -23,7 +29,10 @@ export interface EmailBranding {
  * Header treatment is IDENTICAL across all 6 templates (consistency over status
  * semantics — same band color/shape on confirm, cancel, reschedule).
  *
- * Color resolution: backgroundColor → brand_primary → DEFAULT_BRAND_PRIMARY (#0A2540).
+ * Color resolution (Phase 12.5 / EMAIL-13, intensity-aware):
+ *   intensity='none'           → brand_primary → DEFAULT_BRAND_PRIMARY
+ *   intensity='subtle'|'full'  → backgroundColor → brand_primary → DEFAULT_BRAND_PRIMARY
+ *   intensity=undefined        → same as 'subtle' (backward compat for pre-12.5 callers)
  * Text color auto-picked via WCAG luminance (pickTextColor) for accessibility.
  *
  * When logo_url is set: renders an <img> centered on the band.
@@ -32,9 +41,15 @@ export interface EmailBranding {
  * Inline-styled for Gmail/Outlook/Apple Mail compatibility.
  */
 export function renderEmailBrandedHeader(branding: EmailBranding): string {
-  // CONTEXT.md lock: solid-color-only — bg is always a single solid fill.
+  // Phase 12.5 — intensity-aware color resolution (EMAIL-13):
+  // intensity='none' → brand_primary in header band (owner chose no background tint)
+  // intensity='subtle'|'full' or undefined (backward compat default='subtle') → backgroundColor if set
+  // Email clients cannot render color-mix(); we use direct hex values only.
+  const intensity = branding.chromeTintIntensity ?? "subtle";
   const bg =
-    branding.backgroundColor ?? branding.brand_primary ?? DEFAULT_BRAND_PRIMARY;
+    intensity === "none"
+      ? (branding.brand_primary ?? DEFAULT_BRAND_PRIMARY)
+      : (branding.backgroundColor ?? branding.brand_primary ?? DEFAULT_BRAND_PRIMARY);
   const fg = pickTextColor(bg);
 
   const logoCell = branding.logo_url
