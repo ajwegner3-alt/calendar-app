@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 10 — Multi-User Signup + Onboarding.
-**Last completed plan:** 10-09 (rls-matrix-extension-and-checklist) — 2026-04-28.
-**Status:** Phase 10 auto-executable work complete. Task 1 of 10-09 (3rd RLS test user creation) deferred to milestone-end QA. Phase 11 ready to start.
-**Last activity:** 2026-04-28 — Plan 10-09 executed: N=3 RLS matrix (24 new cases, skip-guarded); OnboardingChecklist component + dismissChecklistAction Server Action; /app dashboard renders checklist above WelcomeCard; FUTURE_DIRECTIONS.md §7 added. 148 tests passing + 24 skipped.
+**Last completed plan:** Phase 10 — code complete (9/9 plans; verifier passed at code level with status `human_needed`) — 2026-04-28.
+**Status:** Phase 10 CODE-COMPLETE. 6 manual checks deferred to milestone-end QA per Andrew 2026-04-28. Phase 11 (Booking Capacity + Double-Booking Fix) ready to plan.
+**Last activity:** 2026-04-28 — Phase 10 verifier ran goal-backward analysis; all 19 requirements have shipping code; 6 walkthroughs queued in `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md` (P-A8 + email-confirm toggle, signup E2E, password reset E2E, profile/soft-delete UI, email-change E2E, N=3 RLS test user setup). Roadmap + REQUIREMENTS marked Complete (with manual-deferred annotation). 148 tests passing + 24 skip-guarded.
 
-**Progress (across both v1.0 and v1.1):** [█████████░░░░] 9 / 13 phases complete (v1.0 SHIPPED 2026-04-27; Phase 10 auto portions complete — all 9/9 plans committed)
+**Progress (across both v1.0 and v1.1):** [██████████░░] 10 / 13 phases code-complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28 — milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
