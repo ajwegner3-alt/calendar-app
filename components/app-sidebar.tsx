@@ -26,6 +26,8 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
+import type { ChromeTintIntensity } from "@/lib/branding/types";
+import { chromeTintToCss, chromeTintTextColor } from "@/lib/branding/chrome-tint";
 
 /**
  * Sidebar IA — Phase 12 Plan 03 flat list (UI-05):
@@ -34,6 +36,8 @@ import {
  * Settings expands in-place (inline accordion) to Reminders + Profile.
  * Defaults open when pathname.startsWith('/app/settings').
  * Mobile: full-screen drawer via --sidebar-width-mobile: 100vw (globals.css).
+ *
+ * Phase 12.5: receives backgroundColor + chromeTintIntensity to tint sidebar chrome.
  */
 
 const TOP_ITEMS = [
@@ -44,14 +48,36 @@ const TOP_ITEMS = [
   { label: "Branding",     href: "/app/branding",      Icon: Palette },
 ] as const;
 
-export function AppSidebar({ email }: { email: string }) {
+interface AppSidebarProps {
+  email: string;
+  backgroundColor: string | null;
+  chromeTintIntensity: ChromeTintIntensity;
+}
+
+export function AppSidebar({ email, backgroundColor, chromeTintIntensity }: AppSidebarProps) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/app/settings"),
   );
 
+  // Phase 12.5: derive sidebar tint values from brand color + intensity.
+  // chromeTintToCss returns null when intensity='none' or no color — ?? undefined
+  // removes the inline style and lets the sidebar's CSS token (--sidebar) apply.
+  const sidebarBgTint = chromeTintToCss(backgroundColor, chromeTintIntensity, "sidebar");
+  // chromeTintTextColor returns '#000000' or '#ffffff' when tinting is active, else null.
+  // Applied as --sidebar-foreground CSS variable override so all nav text/icons inherit.
+  const sidebarTextColor = chromeTintTextColor(backgroundColor, chromeTintIntensity, "sidebar");
+
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar
+      collapsible="icon"
+      style={{
+        backgroundColor: sidebarBgTint ?? undefined,
+        ...(sidebarTextColor
+          ? ({ "--sidebar-foreground": sidebarTextColor } as React.CSSProperties)
+          : {}),
+      }}
+    >
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
