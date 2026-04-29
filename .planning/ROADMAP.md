@@ -27,7 +27,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ## Phases
 
-- [ ] **Phase 10: Multi-User Signup + Onboarding** — Public `/signup`, email verification, atomic account provisioning, 3-step onboarding wizard, password reset, profile settings.
+- [✓~] **Phase 10: Multi-User Signup + Onboarding** — Code complete 2026-04-28 (9/9 plans); 6 manual checks deferred to milestone-end QA per `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`. Public `/signup`, email verification, atomic account provisioning, 3-step onboarding wizard, password reset, profile settings.
 - [ ] **Phase 11: Booking Capacity + Double-Booking Root-Cause Fix** — Reproduce the prod double-booking, replace partial-unique-index with race-safe N-per-slot mechanism, expose `max_bookings_per_slot` per event type.
 - [ ] **Phase 12: Branded UI Overhaul (5 Surfaces)** — Cruip "Simple Light" aesthetic across dashboard + public booking + embed + emails + auth, plus per-account `background_color`/`background_shade` tokens, sidebar IA refactor, Home tab monthly calendar.
 - [ ] **Phase 13: Manual QA + Andrew Ship Sign-Off** — End-to-end signup walkthrough, multi-tenant UI isolation check, capacity E2E, branded smoke across 3 test accounts, explicit "ship v1.1" sign-off.
@@ -163,7 +163,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 10. Multi-User Signup + Onboarding | v1.1 | 0 / 9 | Plans created (2026-04-28) | - |
+| 10. Multi-User Signup + Onboarding | v1.1 | 9 / 9 | Code complete; 6 manual checks deferred | 2026-04-28 (code) |
 | 11. Booking Capacity + Double-Booking Fix | v1.1 | 0 / TBD | Not started | - |
 | 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 0 / TBD | Not started | - |
 | 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started | - |
@@ -180,4 +180,4 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ---
 
-*Roadmap last updated: 2026-04-27 — v1.1 phase structure created (Phases 10-13).*
+*Roadmap last updated: 2026-04-28 — Phase 10 code-complete (9/9 plans, 19/19 requirements verified at code level); 6 deferred manual checks tracked in `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md` for milestone-end QA.*

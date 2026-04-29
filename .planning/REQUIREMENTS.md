@@ -138,25 +138,25 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-05 | Phase 10 | Pending |
-| AUTH-06 | Phase 10 | Pending |
-| AUTH-07 | Phase 10 | Pending |
-| AUTH-08 | Phase 10 | Pending |
-| AUTH-09 | Phase 10 | Pending |
-| AUTH-10 | Phase 10 | Pending |
-| AUTH-11 | Phase 10 | Pending |
-| ONBOARD-01 | Phase 10 | Pending |
-| ONBOARD-02 | Phase 10 | Pending |
-| ONBOARD-03 | Phase 10 | Pending |
-| ONBOARD-04 | Phase 10 | Pending |
-| ONBOARD-05 | Phase 10 | Pending |
-| ONBOARD-06 | Phase 10 | Pending |
-| ONBOARD-07 | Phase 10 | Pending |
-| ONBOARD-08 | Phase 10 | Pending |
-| ONBOARD-09 | Phase 10 | Pending |
-| ACCT-01 | Phase 10 | Pending |
-| ACCT-02 | Phase 10 | Pending |
-| ACCT-03 | Phase 10 | Pending |
+| AUTH-05 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-06 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-07 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-08 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-09 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-10 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-11 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-01 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-02 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-03 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-04 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-05 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-06 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-07 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-08 | Phase 10 | Complete (code; manual deferred) |
+| ONBOARD-09 | Phase 10 | Complete (code; manual deferred) |
+| ACCT-01 | Phase 10 | Complete (code; manual deferred) |
+| ACCT-02 | Phase 10 | Complete (code; manual deferred) |
+| ACCT-03 | Phase 10 | Complete (code; manual deferred) |
 | CAP-01 | Phase 11 | Pending |
 | CAP-02 | Phase 11 | Pending |
 | CAP-03 | Phase 11 | Pending |
