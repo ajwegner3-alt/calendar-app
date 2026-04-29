@@ -13,6 +13,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { eventTypeSchema, type EventTypeInput } from "../_lib/schema";
 import {
   createEventTypeAction,
@@ -34,6 +44,11 @@ const DEFAULTS: EventTypeInput = {
   is_active: true,
   custom_questions: [],
   location: "",
+  // Phase 11 Plan 11-07: CAP-03 + CAP-08 defaults. confirmCapacityDecrease is
+  // never true at rest — only set transiently when the modal confirms.
+  max_bookings_per_slot: 1,
+  show_remaining_capacity: false,
+  confirmCapacityDecrease: false,
 };
 
 export function EventTypeForm({
@@ -47,6 +62,15 @@ export function EventTypeForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // CAP-09 (Phase 11 Plan 11-07): state for the capacity-decrease confirmation modal.
+  // null = modal closed; object = modal open with over-cap details from the action.
+  const [overcapWarning, setOvercapWarning] = useState<null | {
+    newCap: number;
+    currentCap: number;
+    affectedSlots: number;
+    maxAffected: number;
+  }>(null);
 
   // Track whether the user has manually edited the slug. Once true, name->slug
   // auto-fill stops for the rest of the session (CONTEXT decision).
@@ -66,6 +90,7 @@ export function EventTypeForm({
     setValue,
     setError,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<EventTypeInput>({
     // zodResolver generic anchors the output type so TS doesn't error on
@@ -129,6 +154,11 @@ export function EventTypeForm({
         // If the action redirected, control never returns here (NEXT_REDIRECT
         // throws). If it returned an EventTypeState, we have errors to surface.
         if (result) {
+          // CAP-09: capacity-decrease overflow warning — open confirmation modal.
+          if (result.warning === "capacity_decrease_overflow" && result.details) {
+            setOvercapWarning(result.details);
+            return;
+          }
           applyServerErrors(result);
           if (result.formError) {
             toast.error(result.formError);
@@ -152,12 +182,45 @@ export function EventTypeForm({
     });
   }
 
+  // CAP-09: re-submit with bypass flag after modal confirmation.
+  async function handleOvercapConfirm() {
+    const values = getValues();
+    try {
+      const result = await updateEventTypeAction(eventTypeId!, {
+        ...values,
+        confirmCapacityDecrease: true,
+      });
+      if (result) {
+        if (result.formError) {
+          toast.error(result.formError);
+        } else {
+          applyServerErrors(result);
+        }
+      }
+      // On success (redirect thrown), NEXT_REDIRECT propagates naturally.
+    } catch (err) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "digest" in err &&
+        typeof (err as { digest?: unknown }).digest === "string" &&
+        (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw err;
+      }
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setOvercapWarning(null);
+    }
+  }
+
   // Show the slug-edit warning ONLY in edit mode AND only when the current
   // slug differs from the originally-saved slug.
   const showSlugChangeWarning =
     mode === "edit" && currentSlug !== originalSlug && currentSlug.length > 0;
 
   return (
+    <>
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-6"
@@ -227,6 +290,51 @@ export function EventTypeForm({
         )}
       </div>
 
+      {/* Max bookings per slot (CAP-03, Phase 11 Plan 11-07) */}
+      <div className="grid gap-2">
+        <Label htmlFor="max_bookings_per_slot">Max bookings per slot</Label>
+        <Input
+          id="max_bookings_per_slot"
+          type="number"
+          min={1}
+          max={50}
+          step={1}
+          inputMode="numeric"
+          className="max-w-[160px]"
+          {...register("max_bookings_per_slot", { valueAsNumber: true })}
+        />
+        {errors.max_bookings_per_slot && (
+          <p className="text-sm text-destructive">{errors.max_bookings_per_slot.message}</p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Default 1 = exclusive booking (one person per time slot). Increase to allow multiple bookers per slot (group consultations, classes).
+        </p>
+      </div>
+
+      {/* Show remaining capacity toggle (CAP-08 owner UI, Phase 11 Plan 11-07) */}
+      <div className="flex items-start gap-3 border rounded-lg p-3 bg-muted/30">
+        <Controller
+          control={control}
+          name="show_remaining_capacity"
+          render={({ field }) => (
+            <Switch
+              id="show_remaining_capacity"
+              checked={!!field.value}
+              onCheckedChange={field.onChange}
+              className="mt-0.5"
+            />
+          )}
+        />
+        <div className="grid gap-1">
+          <Label htmlFor="show_remaining_capacity" className="cursor-pointer">
+            Show remaining capacity to bookers
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            When ON, the booking page displays &ldquo;X spots left&rdquo; on each available slot.
+          </p>
+        </div>
+      </div>
+
       {/* Description */}
       <div className="grid gap-2">
         <Label htmlFor="description">Description (optional)</Label>
@@ -294,5 +402,44 @@ export function EventTypeForm({
         </Button>
       </div>
     </form>
+
+    {/* CAP-09 capacity-decrease confirmation modal (Phase 11 Plan 11-07).
+        Opens when updateEventTypeAction returns warning=capacity_decrease_overflow.
+        Confirm re-submits with confirmCapacityDecrease=true to bypass the check. */}
+    <AlertDialog
+      open={overcapWarning !== null}
+      onOpenChange={(open) => { if (!open) setOvercapWarning(null); }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Reduce capacity to {overcapWarning?.newCap}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {overcapWarning && (
+              <>
+                {overcapWarning.affectedSlots} future slot
+                {overcapWarning.affectedSlots === 1 ? "" : "s"} currently{" "}
+                {overcapWarning.affectedSlots === 1 ? "has" : "have"} more
+                confirmed bookings than your new cap of {overcapWarning.newCap}.
+                The worst-affected slot has {overcapWarning.maxAffected} confirmed
+                booking{overcapWarning.maxAffected === 1 ? "" : "s"}.
+                Existing bookings will NOT be cancelled &mdash; but affected slots
+                will be over-cap until those bookings end or are cancelled.
+              </>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setOvercapWarning(null)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={handleOvercapConfirm}>
+            Reduce capacity anyway
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
