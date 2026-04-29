@@ -138,7 +138,13 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
   - **Visual regression scope** (cheap-insurance question per P-C7): pull a minimum-viable Playwright suite forward into Phase 12 prerequisites (~1 day, 5 critical screenshots × 3 viewports) OR accept that Phase 13 manual QA falls entirely on Andrew's eyes? No Playwright suite exists yet; Phase 12 is the largest visual surface in the project's history.
   - **Out of scope for this flag** but worth noting: Cruip "Simple Light" license/redistribution terms (legal check, not architectural).
 
-**Plans**: ~5-7 plans (largest visual surface but the work splits cleanly along surface boundaries — branding tokens migration + dashboard restyle + public/embed/auth restyles can parallelize, emails restyle is its own track).
+**Plans**: 6 plans in 3 waves (per /gsd:plan-phase 12 2026-04-29). Architectural decisions committed during planning: (1) email gradient strategy = solid-color-only per CONTEXT.md lock (no VML); (2) Playwright visual-regression suite DEFERRED — manual QA in Phase 13 + deploy-and-eyeball workflow per Andrew CLAUDE.md (research recommendation; defer cost ~1.5d not worth marginal coverage). Plain-text alt scope extended beyond EMAIL-10 minimum to all booker-facing emails (cancel + reschedule). Live cross-client email QA (Outlook desktop, Apple Mail iOS, Yahoo) deferred to v1.2 per existing pattern.
+  - [ ] 12-01-PLAN.md — Branding tokens foundation (background_color + background_shade migration; GradientBackdrop + NSIGradientBackdrop primitives; /app/branding swatch + shade picker + mini-preview) (Wave 1)
+  - [ ] 12-02-PLAN.md — Auth pages restyle (Cruip split-panel + NSI hero across /login + /signup + /forgot-password + /verify-email + /auth/reset-password + /auth/auth-error) (Wave 1)
+  - [ ] 12-03-PLAN.md — Dashboard chrome (Inter font + bg-gray-50 + floating glass header pill + sidebar IA: Home/Event Types/Availability/Bookings/Branding/Settings with inline accordion + mobile full-screen drawer) (Wave 2)
+  - [ ] 12-04-PLAN.md — Home tab (monthly calendar with capped dots + Sheet drawer with 4 row actions: View/Cancel/Copy-reschedule-link/Send-reminder; OnboardingChecklist demoted to banner) (Wave 3)
+  - [ ] 12-05-PLAN.md — Public surfaces restyle (/[account] landing card + /[account]/[event-slug] booking page + /embed widget + EmbedCodeDialog widening to sm:max-w-2xl) (Wave 2)
+  - [ ] 12-06-PLAN.md — Email restyle (6 transactional templates with solid-color branded header + NSI footer mark + plain-text alt on booker-facing emails) (Wave 2)
 
 ---
 
@@ -173,7 +179,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 |-------|-----------|----------------|--------|-----------|
 | 10. Multi-User Signup + Onboarding | v1.1 | 9 / 9 | Code complete; 6 manual checks deferred | 2026-04-28 (code) |
 | 11. Booking Capacity + Double-Booking Fix | v1.1 | 8 / 8 | Code complete; 4 manual checks deferred | 2026-04-29 (code) |
-| 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 0 / TBD | Not started | - |
+| 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 0 / 6 | Plans created (6 plans, 3 waves) | - |
 | 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started | - |
 
 ## Coverage Summary
