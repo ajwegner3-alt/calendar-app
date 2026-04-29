@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-28 — Plan 11-02 complete. Capacity columns migration applied to prod: max_bookings_per_slot (integer NOT NULL DEFAULT 1, CHECK >= 1) + show_remaining_capacity (boolean NOT NULL DEFAULT false) added to event_types. All 4 existing rows defaulted safely. 9 booking-API tests still green.
+**Last updated:** 2026-04-28 — Plan 11-03 complete. slot_index column (smallint NOT NULL DEFAULT 1) live on prod bookings table. bookings_capacity_slot_idx UNIQUE (event_type_id, start_at, slot_index) WHERE status='confirmed' built CONCURRENTLY (indisvalid=true, indisready=true). bookings_no_double_book v1.0 index dropped cleanly via defensive DO $$ guard. Smoke 23505 test confirmed new index enforces uniqueness. CLI CONCURRENTLY workaround applied (inline query, not SQL Editor).
 
 ## Project Reference
 
@@ -18,9 +18,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 11 — Booking Capacity + Double-Booking Fix.
-**Last completed plan:** 11-02 (capacity-columns-migration) — 2026-04-28.
-**Status:** Phase 11 IN PROGRESS. Wave 1 complete; Wave 2 executing (Plans 11-02 done; 11-03 through 11-05 pending). Phase 10 code-complete with 6 manual checks deferred to milestone-end QA.
-**Last activity:** 2026-04-28 — Plan 11-02 complete. Capacity columns applied to prod via locked workaround. All 3 verify queries passed (2 columns, CHECK constraint, 4 rows defaulted). 9 bookings-api tests green.
+**Last completed plan:** 11-03 (slot-index-migration) — 2026-04-28.
+**Status:** Phase 11 IN PROGRESS. Wave 1 complete; Wave 2 executing (Plans 11-02 + 11-03 done; 11-04 through 11-07 pending). Phase 10 code-complete with 6 manual checks deferred to milestone-end QA.
+**Last activity:** 2026-04-28 — Plan 11-03 complete. bookings.slot_index column live + bookings_capacity_slot_idx UNIQUE index live on prod. bookings_no_double_book dropped. Smoke 23505 confirmed.
 
 **Progress (across both v1.0 and v1.1):** [██████████░░] 10 / 13 phases code-complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28 — milestone-end QA pending)
 
@@ -50,6 +50,7 @@ Phase 10 [✓~] Multi-User Signup + Onboarding         (auto complete 2026-04-28
 Phase 11 [~] Booking Capacity + Double-Booking Fix   (Wave 1 complete 2026-04-28; Wave 2 in progress)
   11-01 [✓] cap-01-root-cause-investigation           (Complete 2026-04-28 — verdict (c), gate PROCEED)
   11-02 [✓] capacity-columns-migration                (Complete 2026-04-28 — max_bookings_per_slot + show_remaining_capacity live on prod)
+  11-03 [✓] slot-index-migration                      (Complete 2026-04-28 — bookings.slot_index live; bookings_capacity_slot_idx replaces bookings_no_double_book; smoke 23505 confirmed)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
@@ -111,6 +112,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Soft-delete pattern: `accounts.deleted_at = now()` + signOut + redirect `/account-deleted`** (Plan 10-07, 2026-04-28) — `softDeleteAccountAction` server-side slug confirmation guard. `auth.users` row kept intact per ACCT-02. Post-delete re-login lands on `/app/unlinked` (UX hole, v1.1 acceptable, Phase 13 QA note).
 - **ACCT-03 deleted_at filter live on all public surfaces** (Plan 10-07, 2026-04-28) — `.is('deleted_at', null)` added to `loadAccountListing` + `loadEventTypeForBookingPage`. Embed surface inherits filter via shared loader import (no direct edit). 6-test coverage in `tests/account-soft-delete.test.ts`. 141 tests passing.
 - **Email-change trigger + route shipped** (Plan 10-08, 2026-04-28) — `sync_account_email_on_auth_update` SECURITY DEFINER trigger on `auth.users AFTER UPDATE OF email` propagates to `accounts.owner_email`. `/app/settings/profile/email` route with `requestEmailChangeAction` Server Action: rate-limited 3/hr per `${ip}:${uid}` (authenticated flow, uid available), quota-guarded (`email-change` category), P-A1 generic response (never leaks "email already in use"). `emailRedirectTo` points to `${origin}/auth/confirm?next=/app/settings/profile`. E2E deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. 148 tests passing.
+- **slot_index column + bookings_capacity_slot_idx live on prod** (Plan 11-03, 2026-04-28) — `bookings.slot_index smallint NOT NULL DEFAULT 1` added; `CREATE UNIQUE INDEX CONCURRENTLY bookings_capacity_slot_idx ON bookings(event_type_id, start_at, slot_index) WHERE status='confirmed'` built and validated (indisvalid=true, indisready=true). `bookings_no_double_book` v1.0 single-capacity index dropped via defensive DO $$ transaction. Smoke 23505 confirmed. CLI CONCURRENTLY apply workaround: pipe standalone statement via `echo | npx supabase db query --linked` (CLI -f path wraps in implicit transaction, blocking CONCURRENTLY). Plans 04 + 06 can now exercise N-per-slot mechanism.
 - **CAP-01 root-cause: verdict (c) rescheduled-status slot reuse gap** (Plan 11-01, 2026-04-28) — 6-step diagnostic against prod confirmed zero duplicate confirmed bookings. `bookings_no_double_book` unique index is present and correct. The structural gap (rescheduled status does not trigger the unique index guard, so a bypassed availability check could double-book a rescheduled slot) is accepted behavior — rescheduled bookings hold their original slot for audit purposes. Plan 03 (slot_index migration) gate = PROCEED. Plan 05 must change `.neq("status","cancelled")` → `.eq("status","confirmed")` per Pitfall 4.
 - **Capacity columns live on prod event_types** (Plan 11-02, 2026-04-28) — `max_bookings_per_slot integer NOT NULL DEFAULT 1 CHECK (>= 1)` + `show_remaining_capacity boolean NOT NULL DEFAULT false` added via locked workaround. All 4 existing rows defaulted to v1.0-safe values. No upper-bound CHECK on max_bookings_per_slot (Zod Plan-07 layer enforces <=50; DB keeps flexibility). Plans 04, 05, 07 can now read/write these columns without further schema work. 9 bookings-api tests still green.
 - **RLS matrix extended to N=3 tenants** (Plan 10-09, 2026-04-28) — `tests/rls-cross-tenant-matrix.test.ts` now has a second `describe.skipIf(skipIfNoThreeUsers)` suite with 24 new cases (positive control, anon lockout, cross-tenant SELECT in 8 table×direction combos, UPDATE deny in 2 directions, admin sees-all-3). `tests/helpers/auth.ts` exports `signInAsNsiTest3Owner()` + `TEST_RLS_3_ACCOUNT_SLUG`. Third test user provisioning deferred to milestone-end QA (see MILESTONE_V1_1_DEFERRED_CHECKS.md). 148 passing + 24 skipped.
@@ -157,11 +159,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-28 — Plan 11-02 complete. Capacity columns migration applied to prod. All verify queries passed. 9 bookings-api tests green.
+**Last session:** 2026-04-28 — Plan 11-03 complete. bookings.slot_index column + bookings_capacity_slot_idx UNIQUE index live on prod. bookings_no_double_book dropped. Smoke 23505 confirmed new index enforces uniqueness on (event_type_id, start_at, slot_index) WHERE status='confirmed'.
 
-**Stopped at:** Plan 11-02 complete. Wave 2 Plan 11-02 done.
+**Stopped at:** Plan 11-03 complete. Wave 2 Plans 11-02 + 11-03 done.
 
-**Resume:** Execute Plan 11-03 (slot_index migration — CONCURRENTLY index build) in Wave 2.
+**Resume:** Execute Plan 11-04 (bookings INSERT retry — 23505 catch + slot_index assignment) in Wave 2.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
