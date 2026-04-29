@@ -4,11 +4,12 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { BrandingState } from "../_lib/load-branding";
-import type { BackgroundShade } from "@/lib/branding/types";
+import type { BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
 import { LogoUploader } from "./logo-uploader";
 import { ColorPickerInput } from "./color-picker-input";
 import { PreviewIframe } from "./preview-iframe";
 import { ShadePicker } from "./shade-picker";
+import { IntensityPicker } from "./intensity-picker";
 import { MiniPreviewCard } from "./mini-preview-card";
 import { saveBrandingAction } from "../_lib/actions";
 
@@ -19,11 +20,12 @@ interface BrandingEditorProps {
 /**
  * Top-level branding editor orchestrator.
  *
- * Owns four pieces of live preview state:
+ * Owns five pieces of live preview state:
  * - primaryColor: starts from DB value (or DEFAULT_BRAND_PRIMARY if null)
  * - logoUrl: starts from DB value (or null)
  * - backgroundColor: starts from DB value (or null — gray-50 fallback in preview)
  * - backgroundShade: starts from DB value (or 'subtle')
+ * - chromeTintIntensity: starts from DB value (or 'subtle')
  *
  * Changes to any propagate into the respective preview immediately, giving the
  * owner a live preview BEFORE they save (CONTEXT lock).
@@ -41,11 +43,21 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
   const [backgroundShade, setBackgroundShade] = useState<BackgroundShade>(
     state.backgroundShade,
   );
+
+  // Phase 12.5: chrome tint intensity state
+  const [chromeTintIntensity, setChromeTintIntensity] = useState<ChromeTintIntensity>(
+    state.chromeTintIntensity,
+  );
+
   const [isSavingBackground, startBackgroundSave] = useTransition();
 
   function handleSaveBackground() {
     startBackgroundSave(async () => {
-      const result = await saveBrandingAction({ backgroundColor, backgroundShade });
+      const result = await saveBrandingAction({
+        backgroundColor,
+        backgroundShade,
+        chromeTintIntensity,
+      });
       if (result.error) {
         toast.error(result.error);
       } else if (result.fieldErrors) {
@@ -102,9 +114,26 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
             Controls gradient intensity. "Subtle" is a soft accent; "Bold" is a full Cruip-style pattern.
           </p>
           <ShadePicker value={backgroundShade} onChange={setBackgroundShade} />
+        </div>
 
-          {/* Phase 12: Inline mini-preview card (CONTEXT lock: only in-page preview) */}
-          <MiniPreviewCard color={backgroundColor} shade={backgroundShade} />
+        {/* Phase 12.5: Chrome intensity */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium">Chrome intensity</h2>
+          <p className="text-sm text-muted-foreground">
+            Controls how much brand color tints the dashboard sidebar and background.
+            "None" keeps the neutral gray look.
+          </p>
+          <IntensityPicker
+            value={chromeTintIntensity}
+            onChange={setChromeTintIntensity}
+          />
+
+          {/* Phase 12.5: Chrome-aware inline mini-preview (CONTEXT lock: only in-page preview) */}
+          <MiniPreviewCard
+            color={backgroundColor}
+            shade={backgroundShade}
+            chromeTintIntensity={chromeTintIntensity}
+          />
 
           <Button
             onClick={handleSaveBackground}
