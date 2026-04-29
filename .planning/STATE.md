@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12-04a complete. Home tab calendar: loadMonthBookings + regenerateRescheduleTokenAction + sendReminderForBookingAction + HomeCalendar (capped-dot DayButton) + OnboardingBanner + /app page.tsx refactored (WelcomeCard removed). 208 Vitest tests passing + 26 skipped (up from 191 + 17 new tests). Phase 12 now has 6 plans done (12-01, 12-02, 12-03, 12-04a, 12-05, 12-06); 12-04b (DayDetailSheet drawer) next.
+**Last updated:** 2026-04-29 — Plan 12-04b complete. DayDetailRow (4 actions + 3 AlertDialogs) + DayDetailSheet (shadcn Sheet) + HomeDashboard (state container) shipped; /app page.tsx wired; 225 Vitest tests passing + 26 skipped (up from 208 + 17 new tests). Phase 12 FULLY COMPLETE (all 7 plans done). Phase 13 (Manual QA) next.
 
 ## Project Reference
 
@@ -17,12 +17,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 ## Current Position
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
-**Phase:** Phase 12 — Branded UI Overhaul.
-**Last completed plan:** 12-04a (home-tab-server-and-calendar) — 2026-04-29.
-**Status:** Phase 12 IN PROGRESS (6 plans done: 12-01, 12-02, 12-03, 12-04a, 12-05, 12-06; 12-04b next).
-**Last activity:** 2026-04-29 — Plan 12-04a complete. loadMonthBookings + regenerateRescheduleTokenAction + sendReminderForBookingAction + HomeCalendar (capped-dot DayButton) + OnboardingBanner + /app page.tsx refactored; 17 new tests; 208 passing + 26 skipped.
+**Phase:** Phase 13 — Manual QA + Andrew Ship Sign-Off.
+**Last completed plan:** 12-04b (home-tab-day-detail-sheet) — 2026-04-29.
+**Status:** Phase 12 COMPLETE (all 7 plans: 12-01, 12-02, 12-03, 12-04a, 12-04b, 12-05, 12-06 done). Phase 13 next.
+**Last activity:** 2026-04-29 — Plan 12-04b complete. DayDetailRow + DayDetailSheet + HomeDashboard + page.tsx wire-up; 17 new tests; 225 passing + 26 skipped.
 
-**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 IN PROGRESS (6 plans done including 12-04a; 12-04b next); Phase 13 (Manual QA) after Phase 12 complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 13 (Manual QA + Ship Sign-Off) next (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -56,12 +56,12 @@ Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — 
   11-06 [✓] pg-driver-race-test                       (Complete 2026-04-29 — CAP-06 pg-driver race test; postgres.js devDep; pg-direct helper; skip-guarded; 148 tests + 26 skipped)
   11-07 [✓] event-type-form-capacity                  (Complete 2026-04-29 — CAP-03 input + CAP-08 toggle + CAP-09 modal; in-JS group-by; fail-closed; 148 tests + 26 skipped)
   11-08 [✓] booker-ui-capacity                        (Complete 2026-04-29 — CAP-08 'X spots left' badge + CAP-07 409 branching on body.code; RaceLoserBanner message prop; 148 tests + 26 skipped)
-Phase 12 [~] Branded UI Overhaul (6 Surfaces)        (IN PROGRESS 2026-04-29 — 6 of 7 plans done)
+Phase 12 [✓] Branded UI Overhaul (6 Surfaces)        (COMPLETE 2026-04-29 — all 7 plans done)
   12-01 [✓] branding-tokens-foundation               (Complete 2026-04-29 — background_color + background_shade columns; GradientBackdrop/NSIGradientBackdrop primitives; BrandedPage extended; /app/branding editor wired; 173 tests + 26 skipped)
   12-02 [✓] auth-pages-restyle                       (Complete 2026-04-29 — AuthHero component; 6 auth pages (login/signup/forgot-password/verify-email/reset-password/auth-error) Cruip split-panel; NSIGradientBackdrop in hero; all auth logic preserved; UI-12 satisfied)
   12-03 [✓] dashboard-chrome                         (Complete 2026-04-29 — Inter font + gray-50 + Cruip glass header pill + GradientBackdrop in shell layout + flat sidebar IA (Home/Event Types/Availability/Bookings/Branding/Settings accordion); 184 tests + 26 skipped)
   12-04a [✓] home-tab-server-and-calendar            (Complete 2026-04-29 — loadMonthBookings + regenerateRescheduleTokenAction + sendReminderForBookingAction + HomeCalendar capped-dot DayButton + OnboardingBanner + page.tsx refactor; WelcomeCard removed; 208 tests + 26 skipped)
-  12-04b [ ] home-tab-day-detail-sheet               (Not started — drawer + per-row actions; consumes onDayClick + Server Actions from 12-04a)
+  12-04b [✓] home-tab-day-detail-sheet               (Complete 2026-04-29 — DayDetailRow 4 actions + 3 AlertDialogs; DayDetailSheet shadcn Sheet; HomeDashboard state container; page.tsx timezone wire-up; 17 new tests; 225 passing + 26 skipped)
   12-05 [✓] public-surfaces-restyle                  (Complete 2026-04-29 — ListingHero + /[account] hero card; BookingShell py-12 md:py-20 + max-w-3xl card; embed single-circle gradient Pitfall-10-safe; EmbedCodeDialog sm:max-w-2xl; all public BrandedPage callers pass backgroundColor/backgroundShade; UI-09/10/11/13 satisfied)
   12-06 [✓] email-restyle                            (Complete 2026-04-29 — renderEmailBrandedHeader solid-color band + NSI mark PNG + plain-text alts on booker senders; all 6 senders migrated; EMAIL-09/10/11/12 closed; 191 tests + 26 skipped)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
@@ -158,6 +158,9 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **stripHtml shared from branding-blocks.ts** (Plan 12-06, 2026-04-29) — Moved from private function in send-reminder-booker.ts to shared export in branding-blocks.ts. All 6 booker-facing senders import from there.
 - **NSI mark PNG + NSI_MARK_URL live** (Plan 12-06, 2026-04-29) — `public/nsi-mark.png` committed (32x32 solid-navy placeholder; Andrew to swap with brand asset before Phase 13 QA). `NSI_MARK_URL` = `${NEXT_PUBLIC_APP_URL}/nsi-mark.png`; null in test env (NEXT_PUBLIC_APP_URL unset) so no broken-image test assertions.
 - **Live cross-client email QA deferred** (Plan 12-06, 2026-04-29) — Outlook desktop, Apple Mail iOS, Yahoo Mail rendering deferred to Phase 13 QA / v1.2 per CONTEXT.md lock and existing EMAIL-08 / QA-01..06 backlog.
+- **DayDetailSheet drawer + HomeDashboard shipped** (Plan 12-04b, 2026-04-29) — `HomeDashboard` owns open/selectedDate/selectedBookings state; `DayDetailSheet` renders shadcn Sheet (side=right, w-full sm:max-w-md) with `DayDetailRow` list or empty-state branch. All 4 row actions (View/Cancel/Copy-reschedule-link/Send-reminder) with AlertDialog confirmations. Clipboard fallback: if `navigator.clipboard.writeText` throws, shows `<input readOnly>` with the URL. Phase 12 ROADMAP must_have #2 fully satisfied. 17 new tests; 225 passing + 26 skipped.
+- **HomeDashboard pattern: state container separate from display components** (Plan 12-04b, 2026-04-29) — `HomeCalendar` is pure display; `DayDetailSheet` is pure presentation; `HomeDashboard` owns coordination state. This pattern should be used for future calendar-adjacent interactivity.
+- **SheetDescription as empty-state text source** (Plan 12-04b, 2026-04-29) — When bookings=[], `SheetDescription` renders "No bookings on this day." and the body is an empty spacer `<div>`. Avoids duplicate text nodes that break RTL `getByText` queries.
 - **loadMonthBookings canonical query** (Plan 12-04a, 2026-04-29) — server-only, inline auth pattern (getClaims + accounts SELECT), status='confirmed' filter, startOfMonth..endOfMonth range. Returns `MonthBooking[]` with `event_type: { name }` shape. UTC date bucketing for day grouping (v1.2: upgrade to account IANA TZ via TZDate).
 - **regenerateRescheduleTokenAction token rotation** (Plan 12-04a, 2026-04-29) — Mints single fresh reschedule token via `crypto.randomUUID() + hashToken()` (NOT `generateBookingTokens()` — that overshoots by minting both tokens). Returns rawToken to caller. Old emailed link invalidated. 12-04b AlertDialog warns owner before invocation.
 - **sendReminderForBookingAction rotates BOTH tokens** (Plan 12-04a, 2026-04-29) — Matches Phase 8 cron pattern exactly. Owner-initiated reminder invalidates booker's existing cancel + reschedule email links. Accepted side effect per project pattern. Ships alongside `cancelBookingAsOwner` in `app/(shell)/app/bookings/[id]/_lib/actions.ts`.
@@ -203,11 +206,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12-04a complete. Home tab calendar: loadMonthBookings + regenerateRescheduleTokenAction + sendReminderForBookingAction + HomeCalendar + OnboardingBanner + /app page.tsx refactored. 208 tests passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 12-04b complete. DayDetailRow (4 actions + 3 AlertDialogs) + DayDetailSheet (shadcn Sheet) + HomeDashboard (state container) + /app page.tsx timezone wire-up. 225 tests passing + 26 skipped.
 
-**Stopped at:** Plan 12-04a complete. SUMMARY.md created. STATE.md updated.
+**Stopped at:** Plan 12-04b complete. Phase 12 FULLY COMPLETE. SUMMARY.md created. STATE.md updated.
 
-**Resume:** Execute Plan 12-04b (home-tab-day-detail-sheet). Consumes onDayClick from HomeCalendar + both new Server Actions from 12-04a. Drawer + per-row actions. After 12-04b complete, Phase 12 fully done → Phase 13 (Manual QA).
+**Resume:** Execute Phase 13 (Manual QA + Andrew Ship Sign-Off). All Phase 12 code is shipped; manual smoke deferred to Phase 13. See 12-04b-SUMMARY.md for Phase 13 smoke checklist for the DayDetailSheet drawer.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
