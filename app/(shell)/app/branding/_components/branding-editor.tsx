@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { BrandingState } from "../_lib/load-branding";
+import type { BackgroundShade } from "@/lib/branding/types";
 import { LogoUploader } from "./logo-uploader";
 import { ColorPickerInput } from "./color-picker-input";
 import { PreviewIframe } from "./preview-iframe";
+import { ShadePicker } from "./shade-picker";
+import { MiniPreviewCard } from "./mini-preview-card";
+import { saveBrandingAction } from "../_lib/actions";
 
 interface BrandingEditorProps {
   state: BrandingState;
@@ -13,11 +19,13 @@ interface BrandingEditorProps {
 /**
  * Top-level branding editor orchestrator.
  *
- * Owns two pieces of live preview state:
+ * Owns four pieces of live preview state:
  * - primaryColor: starts from DB value (or DEFAULT_BRAND_PRIMARY if null)
  * - logoUrl: starts from DB value (or null)
+ * - backgroundColor: starts from DB value (or null — gray-50 fallback in preview)
+ * - backgroundShade: starts from DB value (or 'subtle')
  *
- * Changes to either propagate into PreviewIframe immediately, giving the
+ * Changes to any propagate into the respective preview immediately, giving the
  * owner a live preview BEFORE they save (CONTEXT lock).
  *
  * Layout: two-column on md+ (editor left, preview right).
@@ -25,6 +33,29 @@ interface BrandingEditorProps {
 export function BrandingEditor({ state }: BrandingEditorProps) {
   const [primaryColor, setPrimaryColor] = useState(state.primaryColor ?? "#0A2540");
   const [logoUrl, setLogoUrl] = useState<string | null>(state.logoUrl);
+
+  // Phase 12: background gradient state
+  const [backgroundColor, setBackgroundColor] = useState<string | null>(
+    state.backgroundColor,
+  );
+  const [backgroundShade, setBackgroundShade] = useState<BackgroundShade>(
+    state.backgroundShade,
+  );
+  const [isSavingBackground, startBackgroundSave] = useTransition();
+
+  function handleSaveBackground() {
+    startBackgroundSave(async () => {
+      const result = await saveBrandingAction({ backgroundColor, backgroundShade });
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.fieldErrors) {
+        const firstError = Object.values(result.fieldErrors).flat()[0];
+        if (firstError) toast.error(firstError);
+      } else {
+        toast.success("Background saved.");
+      }
+    });
+  }
 
   return (
     <div className="grid gap-8 md:grid-cols-2">
@@ -48,6 +79,40 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
             Used for buttons and headings. Type a hex value or use the color picker.
           </p>
           <ColorPickerInput value={primaryColor} onChange={setPrimaryColor} />
+        </div>
+
+        {/* Phase 12: Background color */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium">Background color</h2>
+          <p className="text-sm text-muted-foreground">
+            Sets the gradient accent color on your booking pages. Pick a swatch or enter a custom hex.
+          </p>
+          <ColorPickerInput
+            value={backgroundColor ?? "#0A2540"}
+            onChange={(hex) => setBackgroundColor(hex)}
+            showSaveButton={false}
+            showSwatches={true}
+          />
+        </div>
+
+        {/* Phase 12: Background shade */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium">Background shade</h2>
+          <p className="text-sm text-muted-foreground">
+            Controls gradient intensity. "Subtle" is a soft accent; "Bold" is a full Cruip-style pattern.
+          </p>
+          <ShadePicker value={backgroundShade} onChange={setBackgroundShade} />
+
+          {/* Phase 12: Inline mini-preview card (CONTEXT lock: only in-page preview) */}
+          <MiniPreviewCard color={backgroundColor} shade={backgroundShade} />
+
+          <Button
+            onClick={handleSaveBackground}
+            disabled={isSavingBackground}
+            size="sm"
+          >
+            {isSavingBackground ? "Saving…" : "Save background"}
+          </Button>
         </div>
       </section>
 

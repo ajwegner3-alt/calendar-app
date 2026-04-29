@@ -28,3 +28,19 @@ export const logoFileSchema = {
   allowedMime: "image/png" as const,
   magicBytes: PNG_MAGIC,
 };
+
+// Phase 12: background gradient tokens
+export const backgroundColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Use #RRGGBB format (e.g. #0A2540)")
+  .nullable()
+  .optional();
+
+export const backgroundShadeSchema = z
+  .enum(["none", "subtle", "bold"])
+  .default("subtle");
+
+export const brandingBackgroundSchema = z.object({
+  background_color: backgroundColorSchema,
+  background_shade: backgroundShadeSchema,
+});

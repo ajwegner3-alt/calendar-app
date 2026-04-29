@@ -8,9 +8,33 @@ import { Label } from "@/components/ui/label";
 import { savePrimaryColorAction } from "../_lib/actions";
 import { primaryColorSchema } from "../_lib/schema";
 
+// Phase 12: curated swatch palette aligned with Cruip gradient research
+const CRUIP_SWATCHES = [
+  { name: "NSI Navy", hex: "#0A2540" },
+  { name: "Cruip Blue", hex: "#3B82F6" },
+  { name: "Forest", hex: "#10B981" },
+  { name: "Sunset", hex: "#F97316" },
+  { name: "Magenta", hex: "#EC4899" },
+  { name: "Violet", hex: "#8B5CF6" },
+  { name: "Slate", hex: "#475569" },
+  { name: "Stone", hex: "#78716C" },
+] as const;
+
 interface ColorPickerInputProps {
   value: string;
   onChange: (hex: string) => void;
+  /**
+   * When true (default), renders an inline "Save color" button that calls
+   * savePrimaryColorAction directly.
+   * When false, omits the save button — the parent handles saving.
+   * Use false for the background-color slot (parent form handles persistence).
+   */
+  showSaveButton?: boolean;
+  /**
+   * When true, shows the curated swatch palette above the native picker.
+   * Default: false (existing primary-color behavior unchanged).
+   */
+  showSwatches?: boolean;
 }
 
 /**
@@ -30,7 +54,12 @@ function normalizeHex(val: string): string {
   return trimmed;
 }
 
-export function ColorPickerInput({ value, onChange }: ColorPickerInputProps) {
+export function ColorPickerInput({
+  value,
+  onChange,
+  showSaveButton = true,
+  showSwatches = false,
+}: ColorPickerInputProps) {
   // Local state for the text input so user can type freely without parent re-rendering every keystroke
   const [localText, setLocalText] = useState(value);
   const [isPending, startTransition] = useTransition();
@@ -69,6 +98,11 @@ export function ColorPickerInput({ value, onChange }: ColorPickerInputProps) {
     onChange(hex);
   }
 
+  function handleSwatchClick(hex: string) {
+    setLocalText(hex);
+    onChange(hex);
+  }
+
   function handleSave() {
     const normalized = normalizeHex(localText);
     const parsed = primaryColorSchema.safeParse(normalized);
@@ -96,6 +130,39 @@ export function ColorPickerInput({ value, onChange }: ColorPickerInputProps) {
 
   return (
     <div className="space-y-3">
+      {/* Phase 12: curated swatch palette (shown when showSwatches=true) */}
+      {showSwatches && (
+        <div className="flex flex-wrap gap-2">
+          {CRUIP_SWATCHES.map((swatch) => (
+            <button
+              key={swatch.hex}
+              type="button"
+              aria-label={swatch.name}
+              onClick={() => handleSwatchClick(swatch.hex)}
+              className="h-8 w-8 rounded-full border-2 transition focus:outline-none focus:ring-2 focus:ring-offset-2"
+              style={{
+                backgroundColor: swatch.hex,
+                // Phase 7 lesson: use inline style for runtime hex — never dynamic Tailwind classes
+                borderColor:
+                  value.toUpperCase() === swatch.hex
+                    ? "hsl(var(--primary, 221 83% 53%))"
+                    : "transparent",
+                boxShadow:
+                  value.toUpperCase() === swatch.hex
+                    ? "0 0 0 2px white, 0 0 0 4px currentColor"
+                    : undefined,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {showSwatches && (
+        <p className="text-xs text-muted-foreground">
+          Or enter a custom hex:
+        </p>
+      )}
+
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1">
           <Label htmlFor="color-text" className="sr-only">
@@ -121,14 +188,18 @@ export function ColorPickerInput({ value, onChange }: ColorPickerInputProps) {
             aria-label="Hex color value"
           />
         </div>
-        <Button onClick={handleSave} disabled={isPending} size="sm">
-          {isPending ? "Saving…" : "Save color"}
-        </Button>
+        {showSaveButton && (
+          <Button onClick={handleSave} disabled={isPending} size="sm">
+            {isPending ? "Saving…" : "Save color"}
+          </Button>
+        )}
       </div>
-      <p className="text-xs text-muted-foreground">
-        Use a 6-digit hex color (e.g. <span className="font-mono">#FF6B6B</span>). The
-        color applies to buttons and headings on your booking page.
-      </p>
+      {!showSwatches && (
+        <p className="text-xs text-muted-foreground">
+          Use a 6-digit hex color (e.g. <span className="font-mono">#FF6B6B</span>). The
+          color applies to buttons and headings on your booking page.
+        </p>
+      )}
     </div>
   );
 }
