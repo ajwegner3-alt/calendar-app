@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 11-04 complete. POST /api/bookings now has slot_index=1..N retry loop on Postgres 23505. CAP-07 SLOT_TAKEN (capacity=1) / SLOT_CAPACITY_REACHED (capacity>1) distinguishing live. max_bookings_per_slot read from event_types in bookings route. 148 tests passing + 24 skipped (baseline maintained).
+**Last updated:** 2026-04-29 — Plan 11-05 complete. /api/slots is now capacity-aware: Pitfall 4 closed (.eq("status","confirmed") filter), CAP-04 slot exclusion live, CAP-08 remaining_capacity opt-in live. 148 tests passing + 24 skipped (baseline maintained).
 
 ## Project Reference
 
@@ -18,9 +18,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 11 — Booking Capacity + Double-Booking Fix.
-**Last completed plan:** 11-04 (bookings-api-capacity-retry) — 2026-04-29.
-**Status:** Phase 11 IN PROGRESS. Wave 1 complete; Wave 2 executing (Plans 11-02 + 11-03 + 11-04 done; 11-05 through 11-07 pending). Phase 10 code-complete with 6 manual checks deferred to milestone-end QA.
-**Last activity:** 2026-04-29 — Plan 11-04 complete. POST /api/bookings slot_index retry loop + CAP-07 error codes live. 148 tests passing.
+**Last completed plan:** 11-05 (slots-api-capacity-aware) — 2026-04-29.
+**Status:** Phase 11 IN PROGRESS. Wave 1 complete; Wave 2 executing (Plans 11-02 + 11-03 + 11-04 + 11-05 done; 11-06 through 11-07 pending). Phase 10 code-complete with 6 manual checks deferred to milestone-end QA.
+**Last activity:** 2026-04-29 — Plan 11-05 complete. /api/slots capacity-aware + Pitfall 4 closed (.eq("status","confirmed")). CAP-04 slot exclusion + CAP-08 remaining_capacity opt-in live. 148 tests passing.
 
 **Progress (across both v1.0 and v1.1):** [██████████░░] 10 / 13 phases code-complete (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28 — milestone-end QA pending)
 
@@ -52,6 +52,7 @@ Phase 11 [~] Booking Capacity + Double-Booking Fix   (Wave 1 complete 2026-04-28
   11-02 [✓] capacity-columns-migration                (Complete 2026-04-28 — max_bookings_per_slot + show_remaining_capacity live on prod)
   11-03 [✓] slot-index-migration                      (Complete 2026-04-28 — bookings.slot_index live; bookings_capacity_slot_idx replaces bookings_no_double_book; smoke 23505 confirmed)
   11-04 [✓] bookings-api-capacity-retry               (Complete 2026-04-29 — slot_index retry loop + CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED live; 148 tests passing)
+  11-05 [✓] slots-api-capacity-aware                  (Complete 2026-04-29 — Pitfall 4 closed (.eq("status","confirmed")); CAP-04 slot exclusion + CAP-08 remaining_capacity opt-in; 148 tests passing)
 Phase 12 [ ] Branded UI Overhaul (5 Surfaces)        (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
@@ -116,6 +117,7 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **slot_index column + bookings_capacity_slot_idx live on prod** (Plan 11-03, 2026-04-28) — `bookings.slot_index smallint NOT NULL DEFAULT 1` added; `CREATE UNIQUE INDEX CONCURRENTLY bookings_capacity_slot_idx ON bookings(event_type_id, start_at, slot_index) WHERE status='confirmed'` built and validated (indisvalid=true, indisready=true). `bookings_no_double_book` v1.0 single-capacity index dropped via defensive DO $$ transaction. Smoke 23505 confirmed. CLI CONCURRENTLY apply workaround: pipe standalone statement via `echo | npx supabase db query --linked` (CLI -f path wraps in implicit transaction, blocking CONCURRENTLY). Plans 04 + 06 can now exercise N-per-slot mechanism.
 - **CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED distinguishing live** (Plan 11-04, 2026-04-29) — POST /api/bookings now reads `max_bookings_per_slot` from event_types SELECT. INSERT retry loop: slot_index=1..N on Postgres 23505; fail fast on non-23505. After exhaustion: 409 `code=SLOT_TAKEN` (capacity=1) or `code=SLOT_CAPACITY_REACHED` (capacity>1). Booker UI can switch on `code` field uniformly. Backward-compatible: v1.0 capacity=1 path returns SLOT_TAKEN with original copy. 148 tests passing + 24 skipped.
 - **CAP-01 root-cause: verdict (c) rescheduled-status slot reuse gap** (Plan 11-01, 2026-04-28) — 6-step diagnostic against prod confirmed zero duplicate confirmed bookings. `bookings_no_double_book` unique index is present and correct. The structural gap (rescheduled status does not trigger the unique index guard, so a bypassed availability check could double-book a rescheduled slot) is accepted behavior — rescheduled bookings hold their original slot for audit purposes. Plan 03 (slot_index migration) gate = PROCEED. Plan 05 must change `.neq("status","cancelled")` → `.eq("status","confirmed")` per Pitfall 4.
+- **Pitfall 4 CLOSED + CAP-04 + CAP-08 backend live** (Plan 11-05, 2026-04-29) — `/api/slots` bookings query changed from `.neq("status","cancelled")` to `.eq("status","confirmed")`; rescheduled bookings no longer over-block freed slots. `slotConfirmedCount()` helper added to `lib/slots.ts`; `computeSlots()` inner loop skips slots where `confirmedCount >= maxBookingsPerSlot`. `remaining_capacity` field optionally included per slot when `show_remaining_capacity=true`. Semantically aligned with `bookings_capacity_slot_idx` (WHERE status='confirmed'). v1.0 behavior fully preserved (capacity=1 + show_remaining_capacity=false defaults). `cancel-reschedule-api.test.ts` required zero semantic updates. 148 tests passing.
 - **Capacity columns live on prod event_types** (Plan 11-02, 2026-04-28) — `max_bookings_per_slot integer NOT NULL DEFAULT 1 CHECK (>= 1)` + `show_remaining_capacity boolean NOT NULL DEFAULT false` added via locked workaround. All 4 existing rows defaulted to v1.0-safe values. No upper-bound CHECK on max_bookings_per_slot (Zod Plan-07 layer enforces <=50; DB keeps flexibility). Plans 04, 05, 07 can now read/write these columns without further schema work. 9 bookings-api tests still green.
 - **RLS matrix extended to N=3 tenants** (Plan 10-09, 2026-04-28) — `tests/rls-cross-tenant-matrix.test.ts` now has a second `describe.skipIf(skipIfNoThreeUsers)` suite with 24 new cases (positive control, anon lockout, cross-tenant SELECT in 8 table×direction combos, UPDATE deny in 2 directions, admin sees-all-3). `tests/helpers/auth.ts` exports `signInAsNsiTest3Owner()` + `TEST_RLS_3_ACCOUNT_SLUG`. Third test user provisioning deferred to milestone-end QA (see MILESTONE_V1_1_DEFERRED_CHECKS.md). 148 passing + 24 skipped.
 - **OnboardingChecklist component shipped** (Plan 10-09, 2026-04-28) — `components/onboarding-checklist.tsx` (`'use client'`): 7-day post-onboarding dismissible card with 3 items (Set availability, Customize event type, Share link + copy button). Visibility gate: `onboarding_complete=true` + `dismissed_at=null` + `created_at+7d>now()`. `app/(shell)/app/onboarding-checklist-actions.ts` exports `dismissChecklistAction` (RLS-scoped UPDATE). `/app` dashboard loads checklist above WelcomeCard with lazy count loading (2 parallel queries only when window open). Browser QA deferred to milestone-end QA.
@@ -161,11 +163,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 11-04 complete. POST /api/bookings slot_index retry loop + CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED distinguishing live. max_bookings_per_slot read from event_types. 148 tests passing + 24 skipped.
+**Last session:** 2026-04-29 — Plan 11-05 complete. /api/slots capacity-aware + Pitfall 4 closed. CAP-04 slot exclusion + CAP-08 remaining_capacity opt-in live. 148 tests passing + 24 skipped.
 
-**Stopped at:** Plan 11-04 complete. Wave 2 Plans 11-02 + 11-03 + 11-04 done.
+**Stopped at:** Plan 11-05 complete. Wave 2 Plans 11-02 + 11-03 + 11-04 + 11-05 done.
 
-**Resume:** Execute Plan 11-05 (availability-query fix: .neq("status","cancelled") → .eq("status","confirmed") in slots route) in Wave 2.
+**Resume:** Execute Plan 11-06 (cancel/reschedule capacity-aware routes) in Wave 2.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
