@@ -28,10 +28,16 @@
  * any query; reads + writes are scoped to the resolved account_id.
  *
  * Pre-flight slot validity check: DEFERRED. The DB-level partial unique index
- * `bookings_no_double_book ON (event_type_id, start_at) WHERE status='confirmed'`
+ * `bookings_capacity_slot_idx ON (event_type_id, start_at, slot_index) WHERE status='confirmed'`
  * is the authoritative race-safe gate. Pre-flighting via computeSlots() would add
  * latency without closing the race window (gap between check and INSERT still exists).
  * Plan 05-08 integration tests verify the end-to-end 409 path.
+ *
+ * Capacity retry loop (Plan 11-04 / CAP-05 + CAP-07):
+ *   The handler reads max_bookings_per_slot from the resolved event_type. It then
+ *   attempts slot_index=1..N. On Postgres 23505, that (event_type_id, start_at,
+ *   slot_index) triplet is taken — retry with slot_index+1. After exhausting all N:
+ *   409 code=SLOT_TAKEN (capacity=1) or code=SLOT_CAPACITY_REACHED (capacity>1).
  *
  * Rate limiting: 20 req / IP / 5-min sliding window (Plan 08-03 / INFRA-04).
  *   Reuses Phase 6 lib/rate-limit.ts; key prefix `bookings:`. Fails open on DB
@@ -42,7 +48,8 @@
  *   400 → { error: string; code: "BAD_REQUEST" | "VALIDATION"; fieldErrors?: ... }
  *   403 → { error: string; code: "TURNSTILE" }
  *   404 → { error: string; code: "NOT_FOUND" }
- *   409 → { error: string; code: "SLOT_TAKEN" }   ← race-loser path
+ *   409 → { error: string; code: "SLOT_TAKEN" }            ← capacity=1 race-loser (CAP-07)
+ *   409 → { error: string; code: "SLOT_CAPACITY_REACHED" } ← capacity>1 fully booked (CAP-07)
  *   429 → { error: string; code: "RATE_LIMITED" } ← rate-limit path (Retry-After header)
  *   500 → { error: string; code: "INTERNAL" }
  */
@@ -142,7 +149,7 @@ export async function POST(req: NextRequest) {
   // if no row matches — handled as 404.
   const { data: eventType, error: etError } = await supabase
     .from("event_types")
-    .select("id, account_id, slug, name, description, duration_minutes, custom_questions")
+    .select("id, account_id, slug, name, description, duration_minutes, custom_questions, max_bookings_per_slot")
     .eq("id", input.eventTypeId)
     .eq("is_active", true)
     .is("deleted_at", null)
@@ -154,6 +161,10 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: NO_STORE },
     );
   }
+
+  // Defensive fallback: DB has NOT NULL DEFAULT 1, but ?? 1 guards against
+  // any lag between migration and TS type generation.
+  const maxBookingsPerSlot = eventType.max_bookings_per_slot ?? 1;
 
   const { data: account, error: acctError } = await supabase
     .from("accounts")
@@ -174,46 +185,86 @@ export async function POST(req: NextRequest) {
   // token and look up the row by hash. NEVER include raw tokens in the response body.
   const tokens = await generateBookingTokens();
 
-  // ── 7. Insert booking row ────────────────────────────────────────────────
-  // The partial unique index `bookings_no_double_book ON (event_type_id, start_at)
-  // WHERE status='confirmed'` is the authoritative race guard. On collision,
-  // Postgres raises error code 23505 (unique_violation). supabase-js surfaces
-  // this on insertError.code. We return 409 so the client can display the
-  // race-loser inline banner and prompt the visitor to pick a new time.
-  const { data: booking, error: insertError } = await supabase
-    .from("bookings")
-    .insert({
-      account_id: account.id,
-      event_type_id: input.eventTypeId,
-      start_at: input.startAt,
-      end_at: input.endAt,
-      booker_name: input.bookerName,
-      booker_email: input.bookerEmail,
-      booker_phone: input.bookerPhone,
-      booker_timezone: input.bookerTimezone,
-      answers: input.answers,
-      cancel_token_hash: tokens.hashCancel,
-      reschedule_token_hash: tokens.hashReschedule,
-      status: "confirmed",
-    })
-    .select(
-      "id, start_at, end_at, booker_name, booker_email, booker_phone, booker_timezone, answers",
-    )
-    .single();
+  // ── 7. Insert booking row (slot_index retry loop) ────────────────────────
+  // The partial unique index `bookings_capacity_slot_idx ON (event_type_id,
+  // start_at, slot_index) WHERE status='confirmed'` is the authoritative race
+  // guard (Plan 11-03). On collision, Postgres raises error code 23505
+  // (unique_violation). We retry with slot_index=2..N (N=max_bookings_per_slot).
+  // If all N slots are exhausted, 409 SLOT_TAKEN (capacity=1) or
+  // SLOT_CAPACITY_REACHED (capacity>1). Non-23505 errors fail fast → 500.
+  //
+  // CAP-05: application-layer capacity-aware retry.
+  // CAP-07: code field distinguishes capacity=1 from capacity>1 for the booker UI.
+  type BookingRow = {
+    id: string;
+    start_at: string;
+    end_at: string;
+    booker_name: string;
+    booker_email: string;
+    booker_phone: string | null;
+    booker_timezone: string;
+    answers: unknown;
+  };
 
-  if (insertError) {
-    if (insertError.code === "23505") {
-      // bookings_no_double_book partial unique index violation — slot was taken
-      // in the race window between the visitor picking a time and submitting.
-      // CONTEXT decision #5: use this exact copy for the race-loser banner.
+  let booking: BookingRow | null = null;
+  let insertError: { code?: string; message: string } | null = null;
+
+  for (let slotIndex = 1; slotIndex <= maxBookingsPerSlot; slotIndex++) {
+    const result = await supabase
+      .from("bookings")
+      .insert({
+        account_id: account.id,
+        event_type_id: input.eventTypeId,
+        start_at: input.startAt,
+        end_at: input.endAt,
+        booker_name: input.bookerName,
+        booker_email: input.bookerEmail,
+        booker_phone: input.bookerPhone,
+        booker_timezone: input.bookerTimezone,
+        answers: input.answers,
+        cancel_token_hash: tokens.hashCancel,
+        reschedule_token_hash: tokens.hashReschedule,
+        status: "confirmed",
+        slot_index: slotIndex,
+      })
+      .select(
+        "id, start_at, end_at, booker_name, booker_email, booker_phone, booker_timezone, answers",
+      )
+      .single();
+
+    if (!result.error) {
+      booking = result.data as BookingRow;
+      insertError = null;
+      break;
+    }
+
+    insertError = result.error;
+
+    if (result.error.code !== "23505") {
+      // Non-capacity error: do not retry. Propagate immediately.
+      break;
+    }
+    // 23505 = that (event_type_id, start_at, slot_index) triplet is already
+    // taken. Try next slot_index value in next iteration.
+  }
+
+  if (!booking) {
+    if (insertError?.code === "23505") {
+      // All slot_index values 1..maxBookingsPerSlot were taken — capacity
+      // fully exhausted for this (event_type_id, start_at) pair.
+      // CAP-07: distinguish capacity=1 (SLOT_TAKEN) vs capacity>1 (SLOT_CAPACITY_REACHED)
+      // so the booker UI can render appropriate copy and the client can switch on code.
+      const code = maxBookingsPerSlot === 1 ? "SLOT_TAKEN" : "SLOT_CAPACITY_REACHED";
+      const message =
+        maxBookingsPerSlot === 1
+          ? "That time was just booked. Pick a new time below."
+          : "That time is fully booked. Please choose a different time.";
       return NextResponse.json(
-        {
-          error: "That time was just booked. Pick a new time below.",
-          code: "SLOT_TAKEN",
-        },
+        { error: message, code },
         { status: 409, headers: NO_STORE },
       );
     }
+    // Non-capacity error (insertError.code !== "23505" or null unexpectedly)
     console.error("[/api/bookings] insert error:", insertError);
     return NextResponse.json(
       { error: "Booking failed. Please try again.", code: "INTERNAL" },
