@@ -51,6 +51,9 @@ export type EventTypeRow = {
   // Phase 8 Plan 08-05: per-event-type location/address. Surfaced in the
   // reminder email body when accounts.reminder_include_location is true.
   location: string | null;
+  // Phase 11 Plan 11-07: CAP-03 + CAP-08 capacity columns.
+  max_bookings_per_slot: number;
+  show_remaining_capacity: boolean;
 };
 
 export type EventTypeListItem = Pick<

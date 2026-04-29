@@ -15,7 +15,7 @@ export default async function EditEventTypePage({
   const { data, error } = await supabase
     .from("event_types")
     .select(
-      "id, account_id, slug, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, min_notice_minutes, max_advance_days, custom_questions, is_active, created_at, deleted_at, location",
+      "id, account_id, slug, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, min_notice_minutes, max_advance_days, custom_questions, is_active, created_at, deleted_at, location, max_bookings_per_slot, show_remaining_capacity",
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -47,6 +47,10 @@ export default async function EditEventTypePage({
           is_active: eventType.is_active,
           custom_questions: eventType.custom_questions ?? [],
           location: eventType.location ?? "",
+          // Phase 11 Plan 11-07: capacity defaults from DB (fallback to safe v1.0 values).
+          max_bookings_per_slot: eventType.max_bookings_per_slot ?? 1,
+          show_remaining_capacity: eventType.show_remaining_capacity ?? false,
+          confirmCapacityDecrease: false,
         }}
       />
     </div>

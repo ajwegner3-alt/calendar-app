@@ -79,6 +79,19 @@ export const eventTypeSchema = z.object({
     .max(500, "Location must be 500 characters or fewer.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  // Phase 11 Plan 11-07: CAP-03 capacity input + CAP-08 show-remaining toggle.
+  // z.coerce mirrors existing pattern (HTML form values arrive as strings).
+  // DB has no upper bound (CHECK >= 1 only); Zod enforces the 50-cap ceiling.
+  max_bookings_per_slot: z.coerce
+    .number()
+    .int("Capacity must be a whole number.")
+    .min(1, "Capacity must be at least 1.")
+    .max(50, "Capacity cannot exceed 50.")
+    .default(1),
+  show_remaining_capacity: z.coerce.boolean().default(false),
+  // CAP-09: bypass flag — travels with the re-submission when the modal confirms
+  // a capacity decrease over existing confirmed bookings. Never stored to DB.
+  confirmCapacityDecrease: z.coerce.boolean().optional().default(false),
 });
 
 export type EventTypeInput = z.infer<typeof eventTypeSchema>;
