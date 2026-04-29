@@ -3,10 +3,11 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
 import {
-  renderEmailLogoHeader,
+  renderEmailBrandedHeader,
   renderEmailFooter,
   renderBrandedButton,
   brandedHeadingStyle,
+  stripHtml,
 } from "./branding-blocks";
 
 /**
@@ -65,6 +66,8 @@ interface ReminderAccountRecord {
   name: string;
   logo_url: string | null;
   brand_primary: string | null;
+  /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
+  background_color?: string | null;
   owner_email?: string | null;
   /** Phase 8 toggles — Plan 08-01 added these as boolean NOT NULL DEFAULT true. */
   reminder_include_custom_answers: boolean;
@@ -106,13 +109,14 @@ export async function sendReminderBooker(args: SendReminderBookerArgs): Promise<
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   // Build the body in segments so toggle-gated blocks can be omitted entirely
   // (omission, not empty-render — keeps the email clean when toggles are off).
   const segments: string[] = [];
 
-  segments.push(renderEmailLogoHeader(branding));
+  segments.push(renderEmailBrandedHeader(branding));
 
   segments.push(
     `<h1 style="${brandedHeadingStyle(account.brand_primary)}">See you tomorrow</h1>`,
@@ -212,22 +216,4 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
-/** Crude HTML→text for the multipart text alternative. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<br\s*\/?>(?!\n)/gi, "\n")
-    .replace(/<\/(p|div|tr|h[1-6])>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
+// stripHtml is now imported from branding-blocks (shared across all booker senders, Plan 12-06)

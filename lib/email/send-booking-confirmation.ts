@@ -4,10 +4,11 @@ import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
 import {
-  renderEmailLogoHeader,
+  renderEmailBrandedHeader,
   renderEmailFooter,
   renderBrandedButton,
   brandedHeadingStyle,
+  stripHtml,
 } from "./branding-blocks";
 
 interface BookingRecord {
@@ -32,6 +33,8 @@ interface AccountRecord {
   slug: string;
   logo_url: string | null;
   brand_primary: string | null;
+  /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
+  background_color?: string | null;
 }
 
 export interface SendBookingConfirmationArgs {
@@ -81,13 +84,14 @@ export async function sendBookingConfirmation(
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   // Table-based layout for broad email-client compatibility.
   // All styles inline (Gmail/Outlook/Apple Mail lock from Phase 5 STATE).
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  ${renderEmailLogoHeader(branding)}
+  ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">You're booked.</h1>
   <p style="margin: 0 0 8px 0;">Hi ${escapeHtml(booking.booker_name)},</p>
   <p style="margin: 0 0 24px 0;">Your appointment with <strong>${escapeHtml(account.name)}</strong> is confirmed.</p>
@@ -151,6 +155,7 @@ export async function sendBookingConfirmation(
     to:      booking.booker_email,
     subject: `Booking confirmed: ${eventType.name} on ${subjectDate}`,
     html,
+    text:    stripHtml(html), // EMAIL-10: plain-text alternative for spam-score + accessibility
     attachments: [
       {
         filename:    "invite.ics",

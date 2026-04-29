@@ -3,7 +3,7 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
 import {
-  renderEmailLogoHeader,
+  renderEmailBrandedHeader,
   renderEmailFooter,
   brandedHeadingStyle,
 } from "./branding-blocks";
@@ -28,6 +28,8 @@ interface AccountRecord {
   owner_email: string | null;
   logo_url: string | null;
   brand_primary: string | null;
+  /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
+  background_color?: string | null;
 }
 
 export interface SendOwnerNotificationArgs {
@@ -73,6 +75,7 @@ export async function sendOwnerNotification(
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   // Build custom-question answers rows (only rendered if answers exist)
@@ -95,7 +98,7 @@ ${answerEntries
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  ${renderEmailLogoHeader(branding)}
+  ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">New booking</h1>
 
   <table style="border-collapse: collapse; width: 100%;">

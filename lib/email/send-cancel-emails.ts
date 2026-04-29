@@ -5,10 +5,11 @@ import { ICalCalendarMethod } from "ical-generator";
 import { sendEmail } from "@/lib/email-sender";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
 import {
-  renderEmailLogoHeader,
+  renderEmailBrandedHeader,
   renderEmailFooter,
   renderBrandedButton,
   brandedHeadingStyle,
+  stripHtml,
 } from "./branding-blocks";
 
 interface BookingRecord {
@@ -36,6 +37,8 @@ interface AccountRecord {
   owner_email: string | null;
   logo_url: string | null;
   brand_primary: string | null;
+  /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
+  background_color?: string | null;
 }
 
 export interface SendCancelEmailsArgs {
@@ -94,6 +97,7 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   // Apology copy when owner cancelled (CONTEXT lock); confirmation copy when booker cancelled
@@ -116,7 +120,7 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  ${renderEmailLogoHeader(branding)}
+  ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">Appointment cancelled</h1>
   ${intro}
   ${reasonBlock}
@@ -168,6 +172,7 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
     to:      booking.booker_email,
     subject: `Booking cancelled: ${eventType.name}`,
     html,
+    text:    stripHtml(html), // EMAIL-10 extended: plain-text alt on booker cancel (Plan 12-06)
     attachments: [
       {
         filename:    "cancelled.ics",
@@ -196,6 +201,7 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
+    backgroundColor: account.background_color ?? null,
   };
 
   // Booker-cancel reason callout — only when actor=booker AND reason is non-empty
@@ -215,7 +221,7 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
 
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
-  ${renderEmailLogoHeader(branding)}
+  ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">Booking cancelled</h1>
   <p style="margin: 0 0 24px 0;">${triggeredBy}</p>
   ${reasonBlock}
