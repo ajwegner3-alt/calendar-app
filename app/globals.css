@@ -143,6 +143,13 @@
   --color-sidebar-accent-foreground: #0F172A;
   --color-sidebar-border: #E2E8F0;
   --color-sidebar-ring: #0A2540;
+
+  /* Phase 12: Cruip Simple Light baseline */
+  --background: oklch(0.985 0.002 247);  /* approx gray-50 */
+  --foreground: oklch(0.2 0.02 247);     /* approx gray-900 */
+
+  /* Phase 12: mobile sidebar = full-screen drawer (CONTEXT.md lock) */
+  --sidebar-width-mobile: 100vw;
 }
 
 /* Date-override markers on the availability calendar (Phase 4 Plan 04-05) */
