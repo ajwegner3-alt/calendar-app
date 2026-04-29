@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12.5-01 complete. chrome_tint_intensity enum + column live on prod; ChromeTintIntensity type + chromeTintToCss helper with locked % table; 240 Vitest tests passing + 26 skipped (up from 225 + 15 new tests). Phase 12.5 Wave 1 done; Wave 2 (12.5-02/03/04) ready to execute.
+**Last updated:** 2026-04-29 — Plan 12.5-02 complete. FloatingHeaderPill deleted; sidebar + page bg tinted per-account via color-mix(in oklch) inline styles; WCAG text flip via --sidebar-foreground CSS var override; plain SidebarTrigger hamburger (md:hidden) in layout; 240 tests passing + 26 skipped.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 12 — Branded UI Overhaul (Phase 11 code-complete + verified 2026-04-29; 4 manual checks deferred to milestone-end QA). Plan 12-04a complete; 12-04b (DayDetailSheet drawer) next.
+**Current focus:** v1.1 Phase 12.5 — Per-Account Chrome Theming (Wave 2 in progress). 12.5-02 done; 12.5-03 + 12.5-04 may be complete from parallel execution.
 
 **Mode:** yolo
 **Depth:** standard
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 12.5 — Per-Account Chrome Theming (Wave 1 complete; Wave 2 next).
-**Last completed plan:** 12.5-01 (foundation) — 2026-04-29.
-**Status:** Phase 12.5 Wave 1 COMPLETE (12.5-01 done). Wave 2 plans (12.5-02, 12.5-03, 12.5-04) ready to execute.
-**Last activity:** 2026-04-29 — Plan 12.5-01 complete. chrome_tint_intensity enum + column on prod; ChromeTintIntensity type + chromeTintToCss helper; 15 new tests; 240 passing + 26 skipped.
+**Last completed plan:** 12.5-02 (dashboard-chrome) — 2026-04-29.
+**Status:** Phase 12.5 Wave 2 in progress — 12.5-02 COMPLETE; 12.5-03 + 12.5-04 running in parallel.
+**Last activity:** 2026-04-29 — Plan 12.5-02 complete. FloatingHeaderPill deleted; sidebar + page bg tinting live; WCAG --sidebar-foreground override; 240 tests passing + 26 skipped.
 
-**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 Wave 1 COMPLETE (12.5-01 done); Wave 2 (12.5-02/03/04) next (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 Wave 1 code-complete 2026-04-29; milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 Wave 1 COMPLETE (12.5-01 done); Phase 12.5 Wave 2 — 12.5-02 done; 12.5-03 + 12.5-04 parallel (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 Wave 1 code-complete 2026-04-29; milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -66,7 +66,7 @@ Phase 12 [✓] Branded UI Overhaul (6 Surfaces)        (COMPLETE 2026-04-29 — 
   12-06 [✓] email-restyle                            (Complete 2026-04-29 — renderEmailBrandedHeader solid-color band + NSI mark PNG + plain-text alts on booker senders; all 6 senders migrated; EMAIL-09/10/11/12 closed; 191 tests + 26 skipped)
 Phase 12.5 [~] Per-Account Chrome Theming            (Wave 1 done 2026-04-29; Wave 2 in progress)
   12.5-01 [✓] foundation                             (Complete 2026-04-29 — chrome_tint_intensity enum + col; ChromeTintIntensity + chromeTintToCss; 240 tests + 26 skipped)
-  12.5-02 [ ] dashboard-chrome                       (Not started)
+  12.5-02 [✓] dashboard-chrome                       (Complete 2026-04-29 — FloatingHeaderPill deleted; sidebar + page tinted via color-mix inline styles; WCAG --sidebar-foreground var override; plain SidebarTrigger hamburger md:hidden; 240 tests + 26 skipped)
   12.5-03 [ ] branding-editor                        (Not started)
   12.5-04 [ ] email-tokens                           (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
@@ -164,6 +164,9 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **chrome_tint_intensity enum column live on prod** (Plan 12.5-01, 2026-04-29) — `accounts.chrome_tint_intensity` enum ('none'|'subtle'|'full') NOT NULL DEFAULT 'subtle'. All existing accounts defaulted to 'subtle'. BRAND-08 satisfied. Migration: 20260429180000_phase12_5_chrome_tint_intensity.sql.
 - **ChromeTintIntensity type + chromeTintToCss helper locked** (Plan 12.5-01, 2026-04-29) — `ChromeTintIntensity = "none" | "subtle" | "full"` exported from `lib/branding/types.ts`. `Branding.chromeTintIntensity` field added; `brandingFromRow` + `getBrandingForAccount` read it with 'subtle' fallback. `chromeTintToCss(color, intensity, surface)` in `lib/branding/chrome-tint.ts`: returns `color-mix(in oklch, ${color} N%, white)` with LOCKED table — sidebar full=14% subtle=6%, page full=8% subtle=3%. Returns null for intensity='none' or color=null (consumer uses CSS class default). Cards always white. Wave 2 consumers must import from this helper, never fork the table.
 - **chromeTintTextColor conservative WCAG proxy** (Plan 12.5-01, 2026-04-29) — `chromeTintTextColor(color, intensity, surface)` calls `pickTextColor(originalColor)` (not the tinted color). Conservative: a dark navy brand color returns white text even though the tinted surface may be light. Documented trade-off; acceptable for v1.1. Wave 2 can refine if needed.
+- **FloatingHeaderPill deleted; plain SidebarTrigger hamburger pattern** (Plan 12.5-02, 2026-04-29) — `app/(shell)/_components/floating-header-pill.tsx` deleted (single importer confirmed). Replaced by `<div className="fixed top-3 left-3 z-20 md:hidden"><SidebarTrigger /></div>` in shell layout. `main` padding reduced from `pt-20 md:pt-28` → `pt-6 md:pt-8`. accounts SELECT trimmed (removed name + logo_url).
+- **Sidebar chrome tinting via --sidebar-foreground CSS var override** (Plan 12.5-02, 2026-04-29) — `AppSidebar` now accepts `backgroundColor: string | null` + `chromeTintIntensity: ChromeTintIntensity`. `sidebarBgTint` applied to `<Sidebar>` root via `style={{ backgroundColor: ... }}`. WCAG text flip: `--sidebar-foreground` CSS variable overridden on the Sidebar root via `style` cast; propagates to all nav buttons via shadcn CSS var chain. No per-item inline styles needed.
+- **Page bg tinting on SidebarInset** (Plan 12.5-02, 2026-04-29) — `pageBgTint = chromeTintToCss(branding.backgroundColor, branding.chromeTintIntensity, "page")` computed in shell layout; applied via `style={{ backgroundColor: pageBgTint ?? undefined }}` on `<SidebarInset>`. When null, `bg-background` (gray-50) applies — Phase 12 regression-safe baseline preserved.
 - **pickTextColor / contrast.ts no changes needed** (Plan 12.5-01, 2026-04-29) — Already extracted to `lib/branding/contrast.ts` in Plan 12-01. BRAND-09 DRY requirement satisfied. chrome-tint.ts imports pickTextColor directly. No relocation required.
 - **NSI mark PNG + NSI_MARK_URL live** (Plan 12-06, 2026-04-29) — `public/nsi-mark.png` committed (32x32 solid-navy placeholder; Andrew to swap with brand asset before Phase 13 QA). `NSI_MARK_URL` = `${NEXT_PUBLIC_APP_URL}/nsi-mark.png`; null in test env (NEXT_PUBLIC_APP_URL unset) so no broken-image test assertions.
 - **Live cross-client email QA deferred** (Plan 12-06, 2026-04-29) — Outlook desktop, Apple Mail iOS, Yahoo Mail rendering deferred to Phase 13 QA / v1.2 per CONTEXT.md lock and existing EMAIL-08 / QA-01..06 backlog.
@@ -215,11 +218,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12.5-01 complete. chrome_tint_intensity enum + column on prod; ChromeTintIntensity type + Branding field; chromeTintToCss helper with locked TINT_PCT table; 15 new tests; 240 passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 12.5-02 complete. FloatingHeaderPill deleted; sidebar + page bg tinting live; WCAG --sidebar-foreground CSS var override; plain SidebarTrigger hamburger (md:hidden); 240 passing + 26 skipped.
 
-**Stopped at:** Plan 12.5-01 complete. Phase 12.5 Wave 1 COMPLETE. SUMMARY.md created. STATE.md updated.
+**Stopped at:** Plan 12.5-02 complete. SUMMARY.md created. STATE.md updated. 12.5-03 + 12.5-04 running in parallel.
 
-**Resume:** Execute Phase 12.5 Wave 2 (plans 12.5-02 dashboard-chrome, 12.5-03 branding-editor, 12.5-04 email-tokens). Foundation is live on prod. All Wave 2 plans can safely import from lib/branding/chrome-tint.ts.
+**Resume:** Verify 12.5-03 (branding-editor) and 12.5-04 (email-tokens) completion. If both done, proceed to Phase 13 (Manual QA + Andrew Ship Sign-Off).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
