@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12-05 complete. Public surfaces restyle: /[account] hero card (ListingHero), /[account]/[event-slug] py-12 md:py-20 + max-w-3xl booking card, /embed single-circle gradient (Pitfall 10 safe), EmbedCodeDialog sm:max-w-2xl. All public callers pass backgroundColor/backgroundShade to BrandedPage. UI-09/10/11/13 satisfied.
+**Last updated:** 2026-04-29 — Plan 12-06 complete. Email restyle: all 6 transactional senders migrated to renderEmailBrandedHeader (solid-color header band, CONTEXT lock); NSI mark PNG committed; plain-text alts on all booker-facing emails; EMAIL-09/10/11/12 closed at code level. 191 Vitest tests passing + 26 skipped (baseline 173 + 18 new email tests).
 
 ## Project Reference
 
@@ -18,11 +18,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
 **Phase:** Phase 12 — Branded UI Overhaul.
-**Last completed plan:** 12-05 (public-surfaces-restyle) — 2026-04-29.
-**Status:** Phase 12 IN PROGRESS (Wave 1 + Wave 2 complete; 12-05 complete; 12-06 emails remaining). Plans 12-01, 12-02, 12-03, 12-05 done.
-**Last activity:** 2026-04-29 — Plan 12-05 complete. ListingHero, booking-shell Cruip restyle, embed single-circle gradient, EmbedCodeDialog sm:max-w-2xl. TSC clean. 178 tests passing + 26 skipped (pre-existing failures in bookings-api/rate-limit from concurrent 12-06 email wave).
+**Last completed plan:** 12-06 (email-restyle) — 2026-04-29.
+**Status:** Phase 12 COMPLETE (all 5 plans done: 12-01, 12-02, 12-03, 12-05, 12-06). Phase 13 (Manual QA) ready to start.
+**Last activity:** 2026-04-29 — Plan 12-06 complete. All 6 transactional email senders migrated to renderEmailBrandedHeader; NSI mark PNG shipped; plain-text alts on booker-facing senders; 18 new tests; EMAIL-09/10/11/12 closed at code level.
 
-**Progress (across both v1.0 and v1.1):** [███████████░] 11 / 13 phases code-complete; Phase 12 in progress (12-01 ✓, 12-02 ✓, 12-03 ✓, 12-05 ✓ done; 12-06 emails remaining) (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29 — milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [████████████░] 12 / 13 phases code-complete; Phase 12 complete (5/5 plans done); Phase 13 (Manual QA) next (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29 — milestone-end QA pending)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -56,11 +56,12 @@ Phase 11 [✓] Booking Capacity + Double-Booking Fix   (COMPLETE 2026-04-29 — 
   11-06 [✓] pg-driver-race-test                       (Complete 2026-04-29 — CAP-06 pg-driver race test; postgres.js devDep; pg-direct helper; skip-guarded; 148 tests + 26 skipped)
   11-07 [✓] event-type-form-capacity                  (Complete 2026-04-29 — CAP-03 input + CAP-08 toggle + CAP-09 modal; in-JS group-by; fail-closed; 148 tests + 26 skipped)
   11-08 [✓] booker-ui-capacity                        (Complete 2026-04-29 — CAP-08 'X spots left' badge + CAP-07 409 branching on body.code; RaceLoserBanner message prop; 148 tests + 26 skipped)
-Phase 12 [~] Branded UI Overhaul (5 Surfaces)        (In Progress — 12-01, 12-02, 12-03, 12-05 done; 12-06 remaining)
+Phase 12 [✓] Branded UI Overhaul (5 Surfaces)        (COMPLETE 2026-04-29 — all 5 plans done)
   12-01 [✓] branding-tokens-foundation               (Complete 2026-04-29 — background_color + background_shade columns; GradientBackdrop/NSIGradientBackdrop primitives; BrandedPage extended; /app/branding editor wired; 173 tests + 26 skipped)
   12-02 [✓] auth-pages-restyle                       (Complete 2026-04-29 — AuthHero component; 6 auth pages (login/signup/forgot-password/verify-email/reset-password/auth-error) Cruip split-panel; NSIGradientBackdrop in hero; all auth logic preserved; UI-12 satisfied)
   12-03 [✓] dashboard-chrome                         (Complete 2026-04-29 — Inter font + gray-50 + Cruip glass header pill + GradientBackdrop in shell layout + flat sidebar IA (Home/Event Types/Availability/Bookings/Branding/Settings accordion); 184 tests + 26 skipped)
   12-05 [✓] public-surfaces-restyle                  (Complete 2026-04-29 — ListingHero + /[account] hero card; BookingShell py-12 md:py-20 + max-w-3xl card; embed single-circle gradient Pitfall-10-safe; EmbedCodeDialog sm:max-w-2xl; all public BrandedPage callers pass backgroundColor/backgroundShade; UI-09/10/11/13 satisfied)
+  12-06 [✓] email-restyle                            (Complete 2026-04-29 — renderEmailBrandedHeader solid-color band + NSI mark PNG + plain-text alts on booker senders; all 6 senders migrated; EMAIL-09/10/11/12 closed; 191 tests + 26 skipped)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
 
@@ -149,6 +150,12 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **3-step /onboarding wizard shipped** (Plan 10-06, 2026-04-28) — `/onboarding/step-1-account` (name+slug), `/onboarding/step-2-timezone` (auto-detect), `/onboarding/step-3-event-type` (required, pre-filled "Consultation"/30min). Step 3 atomically: INSERT 5 Mon-Fri 9-5 availability_rules + INSERT event_types + UPDATE accounts onboarding_complete=true. Welcome email fire-and-forget after. /app now redirects to /onboarding when onboarding_complete=false.
 - **slug_is_taken() SECURITY DEFINER RPC** (Plan 10-06, 2026-04-28) — Bypasses RLS (wizard user can only SELECT own row). Used by /api/check-slug route handler (auth-gated, reserved short-circuit, fail-open on DB error). 300ms debounced in step-1 account-form.tsx.
 - **sendWelcomeEmail uses accounts.name column** (Plan 10-06, 2026-04-28) — Interface `{ owner_email, name, slug }` matches 10-03 schema deviation. UI label is "Display Name" / "Business name"; DB column is `name`. 148 tests passing.
+- **renderEmailBrandedHeader solid-color-only pattern** (Plan 12-06, 2026-04-29) — New canonical header for all 6 transactional senders. CONTEXT lock: no VML, no CSS gradients. bgcolor= table attribute (Outlook-safe). Color resolution: `branding.backgroundColor ?? branding.brand_primary ?? DEFAULT_BRAND_PRIMARY (#0A2540)`. Auto-contrast text via pickTextColor (WCAG). Logo img when logo_url set; account-name span fallback when null.
+- **EmailBranding.backgroundColor field** (Plan 12-06, 2026-04-29) — All 6 AccountRecord interfaces now have `background_color?: string | null`. Callers pass `backgroundColor: account.background_color ?? null` in branding object. Aligns with Plan 12-01 Branding type.
+- **Plain-text alts on all booker-facing senders** (Plan 12-06, 2026-04-29) — `text: stripHtml(html)` in sendEmail() options for confirmation, cancel-booker, reschedule-booker. Reminder had it since Phase 8. Owner-facing senders skip plain-text alt per CONTEXT discretion. EMAIL-10 extended beyond minimum.
+- **stripHtml shared from branding-blocks.ts** (Plan 12-06, 2026-04-29) — Moved from private function in send-reminder-booker.ts to shared export in branding-blocks.ts. All 6 booker-facing senders import from there.
+- **NSI mark PNG + NSI_MARK_URL live** (Plan 12-06, 2026-04-29) — `public/nsi-mark.png` committed (32x32 solid-navy placeholder; Andrew to swap with brand asset before Phase 13 QA). `NSI_MARK_URL` = `${NEXT_PUBLIC_APP_URL}/nsi-mark.png`; null in test env (NEXT_PUBLIC_APP_URL unset) so no broken-image test assertions.
+- **Live cross-client email QA deferred** (Plan 12-06, 2026-04-29) — Outlook desktop, Apple Mail iOS, Yahoo Mail rendering deferred to Phase 13 QA / v1.2 per CONTEXT.md lock and existing EMAIL-08 / QA-01..06 backlog.
 
 ### Pending Todos
 
@@ -162,9 +169,9 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 - **Phase 8 dashboard 9-item human walkthrough** — partially absorbed by Phase 12 visual sweep + Phase 13 multi-tenant walkthrough; remainder stays in v1.2 backlog.
 - **Cron-fired-in-production functional proof** — v1.2 backlog (Phase 13 does not include).
 - **Apple Mail live device verification** — v1.2 backlog (Phase 13 does not include).
-- **Per-template branding 6-row smoke** — folds into Phase 12 (EMAIL-12).
-- **Plain-text alternative on confirmation email** — folds into Phase 12 (EMAIL-10).
-- **NSI mark image in email footer** — folds into Phase 12 (EMAIL-11).
+- **Per-template branding 6-row smoke** — RESOLVED in Plan 12-06 (2026-04-29). EMAIL-12 closed at code level; live inbox verification deferred to Phase 13 QA.
+- **Plain-text alternative on confirmation email** — RESOLVED in Plan 12-06 (2026-04-29). EMAIL-10 extended to booker cancel + reschedule as well.
+- **NSI mark image in email footer** — RESOLVED in Plan 12-06 (2026-04-29). Placeholder PNG committed at public/nsi-mark.png; Andrew to swap brand asset before Phase 13.
 - **`RESERVED_SLUGS` deduplication** — RESOLVED in Plan 10-01 (2026-04-28). `lib/reserved-slugs.ts` is the single source of truth.
 - **`/auth/callback` 404** — RESOLVED in Plan 10-02 (2026-04-28). `/auth/confirm` Route Handler live with verifyOtp pattern. v1.0 BLOCKER closed.
 - **`react-hooks/incompatible-library` warning** on `event-type-form.tsx:99` — v1.2 tech debt.
@@ -188,13 +195,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12-05 complete. Public surfaces restyle: ListingHero, BookingShell Cruip rhythm, embed single-circle gradient, EmbedCodeDialog sm:max-w-2xl. 178+ tests passing + 26 skipped.
+**Last session:** 2026-04-29 — Plan 12-06 complete. Email restyle: all 6 senders migrated to renderEmailBrandedHeader; NSI mark PNG shipped; EMAIL-09/10/11/12 closed at code level. Phase 12 complete. 191 tests passing + 26 skipped.
 
-**Stopped at:** Plan 12-05 (public-surfaces-restyle) complete. SUMMARY.md created. STATE.md updated.
+**Stopped at:** Plan 12-06 (email-restyle) complete. Phase 12 fully complete. SUMMARY.md created. STATE.md updated.
 
-**Resume:** Execute Phase 12 Plan 12-06 (email branding). All branding tokens (background_color/backgroundShade) now in AccountSummary via loadEventTypeForBookingPage — email plan can read these for solid-color blocks (not gradient, different rendering path).
-
-**Resume:** Phase 12 remaining: 12-04a (home-tab-server-and-calendar), and confirm 12-05/12-06 status from git history. Two open architectural decisions: email gradient strategy (solid-only vs VML fallback); minimum-viable Playwright suite scope — address in respective plans.
+**Resume:** Execute Phase 13 (Manual QA + Andrew Ship Sign-Off). Phase 12 visual smoke included. Email 6-row inbox verification needed. NSI mark PNG swap needed before Phase 13 sign-off.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
