@@ -1,5 +1,38 @@
 # Project Milestones: Calendar App (NSI Booking Tool)
 
+## v1.1 Multi-User + Capacity + Branded UI (Shipped: 2026-04-30)
+
+**Delivered:** Public multi-user signup with email verification + 3-step onboarding wizard + per-event-type booking capacity (race-safe slot_index mechanism replacing v1.0 partial unique index) + Cruip "Simple Light" visual overhaul across all 5 owner-facing and public surfaces with direct per-account color controls (sidebar / page / primary) wired to shadcn `--primary` CSS variable for full dashboard chrome theming.
+
+**Phases completed:** 10-13 (with decimal Phase 12.5 + 12.6 inserted) — 6 phases, 34 plans total.
+
+**Key accomplishments:**
+
+- **Public multi-user signup + onboarding wizard end-to-end shipped** — `/signup` → email verification via `/auth/confirm` (verifyOtp pattern, closes v1.0 BLOCKER) → 3-step wizard (slug + name + timezone + first event type) → working dashboard with the user's own bookable URL. Postgres SECURITY DEFINER trigger atomically creates stub `accounts` row on `auth.users` INSERT; wizard UPDATEs via RLS-scoped Server Action. Forgot-password + reset-password flows close v1.0 `/auth/callback` 404 BLOCKER.
+- **Per-event-type booking capacity with race-safe slot_index mechanism** — `bookings_capacity_slot_idx` ON `(event_type_id, start_at, slot_index) WHERE status='confirmed'` replaces v1.0 `bookings_no_double_book`. CAP-07 distinguishes `SLOT_TAKEN` (cap=1) from `SLOT_CAPACITY_REACHED` (cap>1) for booker UX message branching. CAP-01 root-cause investigation confirmed zero prod duplicate confirmed bookings; rescheduled-status slot reuse documented as accepted structural gap.
+- **Cruip "Simple Light" visual overhaul across 5 surfaces** — dashboard (Inter font + bg-gray-50 + flat sidebar IA + Home tab monthly calendar with day-detail Sheet drawer + 4 row actions), public booking page (`py-12 md:py-20` + `max-w-3xl`), embed widget (single-circle gradient pattern, EmbedCodeDialog `sm:max-w-2xl`), 6 transactional emails (solid-color branded header band + plain-text alts on booker-facing senders + NSI footer mark), and 6 auth pages (Cruip split-panel with NSI hero).
+- **Direct per-account color controls (Phase 12.6 course-correction)** — three independent color pickers (`sidebar_color` / `background_color` / `brand_primary`) with auto-WCAG text contrast on `--sidebar-foreground` + `--primary-foreground` overrides. First wire-up of `brand_primary` to shadcn `--primary` CSS variable (buttons / switches / focus rings now inherit account branding). IntensityPicker REMOVED; MiniPreviewCard rebuilt as 3-color faux-dashboard preview.
+- **RLS cross-tenant matrix extended to N=3 tenants** — 24 new test cases across 8 table×direction combos plus admin-sees-all-3 verification. Plus pg-driver race test (CAP-06) at the postgres.js layer (skip-guarded; runs against prod when `SUPABASE_DIRECT_URL` is set).
+- **Email senders unified on per-account tokens** — header band priority chain `sidebar_color → brand_primary → '#0A2540'`. No separate user-controlled email branding fields. Plain-text alts shipped on confirmation + cancel + reschedule (extends EMAIL-10 minimum). Live cross-client QA (Outlook desktop, Apple Mail iOS, Yahoo) deferred to v1.2.
+- **Gmail SMTP quota-guard shipped** — 200/day cap via `email_send_log` Postgres counter; 80% threshold logs `[GMAIL_SMTP_QUOTA_APPROACHING]`; fail-closed at cap; bookings/reminders bypass. Resend migration documented as v1.2 backlog (~$10/mo for 5k emails).
+
+**Stats:**
+
+- 239 files changed across the v1.1 phase span
+- 33,817 lines inserted; 2,153 lines deleted
+- 29,450 LOC TypeScript/TSX in the runtime tree at sign-off
+- 6 phases, 34 plans, ~95 tasks (estimated), 135 commits
+- 3 days from kickoff (2026-04-27) to sign-off (2026-04-30)
+- 277 passing + 4 skipped automated tests (26 test files) at sign-off
+
+**Git range:** `4ae2e92` (first v1.1 commit) → `e3119bc` (`docs(13): close phase + ship v1.1 milestone — Andrew marathon waiver`)
+
+**Sign-off:** Andrew verbatim 2026-04-30 — *"consider everything good. close out the milestone."*
+
+**What's next:** v1.2 — execute the deferred Phase 13 marathon (QA-09..QA-13) + per-phase manual checks accumulated through Phases 10/11/12/12.5/12.6 (~21 items per `MILESTONE_V1_1_DEFERRED_CHECKS.md`) + Resend migration + Vercel Pro hourly cron flip + DROP `accounts.chrome_tint_intensity` + remove `chromeTintToCss` compat export + final NSI mark image swap + live cross-client email QA. See `FUTURE_DIRECTIONS.md` §8 for canonical v1.2 backlog.
+
+---
+
 ## v1.0 MVP (Shipped: 2026-04-27)
 
 **Delivered:** A Calendly-style multi-tenant booking tool with race-safe DB-level slot uniqueness, DST-correct slot computation, branded embeddable widget with postMessage height protocol, and end-to-end booking lifecycle (book / confirm / cancel / reschedule / 24h reminder) wired to Andrew's NSI account on Vercel + Supabase.

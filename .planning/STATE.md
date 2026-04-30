@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-30 — **v1.1 SHIPPED.** Phase 13 closed via Andrew marathon waiver: verbatim "consider everything good. close out the milestone." Plans 13-02 + 13-03 closed-by-waiver (no marathon executed); QA-09..QA-13 = DEFERRED-V1.2 (5 items); QA-14 + QA-15 = Complete. FUTURE_DIRECTIONS.md §8 appended with marathon waiver record + carry-overs. Plan 13-01 pre-flight artifacts (Test User 3, capacity-test event, 3 branding profiles) KEPT on prod for v1.2 marathon. Next: `/gsd:complete-milestone` to archive v1.1.
+**Last updated:** 2026-04-30 — **v1.1 MILESTONE ARCHIVED.** ROADMAP.md collapsed to one-line entry; v1.1 details in `.planning/milestones/v1.1-ROADMAP.md`. REQUIREMENTS.md deleted (fresh one will be created by `/gsd:new-milestone` for v1.2). REQUIREMENTS archive at `.planning/milestones/v1.1-REQUIREMENTS.md`. PROJECT.md fully evolved (v1.1 reqs moved to Validated; Current Milestone now reads "v1.2 (not yet planned)"; Key Decisions outcomes marked ✓ Good / ⚠ Revisit). MILESTONES.md prepended with v1.1 entry. Git tag `v1.1` will land in close commit. Next: `/gsd:new-milestone` to scope v1.2.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 SHIPPED 2026-04-30. Phase 13 closed via marathon waiver. Next milestone: v1.2 (carry over 5 marathon items + per-phase manual deferrals + Resend migration + Vercel Pro hourly cron + Phase 12.5 chrome_tint_intensity column DROP + chromeTintToCss compat removal + final NSI mark swap + live cross-client email QA).
+**Current focus:** v1.2 not yet planned. Run `/gsd:new-milestone` to scope. Candidate carry-over scope captured in `FUTURE_DIRECTIONS.md` §8 + `MILESTONE_V1_1_DEFERRED_CHECKS.md`.
 
 **Mode:** yolo
 **Depth:** standard
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 ## Current Position
 
-**Milestone:** v1.1 SHIPPED 2026-04-30 (started 2026-04-27).
-**Phase:** Phase 13 CLOSED 2026-04-30 (marathon waived).
-**Last completed plan:** 13-03 (future-directions-and-sign-off; closed by Andrew marathon waiver) — 2026-04-30. Plan 13-02 sibling: closed-by-waiver same date.
-**Status:** v1.1 milestone COMPLETE. Ready for `/gsd:complete-milestone` archive + v1.2 kickoff.
-**Last activity:** 2026-04-30 — Andrew verbatim "consider everything good. close out the milestone." Phase 13 closed via marathon waiver: 13-CHECKLIST sign-off populated, FUTURE_DIRECTIONS §8 appended, ROADMAP + REQUIREMENTS marked, 13-02 + 13-03 SUMMARY files written, all changes bundled in close-out commit.
+**Milestone:** v1.1 SHIPPED 2026-04-30 (started 2026-04-27); ARCHIVED 2026-04-30. Awaiting v1.2 kickoff.
+**Phase:** No active phase. Last completed: Phase 13 CLOSED 2026-04-30 (marathon waived).
+**Last completed plan:** 13-03 (future-directions-and-sign-off; closed by Andrew marathon waiver) — 2026-04-30.
+**Status:** Ready for `/gsd:new-milestone` to scope v1.2.
+**Last activity:** 2026-04-30 — `/gsd:complete-milestone v1.1` executed. ROADMAP archived to `milestones/v1.1-ROADMAP.md`; REQUIREMENTS archived to `milestones/v1.1-REQUIREMENTS.md`; PROJECT.md evolved (v1.1 reqs → Validated; Key Decisions outcomes recorded); MILESTONES.md prepended; git tag `v1.1` created.
 
 **Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 12.6 COMPLETE (all 3 plans done — 12.6-01/02/03); Phase 13 pending milestone-end QA (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29; Phase 12.6 code-complete 2026-04-30)
 
