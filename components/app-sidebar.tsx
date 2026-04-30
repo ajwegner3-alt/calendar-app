@@ -26,8 +26,6 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import type { ChromeTintIntensity } from "@/lib/branding/types";
-import { chromeTintToCss, chromeTintTextColor } from "@/lib/branding/chrome-tint";
 
 /**
  * Sidebar IA — Phase 12 Plan 03 flat list (UI-05):
@@ -37,7 +35,8 @@ import { chromeTintToCss, chromeTintTextColor } from "@/lib/branding/chrome-tint
  * Defaults open when pathname.startsWith('/app/settings').
  * Mobile: full-screen drawer via --sidebar-width-mobile: 100vw (globals.css).
  *
- * Phase 12.5: receives backgroundColor + chromeTintIntensity to tint sidebar chrome.
+ * Phase 12.6: receives sidebarColor + sidebarTextColor props (direct hex from
+ * resolveChromeColors in shell layout). Replaces Phase 12.5 color-mix() approach.
  */
 
 const TOP_ITEMS = [
@@ -50,29 +49,25 @@ const TOP_ITEMS = [
 
 interface AppSidebarProps {
   email: string;
-  backgroundColor: string | null;
-  chromeTintIntensity: ChromeTintIntensity;
+  sidebarColor: string | null;
+  sidebarTextColor: "#ffffff" | "#000000" | null;
 }
 
-export function AppSidebar({ email, backgroundColor, chromeTintIntensity }: AppSidebarProps) {
+export function AppSidebar({ email, sidebarColor, sidebarTextColor }: AppSidebarProps) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/app/settings"),
   );
 
-  // Phase 12.5: derive sidebar tint values from brand color + intensity.
-  // chromeTintToCss returns null when intensity='none' or no color — ?? undefined
-  // removes the inline style and lets the sidebar's CSS token (--sidebar) apply.
-  const sidebarBgTint = chromeTintToCss(backgroundColor, chromeTintIntensity, "sidebar");
-  // chromeTintTextColor returns '#000000' or '#ffffff' when tinting is active, else null.
-  // Applied as --sidebar-foreground CSS variable override so all nav text/icons inherit.
-  const sidebarTextColor = chromeTintTextColor(backgroundColor, chromeTintIntensity, "sidebar");
+  // Phase 12.6: direct hex color application — no color-mix().
+  // sidebarColor is the resolved hex from resolveChromeColors() in the shell layout.
+  // null = use shadcn --sidebar default via CSS class (regression-safe).
 
   return (
     <Sidebar
       collapsible="icon"
       style={{
-        backgroundColor: sidebarBgTint ?? undefined,
+        backgroundColor: sidebarColor ?? undefined,
         ...(sidebarTextColor
           ? ({ "--sidebar-foreground": sidebarTextColor } as React.CSSProperties)
           : {}),
