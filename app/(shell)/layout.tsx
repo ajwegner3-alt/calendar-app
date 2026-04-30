@@ -1,3 +1,4 @@
+import { BackgroundGlow } from "@/app/_components/background-glow";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -76,6 +77,7 @@ export default async function ShellLayout({
             className="relative overflow-hidden bg-background"
             style={{ backgroundColor: chrome.pageColor ?? undefined }}
           >
+            <BackgroundGlow />
             <GradientBackdrop color={branding.backgroundColor} shade={branding.backgroundShade} />
             {/* Phase 12.6: plain sidebar trigger replacing FloatingHeaderPill (UI-16).
                 Fixed top-left, z-20, mobile-only. No glass pill — direct color
