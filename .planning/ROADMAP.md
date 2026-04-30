@@ -81,7 +81,7 @@ See [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md) for full phase 
 **Plans:** 1 plan
 
 Plans:
-- [ ] 14-01: Font loading + globals.css CSS token update
+- [x] 14-01: Font loading + globals.css CSS token update — completed 2026-04-30
 
 ---
 
@@ -269,7 +269,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-9 | v1.0 | 52 / 52 | ✅ Shipped | 2026-04-27 |
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
-| 14 — Typography + CSS Token Foundations | v1.2 | 0 / TBD | Not started | - |
+| 14 — Typography + CSS Token Foundations | v1.2 | 1 / 1 | ✅ Complete | 2026-04-30 |
 | 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 0 / TBD | Not started | - |
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 0 / TBD | Not started | - |
 | 17 — Public Surfaces + Embed | v1.2 | 0 / TBD | Not started | - |
@@ -288,4 +288,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-04-30 — v1.2 roadmap created (Phases 14-21). Run `/gsd:plan-phase 14` to begin.*
+*Roadmap last updated: 2026-04-30 — Phase 14 complete (1/1 plans, all 7 TYPO requirements verified). Next: `/gsd:plan-phase 15`.*

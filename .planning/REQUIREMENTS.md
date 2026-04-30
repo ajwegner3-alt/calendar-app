@@ -28,13 +28,13 @@ Requirements for v1.2 release. Each maps to roadmap phases (see Traceability bel
 
 Foundational changes that enable all subsequent visual work. Additive only — no breaking changes.
 
-- [ ] **TYPO-01**: `app/layout.tsx` loads Inter with weights `["400","500","600","700","800"]` (current load is weight 400 only; the `font-extrabold` "NorthStar" wordmark requires 800)
-- [ ] **TYPO-02**: `app/layout.tsx` loads Roboto Mono via `next/font/google` and exposes `--font-roboto-mono` CSS variable
-- [ ] **TYPO-03**: `globals.css @theme inline` declares `--font-mono: var(--font-roboto-mono), ui-monospace, monospace`
-- [ ] **TYPO-04**: `globals.css` body `letter-spacing: -0.017em` (em-based, replaces Tailwind `tracking-tight` which is rem-based)
-- [ ] **TYPO-05**: `globals.css` `h1, h2, h3 { letter-spacing: -0.037em }`
-- [ ] **TYPO-06**: `globals.css @theme` `--color-primary` set to `#3B82F6` (was `#0A2540` navy)
-- [ ] **TYPO-07**: `globals.css @theme` `--color-sidebar-primary` set to `#3B82F6` (sidebar active-state color)
+- [x] **TYPO-01**: `app/layout.tsx` loads Inter with weights `["400","500","600","700","800"]` (current load is weight 400 only; the `font-extrabold` "NorthStar" wordmark requires 800)
+- [x] **TYPO-02**: `app/layout.tsx` loads Roboto Mono via `next/font/google` and exposes `--font-roboto-mono` CSS variable
+- [x] **TYPO-03**: `globals.css @theme inline` declares `--font-mono: var(--font-roboto-mono), ui-monospace, monospace`
+- [x] **TYPO-04**: `globals.css` body `letter-spacing: -0.017em` (em-based, replaces Tailwind `tracking-tight` which is rem-based)
+- [x] **TYPO-05**: `globals.css` `h1, h2, h3 { letter-spacing: -0.037em }`
+- [x] **TYPO-06**: `globals.css @theme` `--color-primary` set to `#3B82F6` (was `#0A2540` navy)
+- [x] **TYPO-07**: `globals.css @theme` `--color-sidebar-primary` set to `#3B82F6` (sidebar active-state color)
 
 ### BackgroundGlow Component
 
@@ -254,13 +254,13 @@ Populated by roadmapper 2026-04-30.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPO-01 | Phase 14 | Pending |
-| TYPO-02 | Phase 14 | Pending |
-| TYPO-03 | Phase 14 | Pending |
-| TYPO-04 | Phase 14 | Pending |
-| TYPO-05 | Phase 14 | Pending |
-| TYPO-06 | Phase 14 | Pending |
-| TYPO-07 | Phase 14 | Pending |
+| TYPO-01 | Phase 14 | Complete |
+| TYPO-02 | Phase 14 | Complete |
+| TYPO-03 | Phase 14 | Complete |
+| TYPO-04 | Phase 14 | Complete |
+| TYPO-05 | Phase 14 | Complete |
+| TYPO-06 | Phase 14 | Complete |
+| TYPO-07 | Phase 14 | Complete |
 | GLOW-01 | Phase 15 | Pending |
 | GLOW-02 | Phase 15 | Pending |
 | GLOW-03 | Phase 15 | Pending |
