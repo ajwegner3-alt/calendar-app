@@ -250,113 +250,124 @@ Tracked but not in v1.2 roadmap. See `FUTURE_DIRECTIONS.md` §8 for canonical en
 
 ## Traceability
 
-Empty initially. Populated during roadmap creation.
+Populated by roadmapper 2026-04-30.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPO-01 | TBD | Pending |
-| TYPO-02 | TBD | Pending |
-| TYPO-03 | TBD | Pending |
-| TYPO-04 | TBD | Pending |
-| TYPO-05 | TBD | Pending |
-| TYPO-06 | TBD | Pending |
-| TYPO-07 | TBD | Pending |
-| GLOW-01 | TBD | Pending |
-| GLOW-02 | TBD | Pending |
-| GLOW-03 | TBD | Pending |
-| GLOW-04 | TBD | Pending |
-| GLOW-05 | TBD | Pending |
-| HDR-01 | TBD | Pending |
-| HDR-02 | TBD | Pending |
-| HDR-03 | TBD | Pending |
-| HDR-04 | TBD | Pending |
-| HDR-05 | TBD | Pending |
-| HDR-06 | TBD | Pending |
-| HDR-07 | TBD | Pending |
-| HDR-08 | TBD | Pending |
-| OWNER-01 | TBD | Pending |
-| OWNER-02 | TBD | Pending |
-| OWNER-03 | TBD | Pending |
-| OWNER-04 | TBD | Pending |
-| OWNER-05 | TBD | Pending |
-| OWNER-06 | TBD | Pending |
-| OWNER-07 | TBD | Pending |
-| OWNER-08 | TBD | Pending |
-| OWNER-09 | TBD | Pending |
-| OWNER-10 | TBD | Pending |
-| OWNER-11 | TBD | Pending |
-| AUTH-12 | TBD | Pending |
-| AUTH-13 | TBD | Pending |
-| AUTH-14 | TBD | Pending |
-| AUTH-15 | TBD | Pending |
-| AUTH-16 | TBD | Pending |
-| AUTH-17 | TBD | Pending |
-| ONBOARD-10 | TBD | Pending |
-| ONBOARD-11 | TBD | Pending |
-| ONBOARD-12 | TBD | Pending |
-| ONBOARD-13 | TBD | Pending |
-| ONBOARD-14 | TBD | Pending |
-| ONBOARD-15 | TBD | Pending |
-| PUB-01 | TBD | Pending |
-| PUB-02 | TBD | Pending |
-| PUB-03 | TBD | Pending |
-| PUB-04 | TBD | Pending |
-| PUB-05 | TBD | Pending |
-| PUB-06 | TBD | Pending |
-| PUB-07 | TBD | Pending |
-| PUB-08 | TBD | Pending |
-| PUB-09 | TBD | Pending |
-| PUB-10 | TBD | Pending |
-| PUB-11 | TBD | Pending |
-| PUB-12 | TBD | Pending |
-| EMBED-08 | TBD | Pending |
-| EMBED-09 | TBD | Pending |
-| EMBED-10 | TBD | Pending |
-| EMBED-11 | TBD | Pending |
-| BRAND-13 | TBD | Pending |
-| BRAND-14 | TBD | Pending |
-| BRAND-15 | TBD | Pending |
-| BRAND-16 | TBD | Pending |
-| BRAND-17 | TBD | Pending |
-| BRAND-18 | TBD | Pending |
-| BRAND-19 | TBD | Pending |
-| BRAND-20 | TBD | Pending |
-| BRAND-21 | TBD | Pending |
-| EMAIL-15 | TBD | Pending |
-| EMAIL-16 | TBD | Pending |
-| EMAIL-17 | TBD | Pending |
-| EMAIL-18 | TBD | Pending |
-| EMAIL-19 | TBD | Pending |
-| EMAIL-20 | TBD | Pending |
-| CLEAN-01 | TBD | Pending |
-| CLEAN-02 | TBD | Pending |
-| CLEAN-03 | TBD | Pending |
-| CLEAN-04 | TBD | Pending |
-| CLEAN-05 | TBD | Pending |
-| CLEAN-06 | TBD | Pending |
-| CLEAN-07 | TBD | Pending |
-| CLEAN-08 | TBD | Pending |
-| CLEAN-09 | TBD | Pending |
-| CLEAN-10 | TBD | Pending |
-| DB-01 | TBD | Pending |
-| DB-02 | TBD | Pending |
-| DB-03 | TBD | Pending |
-| DB-04 | TBD | Pending |
-| DB-05 | TBD | Pending |
-| DB-06 | TBD | Pending |
-| DB-07 | TBD | Pending |
-| DB-08 | TBD | Pending |
-| DB-09 | TBD | Pending |
-| DB-10 | TBD | Pending |
-| DB-11 | TBD | Pending |
+| TYPO-01 | Phase 14 | Pending |
+| TYPO-02 | Phase 14 | Pending |
+| TYPO-03 | Phase 14 | Pending |
+| TYPO-04 | Phase 14 | Pending |
+| TYPO-05 | Phase 14 | Pending |
+| TYPO-06 | Phase 14 | Pending |
+| TYPO-07 | Phase 14 | Pending |
+| GLOW-01 | Phase 15 | Pending |
+| GLOW-02 | Phase 15 | Pending |
+| GLOW-03 | Phase 15 | Pending |
+| GLOW-04 | Phase 15 | Pending |
+| GLOW-05 | Phase 15 | Pending |
+| HDR-01 | Phase 15 | Pending |
+| HDR-02 | Phase 15 | Pending |
+| HDR-03 | Phase 15 | Pending |
+| HDR-04 | Phase 15 | Pending |
+| HDR-05 | Phase 17 | Pending |
+| HDR-06 | Phase 17 | Pending |
+| HDR-07 | Phase 15 | Pending |
+| HDR-08 | Phase 15 | Pending |
+| OWNER-01 | Phase 15 | Pending |
+| OWNER-02 | Phase 15 | Pending |
+| OWNER-03 | Phase 15 | Pending |
+| OWNER-04 | Phase 15 | Pending |
+| OWNER-05 | Phase 15 | Pending |
+| OWNER-06 | Phase 15 | Pending |
+| OWNER-07 | Phase 15 | Pending |
+| OWNER-08 | Phase 15 | Pending |
+| OWNER-09 | Phase 15 | Pending |
+| OWNER-10 | Phase 15 | Pending |
+| OWNER-11 | Phase 15 | Pending |
+| AUTH-12 | Phase 16 | Pending |
+| AUTH-13 | Phase 16 | Pending |
+| AUTH-14 | Phase 16 | Pending |
+| AUTH-15 | Phase 16 | Pending |
+| AUTH-16 | Phase 16 | Pending |
+| AUTH-17 | Phase 16 | Pending |
+| ONBOARD-10 | Phase 16 | Pending |
+| ONBOARD-11 | Phase 16 | Pending |
+| ONBOARD-12 | Phase 16 | Pending |
+| ONBOARD-13 | Phase 16 | Pending |
+| ONBOARD-14 | Phase 16 | Pending |
+| ONBOARD-15 | Phase 16 | Pending |
+| PUB-01 | Phase 17 | Pending |
+| PUB-02 | Phase 17 | Pending |
+| PUB-03 | Phase 17 | Pending |
+| PUB-04 | Phase 17 | Pending |
+| PUB-05 | Phase 17 | Pending |
+| PUB-06 | Phase 17 | Pending |
+| PUB-07 | Phase 17 | Pending |
+| PUB-08 | Phase 17 | Pending |
+| PUB-09 | Phase 17 | Pending |
+| PUB-10 | Phase 17 | Pending |
+| PUB-11 | Phase 17 | Pending |
+| PUB-12 | Phase 17 | Pending |
+| EMBED-08 | Phase 17 | Pending |
+| EMBED-09 | Phase 17 | Pending |
+| EMBED-10 | Phase 17 | Pending |
+| EMBED-11 | Phase 17 | Pending |
+| BRAND-13 | Phase 18 | Pending |
+| BRAND-14 | Phase 18 | Pending |
+| BRAND-15 | Phase 18 | Pending |
+| BRAND-16 | Phase 18 | Pending |
+| BRAND-17 | Phase 18 | Pending |
+| BRAND-18 | Phase 18 | Pending |
+| BRAND-19 | Phase 18 | Pending |
+| BRAND-20 | Phase 18 | Pending |
+| BRAND-21 | Phase 18 | Pending |
+| EMAIL-15 | Phase 19 | Pending |
+| EMAIL-16 | Phase 19 | Pending |
+| EMAIL-17 | Phase 19 | Pending |
+| EMAIL-18 | Phase 19 | Pending |
+| EMAIL-19 | Phase 19 | Pending |
+| EMAIL-20 | Phase 19 | Pending |
+| CLEAN-01 | Phase 20 | Pending |
+| CLEAN-02 | Phase 20 | Pending |
+| CLEAN-03 | Phase 20 | Pending |
+| CLEAN-04 | Phase 20 | Pending |
+| CLEAN-05 | Phase 20 | Pending |
+| CLEAN-06 | Phase 20 | Pending |
+| CLEAN-07 | Phase 20 | Pending |
+| CLEAN-08 | Phase 20 | Pending |
+| CLEAN-09 | Phase 20 | Pending |
+| CLEAN-10 | Phase 20 | Pending |
+| DB-01 | Phase 21 | Pending |
+| DB-02 | Phase 21 | Pending |
+| DB-03 | Phase 21 | Pending |
+| DB-04 | Phase 21 | Pending |
+| DB-05 | Phase 21 | Pending |
+| DB-06 | Phase 21 | Pending |
+| DB-07 | Phase 21 | Pending |
+| DB-08 | Phase 21 | Pending |
+| DB-09 | Phase 21 | Pending |
+| DB-10 | Phase 21 | Pending |
+| DB-11 | Phase 21 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 92 total
-- Mapped to phases: 0 (populated by roadmapper)
-- Unmapped: 92 ⚠️ (until roadmap creation)
+- v1.2 requirements: 95 total
+- Mapped to phases: 95 / 95 ✓
+- Unmapped: 0 ✓
+
+**Phase distribution:**
+- Phase 14 — Typography + CSS Token Foundations: 7 requirements (TYPO-01..07)
+- Phase 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin: 22 requirements (GLOW-01..05, HDR-01..04, HDR-07, HDR-08, OWNER-01..11)
+- Phase 16 — Auth + Onboarding Re-Skin: 12 requirements (AUTH-12..17, ONBOARD-10..15)
+- Phase 17 — Public Surfaces + Embed: 18 requirements (PUB-01..12, HDR-05..06, EMBED-08..11)
+- Phase 18 — Branding Editor Simplification: 9 requirements (BRAND-13..21)
+- Phase 19 — Email Layer Simplification: 6 requirements (EMAIL-15..20)
+- Phase 20 — Dead Code + Test Cleanup: 10 requirements (CLEAN-01..10)
+- Phase 21 — Schema DROP Migration: 11 requirements (DB-01..11)
 
 ---
 
 *Requirements defined: 2026-04-30 for v1.2 milestone (NSI Brand Lock-Down + UI Overhaul)*
 *Open questions resolved at scoping: brand_accent → DROP; BrandedPage → REPLACE with PublicShell*
-*Last updated: 2026-04-30 after initial v1.2 definition*
+*Traceability populated: 2026-04-30 by gsd-roadmapper (92/92 requirements mapped)*
+*Last updated: 2026-04-30 after roadmap creation*
