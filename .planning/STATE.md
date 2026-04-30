@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 12.5-04 complete. EmailBranding.chromeTintIntensity field; renderEmailBrandedHeader intensity-aware (intensity='none'→brand_primary); all 6 senders wired; 240 tests + 26 skipped. Phase 12.5 Wave 2 COMPLETE (12.5-02/03/04 all done).
+**Last updated:** 2026-04-30 — Plan 12.6-01 complete. accounts.sidebar_color column on prod; Branding.sidebarColor field; resolveChromeColors() helper; 252 tests + 26 skipped. Phase 12.6 Wave 1 COMPLETE.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 12.5 — Per-Account Chrome Theming (Wave 2 COMPLETE). All 4 plans done. Next: Phase 13 (Manual QA + Andrew Ship Sign-Off).
+**Current focus:** v1.1 Phase 12.6 — Direct Color Controls (Wave 1 COMPLETE). Plan 12.6-01 done. Next: Phase 12.6 Wave 2 (12.6-02 dashboard chrome + editor, 12.6-03 email tokens).
 
 **Mode:** yolo
 **Depth:** standard
@@ -17,12 +17,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 ## Current Position
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
-**Phase:** Phase 12.5 — Per-Account Chrome Theming (Wave 1 complete; Wave 2 next).
-**Last completed plan:** 12.5-04 (email-tokens) — 2026-04-29.
-**Status:** Phase 12.5 Wave 2 COMPLETE — 12.5-02 COMPLETE; 12.5-03 COMPLETE; 12.5-04 COMPLETE.
-**Last activity:** 2026-04-29 — Plan 12.5-04 complete. EmailBranding.chromeTintIntensity; renderEmailBrandedHeader intensity-aware; all 6 senders wired + route callers updated; 240 tests passing + 26 skipped.
+**Phase:** Phase 12.6 — Direct Color Controls (Wave 1 complete; Wave 2 next).
+**Last completed plan:** 12.6-01 (foundation) — 2026-04-30.
+**Status:** Phase 12.6 Wave 1 COMPLETE — 12.6-01 COMPLETE.
+**Last activity:** 2026-04-30 — Plan 12.6-01 complete. accounts.sidebar_color prod column; Branding.sidebarColor; resolveChromeColors() with WCAG text resolution; 252 tests passing + 26 skipped.
 
-**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 13 next (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29; milestone-end QA pending)
+**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 12.6 Wave 1 COMPLETE (12.6-01 done; 12.6-02/03 Wave 2 next); Phase 13 pending milestone-end QA (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -64,11 +64,15 @@ Phase 12 [✓] Branded UI Overhaul (6 Surfaces)        (COMPLETE 2026-04-29 — 
   12-04b [✓] home-tab-day-detail-sheet               (Complete 2026-04-29 — DayDetailRow 4 actions + 3 AlertDialogs; DayDetailSheet shadcn Sheet; HomeDashboard state container; page.tsx timezone wire-up; 17 new tests; 225 passing + 26 skipped)
   12-05 [✓] public-surfaces-restyle                  (Complete 2026-04-29 — ListingHero + /[account] hero card; BookingShell py-12 md:py-20 + max-w-3xl card; embed single-circle gradient Pitfall-10-safe; EmbedCodeDialog sm:max-w-2xl; all public BrandedPage callers pass backgroundColor/backgroundShade; UI-09/10/11/13 satisfied)
   12-06 [✓] email-restyle                            (Complete 2026-04-29 — renderEmailBrandedHeader solid-color band + NSI mark PNG + plain-text alts on booker senders; all 6 senders migrated; EMAIL-09/10/11/12 closed; 191 tests + 26 skipped)
-Phase 12.5 [~] Per-Account Chrome Theming            (Wave 1 done 2026-04-29; Wave 2 in progress)
+Phase 12.5 [✓] Per-Account Chrome Theming            (COMPLETE 2026-04-29 — all 4 plans done)
   12.5-01 [✓] foundation                             (Complete 2026-04-29 — chrome_tint_intensity enum + col; ChromeTintIntensity + chromeTintToCss; 240 tests + 26 skipped)
   12.5-02 [✓] dashboard-chrome                       (Complete 2026-04-29 — FloatingHeaderPill deleted; sidebar + page tinted via color-mix inline styles; WCAG --sidebar-foreground var override; plain SidebarTrigger hamburger md:hidden; 240 tests + 26 skipped)
   12.5-03 [✓] branding-editor                        (Complete 2026-04-29 — IntensityPicker (None/Subtle/Full); chrome-aware MiniPreviewCard (faux-sidebar + faux-page + white faux-card); chromeTintIntensity BrandingState + saveBrandingAction round-trip; 240 tests + 26 skipped)
   12.5-04 [✓] email-tokens                           (Complete 2026-04-29 — EmailBranding.chromeTintIntensity; intensity-aware renderEmailBrandedHeader; all 6 senders wired; 240 tests + 26 skipped)
+Phase 12.6 [~] Direct Per-Account Color Controls     (Wave 1 COMPLETE 2026-04-30; Wave 2 next)
+  12.6-01 [✓] foundation                             (Complete 2026-04-30 — accounts.sidebar_color prod column; Branding.sidebarColor; resolveChromeColors() ResolvedChromeColors; chromeTintToCss compat kept; 252 tests + 26 skipped)
+  12.6-02 [ ] dashboard-chrome-and-editor            (Not started)
+  12.6-03 [ ] email-tokens                           (Not started)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
 
@@ -183,6 +187,10 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **HomeCalendar capped-dot DayButton** (Plan 12-04a, 2026-04-29) — Custom DayButton via `Calendar.components.DayButton` override. 1-3 dots + "+N" overflow. Dot color: `var(--brand-primary, hsl(var(--primary)))` inline style (Phase 7 pitfall locked). `onDayClick(date, dayBookings)` prop exposed for 12-04b drawer.
 - **WelcomeCard removed from /app** (Plan 12-04a, 2026-04-29) — Replaced by HomeCalendar + month header. v1.2 candidate if Andrew wants a welcome message. Flagged for revisit.
 - **vi.hoisted() pattern confirmed** (Plan 12-04a, 2026-04-29) — vitest hoists vi.mock() factories to top of file; variables declared after mock calls trigger TDZ errors. Use vi.hoisted() to declare mock spies before vi.mock() factory functions. Applied in both regenerate-reschedule-token and send-reminder-for-booking tests.
+- **accounts.sidebar_color column live on prod** (Plan 12.6-01, 2026-04-30) — `sidebar_color text nullable` with hex CHECK constraint (`'^#[0-9a-f]{6}$'`). ADDITIVE only; chrome_tint_intensity, background_shade, background_color unchanged. Null = shadcn --sidebar default. BRAND-10 satisfied.
+- **Branding.sidebarColor field live** (Plan 12.6-01, 2026-04-30) — `sidebarColor: string | null` added to Branding interface. `brandingFromRow` + `getBrandingForAccount` both read and map `sidebar_color`. chromeTintIntensity kept for backward compat — Wave 2 consumers use resolveChromeColors instead.
+- **resolveChromeColors(branding) canonical helper** (Plan 12.6-01, 2026-04-30) — `resolveChromeColors(branding: Branding): ResolvedChromeColors` exported from `lib/branding/chrome-tint.ts`. Returns `{ pageColor, sidebarColor, primaryColor, sidebarTextColor, primaryTextColor }` — each surface is a direct hex string or null (null = CSS default, consumer uses inline style with `?? undefined` so CSS class default applies). Priority chains: pageColor=backgroundColor, sidebarColor=sidebarColor, primaryColor=primaryColor (always set via DEFAULT_BRAND_PRIMARY fallback). WCAG: sidebarTextColor=pickTextColor(sidebarColor) when set; primaryTextColor=pickTextColor(primaryColor) always set.
+- **chromeTintToCss preserved as live compat export** (Plan 12.6-01, 2026-04-30) — `chromeTintToCss` and `chromeTintTextColor` kept as full original functions in `lib/branding/chrome-tint.ts`. Shell layout + app-sidebar still call these in their 12.5 implementations; 12.6-02 will replace those call sites with `resolveChromeColors`.
 
 ### Pending Todos
 
@@ -222,11 +230,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-29 — Plan 12.5-04 complete. EmailBranding.chromeTintIntensity; renderEmailBrandedHeader intensity-aware; all 6 senders + 4 route callers wired; 240 passing + 26 skipped. Phase 12.5 Wave 2 COMPLETE.
+**Last session:** 2026-04-30 — Plan 12.6-01 complete. accounts.sidebar_color prod column; Branding.sidebarColor; resolveChromeColors() with WCAG text resolution; 252 passing + 26 skipped. Phase 12.6 Wave 1 COMPLETE.
 
-**Stopped at:** Plan 12.5-04 complete. SUMMARY.md created. STATE.md updated. Phase 12.5 fully done.
+**Stopped at:** Plan 12.6-01 complete. SUMMARY.md created. STATE.md updated. Phase 12.6 Wave 1 done.
 
-**Resume:** Proceed to Phase 13 (Manual QA + Andrew Ship Sign-Off).
+**Resume:** Spawn Wave 2: execute 12.6-02-dashboard-chrome-and-editor and 12.6-03-email-tokens (can run in parallel).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
