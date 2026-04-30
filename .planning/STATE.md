@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-30 — Plan 12.6-02 complete. Shell --primary CSS var override; AppSidebar direct hex; branding editor 3 pickers; MiniPreviewCard 3-color; IntensityPicker deleted; 255 tests + 26 skipped. Phase 12.6 Wave 2 (12.6-02 DONE; 12.6-03 concurrent).
+**Last updated:** 2026-04-30 — Plan 12.6-03 complete. Email header band uses sidebar_color → brand_primary → DEFAULT chain (EMAIL-14); all 6 senders + 4 callers wired; 255 tests + 26 skipped. Phase 12.6 COMPLETE.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 12.6 — Direct Color Controls. Wave 2: 12.6-02 DONE; 12.6-03 (email tokens) concurrent. Once 12.6-03 merges, Phase 13 manual QA.
+**Current focus:** v1.1 Phase 12.6 — Direct Color Controls COMPLETE (all 3 plans done). Next: Phase 13 Manual QA + Andrew Ship Sign-Off.
 
 **Mode:** yolo
 **Depth:** standard
@@ -17,12 +17,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 ## Current Position
 
 **Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
-**Phase:** Phase 12.6 — Direct Color Controls (Wave 1 complete; Wave 2 next).
-**Last completed plan:** 12.6-02 (dashboard-chrome-and-editor) — 2026-04-30.
-**Status:** Phase 12.6 Wave 2 IN PROGRESS — 12.6-02 COMPLETE; 12.6-03 concurrent.
-**Last activity:** 2026-04-30 — Plan 12.6-02 complete. Shell --primary CSS vars; AppSidebar direct hex; 3 color pickers; 3-color MiniPreviewCard; IntensityPicker deleted; sidebar_color DB write; 255 tests passing + 26 skipped.
+**Phase:** Phase 12.6 — Direct Color Controls COMPLETE (all 3 plans done). Phase 13 next.
+**Last completed plan:** 12.6-03 (email-tokens) — 2026-04-30.
+**Status:** Phase 12.6 COMPLETE — all 3 plans done. Phase 13 ready.
+**Last activity:** 2026-04-30 — Plan 12.6-03 complete. EmailBranding.sidebarColor + EMAIL-14 priority chain; all 6 senders + 4 callers wired; 255 tests passing + 26 skipped.
 
-**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 12.6 Wave 1 COMPLETE (12.6-01 done; 12.6-02/03 Wave 2 next); Phase 13 pending milestone-end QA (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29)
+**Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 12.6 COMPLETE (all 3 plans done — 12.6-01/02/03); Phase 13 pending milestone-end QA (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29; Phase 12.6 code-complete 2026-04-30)
 
 ```
 v1.0 — SHIPPED 2026-04-27
@@ -72,7 +72,7 @@ Phase 12.5 [✓] Per-Account Chrome Theming            (COMPLETE 2026-04-29 — 
 Phase 12.6 [~] Direct Per-Account Color Controls     (Wave 1 COMPLETE 2026-04-30; Wave 2 next)
   12.6-01 [✓] foundation                             (Complete 2026-04-30 — accounts.sidebar_color prod column; Branding.sidebarColor; resolveChromeColors() ResolvedChromeColors; chromeTintToCss compat kept; 252 tests + 26 skipped)
   12.6-02 [✓] dashboard-chrome-and-editor            (Complete 2026-04-30 — shell --primary CSS var; AppSidebar direct hex; 3 pickers; 3-color MiniPreviewCard; IntensityPicker deleted; sidebar_color DB write; 255 tests + 26 skipped)
-  12.6-03 [ ] email-tokens                           (Not started)
+  12.6-03 [✓] email-tokens                           (Complete 2026-04-30 — EmailBranding.sidebarColor; EMAIL-14 sidebarColor→brand_primary→DEFAULT chain; all 6 senders + 4 callers wired; 255 tests + 26 skipped)
 Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 ```
 
@@ -191,6 +191,8 @@ Phase 13 [ ] Manual QA + Andrew Ship Sign-Off        (Not started)
 - **Branding.sidebarColor field live** (Plan 12.6-01, 2026-04-30) — `sidebarColor: string | null` added to Branding interface. `brandingFromRow` + `getBrandingForAccount` both read and map `sidebar_color`. chromeTintIntensity kept for backward compat — Wave 2 consumers use resolveChromeColors instead.
 - **resolveChromeColors(branding) canonical helper** (Plan 12.6-01, 2026-04-30) — `resolveChromeColors(branding: Branding): ResolvedChromeColors` exported from `lib/branding/chrome-tint.ts`. Returns `{ pageColor, sidebarColor, primaryColor, sidebarTextColor, primaryTextColor }` — each surface is a direct hex string or null (null = CSS default, consumer uses inline style with `?? undefined` so CSS class default applies). Priority chains: pageColor=backgroundColor, sidebarColor=sidebarColor, primaryColor=primaryColor (always set via DEFAULT_BRAND_PRIMARY fallback). WCAG: sidebarTextColor=pickTextColor(sidebarColor) when set; primaryTextColor=pickTextColor(primaryColor) always set.
 - **chromeTintToCss preserved as live compat export** (Plan 12.6-01, 2026-04-30) — `chromeTintToCss` and `chromeTintTextColor` kept as full original functions in `lib/branding/chrome-tint.ts`. Shell layout + app-sidebar still call these in their 12.5 implementations; 12.6-02 will replace those call sites with `resolveChromeColors`.
+- **EMAIL-14: sidebarColor → brand_primary → DEFAULT email header band chain** (Plan 12.6-03, 2026-04-30) — `renderEmailBrandedHeader` now uses `branding.sidebarColor ?? branding.brand_primary ?? DEFAULT_BRAND_PRIMARY`. Mirrors the dashboard sidebar visual: sidebar_color is the primary source. Email clients cannot render color-mix(); both sidebarColor and brand_primary are direct hex — correct for all clients. `chromeTintIntensity` and `backgroundColor` fields kept in `EmailBranding` interface for backward compat (optional, unused by resolver). All 6 senders wire `sidebarColor: account.sidebar_color ?? null`. All 4 route/cron callers SELECT `sidebar_color` from accounts.
+- **Phase 12.6 COMPLETE** (2026-04-30) — All 3 plans done: 12.6-01 (foundation + prod column), 12.6-02 (dashboard chrome + editor), 12.6-03 (email tokens). Phase 13 Manual QA is the next milestone gate.
 - **--primary CSS var override pattern** (Plan 12.6-02, 2026-04-30) — Shell layout wraps entire shell in `<div style={{ "--primary": chrome.primaryColor, "--primary-foreground": chrome.primaryTextColor ?? undefined } as React.CSSProperties}>`. Raw hex is a valid CSS <color> value; shadcn var(--primary) consumers inherit automatically. No oklch conversion needed. Override is unconditional (DEFAULT_BRAND_PRIMARY fallback ensures always-a-string).
 - **AppSidebar direct hex pattern** (Plan 12.6-02, 2026-04-30) — Props changed from `backgroundColor + chromeTintIntensity` to `sidebarColor + sidebarTextColor`. Applied as `backgroundColor: sidebarColor ?? undefined` (null = CSS default). `--sidebar-foreground` CSS var override pattern preserved from 12.5-02 — only source changed (direct hex vs color-mix).
 - **saveBrandingAction signature updated** (Plan 12.6-02, 2026-04-30) — `chromeTintIntensity` param replaced with `sidebarColor: string | null`. DB UPDATE now writes `sidebar_color` instead of `chrome_tint_intensity`. `chromeTintIntensitySchema` kept as exported constant in schema.ts for backward compat; removed from `brandingBackgroundSchema`.
@@ -235,11 +237,11 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-30 — Plan 12.6-02 complete. Shell --primary CSS var; AppSidebar direct hex; 3 color pickers; MiniPreviewCard 3-color; IntensityPicker deleted; sidebar_color DB write; 255 passing + 26 skipped.
+**Last session:** 2026-04-30 — Plan 12.6-03 complete. EmailBranding.sidebarColor + EMAIL-14 priority chain; all 6 senders + 4 callers wired; 255 passing + 26 skipped. Phase 12.6 COMPLETE.
 
-**Stopped at:** Plan 12.6-02 complete. SUMMARY.md created. STATE.md updated. Wave 2 (12.6-02 DONE; 12.6-03 concurrent).
+**Stopped at:** Plan 12.6-03 complete. SUMMARY.md created. STATE.md updated. Phase 12.6 all 3 plans done.
 
-**Resume:** 12.6-03 (email tokens) may still be running concurrently. Once both Wave 2 plans merge to main, proceed to Phase 13 manual QA.
+**Resume:** Phase 13 Manual QA + Andrew Ship Sign-Off. All Phase 12.6 code is on main branch. Start Phase 13 planning.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)
