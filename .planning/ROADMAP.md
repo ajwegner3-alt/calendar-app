@@ -107,8 +107,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 15-01: BackgroundGlow + Header pill components + lib/brand.ts wordmark constant (additive — no layout changes)
-- [ ] 15-02: (shell)/layout.tsx re-skin + AppSidebar prop strip + globals.css --primary fix + 14-card OWNER-10 standardization + Vercel deploy + Andrew eyeball
+- [x] 15-01: BackgroundGlow + Header pill components + lib/brand.ts wordmark constant — completed 2026-04-30
+- [x] 15-02: (shell)/layout.tsx re-skin + AppSidebar prop strip + globals.css --primary fix + 14-card OWNER-10 standardization + Vercel deploy + Andrew eyeball — completed 2026-04-30
 
 ---
 
@@ -270,7 +270,7 @@ Plans:
 | 1-9 | v1.0 | 52 / 52 | ✅ Shipped | 2026-04-27 |
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14 — Typography + CSS Token Foundations | v1.2 | 1 / 1 | ✅ Complete | 2026-04-30 |
-| 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 0 / 2 | Planned | - |
+| 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 2 / 2 | ✅ Complete | 2026-04-30 |
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 0 / TBD | Not started | - |
 | 17 — Public Surfaces + Embed | v1.2 | 0 / TBD | Not started | - |
 | 18 — Branding Editor Simplification | v1.2 | 0 / TBD | Not started | - |
@@ -288,4 +288,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-04-30 — Phase 14 complete (1/1 plans, all 7 TYPO requirements verified). Next: `/gsd:plan-phase 15`.*
+*Roadmap last updated: 2026-04-30 — Phase 15 complete (2/2 plans, all 22 GLOW/HDR/OWNER requirements verified, Andrew approved live deploy). Next: `/gsd:plan-phase 16`.*
