@@ -96,7 +96,7 @@ export function HomeCalendar({ bookings, onDayClick }: HomeCalendarProps) {
                       style={{
                         backgroundColor: isSelected
                           ? "currentColor"
-                          : "var(--brand-primary, hsl(var(--primary)))",
+                          : "hsl(var(--primary))",
                       }}
                     />
                   ))}
