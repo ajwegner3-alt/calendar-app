@@ -80,6 +80,26 @@ Numbering continues from v1.0 (FOUND-01..06, AUTH-01..04, EVENT-01..06, AVAIL-01
 - [ ] **EMAIL-11**: Email footer includes the NSI mark image (sets `NSI_MARK_URL`) — closes FUTURE_DIRECTIONS.md §3 backlog
 - [ ] **EMAIL-12**: Per-template branding visual smoke verified across all 6 transactional surfaces (booker × owner × confirm/cancel/reschedule) — closes FUTURE_DIRECTIONS.md §3 6-row smoke backlog
 
+### Per-Account Chrome Theming (Phase 12.5 — DEPRECATED in code by Phase 12.6, DB columns retained)
+
+- [x] **BRAND-08**: `accounts.chrome_tint_intensity` enum column (`'none' | 'subtle' | 'full'`, NOT NULL DEFAULT `'subtle'`). Column persists in DB but no longer drives chrome rendering as of Phase 12.6.
+- [x] **BRAND-09**: Auto-WCAG text contrast helper (`pickTextColor` in `lib/branding/contrast.ts`) shared by both UI surfaces and email senders.
+- [x] **UI-14**: Sidebar tints per-account (DEPRECATED — replaced by direct sidebar_color in Phase 12.6).
+- [x] **UI-15**: Page background tints per-account (DEPRECATED — replaced by direct background_color rendering in Phase 12.6).
+- [x] **UI-16**: `FloatingHeaderPill` component DELETED; plain hamburger trigger replaces it.
+- [x] **UI-17**: Branding editor exposes intensity picker (DEPRECATED — IntensityPicker DELETED in Phase 12.6 in favor of 3 direct color pickers).
+- [x] **EMAIL-13**: Email senders unified on per-account branding tokens — no separate user-controlled email-branding fields exist.
+
+### Direct Per-Account Color Controls (Phase 12.6)
+
+- [x] **BRAND-10**: `accounts.sidebar_color` text column (nullable, hex CHECK). Null = shadcn default sidebar bg; set = literal hex applied to sidebar root via inline style.
+- [x] **BRAND-11**: `accounts.background_color` (existing v1.0 column, repurposed semantically) serves as the page color field. Direct hex applied to SidebarInset via inline style.
+- [x] **BRAND-12**: `accounts.brand_primary` (existing v1.0 column) wired to override the shadcn `--primary` + `--primary-foreground` CSS variables on the `(shell)` wrapper, so all dashboard buttons / switches / focus rings inherit the brand color.
+- [x] **UI-18**: `/app/branding` exposes 3 distinct color pickers (Sidebar color, Page background, Button & accent color); IntensityPicker REMOVED.
+- [x] **UI-19**: `MiniPreviewCard` renders all 3 colors live (faux-sidebar, faux-page, faux-button + faux-switch) as the owner adjusts.
+- [x] **UI-20**: Auto-WCAG text contrast on sidebar (`--sidebar-foreground` override) and primary (`--primary-foreground` override).
+- [x] **EMAIL-14**: Email header band priority chain `sidebar_color → brand_primary → '#0A2540'` so emails visually mirror the dashboard sidebar.
+
 ### Manual QA (Phase 13)
 
 - [ ] **QA-09**: End-to-end signup → email-verify → onboarding wizard → first booking received completes for a brand-new test user with no errors
@@ -166,26 +186,40 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 | CAP-07 | Phase 11 | Complete (code; manual deferred) |
 | CAP-08 | Phase 11 | Complete (code; manual deferred) |
 | CAP-09 | Phase 11 | Complete (code; manual deferred) |
-| BRAND-05 | Phase 12 | Pending |
-| BRAND-06 | Phase 12 | Pending |
-| BRAND-07 | Phase 12 | Pending |
-| UI-01 | Phase 12 | Pending |
-| UI-02 | Phase 12 | Pending |
-| UI-03 | Phase 12 | Pending |
-| UI-04 | Phase 12 | Pending |
-| UI-05 | Phase 12 | Pending |
-| UI-06 | Phase 12 | Pending |
-| UI-07 | Phase 12 | Pending |
-| UI-08 | Phase 12 | Pending |
-| UI-09 | Phase 12 | Pending |
-| UI-10 | Phase 12 | Pending |
-| UI-11 | Phase 12 | Pending |
-| UI-12 | Phase 12 | Pending |
-| UI-13 | Phase 12 | Pending |
-| EMAIL-09 | Phase 12 | Pending |
-| EMAIL-10 | Phase 12 | Pending |
-| EMAIL-11 | Phase 12 | Pending |
-| EMAIL-12 | Phase 12 | Pending |
+| BRAND-05 | Phase 12 | Complete (code; manual deferred) |
+| BRAND-06 | Phase 12 | Complete (code; manual deferred) |
+| BRAND-07 | Phase 12 | Complete (code; manual deferred) |
+| UI-01 | Phase 12 | Complete (code; manual deferred) |
+| UI-02 | Phase 12 | Complete (code; manual deferred) |
+| UI-03 | Phase 12 | Complete (code; manual deferred) |
+| UI-04 | Phase 12 | Complete (code; manual deferred) |
+| UI-05 | Phase 12 | Complete (code; manual deferred) |
+| UI-06 | Phase 12 | Complete (code; manual deferred) |
+| UI-07 | Phase 12 | Complete (code; manual deferred) |
+| UI-08 | Phase 12 | Complete (code; manual deferred) |
+| UI-09 | Phase 12 | Complete (code; manual deferred) |
+| UI-10 | Phase 12 | Complete (code; manual deferred) |
+| UI-11 | Phase 12 | Complete (code; manual deferred) |
+| UI-12 | Phase 12 | Complete (code; manual deferred) |
+| UI-13 | Phase 12 | Complete (code; manual deferred) |
+| EMAIL-09 | Phase 12 | Complete (code; manual deferred) |
+| EMAIL-10 | Phase 12 | Complete (code; manual deferred) |
+| EMAIL-11 | Phase 12 | Complete (code; manual deferred) |
+| EMAIL-12 | Phase 12 | Complete (code; manual deferred) |
+| BRAND-08 | Phase 12.5 | Complete (code; manual deferred) |
+| BRAND-09 | Phase 12.5 | Complete (code) |
+| UI-14 | Phase 12.5 | Complete (code; manual deferred) |
+| UI-15 | Phase 12.5 | Complete (code; manual deferred) |
+| UI-16 | Phase 12.5 | Complete (code) |
+| UI-17 | Phase 12.5 | Complete (code; manual deferred) |
+| EMAIL-13 | Phase 12.5 | Complete (code) |
+| BRAND-10 | Phase 12.6 | Complete (code; manual deferred) |
+| BRAND-11 | Phase 12.6 | Complete (code; manual deferred) |
+| BRAND-12 | Phase 12.6 | Complete (code; manual deferred) |
+| UI-18 | Phase 12.6 | Complete (code; manual deferred) |
+| UI-19 | Phase 12.6 | Complete (code; manual deferred) |
+| UI-20 | Phase 12.6 | Complete (code; manual deferred) |
+| EMAIL-14 | Phase 12.6 | Complete (code; manual deferred) |
 | QA-09 | Phase 13 | Pending |
 | QA-10 | Phase 13 | Pending |
 | QA-11 | Phase 13 | Pending |
@@ -195,10 +229,12 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 | QA-15 | Phase 13 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 53 total
-- Mapped to phases: 53
+- v1.1 requirements: 67 total (53 original + 7 added in Phase 12.5 + 7 added in Phase 12.6)
+- Mapped to phases: 67
 - Unmapped: 0 ✓
+- Phase 12.5 reqs (BRAND-08/09, UI-14/15/16/17, EMAIL-13): per-account chrome theming with intensity picker — DEPRECATED in code by Phase 12.6 but DB columns retained (additive)
+- Phase 12.6 reqs (BRAND-10/11/12, UI-18/19/20, EMAIL-14): direct per-account color controls (sidebar/page/primary at full strength) replacing 12.5's color-mix approach
 
 ---
 *Requirements defined: 2026-04-27 for v1.1 milestone*
-*Last updated: 2026-04-29 — Phase 11 (CAP-01..CAP-09) marked Complete after verifier passed at code level; 4 manual checks deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`.*
+*Last updated: 2026-04-29 — Phase 12, 12.5, 12.6 marked Complete after verifiers passed at code level (5/5, 7/7, 8/8 must_haves respectively); manual checks deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. Phase 13 next.*

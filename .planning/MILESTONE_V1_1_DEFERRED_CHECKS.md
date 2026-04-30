@@ -239,8 +239,52 @@ npm test -- tests/rls-cross-tenant-matrix.test.ts
 
 ---
 
+## Phase 12 — Branded UI Overhaul (10 deferred items)
+
+Source: `.planning/phases/12-branded-ui-overhaul/12-VERIFICATION.md`. All 5/5 must_haves and 20/20 requirements verified at code level. Items below are inherently browser/email-client checks.
+
+1. **Inter font load** — DevTools Network tab on the live deploy; confirm `inter-latin.woff2` requests succeed.
+2. **`bg-gray-50` actual render** — DevTools eyedropper; confirm dashboard page bg is ~#F8FAFC (not #FFFFFF).
+3. **Gradient backdrop visual sweep** — Set a non-null `background_color` and toggle `background_shade` through `none` / `subtle` / `bold`; check each of the 5 surfaces (dashboard / public booking / embed / `/[account]` / auth pages) renders as expected.
+4. **Live branding editor update** — `MiniPreviewCard` updates instantly while editing; public surfaces reflect saved values after refresh.
+5. **Home tab calendar + Sheet drawer** — Click a day with bookings, confirm Sheet opens with each row's 4 actions (View / Cancel / Copy reschedule link / Send reminder).
+6. **Auth pages split-panel responsive** — `lg+` two-column with `AuthHero` on right; `sm` form-only.
+7. **Email branded header in real inbox** — Trigger live booking; check Gmail web for solid-color header band; confirm no gradient artifacts.
+8. **NSI mark image** — Replace `/public/nsi-mark.png` placeholder with the final brand mark before sign-off.
+9. **`EmbedCodeDialog` `sm:max-w-2xl`** — Verify at 320 / 768 / 1024 viewports; no horizontal overflow.
+10. **Phase 11 regression live trigger** — Concurrent booking races to confirm `RaceLoserBanner` + capacity badge still render correctly under the new branded chrome.
+
+---
+
+## Phase 12.5 — Per-Account Chrome Theming (DEPRECATED in code by Phase 12.6 — manual QA covers regression-safety only)
+
+Source: `.planning/phases/12.5-per-account-chrome-theming/12.5-VERIFICATION.md`. Phase 12.5 code paths were deprecated and replaced by Phase 12.6, but the schema columns persist. Phase 13 should confirm Phase 12.5's DB additions don't break anything; functional QA happens against Phase 12.6.
+
+1. **`accounts.chrome_tint_intensity` column unaffected** — verify SELECTs that include this column don't fail; column persists with DEFAULT `'subtle'` for all accounts.
+2. **`FloatingHeaderPill` removal** — confirm no glass header pill on any dashboard route at any viewport (was removed in 12.5; Phase 13 confirms no regression).
+3. **Mobile hamburger trigger** — confirm `<SidebarTrigger>` reachable at <768px viewport (replacement for the deleted pill).
+
+---
+
+## Phase 12.6 — Direct Per-Account Color Controls (8 deferred items — load-bearing for Phase 13 sign-off)
+
+Source: `.planning/phases/12.6-direct-color-controls/12.6-VERIFICATION.md`. 8/8 must_haves + 7/7 requirements verified at code level. Items below are the functional QA Andrew approved live during the Phase 12.6 deploy session (2026-04-29).
+
+1. **Full-strength 3-color combo** — Set `sidebar_color=#0A2540`, `background_color=#F8FAFC`, `brand_primary=#0A2540` on `/app/branding`. Reload `/app`. Confirm full navy sidebar + light-gray page + navy buttons + navy switches.
+2. **Null/clear regression path** — Clear all 3 fields. Confirm shadcn defaults restore cleanly (white-ish sidebar, gray-50 page, default near-black buttons).
+3. **Button accent color** — Set `brand_primary` to a distinct color (e.g., magenta `#EC4899`). Visit `/app/event-types`; confirm "Create event type" / row buttons inherit the color.
+4. **Switch on-state** — With same custom primary, visit `/app/availability`; confirm Switch on-state (toggle filled background) inherits the color.
+5. **Email header band** — Trigger a real booking against your own NSI URL; inspect the confirmation email in Gmail web; confirm header band uses `sidebar_color` (or falls back to `brand_primary` when sidebar_color is null).
+6. **`/app/branding` UI layout** — Confirm 3 distinct labeled pickers (Sidebar / Page background / Button & accent); IntensityPicker is gone; `MiniPreviewCard` faux-dashboard updates live with 3 color regions.
+7. **Mobile hamburger** — Sub-768px viewport; confirm `<SidebarTrigger>` at `top-3 left-3` opens the drawer.
+8. **NSI mark asset swap** — Replace `/public/nsi-mark.png` placeholder with final brand mark before "ship v1.1" sign-off.
+
+**Andrew confirmed Phase 12.6 deploy approved 2026-04-29** during the live verification step. Items 1-7 above were live-verified during that approval; only NSI mark asset swap (item 8) remains as a hard prerequisite for Phase 13 sign-off.
+
+---
+
 ## (Add additional deferred checks here as later plans emit them)
 
 ---
 
-*Last updated: 2026-04-29 — appended 4 Phase 11 deferred items during /gsd:execute-phase 11 wrap-up.*
+*Last updated: 2026-04-29 — appended 21 deferred items from Phases 12 (10), 12.5 (3), and 12.6 (8) during the 3-phase code-complete close-out. Phase 13 (Manual QA + Andrew Ship Sign-Off) replays all queued items.*

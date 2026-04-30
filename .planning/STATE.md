@@ -237,11 +237,19 @@ These concerns are NOT blockers for v1.1 ship; some fold into v1.1 phases as not
 
 ## Session Continuity
 
-**Last session:** 2026-04-30 — Plan 12.6-03 complete. EmailBranding.sidebarColor + EMAIL-14 priority chain; all 6 senders + 4 callers wired; 255 passing + 26 skipped. Phase 12.6 COMPLETE.
+**Last session:** 2026-04-30 — Phases 12, 12.5, 12.6 all CODE-COMPLETE + Andrew live-approved 12.6 deploy on Vercel. ROADMAP / STATE / REQUIREMENTS / MILESTONE_V1_1_DEFERRED_CHECKS updated in one batch close-out. 255 passing + 26 skipped. 21 manual items deferred to Phase 13.
 
-**Stopped at:** Plan 12.6-03 complete. SUMMARY.md created. STATE.md updated. Phase 12.6 all 3 plans done.
+**Stopped at:** 3-phase code-complete close-out. Phase 13 (Manual QA + Andrew Ship Sign-Off) is up next. Andrew's NSI mark image swap is the only hard prerequisite identified in deferred checks.
 
-**Resume:** Phase 13 Manual QA + Andrew Ship Sign-Off. All Phase 12.6 code is on main branch. Start Phase 13 planning.
+**Resume:** Run `/gsd:plan-phase 13` (recommend `/clear` first for fresh context). Phase 13 plans the end-to-end QA walkthrough: signup → onboarding → first booking E2E (QA-09); 2nd-test-owner multi-tenant UI isolation (QA-10); capacity=3 race E2E (QA-11); 3-account branded smoke incl. all 3 per-account color controls (QA-12); embed dialog 320/768/1024 (QA-13); "ship v1.1" sign-off (QA-14); FUTURE_DIRECTIONS.md update (QA-15).
+
+**v1.2 backlog items captured during v1.1**:
+- Hourly cron (currently `0 13 * * *` on Hobby tier; flip to `0 * * * *` after Vercel Pro upgrade)
+- Cleanup `rate_limit_events` test DB accumulation (4 transient bookings-api.test.ts failures)
+- Replace `/public/nsi-mark.png` placeholder with final NSI brand mark
+- DROP deprecated `accounts.chrome_tint_intensity` column (Phase 12.5 leftover; safe to remove after one v1.1 release window)
+- `chromeTintToCss` compat export removal (Phase 12.5 leftover; only Phase 12.5 tests still import it)
+- Live cross-client email QA (Outlook desktop, Apple Mail iOS, Yahoo) — deferred since v1.0
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-04-27)

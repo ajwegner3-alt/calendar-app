@@ -33,7 +33,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 - [✓~] **Phase 11: Booking Capacity + Double-Booking Root-Cause Fix** — Code complete 2026-04-29 (8/8 plans); 4 manual checks deferred to milestone-end QA per `.planning/MILESTONE_V1_1_DEFERRED_CHECKS.md`. CAP-01 verdict (c): rescheduled-status slot reuse gap (no prod duplicates). slot_index + bookings_capacity_slot_idx replaces v1.0 bookings_no_double_book. Pitfall 4 closed. CAP-07 SLOT_TAKEN/SLOT_CAPACITY_REACHED branching live.
 - [✓] **Phase 12: Branded UI Overhaul (5 Surfaces)** — Code complete 2026-04-29 (7/7 plans). Cruip "Simple Light" aesthetic across dashboard + public booking + embed + emails + auth, plus per-account `background_color`/`background_shade` tokens, sidebar IA refactor, Home tab monthly calendar. Chrome was locked to gray-50 by design in this phase.
 - [✓] **Phase 12.5: Per-Account Heavy Chrome Theming + Header Removal + Email Token Unification** — Code complete 2026-04-29 (4/4 plans). Per-account `chrome_tint_intensity` (none/subtle/full) tints sidebar + page bg; FloatingHeaderPill removed; email senders unified on same tokens as UI.
-- [ ] **Phase 12.6: Direct Per-Account Color Controls (Page / Sidebar / Primary)** — Scope pivot (2026-04-29). Replaces Phase 12.5's color-mix percentage approach with direct full-strength hex per surface. Three independent color fields: sidebar_color (sidebar bg), background_color (page bg), brand_primary (shadcn --primary override). IntensityPicker removed.
+- [✓~] **Phase 12.6: Direct Per-Account Color Controls (Page / Sidebar / Primary)** — Code complete 2026-04-29 (3/3 plans). 8/8 must_haves + 7/7 requirements verified at code level; 8 manual checks deferred to milestone-end QA. Three independent color fields ship: `sidebar_color` (sidebar bg), `background_color` (page bg), `brand_primary` wired to shadcn `--primary` CSS variable override. IntensityPicker REMOVED; 3 direct color pickers replace it. Email header band uses `sidebar_color → brand_primary → '#0A2540'` priority chain.
 - [ ] **Phase 13: Manual QA + Andrew Ship Sign-Off** — End-to-end signup walkthrough, multi-tenant UI isolation check, capacity E2E, branded smoke across 3 test accounts (including all 3 per-account color controls), explicit "ship v1.1" sign-off.
 
 ---
@@ -252,8 +252,8 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 | 11. Booking Capacity + Double-Booking Fix | v1.1 | 8 / 8 | Code complete; 4 manual checks deferred | 2026-04-29 (code) |
 | 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 7 / 7 | Code complete (all 7 plans done) | 2026-04-29 (code) |
 | 12.5. Per-Account Chrome Theming + Header + Email | v1.1 | 4 / 4 | Code complete | 2026-04-29 (code) |
-| 12.6. Direct Per-Account Color Controls | v1.1 | 0 / 3 | Plans created (3 plans, 2 waves) | - |
-| 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started | - |
+| 12.6. Direct Per-Account Color Controls | v1.1 | 3 / 3 | Code complete; 8 manual checks deferred | 2026-04-29 (code) |
+| 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started — UP NEXT | - |
 
 ## Coverage Summary
 
@@ -269,4 +269,4 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ---
 
-*Roadmap last updated: 2026-04-29 — Phase 12.6 planned (3 plans, 2 waves). Phase 12.5 code-complete (4/4 plans). Phase 12.6 inserts between Phase 12.5 and Phase 13 as a scope pivot replacing color-mix tinting with direct per-account color controls.*
+*Roadmap last updated: 2026-04-29 — Phase 12, 12.5, 12.6 all CODE-COMPLETE with manual checks deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. v1.1 cumulative: 53/67 requirements complete (Phase 10: 19; Phase 11: 9; Phase 12: 20; Phase 12.5: 7 [deprecated by 12.6 in code]; Phase 12.6: 7 [active]). Phase 13 (Manual QA + Andrew Ship Sign-Off) is UP NEXT.*
