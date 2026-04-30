@@ -37,10 +37,12 @@ interface AccountRecord {
   owner_email: string | null;
   logo_url: string | null;
   brand_primary: string | null;
-  /** Plan 12-01 column: accounts.background_color (nullable hex). Used for header band. */
+  /** Plan 12-01 column: accounts.background_color (nullable hex). No longer drives header band (Phase 12.6). */
   background_color?: string | null;
-  /** Phase 12.5 column: accounts.chrome_tint_intensity. Controls header band color. */
+  /** Phase 12.5 column: accounts.chrome_tint_intensity. Deprecated in Phase 12.6. */
   chrome_tint_intensity?: string | null;
+  /** Phase 12.6 column: accounts.sidebar_color. Primary email header band color (EMAIL-14). */
+  sidebar_color?: string | null;
 }
 
 export interface SendCancelEmailsArgs {
@@ -100,7 +102,7 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
     backgroundColor: account.background_color ?? null,
-    chromeTintIntensity: (account.chrome_tint_intensity as "none" | "subtle" | "full" | undefined) ?? "subtle",
+    sidebarColor: account.sidebar_color ?? null,
   };
 
   // Apology copy when owner cancelled (CONTEXT lock); confirmation copy when booker cancelled
@@ -205,7 +207,7 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
     backgroundColor: account.background_color ?? null,
-    chromeTintIntensity: (account.chrome_tint_intensity as "none" | "subtle" | "full" | undefined) ?? "subtle",
+    sidebarColor: account.sidebar_color ?? null,
   };
 
   // Booker-cancel reason callout — only when actor=booker AND reason is non-empty

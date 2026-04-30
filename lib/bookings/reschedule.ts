@@ -108,7 +108,7 @@ export async function rescheduleBooking(
     .select(
       `id, account_id, event_type_id, start_at, end_at, booker_name, booker_email, booker_timezone,
        event_types!inner(name, description, duration_minutes, slug),
-       accounts!inner(name, slug, timezone, owner_email, logo_url, brand_primary, background_color, chrome_tint_intensity)`,
+       accounts!inner(name, slug, timezone, owner_email, logo_url, brand_primary, background_color, chrome_tint_intensity, sidebar_color)`,
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -200,6 +200,7 @@ export async function rescheduleBooking(
         brand_primary: account.brand_primary ?? null,
         background_color: account.background_color ?? null,
         chrome_tint_intensity: account.chrome_tint_intensity ?? null,
+        sidebar_color: account.sidebar_color ?? null,
       },
       oldStartAt,
       oldEndAt,
