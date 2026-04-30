@@ -239,4 +239,58 @@ Source: `09-CHECKLIST.md` Apple Mail code review findings section + Marathon Cri
 
 ---
 
-*v1 sign-off: Phase 9 Plan 09-03, 2026-04-27. Future Claude Code sessions: read this file after CLAUDE.md, then proceed.*
+## 8. v1.1 Phase 13 — Marathon QA Waiver + Carry-overs
+
+**Sign-off context:** Andrew explicit verbatim 2026-04-30: "consider everything good. close out the milestone." Marathon QA-09..QA-13 was waived at milestone close. v1.1 ships on code-level verifier passes (Phase 10–12.6) + Andrew's live Vercel approval of Phase 12.6 (2026-04-29) + extensive automated coverage (255 tests + 26 skipped at last green run, 277 + 4 skipped after Plan 13-01 N=3 activation).
+
+**Source:** `.planning/phases/13-manual-qa-and-andrew-ship-sign-off/13-CHECKLIST.md` Sign-off section.
+
+### 8.1 v1.1 Marathon Items DEFERRED to v1.2 (waived at sign-off)
+
+All five marathon criteria are recorded as DEFERRED-V1.2, not silently skipped, not falsely passed.
+
+- **QA-09 (signup → email-verify → onboarding wizard → first booking E2E) — DEFERRED-V1.2.** Code-level verifier passed Phase 10 (9/9 plans, 19/19 requirements) 2026-04-28. Live human walkthrough not exercised. Source: `13-CHECKLIST.md` Marathon Criteria row QA-09.
+- **QA-10 (multi-tenant UI isolation walkthrough as Test User 2) — DEFERRED-V1.2.** Backend RLS isolation: `tests/rls-cross-tenant-matrix.test.ts` 24 N=3 cases activated 2026-04-29 (Plan 13-01) — green. UI-layer human walkthrough not exercised. Source: `13-CHECKLIST.md` Marathon Criteria row QA-10.
+- **QA-11 (capacity=3 E2E across 3 sessions; 4th rejected) — DEFERRED-V1.2.** Code-level: Phase 11 verifier passed 8/8 plans 2026-04-29. CAP-06 pg-driver race test (`tests/race-guard.test.ts`) skip-guarded; will run when `SUPABASE_DIRECT_URL` is set. Live 3-session human race not exercised. Source: `13-CHECKLIST.md` Marathon Criteria row QA-11.
+- **QA-12 (3-account branded smoke × 4 surfaces × 3 emails = 15 cells) — DEFERRED-V1.2.** Phase 12.6 single-account live verification done by Andrew on Vercel 2026-04-29. 3-account A/B/C cross-render not exercised. Branding profiles seeded on prod by Plan 13-01 — available for v1.2 marathon. Source: `13-CHECKLIST.md` QA-12 Sub-table (15 cells).
+- **QA-13 (EmbedCodeDialog at 320 / 768 / 1024 viewports) — DEFERRED-V1.2.** Code-level: Plan 12-05 locked EmbedCodeDialog to `sm:max-w-2xl` (commit `2dc5ae1`). Multi-viewport human resize not exercised. Source: `13-CHECKLIST.md` Marathon Criteria row QA-13.
+
+### 8.2 Per-phase Manual Checks Carried Forward (from `MILESTONE_V1_1_DEFERRED_CHECKS.md`)
+
+The 21 per-phase deferred manual checks accumulated through Phases 10/11/12/12.5/12.6 are NOT rolled up here individually — `MILESTONE_V1_1_DEFERRED_CHECKS.md` remains the canonical row-level enumeration. v1.2 marathon should consume that file directly. Items folded by code into automated coverage (e.g., Phase 12.6 items #1–#7 LIVE-VERIFIED 2026-04-29 by Andrew) are explicitly excluded.
+
+- Phase 10: 6 manual checks deferred (Source: `MILESTONE_V1_1_DEFERRED_CHECKS.md`)
+- Phase 11: 4 manual checks deferred (Source: `MILESTONE_V1_1_DEFERRED_CHECKS.md`)
+- Phase 12: 10 manual checks deferred — Phase 12.6 items #1–#7 LIVE-VERIFIED so excluded; remaining 10 deferred (Source: `MILESTONE_V1_1_DEFERRED_CHECKS.md`)
+- Phase 12.5: 3 manual checks deferred (Source: `MILESTONE_V1_1_DEFERRED_CHECKS.md`)
+- Phase 12.6: 8 manual checks — items #1–#7 LIVE-VERIFIED 2026-04-29; item #8 (NSI mark swap) explicitly DEFERRED-V1.2 (Source: `13-CHECKLIST.md` Item 0)
+
+### 8.3 v1.0 Re-Deferred Items (already in v1.2 backlog from §1, RE-confirmed at v1.1 close)
+
+- **EMBED-07** — Live Squarespace/Wix/WordPress embed test (Source: §1, RE-confirmed by ROADMAP scope-NOT-in-Phase-13 lock).
+- **EMAIL-08** — SPF/DKIM/DMARC + mail-tester ≥ 9/10 (Source: §1, RE-confirmed by ROADMAP scope-NOT-in-Phase-13 lock).
+- **QA-01..QA-06** — v1.0 marathon QA criteria (live email-client cross-test, mail-tester scoring, DST live E2E, responsive multi-viewport pass, multi-tenant UI walkthrough). v1.1 QA-10 partially covers the multi-tenant walkthrough at code level; live UI walkthrough still deferred. Source: §1, RE-confirmed by ROADMAP scope-NOT-in-Phase-13 lock.
+
+### 8.4 v1.2 Backlog Items Captured During v1.1
+
+Source for each: `.planning/STATE.md` Session Continuity (2026-04-30) + plan SUMMARYs.
+
+- **Hourly cron flip after Vercel Pro upgrade.** v1.1 ships with `0 13 * * *` daily on Hobby tier; flip `vercel.json` to `0 * * * *` after Vercel Pro upgrade. Source: `STATE.md` Session Continuity.
+- **`rate_limit_events` test DB cleanup.** 4 transient bookings-api.test.ts failures observed when the table accumulates between runs; truncate or scope-by-test. Source: `STATE.md` Session Continuity.
+- **Replace `public/nsi-mark.png` placeholder with final NSI brand mark.** Current placeholder is 105 bytes solid-navy committed by Plan 12-06. Affects email header band footer rendering on all transactional emails. Andrew explicit skip 2026-04-29 ("isn't really all that important"). Expected ≤10KB PNG, 64-128px square, transparent background. Source: `13-CHECKLIST.md` Item 0 + Pre-flight section.
+- **DROP `accounts.chrome_tint_intensity` column.** Phase 12.5 leftover; safe to remove after one v1.1 release window per Phase 12.6 lock (`chrome_tint_intensity` is no longer read by any production code path; only Phase 12.5 tests still reference the chromeTintToCss compat export). Source: `STATE.md` Session Continuity + Phase 12.6 close-out decision #1.
+- **Remove `chromeTintToCss` compat export from `lib/branding/chrome-tint.ts`.** Only Phase 12.5 tests still import it. Pair with the `chrome_tint_intensity` DROP. Source: `STATE.md` Session Continuity.
+- **Live cross-client email QA — Outlook desktop, Apple Mail iOS, Yahoo.** Deferred since v1.0; QA-12 surface 4 (email header band cross-render) was the v1.1 attempt and is itself deferred. Source: `STATE.md` Session Continuity + §1 + §5.
+- **Pre-13-01 NSI branding restoration (optional).** Plan 13-01 overwrote NSI's branding to `(navy / #F8FAFC / subtle / navy / null)` for QA-12 visual contrast. Pre-13-01 values captured in `13-CHECKLIST.md` Test Artifacts Created section: `(brand_primary='#5ABF6E', background_color='#FFFFFF', background_shade='subtle', sidebar_color='#10B981', chrome_tint_intensity='subtle')`. Andrew did not request restoration at close-out — KEEP for now; revisit if NSI marketing materials reference the green palette.
+- **Cleanup of pre-flight test artifacts (Test User 3 + capacity-test event_type + branding profiles).** KEEP decision recorded at close-out — useful for v1.2 marathon execution. Revisit if Test User 3's seeded availability_rules cause cron / reminder confusion. Source: `13-CHECKLIST.md` Test Artifacts Created section.
+
+### 8.5 Phase 13 Commit Reference
+
+- Phase 13 plan-creation commit: `e0e8e9a` (`docs(13): commit phase 13 plan documents (13-01, 13-02, 13-03)`)
+- Phase 13 research commit: `d898503` (`docs(13): research phase domain`)
+- Plan 13-01 close-out: `cc641eb` (`docs(13-01): complete plan — SUMMARY, STATE update, CHECKLIST item-6 SHA`)
+- Phase 13 + v1.1 milestone close commit: _populated post-commit; reference the commit that bundles ROADMAP + STATE + REQUIREMENTS + 13-CHECKLIST sign-off + this §8 update + 13-02-SUMMARY + 13-03-SUMMARY_
+
+---
+
+*v1 sign-off: Phase 9 Plan 09-03, 2026-04-27. v1.1 sign-off: Phase 13 marathon waiver + close-out, 2026-04-30 ("consider everything good. close out the milestone"). Future Claude Code sessions: read this file after CLAUDE.md, then proceed.*

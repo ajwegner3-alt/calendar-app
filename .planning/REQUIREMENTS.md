@@ -158,75 +158,75 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-05 | Phase 10 | Complete (code; manual deferred) |
-| AUTH-06 | Phase 10 | Complete (code; manual deferred) |
-| AUTH-07 | Phase 10 | Complete (code; manual deferred) |
-| AUTH-08 | Phase 10 | Complete (code; manual deferred) |
-| AUTH-09 | Phase 10 | Complete (code; manual deferred) |
-| AUTH-10 | Phase 10 | Complete (code; manual deferred) |
-| AUTH-11 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-01 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-02 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-03 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-04 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-05 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-06 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-07 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-08 | Phase 10 | Complete (code; manual deferred) |
-| ONBOARD-09 | Phase 10 | Complete (code; manual deferred) |
-| ACCT-01 | Phase 10 | Complete (code; manual deferred) |
-| ACCT-02 | Phase 10 | Complete (code; manual deferred) |
-| ACCT-03 | Phase 10 | Complete (code; manual deferred) |
+| AUTH-05 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| AUTH-06 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| AUTH-07 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| AUTH-08 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| AUTH-09 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| AUTH-10 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| AUTH-11 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-01 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-02 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-03 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-04 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-05 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-06 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-07 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-08 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ONBOARD-09 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ACCT-01 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ACCT-02 | Phase 10 | Complete (code; manual deferred to v1.2) |
+| ACCT-03 | Phase 10 | Complete (code; manual deferred to v1.2) |
 | CAP-01 | Phase 11 | Complete (code) |
 | CAP-02 | Phase 11 | Complete (code) |
-| CAP-03 | Phase 11 | Complete (code; manual deferred) |
+| CAP-03 | Phase 11 | Complete (code; manual deferred to v1.2) |
 | CAP-04 | Phase 11 | Complete (code) |
 | CAP-05 | Phase 11 | Complete (code) |
-| CAP-06 | Phase 11 | Complete (code; manual deferred) |
-| CAP-07 | Phase 11 | Complete (code; manual deferred) |
-| CAP-08 | Phase 11 | Complete (code; manual deferred) |
-| CAP-09 | Phase 11 | Complete (code; manual deferred) |
-| BRAND-05 | Phase 12 | Complete (code; manual deferred) |
-| BRAND-06 | Phase 12 | Complete (code; manual deferred) |
-| BRAND-07 | Phase 12 | Complete (code; manual deferred) |
-| UI-01 | Phase 12 | Complete (code; manual deferred) |
-| UI-02 | Phase 12 | Complete (code; manual deferred) |
-| UI-03 | Phase 12 | Complete (code; manual deferred) |
-| UI-04 | Phase 12 | Complete (code; manual deferred) |
-| UI-05 | Phase 12 | Complete (code; manual deferred) |
-| UI-06 | Phase 12 | Complete (code; manual deferred) |
-| UI-07 | Phase 12 | Complete (code; manual deferred) |
-| UI-08 | Phase 12 | Complete (code; manual deferred) |
-| UI-09 | Phase 12 | Complete (code; manual deferred) |
-| UI-10 | Phase 12 | Complete (code; manual deferred) |
-| UI-11 | Phase 12 | Complete (code; manual deferred) |
-| UI-12 | Phase 12 | Complete (code; manual deferred) |
-| UI-13 | Phase 12 | Complete (code; manual deferred) |
-| EMAIL-09 | Phase 12 | Complete (code; manual deferred) |
-| EMAIL-10 | Phase 12 | Complete (code; manual deferred) |
-| EMAIL-11 | Phase 12 | Complete (code; manual deferred) |
-| EMAIL-12 | Phase 12 | Complete (code; manual deferred) |
-| BRAND-08 | Phase 12.5 | Complete (code; manual deferred) |
+| CAP-06 | Phase 11 | Complete (code; manual deferred to v1.2) |
+| CAP-07 | Phase 11 | Complete (code; manual deferred to v1.2) |
+| CAP-08 | Phase 11 | Complete (code; manual deferred to v1.2) |
+| CAP-09 | Phase 11 | Complete (code; manual deferred to v1.2) |
+| BRAND-05 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| BRAND-06 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| BRAND-07 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-01 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-02 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-03 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-04 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-05 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-06 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-07 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-08 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-09 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-10 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-11 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-12 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| UI-13 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| EMAIL-09 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| EMAIL-10 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| EMAIL-11 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| EMAIL-12 | Phase 12 | Complete (code; manual deferred to v1.2) |
+| BRAND-08 | Phase 12.5 | Complete (code; manual deferred to v1.2) |
 | BRAND-09 | Phase 12.5 | Complete (code) |
-| UI-14 | Phase 12.5 | Complete (code; manual deferred) |
-| UI-15 | Phase 12.5 | Complete (code; manual deferred) |
+| UI-14 | Phase 12.5 | Complete (code; manual deferred to v1.2) |
+| UI-15 | Phase 12.5 | Complete (code; manual deferred to v1.2) |
 | UI-16 | Phase 12.5 | Complete (code) |
-| UI-17 | Phase 12.5 | Complete (code; manual deferred) |
+| UI-17 | Phase 12.5 | Complete (code; manual deferred to v1.2) |
 | EMAIL-13 | Phase 12.5 | Complete (code) |
-| BRAND-10 | Phase 12.6 | Complete (code; manual deferred) |
-| BRAND-11 | Phase 12.6 | Complete (code; manual deferred) |
-| BRAND-12 | Phase 12.6 | Complete (code; manual deferred) |
-| UI-18 | Phase 12.6 | Complete (code; manual deferred) |
-| UI-19 | Phase 12.6 | Complete (code; manual deferred) |
-| UI-20 | Phase 12.6 | Complete (code; manual deferred) |
-| EMAIL-14 | Phase 12.6 | Complete (code; manual deferred) |
-| QA-09 | Phase 13 | Pending |
-| QA-10 | Phase 13 | Pending |
-| QA-11 | Phase 13 | Pending |
-| QA-12 | Phase 13 | Pending |
-| QA-13 | Phase 13 | Pending |
-| QA-14 | Phase 13 | Pending |
-| QA-15 | Phase 13 | Pending |
+| BRAND-10 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| BRAND-11 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| BRAND-12 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| UI-18 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| UI-19 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| UI-20 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| EMAIL-14 | Phase 12.6 | Complete (code; manual deferred to v1.2) |
+| QA-09 | Phase 13 | DEFERRED-V1.2 (marathon waived 2026-04-30) |
+| QA-10 | Phase 13 | DEFERRED-V1.2 (marathon waived 2026-04-30; backend RLS green) |
+| QA-11 | Phase 13 | DEFERRED-V1.2 (marathon waived 2026-04-30; CAP-06 race test skip-guarded) |
+| QA-12 | Phase 13 | DEFERRED-V1.2 (marathon waived 2026-04-30; single-account live OK 2026-04-29) |
+| QA-13 | Phase 13 | DEFERRED-V1.2 (marathon waived 2026-04-30; code lock at commit `2dc5ae1`) |
+| QA-14 | Phase 13 | Complete (Andrew sign-off 2026-04-30) |
+| QA-15 | Phase 13 | Complete (FUTURE_DIRECTIONS.md §8 updated 2026-04-30) |
 
 **Coverage:**
 - v1.1 requirements: 67 total (53 original + 7 added in Phase 12.5 + 7 added in Phase 12.6)
@@ -237,4 +237,4 @@ Multi-user-per-account / team seats. Stripe paid tiers. Per-tenant subdomains. S
 
 ---
 *Requirements defined: 2026-04-27 for v1.1 milestone*
-*Last updated: 2026-04-29 — Phase 12, 12.5, 12.6 marked Complete after verifiers passed at code level (5/5, 7/7, 8/8 must_haves respectively); manual checks deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. Phase 13 next.*
+*Last updated: 2026-04-30 — v1.1 SHIPPED. Phase 13 closed via marathon waiver (Andrew verbatim "consider everything good. close out the milestone"). QA-09..QA-13 DEFERRED-V1.2 (5 items); QA-14 + QA-15 Complete. v1.1 cumulative: 62/67 requirements complete; 5 marathon items + per-phase manual deferrals carried to v1.2 backlog per `FUTURE_DIRECTIONS.md` §8.*

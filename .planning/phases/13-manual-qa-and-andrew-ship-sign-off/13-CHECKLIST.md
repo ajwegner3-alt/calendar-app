@@ -18,21 +18,25 @@
 
 ## Marathon Criteria (Plan 13-02)
 
+**Marathon waived by Andrew 2026-04-30** — verbatim instruction "consider everything good. close out the milestone." All five QA-09..QA-13 criteria are recorded as DEFERRED-TO-V1.2 (not silently skipped, not marked PASS). Pre-flight prerequisites (Plan 13-01) were established and remain available for v1.2 marathon execution. Code-level verification is the ship gate; live multi-surface human verification carries forward.
+
 | # | Criterion | Status | Timestamp | Notes |
 |---|-----------|--------|-----------|-------|
-| QA-09 | Signup → email-verify → onboarding wizard → first booking E2E | __ | __ | __ |
-| QA-10 | Multi-tenant UI isolation (login as Test User 2, ZERO of Andrew's data on 7 surfaces) | __ | __ | __ |
-| QA-11 | Capacity=3 E2E (3 succeed, 4th SLOT_CAPACITY_REACHED) | __ | __ | Targets `/nsi-rls-test/capacity-test` |
-| QA-12 | 3-account branded smoke × 4 surfaces (12 spot-checks + 3 emails = 15 total) | __ | __ | Surface 4 (email): NSI mark in footer is the placeholder — do not fail on it (Item 0 deferral) |
-| QA-13 | EmbedCodeDialog at 320 / 768 / 1024 (no horizontal overflow) | __ | __ | __ |
+| QA-09 | Signup → email-verify → onboarding wizard → first booking E2E | DEFERRED-V1.2 | 2026-04-30 | Andrew waived marathon at milestone close-out. Code-level verification: Phase 10 verifier passed 9/9 plans 2026-04-28 |
+| QA-10 | Multi-tenant UI isolation (login as Test User 2, ZERO of Andrew's data on 7 surfaces) | DEFERRED-V1.2 | 2026-04-30 | Andrew waived marathon. Backend RLS: `tests/rls-cross-tenant-matrix.test.ts` 24 N=3 cases passing. UI-layer human walkthrough deferred |
+| QA-11 | Capacity=3 E2E (3 succeed, 4th SLOT_CAPACITY_REACHED) | DEFERRED-V1.2 | 2026-04-30 | Andrew waived marathon. Code-level: Phase 11 verifier passed 8/8 plans; 148 tests + pg-driver race test (CAP-06) skip-guarded ready when SUPABASE_DIRECT_URL is set |
+| QA-12 | 3-account branded smoke × 4 surfaces (12 spot-checks + 3 emails = 15 total) | DEFERRED-V1.2 | 2026-04-30 | Andrew waived marathon. Phase 12.6 was Andrew-live-approved on Vercel deploy 2026-04-29 (single-account smoke). 3-account A/B/C cross-render deferred. Branding profiles remain seeded on prod for v1.2 |
+| QA-13 | EmbedCodeDialog at 320 / 768 / 1024 (no horizontal overflow) | DEFERRED-V1.2 | 2026-04-30 | Andrew waived marathon. Code-level: Plan 12-05 EmbedCodeDialog locked to `sm:max-w-2xl` (commit `2dc5ae1`). Multi-viewport human verification deferred |
 
 ## QA-12 Sub-table (3 accounts × 4 surfaces + 3 emails)
 
+**All 15 cells DEFERRED-V1.2 per marathon waiver.** Branding profiles remain on prod for v1.2 execution.
+
 | Account | Dashboard | Public booking | Embed | Email header band |
 |---------|-----------|----------------|-------|-------------------|
-| A — nsi (navy combo: brand_primary=#0A2540, bg=#F8FAFC, shade=subtle, sidebar=#0A2540) | __ | __ | __ | __ (placeholder NSI mark — accepted) |
-| B — nsi-rls-test (magenta combo: brand_primary=#EC4899, bg=#FDF2F8, shade=bold, sidebar=#EC4899) | __ | __ | __ | __ (placeholder NSI mark — accepted) |
-| C — nsi-rls-test-3 (null combo: brand_primary=#22C55E, bg=null, shade=none, sidebar=null) | __ | __ | __ | __ (placeholder NSI mark — accepted) |
+| A — nsi (navy combo: brand_primary=#0A2540, bg=#F8FAFC, shade=subtle, sidebar=#0A2540) | DEFERRED-V1.2 | DEFERRED-V1.2 | DEFERRED-V1.2 | DEFERRED-V1.2 |
+| B — nsi-rls-test (magenta combo: brand_primary=#EC4899, bg=#FDF2F8, shade=bold, sidebar=#EC4899) | DEFERRED-V1.2 | DEFERRED-V1.2 | DEFERRED-V1.2 | DEFERRED-V1.2 |
+| C — nsi-rls-test-3 (null combo: brand_primary=#22C55E, bg=null, shade=none, sidebar=null) | DEFERRED-V1.2 | DEFERRED-V1.2 | DEFERRED-V1.2 | DEFERRED-V1.2 |
 
 ## Deferred Check Replays (from MILESTONE_V1_1_DEFERRED_CHECKS.md)
 
@@ -63,13 +67,16 @@
 
 ## Test Artifacts Created During Marathon
 
-*Capture every test signup, test booking, test event_type for cleanup post-sign-off (per RESEARCH.md Pitfall 3)*
+Marathon waived — no test bookings, no throwaway signups created.
 
-- QA-09 throwaway signup user: ___ (email: ajwegner3+phase13signup@gmail.com; slug: ___; uuid: ___)
-- QA-09 first-booking booker email: ajwegner3+phase13booker@gmail.com; booking id: ___
-- QA-11 bookings: 3 confirmed bookings on capacity-test event_type — booker emails: cap1/cap2/cap3 + the 4th rejected attempt
-- QA-12 trigger bookings: 3 brandtest bookings (one per Account A/B/C); booker emails: ajwegner3+brandtest-{a,b,c}@gmail.com
-- **Pre-13-01 NSI branding values (for restoration if Andrew wants):** `brand_primary='#5ABF6E', background_color='#FFFFFF', background_shade='subtle', sidebar_color='#10B981', chrome_tint_intensity='subtle'`
+Pre-flight artifacts from Plan 13-01 remain on prod (intentional, available for v1.2 marathon):
+- Test User 3: `andrew.wegner.3@gmail.com` (uuid `c692a86d-ec65-4ce0-9c77-837d3f75b7d3`, slug `nsi-rls-test-3`)
+- Capacity-test event_type: `5344a500-acd5-4336-b195-ebea16f8dec4` on `/nsi-rls-test/capacity-test`
+- 3 distinct branding profiles applied to nsi / nsi-rls-test / nsi-rls-test-3 (navy / magenta / emerald-null)
+
+**Pre-13-01 NSI branding values (for restoration if Andrew chooses to revert post-v1.1):** `brand_primary='#5ABF6E', background_color='#FFFFFF', background_shade='subtle', sidebar_color='#10B981', chrome_tint_intensity='subtle'`. KEPT (Andrew did not request restoration at close-out).
+
+**Cleanup decision:** KEEP all pre-flight artifacts on prod for future v1.2 marathon execution.
 
 ## Deferrals to v1.2
 
@@ -82,7 +89,7 @@
 
 ## Sign-off
 
-- [ ] Andrew reviewed 13-CHECKLIST.md and FUTURE_DIRECTIONS.md §8
-- [ ] Andrew explicit verbal sign-off ("ship v1.1")
-- **Sign-off timestamp:** __
-- **Sign-off commit:** __
+- [x] Andrew reviewed 13-CHECKLIST.md and FUTURE_DIRECTIONS.md §8 (waived marathon at milestone close-out)
+- [x] Andrew explicit verbal sign-off — verbatim 2026-04-30: **"consider everything good. close out the milestone"**
+- **Sign-off timestamp:** 2026-04-30
+- **Sign-off commit:** _populated post-commit; see git log for `docs(13): complete phase + close v1.1 milestone`_

@@ -1,11 +1,11 @@
 # Roadmap: Calendar App (NSI Booking Tool)
 
-A multi-tenant Calendly-style booking tool for trade contractors. v1.0 shipped 2026-04-27 with single-tenant production deployment + multi-tenant schema. v1.1 opens the tool to public signup, closes a prod double-booking observation with per-event-type capacity, and rebrands every owner-facing surface using the Cruip "Simple Light" tailwind-landing-page aesthetic.
+A multi-tenant Calendly-style booking tool for trade contractors. v1.0 shipped 2026-04-27 with single-tenant production deployment + multi-tenant schema. v1.1 opens the tool to public signup, closes a prod double-booking observation with per-event-type capacity, and rebrands every owner-facing surface using the Cruip "Simple Light" tailwind-landing-page aesthetic. v1.1 shipped 2026-04-30 (marathon QA waived by Andrew at sign-off; 5 marathon items deferred to v1.2).
 
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-9 (52 plans) — shipped 2026-04-27. Full archive: [`milestones/v1.0-ROADMAP.md`](./milestones/v1.0-ROADMAP.md).
-- 🚧 **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (in progress, started 2026-04-27).
+- ✅ **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (34 plans) — shipped 2026-04-30. Marathon QA-09..QA-13 deferred to v1.2 per Andrew waiver; QA-14 + QA-15 complete.
 
 ---
 
@@ -34,7 +34,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 - [✓] **Phase 12: Branded UI Overhaul (5 Surfaces)** — Code complete 2026-04-29 (7/7 plans). Cruip "Simple Light" aesthetic across dashboard + public booking + embed + emails + auth, plus per-account `background_color`/`background_shade` tokens, sidebar IA refactor, Home tab monthly calendar. Chrome was locked to gray-50 by design in this phase.
 - [✓] **Phase 12.5: Per-Account Heavy Chrome Theming + Header Removal + Email Token Unification** — Code complete 2026-04-29 (4/4 plans). Per-account `chrome_tint_intensity` (none/subtle/full) tints sidebar + page bg; FloatingHeaderPill removed; email senders unified on same tokens as UI.
 - [✓~] **Phase 12.6: Direct Per-Account Color Controls (Page / Sidebar / Primary)** — Code complete 2026-04-29 (3/3 plans). 8/8 must_haves + 7/7 requirements verified at code level; 8 manual checks deferred to milestone-end QA. Three independent color fields ship: `sidebar_color` (sidebar bg), `background_color` (page bg), `brand_primary` wired to shadcn `--primary` CSS variable override. IntensityPicker REMOVED; 3 direct color pickers replace it. Email header band uses `sidebar_color → brand_primary → '#0A2540'` priority chain.
-- [ ] **Phase 13: Manual QA + Andrew Ship Sign-Off** — End-to-end signup walkthrough, multi-tenant UI isolation check, capacity E2E, branded smoke across 3 test accounts (including all 3 per-account color controls), explicit "ship v1.1" sign-off.
+- [✓~] **Phase 13: Manual QA + Andrew Ship Sign-Off** — Closed 2026-04-30. Plan 13-01 pre-flight 6/6 complete (1 explicit deferral: NSI mark v1.2). Plans 13-02 (marathon QA execution) + 13-03 (sign-off + future-directions) closed via Andrew marathon waiver: verbatim "consider everything good. close out the milestone." QA-09..QA-13 = DEFERRED-V1.2 (5 items); QA-14 (sign-off) + QA-15 (FUTURE_DIRECTIONS.md §8) = Complete.
 
 ---
 
@@ -253,7 +253,7 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 | 12. Branded UI Overhaul (5 Surfaces) | v1.1 | 7 / 7 | Code complete (all 7 plans done) | 2026-04-29 (code) |
 | 12.5. Per-Account Chrome Theming + Header + Email | v1.1 | 4 / 4 | Code complete | 2026-04-29 (code) |
 | 12.6. Direct Per-Account Color Controls | v1.1 | 3 / 3 | Code complete; 8 manual checks deferred | 2026-04-29 (code) |
-| 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 0 / TBD | Not started — UP NEXT | - |
+| 13. Manual QA + Andrew Ship Sign-Off | v1.1 | 3 / 3 | ✓ Closed (marathon waived; QA-09..13 → v1.2) | 2026-04-30 |
 
 ## Coverage Summary
 
@@ -269,4 +269,4 @@ Within each phase, plan-level parallelization is enabled via `parallelization=tr
 
 ---
 
-*Roadmap last updated: 2026-04-29 — Phase 12, 12.5, 12.6 all CODE-COMPLETE with manual checks deferred to milestone-end QA per `MILESTONE_V1_1_DEFERRED_CHECKS.md`. v1.1 cumulative: 53/67 requirements complete (Phase 10: 19; Phase 11: 9; Phase 12: 20; Phase 12.5: 7 [deprecated by 12.6 in code]; Phase 12.6: 7 [active]). Phase 13 (Manual QA + Andrew Ship Sign-Off) is UP NEXT.*
+*Roadmap last updated: 2026-04-30 — **v1.1 SHIPPED.** Phase 13 closed via Andrew marathon waiver. v1.1 cumulative: 62/67 requirements complete (5 deferred: QA-09..QA-13 marathon items → v1.2 per `FUTURE_DIRECTIONS.md` §8). All per-phase manual checks from `MILESTONE_V1_1_DEFERRED_CHECKS.md` carried forward to v1.2 backlog. Next: `/gsd:complete-milestone` to archive v1.1 and prepare v1.2.*

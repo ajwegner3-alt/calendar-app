@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-29 — Plan 13-01 complete. Pre-flight prerequisites for Phase 13 marathon QA established: email-confirm toggle ON (5-step lockout-safe sequence), Test User 3 created (`andrew.wegner.3@gmail.com` / `nsi-rls-test-3`), 3 distinct branded accounts (navy/magenta/emerald-null), capacity=3 event live, 13-CHECKLIST.md scaffolded. NSI mark swap DEFERRED to v1.2 by Andrew. 277 tests + 4 skipped (24 N=3 cases activated; +22 un-skipped). Deploy SHA `ed81ac7`. Plan 13-02 marathon QA is next.
+**Last updated:** 2026-04-30 — **v1.1 SHIPPED.** Phase 13 closed via Andrew marathon waiver: verbatim "consider everything good. close out the milestone." Plans 13-02 + 13-03 closed-by-waiver (no marathon executed); QA-09..QA-13 = DEFERRED-V1.2 (5 items); QA-14 + QA-15 = Complete. FUTURE_DIRECTIONS.md §8 appended with marathon waiver record + carry-overs. Plan 13-01 pre-flight artifacts (Test User 3, capacity-test event, 3 branding profiles) KEPT on prod for v1.2 marathon. Next: `/gsd:complete-milestone` to archive v1.1.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.1 Phase 13 — Manual QA + Andrew Ship Sign-Off. Plan 13-01 COMPLETE 2026-04-29 (pre-flight prerequisites established). Plan 13-02 (marathon QA execution: QA-09..QA-13) is up next.
+**Current focus:** v1.1 SHIPPED 2026-04-30. Phase 13 closed via marathon waiver. Next milestone: v1.2 (carry over 5 marathon items + per-phase manual deferrals + Resend migration + Vercel Pro hourly cron + Phase 12.5 chrome_tint_intensity column DROP + chromeTintToCss compat removal + final NSI mark swap + live cross-client email QA).
 
 **Mode:** yolo
 **Depth:** standard
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v1.0 milestone)
 
 ## Current Position
 
-**Milestone:** v1.1 IN PROGRESS (started 2026-04-27).
-**Phase:** Phase 13 — Manual QA + Andrew Ship Sign-Off. Plan 13-01 COMPLETE 2026-04-29.
-**Last completed plan:** 13-01 (pre-qa-prerequisites-and-pre-flight-fixes) — 2026-04-29.
-**Status:** Plan 13-01 COMPLETE with one deferral (NSI mark v1.2). Plan 13-02 marathon QA next.
-**Last activity:** 2026-04-29 — Plan 13-01 complete. Email-confirm toggle ON; Test User 3 wired; 3 branded accounts; capacity=3 event live; 13-CHECKLIST scaffolded; deploy SHA ed81ac7; 277 tests + 4 skipped.
+**Milestone:** v1.1 SHIPPED 2026-04-30 (started 2026-04-27).
+**Phase:** Phase 13 CLOSED 2026-04-30 (marathon waived).
+**Last completed plan:** 13-03 (future-directions-and-sign-off; closed by Andrew marathon waiver) — 2026-04-30. Plan 13-02 sibling: closed-by-waiver same date.
+**Status:** v1.1 milestone COMPLETE. Ready for `/gsd:complete-milestone` archive + v1.2 kickoff.
+**Last activity:** 2026-04-30 — Andrew verbatim "consider everything good. close out the milestone." Phase 13 closed via marathon waiver: 13-CHECKLIST sign-off populated, FUTURE_DIRECTIONS §8 appended, ROADMAP + REQUIREMENTS marked, 13-02 + 13-03 SUMMARY files written, all changes bundled in close-out commit.
 
 **Progress (across both v1.0 and v1.1):** [████████████░] Phase 12 COMPLETE (all 7 plans done); Phase 12.5 COMPLETE (all 4 plans done); Phase 12.6 COMPLETE (all 3 plans done — 12.6-01/02/03); Phase 13 pending milestone-end QA (v1.0 SHIPPED 2026-04-27; Phase 10 code-complete 2026-04-28; Phase 11 code-complete 2026-04-29; Phase 12 code-complete 2026-04-29; Phase 12.5 code-complete 2026-04-29; Phase 12.6 code-complete 2026-04-30)
 
@@ -73,11 +73,13 @@ Phase 12.6 [~] Direct Per-Account Color Controls     (Wave 1 COMPLETE 2026-04-30
   12.6-01 [✓] foundation                             (Complete 2026-04-30 — accounts.sidebar_color prod column; Branding.sidebarColor; resolveChromeColors() ResolvedChromeColors; chromeTintToCss compat kept; 252 tests + 26 skipped)
   12.6-02 [✓] dashboard-chrome-and-editor            (Complete 2026-04-30 — shell --primary CSS var; AppSidebar direct hex; 3 pickers; 3-color MiniPreviewCard; IntensityPicker deleted; sidebar_color DB write; 255 tests + 26 skipped)
   12.6-03 [✓] email-tokens                           (Complete 2026-04-30 — EmailBranding.sidebarColor; EMAIL-14 sidebarColor→brand_primary→DEFAULT chain; all 6 senders + 4 callers wired; 255 tests + 26 skipped)
-Phase 13 [~] Manual QA + Andrew Ship Sign-Off        (Plan 13-01 complete 2026-04-29; 13-02 next)
+Phase 13 [✓~] Manual QA + Andrew Ship Sign-Off       (CLOSED 2026-04-30 — marathon waived by Andrew; QA-09..13 → v1.2)
   13-01 [✓] pre-qa-prerequisites-and-pre-flight-fixes (Complete 2026-04-29 — email-confirm toggle ON; Test User 3 wired; 3 branded accounts; capacity=3 event live; 13-CHECKLIST scaffolded; NSI mark deferred to v1.2; deploy SHA ed81ac7; 277 tests + 4 skipped)
-  13-02 [ ] marathon-qa-execution                     (Not started)
-  13-03 [ ] future-directions-and-sign-off            (Not started)
+  13-02 [✓~] marathon-qa-execution                    (Closed-by-waiver 2026-04-30 — Andrew verbatim "consider everything good"; QA-09..QA-13 = DEFERRED-V1.2; no marathon executed)
+  13-03 [✓] future-directions-and-sign-off            (Complete 2026-04-30 — FUTURE_DIRECTIONS.md §8 appended; QA-14 + QA-15 satisfied; KEEP cleanup decision recorded)
 ```
+
+**v1.1 SHIPPED 2026-04-30** — 34 plans executed across Phases 10/11/12/12.5/12.6/13; 62/67 requirements complete; 5 marathon items + per-phase manual deferrals carried to v1.2 per `FUTURE_DIRECTIONS.md` §8.
 
 ## Performance Metrics
 
