@@ -41,13 +41,20 @@ export const backgroundShadeSchema = z
   .enum(["none", "subtle", "bold"])
   .default("subtle");
 
-// Phase 12.5: chrome tinting intensity
+// Phase 12.5: chrome tinting intensity (kept for backward compat — DB column still exists)
 export const chromeTintIntensitySchema = z
   .enum(["none", "subtle", "full"])
   .default("subtle") satisfies z.ZodType<ChromeTintIntensity>;
 
+// Phase 12.6: direct sidebar color (nullable hex — null = use CSS default)
+export const sidebarColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Use #RRGGBB format (e.g. #0A2540)")
+  .nullable()
+  .optional();
+
 export const brandingBackgroundSchema = z.object({
   background_color: backgroundColorSchema,
   background_shade: backgroundShadeSchema,
-  chrome_tint_intensity: chromeTintIntensitySchema,
+  sidebar_color: sidebarColorSchema,
 });

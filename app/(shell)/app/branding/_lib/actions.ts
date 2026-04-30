@@ -7,9 +7,9 @@ import {
   MAX_LOGO_BYTES,
   backgroundColorSchema,
   backgroundShadeSchema,
-  chromeTintIntensitySchema,
+  sidebarColorSchema,
 } from "./schema";
-import type { BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
+import type { BackgroundShade } from "@/lib/branding/types";
 
 export interface ActionResult<T = void> {
   ok?: boolean;
@@ -134,16 +134,17 @@ export async function deleteLogoAction(): Promise<ActionResult> {
 }
 
 /**
- * Phase 12 + 12.5: persist background_color, background_shade, and chrome_tint_intensity
+ * Phase 12.6: persist background_color, background_shade, and sidebar_color
  * to the owner's account.
  *
- * Defensive: empty string backgroundColor is treated as null (clears the column).
+ * Replaces Phase 12.5 chrome_tint_intensity parameter with sidebar_color.
+ * Defensive: empty strings are treated as null (clears the column).
  * Validates all three fields via Zod before writing.
  */
 export async function saveBrandingAction(payload: {
   backgroundColor: string | null;
   backgroundShade: BackgroundShade;
-  chromeTintIntensity: ChromeTintIntensity;
+  sidebarColor: string | null;
 }): Promise<ActionResult> {
   // Treat empty string as null (owner cleared the field)
   const rawColor =
@@ -167,11 +168,14 @@ export async function saveBrandingAction(payload: {
     };
   }
 
-  const intensityResult = chromeTintIntensitySchema.safeParse(payload.chromeTintIntensity);
-  if (!intensityResult.success) {
+  // Treat empty string as null (owner cleared the sidebar color field)
+  const rawSidebarColor = payload.sidebarColor === "" ? null : payload.sidebarColor;
+
+  const sidebarColorResult = sidebarColorSchema.safeParse(rawSidebarColor);
+  if (!sidebarColorResult.success) {
     return {
       fieldErrors: {
-        chromeTintIntensity: intensityResult.error.issues.map((i) => i.message),
+        sidebarColor: sidebarColorResult.error.issues.map((i) => i.message),
       },
     };
   }
@@ -184,7 +188,7 @@ export async function saveBrandingAction(payload: {
       .update({
         background_color: colorResult.data ?? null,
         background_shade: shadeResult.data,
-        chrome_tint_intensity: intensityResult.data,
+        sidebar_color: sidebarColorResult.data ?? null,
       })
       .eq("id", accountId);
 

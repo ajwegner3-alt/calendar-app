@@ -4,12 +4,11 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { BrandingState } from "../_lib/load-branding";
-import type { BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
+import type { BackgroundShade } from "@/lib/branding/types";
 import { LogoUploader } from "./logo-uploader";
 import { ColorPickerInput } from "./color-picker-input";
 import { PreviewIframe } from "./preview-iframe";
 import { ShadePicker } from "./shade-picker";
-import { IntensityPicker } from "./intensity-picker";
 import { MiniPreviewCard } from "./mini-preview-card";
 import { saveBrandingAction } from "../_lib/actions";
 
@@ -20,14 +19,14 @@ interface BrandingEditorProps {
 /**
  * Top-level branding editor orchestrator.
  *
- * Owns five pieces of live preview state:
- * - primaryColor: starts from DB value (or DEFAULT_BRAND_PRIMARY if null)
- * - logoUrl: starts from DB value (or null)
- * - backgroundColor: starts from DB value (or null — gray-50 fallback in preview)
- * - backgroundShade: starts from DB value (or 'subtle')
- * - chromeTintIntensity: starts from DB value (or 'subtle')
+ * Phase 12.6: owns three live color preview fields (replacing Phase 12.5 chromeTintIntensity):
+ * - primaryColor: "Button & accent color" — used for buttons, switches, focus rings
+ * - sidebarColor: "Sidebar color" — direct hex fill for sidebar background
+ * - backgroundColor: "Page background" — direct hex fill for page area background
+ * - backgroundShade: "Background shade" — gradient backdrop intensity (unchanged)
+ * - logoUrl: logo (unchanged)
  *
- * Changes to any propagate into the respective preview immediately, giving the
+ * Changes to any field propagate into the MiniPreviewCard immediately, giving the
  * owner a live preview BEFORE they save (CONTEXT lock).
  *
  * Layout: two-column on md+ (editor left, preview right).
@@ -44,9 +43,9 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
     state.backgroundShade,
   );
 
-  // Phase 12.5: chrome tint intensity state
-  const [chromeTintIntensity, setChromeTintIntensity] = useState<ChromeTintIntensity>(
-    state.chromeTintIntensity,
+  // Phase 12.6: direct sidebar color state (replaces chromeTintIntensity)
+  const [sidebarColor, setSidebarColor] = useState<string | null>(
+    state.sidebarColor,
   );
 
   const [isSavingBackground, startBackgroundSave] = useTransition();
@@ -56,7 +55,7 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
       const result = await saveBrandingAction({
         backgroundColor,
         backgroundShade,
-        chromeTintIntensity,
+        sidebarColor,
       });
       if (result.error) {
         toast.error(result.error);
@@ -86,18 +85,32 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
         </div>
 
         <div className="space-y-3">
-          <h2 className="text-lg font-medium">Primary color</h2>
+          <h2 className="text-lg font-medium">Button &amp; accent color</h2>
           <p className="text-sm text-muted-foreground">
-            Used for buttons and headings. Type a hex value or use the color picker.
+            Used for buttons, switches, and focus rings throughout your dashboard.
           </p>
           <ColorPickerInput value={primaryColor} onChange={setPrimaryColor} />
         </div>
 
-        {/* Phase 12: Background color */}
+        {/* Phase 12.6: Sidebar color */}
         <div className="space-y-3">
-          <h2 className="text-lg font-medium">Background color</h2>
+          <h2 className="text-lg font-medium">Sidebar color</h2>
           <p className="text-sm text-muted-foreground">
-            Sets the gradient accent color on your booking pages. Pick a swatch or enter a custom hex.
+            Sets the sidebar background. Leave blank to use the default light gray.
+          </p>
+          <ColorPickerInput
+            value={sidebarColor ?? "#0A2540"}
+            onChange={(hex) => setSidebarColor(hex)}
+            showSaveButton={false}
+            showSwatches={true}
+          />
+        </div>
+
+        {/* Phase 12.6: Page background (was "Background color") */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium">Page background</h2>
+          <p className="text-sm text-muted-foreground">
+            Sets the dashboard page area background. Leave blank for the default light gray.
           </p>
           <ColorPickerInput
             value={backgroundColor ?? "#0A2540"}
@@ -114,25 +127,13 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
             Controls gradient intensity. "Subtle" is a soft accent; "Bold" is a full Cruip-style pattern.
           </p>
           <ShadePicker value={backgroundShade} onChange={setBackgroundShade} />
-        </div>
 
-        {/* Phase 12.5: Chrome intensity */}
-        <div className="space-y-3">
-          <h2 className="text-lg font-medium">Chrome intensity</h2>
-          <p className="text-sm text-muted-foreground">
-            Controls how much brand color tints the dashboard sidebar and background.
-            "None" keeps the neutral gray look.
-          </p>
-          <IntensityPicker
-            value={chromeTintIntensity}
-            onChange={setChromeTintIntensity}
-          />
-
-          {/* Phase 12.5: Chrome-aware inline mini-preview (CONTEXT lock: only in-page preview) */}
+          {/* Phase 12.6: 3-color mini preview */}
           <MiniPreviewCard
-            color={backgroundColor}
+            sidebarColor={sidebarColor}
+            pageColor={backgroundColor}
+            primaryColor={primaryColor}
             shade={backgroundShade}
-            chromeTintIntensity={chromeTintIntensity}
           />
 
           <Button
