@@ -4,13 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import {
   SidebarProvider,
   SidebarInset,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/app-sidebar";
-import { GradientBackdrop } from "@/app/_components/gradient-backdrop";
-import { getBrandingForAccount } from "@/lib/branding/read-branding";
-import { resolveChromeColors } from "@/lib/branding/chrome-tint";
+import { BackgroundGlow } from "@/app/_components/background-glow";
+import { Header } from "@/app/_components/header";
 
 export default async function ShellLayout({
   children,
@@ -36,10 +34,12 @@ export default async function ShellLayout({
   const email = (claimsData.claims.email as string | undefined) ?? "";
 
   // Inline account lookup (RLS-scoped: only the owner's row returned).
-  // Pattern: app/(shell)/app/page.tsx lines 19-26 (no loadAccountForUser helper exists).
+  // OWNER-11: Trimmed to id only — slug not referenced in this layout.
+  // Columns removed: sidebar_color, sidebar_text_color, background_color,
+  // background_shade, chrome_tint_intensity, brand_primary (Phase 15 cleanup).
   const { data: accounts } = await supabase
     .from("accounts")
-    .select("id, slug, brand_primary, background_color, background_shade, sidebar_color")
+    .select("id")
     .eq("owner_user_id", claimsData.claims.sub)
     .is("deleted_at", null)
     .limit(1);
@@ -47,48 +47,19 @@ export default async function ShellLayout({
   if (!accounts || accounts.length === 0) {
     redirect("/app/unlinked");
   }
-  const account = accounts[0];
-
-  // Branding read — getBrandingForAccount is the canonical helper (uses admin client).
-  // Falls open on DB error; returns safe defaults (logoUrl=null, primaryColor=DEFAULT_BRAND_PRIMARY).
-  const branding = await getBrandingForAccount(account.id);
-
-  // Phase 12.6: resolve full-strength chrome colors from branding.
-  // resolveChromeColors() returns null for each field when not set — consumers
-  // apply ?? undefined to fall through to CSS class defaults.
-  const chrome = resolveChromeColors(branding);
 
   return (
-    <div
-      style={{
-        "--primary": chrome.primaryColor,
-        "--primary-foreground": chrome.primaryTextColor ?? undefined,
-      } as React.CSSProperties}
-    >
-      <TooltipProvider delayDuration={0}>
-        <SidebarProvider defaultOpen={sidebarOpen}>
-          <AppSidebar
-            email={email}
-            sidebarColor={chrome.sidebarColor}
-            sidebarTextColor={chrome.sidebarTextColor}
-          />
-          <SidebarInset
-            className="relative overflow-hidden bg-background"
-            style={{ backgroundColor: chrome.pageColor ?? undefined }}
-          >
-            <GradientBackdrop color={branding.backgroundColor} shade={branding.backgroundShade} />
-            {/* Phase 12.6: plain sidebar trigger replacing FloatingHeaderPill (UI-16).
-                Fixed top-left, z-20, mobile-only. No glass pill — direct color
-                application provides the branding surface. */}
-            <div className="fixed top-3 left-3 z-20 md:hidden">
-              <SidebarTrigger />
-            </div>
-            <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 md:pt-8">
-              {children}
-            </main>
-          </SidebarInset>
-        </SidebarProvider>
-      </TooltipProvider>
-    </div>
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider defaultOpen={sidebarOpen}>
+        <AppSidebar email={email} />
+        <SidebarInset className="relative overflow-hidden bg-gray-50">
+          <BackgroundGlow />
+          <Header />
+          <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-20 sm:px-6 md:pt-24 pb-12">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
