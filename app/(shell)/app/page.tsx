@@ -108,7 +108,7 @@ export default async function DashboardHome() {
 
       {/* Empty state — shown above the calendar so owner can still navigate months */}
       {bookings.length === 0 && (
-        <div className="rounded-xl border bg-white p-6 text-center">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm text-center">
           <p className="text-sm text-muted-foreground">
             No bookings in {currentMonth}. Bookings will appear here as
             they&apos;re scheduled.
@@ -118,7 +118,7 @@ export default async function DashboardHome() {
 
       {/* Calendar with day-detail drawer — HomeDashboard owns Sheet open state;
           clicking any day opens DayDetailSheet (empty-state for days with no bookings). */}
-      <div className="rounded-xl border bg-white p-4 sm:p-6">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <HomeDashboard bookings={bookings} accountTimezone={account.timezone} />
       </div>
     </div>

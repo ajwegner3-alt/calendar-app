@@ -27,7 +27,7 @@ export function EventTypesTable({
   appUrl: string;
 }) {
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

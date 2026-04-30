@@ -41,7 +41,7 @@ function formatBookerStart(row: BookingRow): string {
 export function BookingsTable({ rows }: { rows: BookingRow[] }) {
   if (rows.length === 0) {
     return (
-      <div className="border rounded-lg p-12 text-center">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm text-center">
         <p className="text-base font-medium">No bookings match these filters</p>
         <p className="text-sm text-muted-foreground mt-2">
           Try widening the date range or selecting &ldquo;All&rdquo; status.
@@ -51,7 +51,7 @@ export function BookingsTable({ rows }: { rows: BookingRow[] }) {
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
