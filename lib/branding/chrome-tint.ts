@@ -1,4 +1,4 @@
-import type { ChromeTintIntensity } from "./types";
+import type { ChromeTintIntensity, Branding } from "./types";
 import { pickTextColor } from "./contrast";
 
 /**
@@ -72,4 +72,69 @@ export function chromeTintTextColor(
   // CSS color parsing. Conservative approach: use pickTextColor on original color.
   // This gives correct results for typical brand colors (dark navies → black text on tint).
   return pickTextColor(color);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 12.6: Direct full-strength color resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolved direct-color set for dashboard chrome surfaces.
+ * Each value is either a literal hex string (use it as-is) or null (use CSS default).
+ *
+ * Phase 12.6 pivot: instead of color-mix tints, owners set full-strength colors
+ * per surface. resolveChromeColors() is the single place where the priority
+ * chains are evaluated so Wave 2 consumers don't fork the logic.
+ */
+export interface ResolvedChromeColors {
+  /** Direct hex fill for page (SidebarInset) bg. Null = use CSS default (bg-background / gray-50). */
+  pageColor: string | null;
+  /** Direct hex fill for sidebar bg. Null = use CSS default (--sidebar token). */
+  sidebarColor: string | null;
+  /**
+   * Direct hex for --primary CSS variable override.
+   * Always a string (falls back to DEFAULT_BRAND_PRIMARY when owner hasn't set brand_primary).
+   * Shell sets style={{ "--primary": primaryColor }} unconditionally; this is safe because
+   * the default value matches the shadcn-overridden default already in use.
+   * v1.2 improvement: store raw brand_primary nullable separately so we can skip the override
+   * when the owner hasn't explicitly set it.
+   */
+  primaryColor: string;
+  /** WCAG-compliant text color for sidebar surface. Null when sidebarColor is null. */
+  sidebarTextColor: "#ffffff" | "#000000" | null;
+  /** WCAG-compliant text color for primary-colored surfaces (button text, etc.). Always set. */
+  primaryTextColor: "#ffffff" | "#000000";
+}
+
+/**
+ * Resolve the full set of direct chrome colors from a Branding object.
+ *
+ * Priority chains:
+ *   pageColor    → branding.backgroundColor (accounts.background_color)
+ *   sidebarColor → branding.sidebarColor    (accounts.sidebar_color)
+ *   primaryColor → branding.primaryColor    (accounts.brand_primary, always set via fallback)
+ *
+ * Wave 2 consumers (shell layout, sidebar, email) import this function and
+ * apply each resolved value via inline style. null values fall through to the
+ * CSS class default (Phase 7 pitfall: never use dynamic Tailwind for runtime hex).
+ *
+ * @param branding - Resolved Branding object from getBrandingForAccount / brandingFromRow.
+ * @returns ResolvedChromeColors with 5 fields.
+ */
+export function resolveChromeColors(branding: Branding): ResolvedChromeColors {
+  const pageColor = branding.backgroundColor ?? null;
+  const sidebarColor = branding.sidebarColor ?? null;
+  // primaryColor is always a string in Branding (falls back to DEFAULT_BRAND_PRIMARY).
+  const primaryColor = branding.primaryColor;
+
+  const sidebarTextColor = sidebarColor ? pickTextColor(sidebarColor) : null;
+  const primaryTextColor = pickTextColor(primaryColor);
+
+  return {
+    pageColor,
+    sidebarColor,
+    primaryColor,
+    sidebarTextColor,
+    primaryTextColor,
+  };
 }

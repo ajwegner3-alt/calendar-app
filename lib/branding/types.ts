@@ -23,6 +23,9 @@ export interface Branding {
   /** Gradient intensity. Never null (DB DEFAULT 'subtle'). */
   backgroundShade: BackgroundShade;
   // Phase 12.5 additions
-  /** Chrome tint intensity. Never null (DB DEFAULT 'subtle'). */
+  /** Chrome tint intensity. Never null (DB DEFAULT 'subtle'). Kept for backward compat — Wave 2 consumers use resolveChromeColors instead. */
   chromeTintIntensity: ChromeTintIntensity;
+  // Phase 12.6 additions
+  /** Per-account sidebar fill color. Null = shadcn --sidebar default. */
+  sidebarColor: string | null;
 }

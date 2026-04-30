@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { chromeTintToCss, chromeTintTextColor } from "@/lib/branding/chrome-tint";
+import { chromeTintToCss, chromeTintTextColor, resolveChromeColors } from "@/lib/branding/chrome-tint";
+import type { Branding } from "@/lib/branding/types";
+
+// ---------------------------------------------------------------------------
+// Shared Branding fixture helpers
+// ---------------------------------------------------------------------------
+
+/** Build a minimal Branding object with sensible defaults for testing. */
+function makeBranding(overrides: Partial<Branding> = {}): Branding {
+  return {
+    logoUrl: null,
+    primaryColor: "#0A2540",
+    textColor: "#ffffff",
+    backgroundColor: null,
+    backgroundShade: "subtle",
+    chromeTintIntensity: "subtle",
+    sidebarColor: null,
+    ...overrides,
+  };
+}
 
 describe("chromeTintToCss", () => {
   describe("returns null for intensity='none'", () => {
@@ -85,5 +104,85 @@ describe("chromeTintTextColor", () => {
   it("light gray brand color + full sidebar → black text", () => {
     // #F8FAFC (gray-50) is very light → pickTextColor returns black
     expect(chromeTintTextColor("#F8FAFC", "full", "sidebar")).toBe("#000000");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 12.6 tests
+// ---------------------------------------------------------------------------
+
+describe("resolveChromeColors", () => {
+  describe("sidebarColor field", () => {
+    it("with sidebarColor=#0A2540: sidebarColor=#0A2540", () => {
+      const result = resolveChromeColors(makeBranding({ sidebarColor: "#0A2540" }));
+      expect(result.sidebarColor).toBe("#0A2540");
+    });
+
+    it("with sidebarColor=#0A2540: sidebarTextColor=#ffffff (dark bg → white text)", () => {
+      const result = resolveChromeColors(makeBranding({ sidebarColor: "#0A2540" }));
+      expect(result.sidebarTextColor).toBe("#ffffff");
+    });
+
+    it("with sidebarColor=null: sidebarColor=null", () => {
+      const result = resolveChromeColors(makeBranding({ sidebarColor: null }));
+      expect(result.sidebarColor).toBeNull();
+    });
+
+    it("with sidebarColor=null: sidebarTextColor=null", () => {
+      const result = resolveChromeColors(makeBranding({ sidebarColor: null }));
+      expect(result.sidebarTextColor).toBeNull();
+    });
+
+    it("light sidebar color → black text (auto-WCAG flip)", () => {
+      // #F8FAFC is very light → pickTextColor returns black
+      const result = resolveChromeColors(makeBranding({ sidebarColor: "#F8FAFC" }));
+      expect(result.sidebarTextColor).toBe("#000000");
+    });
+  });
+
+  describe("pageColor field", () => {
+    it("with backgroundColor=#F8FAFC: pageColor=#F8FAFC", () => {
+      const result = resolveChromeColors(makeBranding({ backgroundColor: "#F8FAFC" }));
+      expect(result.pageColor).toBe("#F8FAFC");
+    });
+
+    it("with backgroundColor=null: pageColor=null", () => {
+      const result = resolveChromeColors(makeBranding({ backgroundColor: null }));
+      expect(result.pageColor).toBeNull();
+    });
+  });
+
+  describe("primaryColor field", () => {
+    it("primaryColor always returns the Branding.primaryColor string", () => {
+      const result = resolveChromeColors(makeBranding({ primaryColor: "#3B82F6" }));
+      expect(result.primaryColor).toBe("#3B82F6");
+    });
+
+    it("default primaryColor (#0A2540) is returned when no override", () => {
+      const result = resolveChromeColors(makeBranding());
+      expect(result.primaryColor).toBe("#0A2540");
+    });
+
+    it("dark primary color → primaryTextColor=#ffffff", () => {
+      const result = resolveChromeColors(makeBranding({ primaryColor: "#0A2540" }));
+      expect(result.primaryTextColor).toBe("#ffffff");
+    });
+
+    it("light primary color → primaryTextColor=#000000", () => {
+      // #F8FAFC is very light → pickTextColor returns black
+      const result = resolveChromeColors(makeBranding({ primaryColor: "#F8FAFC" }));
+      expect(result.primaryTextColor).toBe("#000000");
+    });
+  });
+
+  describe("all-null branding (full defaults path)", () => {
+    it("null sidebar + null page → all color outputs null except primaryColor", () => {
+      const result = resolveChromeColors(makeBranding({ sidebarColor: null, backgroundColor: null }));
+      expect(result.sidebarColor).toBeNull();
+      expect(result.sidebarTextColor).toBeNull();
+      expect(result.pageColor).toBeNull();
+      expect(result.primaryColor).toBe("#0A2540");
+      expect(result.primaryTextColor).toBe("#ffffff");
+    });
   });
 });

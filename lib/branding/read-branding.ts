@@ -26,6 +26,7 @@ export function brandingFromRow(row: {
   background_color?: string | null;
   background_shade?: string | null;
   chrome_tint_intensity?: string | null;
+  sidebar_color?: string | null;
 }): Branding {
   const primaryColor = row.brand_primary ?? DEFAULT_BRAND_PRIMARY;
   const validShades: BackgroundShade[] = ["none", "subtle", "bold"];
@@ -47,6 +48,7 @@ export function brandingFromRow(row: {
     backgroundColor: row.background_color ?? null,
     backgroundShade,
     chromeTintIntensity,
+    sidebarColor: row.sidebar_color ?? null,
   };
 }
 
@@ -72,7 +74,7 @@ export async function getBrandingForAccount(
     const supabase = createAdminClient();
     const { data: row } = await supabase
       .from("accounts")
-      .select("logo_url, brand_primary, background_color, background_shade, chrome_tint_intensity")
+      .select("logo_url, brand_primary, background_color, background_shade, chrome_tint_intensity, sidebar_color")
       .eq("id", accountId)
       .maybeSingle();
 
