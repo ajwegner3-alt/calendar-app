@@ -183,7 +183,7 @@ export default async function BookingDetailPage({
         </div>
       ) : null}
 
-      <section className="rounded-lg border bg-card p-6">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold mb-4">Booker</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
@@ -242,13 +242,13 @@ export default async function BookingDetailPage({
       </section>
 
       {eventType.location ? (
-        <section className="rounded-lg border bg-card p-6">
+        <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-2">Location</h2>
           <p className="text-sm whitespace-pre-line">{eventType.location}</p>
         </section>
       ) : null}
 
-      <section className="rounded-lg border bg-card p-6">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold mb-2">Owner note</h2>
         <p className="text-xs text-muted-foreground mb-3">
           Private to you — never shown to the booker.
@@ -256,7 +256,7 @@ export default async function BookingDetailPage({
         <OwnerNote bookingId={booking.id} initialNote={booking.owner_note} />
       </section>
 
-      <section className="rounded-lg border bg-card p-6">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold mb-3">History</h2>
         <BookingHistory
           events={events}

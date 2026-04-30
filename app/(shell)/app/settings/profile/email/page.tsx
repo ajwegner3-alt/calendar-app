@@ -47,7 +47,7 @@ export default async function EmailChangePage() {
         </p>
       </header>
 
-      <section className="rounded-lg border bg-card p-6 space-y-4">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-base font-medium">New Email Address</h2>
         <p className="text-xs text-muted-foreground">
           Enter the email address you&apos;d like to use going forward. We&apos;ll send you a

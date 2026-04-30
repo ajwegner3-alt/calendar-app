@@ -31,7 +31,7 @@ export default async function ProfileSettingsPage() {
       </header>
 
       {/* Email (read-only) */}
-      <section className="rounded-lg border bg-card p-6 space-y-3">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-3">
         <h2 className="text-base font-medium">Email Address</h2>
         <p className="text-sm text-muted-foreground">
           {email}
@@ -47,7 +47,7 @@ export default async function ProfileSettingsPage() {
       </section>
 
       {/* Display Name */}
-      <section className="rounded-lg border bg-card p-6 space-y-3">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-3">
         <h2 className="text-base font-medium">Display Name</h2>
         <p className="text-xs text-muted-foreground">
           Shown on your public booking page and in confirmation emails.
@@ -56,7 +56,7 @@ export default async function ProfileSettingsPage() {
       </section>
 
       {/* Slug */}
-      <section className="rounded-lg border bg-card p-6 space-y-3">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-3">
         <h2 className="text-base font-medium">Booking URL</h2>
         <p className="text-xs text-muted-foreground">
           Your public booking link uses this slug. Changing it immediately invalidates the old URL.
@@ -65,7 +65,7 @@ export default async function ProfileSettingsPage() {
       </section>
 
       {/* Password */}
-      <section className="rounded-lg border bg-card p-6 space-y-3">
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-3">
         <h2 className="text-base font-medium">Change Password</h2>
         <p className="text-xs text-muted-foreground">
           You must enter your current password to set a new one.
