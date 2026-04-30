@@ -20,7 +20,7 @@ export function Header() {
   const label = getContextLabel(pathname);
 
   return (
-    <header className="fixed top-2 md:top-6 left-0 right-0 z-30 px-4">
+    <header className="fixed top-2 md:top-6 left-0 md:left-[var(--sidebar-width)] right-0 z-30 px-4">
       <div className="max-w-[1152px] mx-auto h-14 px-4 rounded-2xl flex items-center justify-between bg-white/90 backdrop-blur-sm border border-gray-200 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="md:hidden" />
