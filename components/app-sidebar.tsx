@@ -35,8 +35,8 @@ import {
  * Defaults open when pathname.startsWith('/app/settings').
  * Mobile: full-screen drawer via --sidebar-width-mobile: 100vw (globals.css).
  *
- * Phase 12.6: receives sidebarColor + sidebarTextColor props (direct hex from
- * resolveChromeColors in shell layout). Replaces Phase 12.5 color-mix() approach.
+ * Phase 15: glass treatment (bg-white/80 backdrop-blur-sm) — no per-account
+ * color props. Sidebar background is uniform translucent white (OWNER-02).
  */
 
 const TOP_ITEMS = [
@@ -49,29 +49,18 @@ const TOP_ITEMS = [
 
 interface AppSidebarProps {
   email: string;
-  sidebarColor: string | null;
-  sidebarTextColor: "#ffffff" | "#000000" | null;
 }
 
-export function AppSidebar({ email, sidebarColor, sidebarTextColor }: AppSidebarProps) {
+export function AppSidebar({ email }: AppSidebarProps) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/app/settings"),
   );
 
-  // Phase 12.6: direct hex color application — no color-mix().
-  // sidebarColor is the resolved hex from resolveChromeColors() in the shell layout.
-  // null = use shadcn --sidebar default via CSS class (regression-safe).
-
   return (
     <Sidebar
       collapsible="icon"
-      style={{
-        backgroundColor: sidebarColor ?? undefined,
-        ...(sidebarTextColor
-          ? ({ "--sidebar-foreground": sidebarTextColor } as React.CSSProperties)
-          : {}),
-      }}
+      className="bg-white/80 backdrop-blur-sm"
     >
       <SidebarContent>
         <SidebarGroup>
