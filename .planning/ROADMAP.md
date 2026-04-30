@@ -78,7 +78,7 @@ See [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md) for full phase 
 4. Body text on owner pages computes `letter-spacing: -0.017em` (em-based, not Tailwind `tracking-tight` rem value of `-0.025rem`).
 5. All shadcn primary `Button` components and `Switch` active states on owner pages render in `#3B82F6` (Tailwind blue-500) — no more Phase 12.6 navy `#0A2540`. Verified by opening `/app` dashboard and inspecting a primary button.
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
 - [ ] 14-01: Font loading + globals.css CSS token update
