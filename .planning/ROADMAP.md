@@ -104,11 +104,11 @@ Plans:
 4. The `/app/branding` page (and all other `/app/*` pages) no longer show any per-account `sidebar_color` tinting on the sidebar background — sidebar is the default shadcn `--sidebar` white/light regardless of which account's branding is stored.
 5. Deploy succeeds; Vercel build log shows zero TypeScript errors; `vitest` test suite count is unchanged (no tests broken by shell re-skin).
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 15-01: BackgroundGlow component + OwnerHeader component creation
-- [ ] 15-02: (shell)/layout.tsx re-skin + AppSidebar prop strip + OWNER-08..11 card standardization
+- [ ] 15-01: BackgroundGlow + Header pill components + lib/brand.ts wordmark constant (additive — no layout changes)
+- [ ] 15-02: (shell)/layout.tsx re-skin + AppSidebar prop strip + globals.css --primary fix + 14-card OWNER-10 standardization + Vercel deploy + Andrew eyeball
 
 ---
 
@@ -270,7 +270,7 @@ Plans:
 | 1-9 | v1.0 | 52 / 52 | ✅ Shipped | 2026-04-27 |
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14 — Typography + CSS Token Foundations | v1.2 | 1 / 1 | ✅ Complete | 2026-04-30 |
-| 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 0 / TBD | Not started | - |
+| 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 0 / 2 | Planned | - |
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 0 / TBD | Not started | - |
 | 17 — Public Surfaces + Embed | v1.2 | 0 / TBD | Not started | - |
 | 18 — Branding Editor Simplification | v1.2 | 0 / TBD | Not started | - |
