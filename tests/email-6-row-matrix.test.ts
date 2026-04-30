@@ -44,7 +44,7 @@ const eventType = {
   location:         null,
 };
 
-/** Account with branded background_color — ensures header band uses non-default color */
+/** Account with branded sidebar_color — ensures header band uses non-default color (EMAIL-14 priority chain) */
 const account = {
   id:           "ba8e712d-28b7-4071-b3d4-361fb6fb7a60",
   name:         "Acme Plumbing",
@@ -53,7 +53,8 @@ const account = {
   owner_email:  "owner@acme.example.com",
   logo_url:     null,
   brand_primary: "#0A2540",
-  background_color: "#1A3A5C", // distinct from brand_primary → verifies header uses this value
+  background_color: "#1A3A5C", // kept for backward compat (no longer drives header band in Phase 12.6)
+  sidebar_color: "#1A3A5C",    // Phase 12.6: primary email header band source (sidebarColor → brand_primary → DEFAULT)
 };
 
 const APP_URL = "https://book.acme.example.com";
@@ -253,6 +254,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
         logo_url:         account.logo_url,
         brand_primary:    account.brand_primary,
         background_color: account.background_color,
+        sidebar_color:    account.sidebar_color,
         owner_email:      account.owner_email,
         reminder_include_custom_answers:  false,
         reminder_include_location:        false,

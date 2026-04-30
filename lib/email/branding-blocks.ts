@@ -8,14 +8,16 @@ export interface EmailBranding {
   name: string;
   logo_url: string | null;
   brand_primary: string | null;
-  /** Per-account background color for the header band (Plan 12-01 column: accounts.background_color).
-   *  When null, falls back to brand_primary, then to DEFAULT_BRAND_PRIMARY. */
+  /** Per-account background color (accounts.background_color — page background).
+   *  No longer used for email header band color resolution as of Phase 12.6.
+   *  Kept in the interface for backward compat; ignored by renderEmailBrandedHeader. */
   backgroundColor: string | null;
-  /** Phase 12.5: chrome tint intensity (Plan 12.5 accounts.chrome_tint_intensity).
-   *  Drives whether backgroundColor or brand_primary is used in the header band:
-   *  'none' → use brand_primary (owner chose no tint — email matches UI chrome);
-   *  'subtle'|'full' → use backgroundColor (current Phase 12 behavior).
-   *  Optional: callers that haven't been updated yet default to 'subtle' (backward compat). */
+  /** Phase 12.6: per-account sidebar color (accounts.sidebar_color).
+   *  Priority source for email header band: sidebarColor → brand_primary → DEFAULT.
+   *  Optional: callers that haven't been updated yet fall through to brand_primary. */
+  sidebarColor?: string | null;
+  /** Phase 12.5: chrome tint intensity. DEPRECATED in Phase 12.6 — kept for backward compat only.
+   *  Callers should use sidebarColor instead. Will be removed in a future cleanup pass. */
   chromeTintIntensity?: "none" | "subtle" | "full";
 }
 
@@ -29,10 +31,12 @@ export interface EmailBranding {
  * Header treatment is IDENTICAL across all 6 templates (consistency over status
  * semantics — same band color/shape on confirm, cancel, reschedule).
  *
- * Color resolution (Phase 12.5 / EMAIL-13, intensity-aware):
- *   intensity='none'           → brand_primary → DEFAULT_BRAND_PRIMARY
- *   intensity='subtle'|'full'  → backgroundColor → brand_primary → DEFAULT_BRAND_PRIMARY
- *   intensity=undefined        → same as 'subtle' (backward compat for pre-12.5 callers)
+ * Color resolution (Phase 12.6 / EMAIL-14, sidebarColor-first):
+ *   sidebarColor (accounts.sidebar_color) → brand_primary → DEFAULT_BRAND_PRIMARY
+ * Matches dashboard sidebar visual: sidebar_color is the primary source.
+ * Email clients cannot render color-mix(); both sidebarColor and brand_primary
+ * are direct hex values — correct for all email clients.
+ * Backward compat: callers without sidebarColor fall through to brand_primary.
  * Text color auto-picked via WCAG luminance (pickTextColor) for accessibility.
  *
  * When logo_url is set: renders an <img> centered on the band.
@@ -41,15 +45,15 @@ export interface EmailBranding {
  * Inline-styled for Gmail/Outlook/Apple Mail compatibility.
  */
 export function renderEmailBrandedHeader(branding: EmailBranding): string {
-  // Phase 12.5 — intensity-aware color resolution (EMAIL-13):
-  // intensity='none' → brand_primary in header band (owner chose no background tint)
-  // intensity='subtle'|'full' or undefined (backward compat default='subtle') → backgroundColor if set
-  // Email clients cannot render color-mix(); we use direct hex values only.
-  const intensity = branding.chromeTintIntensity ?? "subtle";
+  // Phase 12.6 / EMAIL-14: color priority chain for email header band.
+  // Matches dashboard sidebar visual: sidebar_color is the primary source.
+  // Email clients cannot render color-mix(); both sidebarColor and brand_primary
+  // are direct hex values — correct for all clients.
+  // Backward compat: callers without sidebarColor fall through to brand_primary.
   const bg =
-    intensity === "none"
-      ? (branding.brand_primary ?? DEFAULT_BRAND_PRIMARY)
-      : (branding.backgroundColor ?? branding.brand_primary ?? DEFAULT_BRAND_PRIMARY);
+    branding.sidebarColor ??
+    branding.brand_primary ??
+    DEFAULT_BRAND_PRIMARY;
   const fg = pickTextColor(bg);
 
   const logoCell = branding.logo_url
