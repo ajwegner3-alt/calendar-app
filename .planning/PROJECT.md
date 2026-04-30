@@ -67,28 +67,61 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 - ✓ `FUTURE_DIRECTIONS.md` §8 appended with v1.1 marathon waiver record + carry-overs — v1.1 (QA-15)
 - ✓ Andrew explicit ship sign-off — v1.1 (QA-14, verbatim 2026-04-30 "consider everything good. close out the milestone")
 
-## Current Milestone: v1.2 (not yet planned)
+## Current Milestone: v1.2 — NSI Brand Lock-Down + UI Overhaul
 
-**Status:** v1.1 SHIPPED 2026-04-30. v1.2 scope not yet defined. Run `/gsd:new-milestone` to scope.
+**Started:** 2026-04-30. **Status:** Scoping (research → requirements → roadmap).
 
-**Candidate scope items** (captured during v1.1; canonical enumeration in `FUTURE_DIRECTIONS.md` §8 + `MILESTONE_V1_1_DEFERRED_CHECKS.md`):
+**Goal:** Establish a unified North Star Integrations visual language across the entire owner-facing app. Re-skin every owner surface to match the lead-scoring tool's "Simple Light" aesthetic (`bg-gray-50` + blue-blot `BackgroundGlow` backdrop + glass header pill + Inter + "NorthStar" wordmark) so anyone using the app immediately recognizes it as an NSI product. Public booking surfaces (booking page + embed + emails) remain the only places where each contractor's own colors apply, using the same layout pattern with the customer's `brand_primary` substituted in.
 
-- v1.1 marathon QA execution (QA-09 signup E2E, QA-10 multi-tenant UI walkthrough, QA-11 capacity=3 race E2E, QA-12 3-account branded smoke, QA-13 EmbedCodeDialog 320/768/1024) — pre-flight artifacts remain on prod (Test User 3, capacity-test event, 3 branding profiles).
-- ~21 per-phase manual checks accumulated through v1.1 Phases 10/11/12/12.5/12.6.
+**Branding rule (locked):**
+
+| Surface | Whose colors |
+|---|---|
+| Owner-facing app (`/app/*`, `/auth/*`, `/onboarding/*`, `/signup`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`, `/account-deleted`) | **NSI ONLY** — `bg-gray-50` + blue-blot backdrop + "NorthStar" wordmark + `--primary = #3B82F6` always. Per-account color overrides shipped in Phase 12.6 are stripped from the owner shell. |
+| Public booking page (`/[account]`, `/[account]/[event-slug]`) | **Customer** — same layout pattern, blob tint = customer `brand_primary`, pill = customer logo + name (NOT "NorthStar"), "Powered by NSI" footer mark visible to bookers. |
+| Embed widget (`/embed/[account]/[event-slug]`) | **Customer** — trimmed for iframe, same pattern. |
+| Transactional emails (6 senders) | **Customer** — header band tinted from customer `brand_primary` (priority chain simplified — no more `sidebar_color → brand_primary → DEFAULT`). |
+
+**Reference site (visual target):**
+
+`C:\Users\andre\OneDrive - Creighton University\Desktop\Claude-Code-Projects\lead-scoring-with-tools\website-analysis-tools\`. Public landing at `/free-audit`. Concrete components Claude must replicate or vendor:
+
+- `app/components/BackgroundGlow.tsx` — fixed-position blue-blot backdrop (`w-80 h-80 rounded-full blur-[160px]`, two divs at `top:-32 left:calc(50% + 580px)` and `top:420 left:calc(50% + 380px)`, gradients `linear-gradient(to top right, #3B82F6, transparent)` and `#3B82F6 → #111827`, opacity 0.35–0.4)
+- `app/components/Header.tsx` — `fixed top-2 md:top-6 z-30`, glass pill `bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl`, "NorthStar" wordmark (gray-900 + blue-500 split, `font-extrabold tracking-[-0.04em]`)
+- `app/dashboard/layout.tsx` — `min-h-screen bg-gray-50 pt-20 md:pt-24` shell pattern
+- `app/globals.css` — Inter + Roboto Mono via `next/font/google`; `body { background: #F9FAFB; tracking: -0.017em; }`; `h1, h2, h3 { tracking: -0.037em; }`; AOS scroll-reveal pattern
+
+**Underlying design system:** Cruip "Simple Light" Tailwind landing system at `C:\Users\andre\OneDrive - Creighton University\Desktop\Claude-Code-Projects\website-creation\.claude\skills\tailwind-landing-page\SKILL.md` (already referenced in v1.1 research). Adjacent skills under `website-creation/.claude/skills/`: `different-styles`, `artifacts-builder`, `hero-section-contractor`, `hero-section-medspa`, `roofing-template`.
+
+**Target features (active scope):**
+
+- **NSI brand lock-down** — strip per-account theming from owner shell (`--primary` override removed from `(shell)` layout; `sidebar_color` override removed from `AppSidebar`; `chromeTint*` call sites removed). All shadcn primary buttons / switches / focus rings / active indicators show NSI blue-500 on owner side.
+- **`BackgroundGlow` component** — vendor or replicate from lead-scoring; NSI blue blots on owner side, customer-`brand_primary`-tinted on public side.
+- **Glass header pill** — "NorthStar" wordmark on owner side; customer logo + name on public side. Replaces or extends current `app/(shell)/_components/floating-header-pill.tsx` pattern (note: that file was deleted in Phase 12.5-02; the pattern is now plain `SidebarTrigger` hamburger — needs to come back as a full pill matching lead-scoring `Header.tsx`).
+- **Owner shell re-skin** — every page under `/app/*` re-skinned to match lead-scoring visual language while keeping the v1.1 sidebar IA (Home / Event Types / Availability / Bookings / Branding / Settings). Sidebar gets new visual skin only — no IA change.
+- **Auth pages re-skin** — login / signup / forgot-password / reset-password / verify-email / auth-error / account-deleted. Replace `NSIGradientBackdrop` with the new `BackgroundGlow` pattern.
+- **Onboarding wizard re-skin** — 3 steps under `/onboarding/*`. Same visual language.
+- **Public booking page + embed re-skin** — `/[account]` index, `/[account]/[event-slug]` per-event, `/embed/[account]/[event-slug]`. Match lead-scoring layout pattern; blob tint = customer `brand_primary`. "Powered by NSI" footer mark visible to bookers.
+- **Branding editor simplification** — collapse to logo + `brand_primary` + `brand_accent` (2 colors). Deprecate `sidebar_color` / `background_color` / `background_shade` / `chrome_tint_intensity` columns and their pickers / preview wiring. `MiniPreviewCard` rebuilt to show new pattern (faux booking page with blob backdrop).
+- **Email re-skin** — header band uses `brand_primary` directly (no more `sidebar_color → brand_primary → DEFAULT` chain). "Powered by NSI" footer mark consistent with public booking page.
+- **Schema cleanup migration** — last phase: DROP deprecated columns + remove `chromeTintToCss` compat export from `lib/branding/chrome-tint.ts` + clean up dead code paths.
+
+**Carry-overs RE-deferred to v1.3 (out of v1.2 scope):**
+
+- v1.1 marathon QA (QA-09..QA-13) + ~21 per-phase manual checks accumulated through Phases 10/11/12/12.5/12.6.
 - v1.0 marathon RE-deferred items: EMBED-07, EMAIL-08, QA-01..QA-06.
-- Resend migration (replaces Gmail SMTP; ~$10/mo for 5k emails; closes EMAIL-08).
-- Vercel Pro upgrade + flip cron schedule from `0 13 * * *` daily to `0 * * * *` hourly.
-- DROP `accounts.chrome_tint_intensity` column (Phase 12.5 leftover; safe after one v1.1 release window).
-- Remove `chromeTintToCss` compat export from `lib/branding/chrome-tint.ts` (paired with column DROP).
-- Final NSI mark image swap (`public/nsi-mark.png` is currently a 105-byte solid-navy placeholder; Andrew explicit deferral).
+- Resend migration (replaces Gmail SMTP, ~$10/mo for 5k emails, closes EMAIL-08).
+- Vercel Pro upgrade + flip cron from `0 13 * * *` daily to `0 * * * *` hourly.
 - Live cross-client email QA — Outlook desktop, Apple Mail iOS, Yahoo (deferred since v1.0).
-- OAuth signup (Google / GitHub) — `auth/confirm` already supports magiclink type.
+- OAuth signup (Google / GitHub) — `/auth/confirm` already supports magiclink type.
 - Magic-link / passwordless login — same handler ready.
 - Hard-delete cron purge (v1.1 ships soft-delete only).
 - Slug 301 redirect for old slugs after change.
 - Soft-delete grace period (account restore on re-login within N days).
 - Onboarding analytics event log.
 - Constant-time delay on signup + forgot-password forms (P-A1 timing-oracle hardening).
+- `rate_limit_events` test DB cleanup (4 transient bookings-api.test.ts failures).
+- Final NSI mark image (`public/nsi-mark.png` placeholder) — IF v1.2 emails / booking page reference an NSI mark image, may be folded in; otherwise defer.
 
 ### Out of Scope
 
@@ -221,4 +254,4 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 | Phase 13 marathon waived by Andrew at sign-off 2026-04-30 | Verbatim "consider everything good. close out the milestone." Ship gate is code-level verifier passes (Phases 10/11/12/12.5/12.6) + Andrew live Vercel approval of 12.6 + 277 passing tests | ⚠ Revisit — same waiver pattern as v1.0 → v1.1 (marathon scope-cut). Pre-flight artifacts for v1.2 marathon are KEPT on prod (Test User 3, capacity-test event, 3 branding profiles). v1.2 should either commit time-boxed marathon execution upfront or formally adopt deploy-and-eyeball as the production gate. |
 
 ---
-*Last updated: 2026-04-30 after v1.1 milestone shipped*
+*Last updated: 2026-04-30 after v1.2 milestone scoping (NSI Brand Lock-Down + UI Overhaul)*
