@@ -12,7 +12,7 @@
 - [x] Item 3: 3 distinct branding profiles applied to nsi / nsi-rls-test / nsi-rls-test-3 — verified 2026-04-29 via SQL. Pre-13-01 NSI tuple captured for restoration: `(#5ABF6E, #FFFFFF, subtle, #10B981, subtle)`. New branding live: A=navy, B=magenta, C=emerald-null.
 - [x] Item 4: capacity=3 "Capacity Test" event type live on `/nsi-rls-test/capacity-test` — verified 2026-04-29 (200 OK). event_type id `5344a500-acd5-4336-b195-ebea16f8dec4`. Direct INSERT used (Andrew elected — bypasses Server Action validation but smoke verified). Bonus: also seeded Test User 2's missing Mon-Fri 9am-5pm availability_rules so slots actually render.
 - [x] Item 5: 13-CHECKLIST.md scaffolded (this file)
-- [ ] Item 6: Production deploy current — commit SHA: `2dc5ae1` was deployed at Task 2 verification time. Task 8 will push current local HEAD (`d898503` + 13-01 commits) and re-record the new deployed SHA here.
+- [x] Item 6: Production deploy current — commit SHA `ed81ac7` (post Plan 13-01 push, 2026-04-29). Verified: `/auth/confirm?token_hash=test` → 307 (route live), `/nsi` → 200, `/nsi-rls-test/capacity-test` → 200.
 
 **Hard-cache-clear note:** Before starting QA-12, hit Ctrl+Shift+R on every production tab open during Phase 12.6 to defeat client-side cache (RESEARCH.md Pitfall 5).
 
