@@ -156,11 +156,18 @@ Plans:
 4. Visiting `/embed/nsi-rls-test/[event-slug]` shows the slot picker selected state in magenta — confirming the embed's `--primary` override uses `brand_primary`, not NSI blue.
 5. `BrandedPage` + `GradientBackdrop` components are confirmed deleted — a codebase grep for `BrandedPage` returns zero hits in non-migration files.
 
-**Plans:** TBD
+**Plans:** 9 plans
 
 Plans:
-- [ ] 17-01: PublicShell + PoweredByNsi + PublicHeader components (PUB-01..04, HDR-05, HDR-06)
-- [ ] 17-02: 5 public surface migrations + embed update (PUB-05..12, EMBED-08..11)
+- [ ] 17-01-PLAN.md — Foundation atoms: BackgroundGlow MP-10 fix + PoweredByNsi + Header public variant (HDR-05, HDR-06, MP-10)
+- [ ] 17-02-PLAN.md — PublicShell composition (PUB-01, PUB-02, PUB-03, PUB-04)
+- [ ] 17-03-PLAN.md — /[account] listing migration + ListingHero strip (PUB-05)
+- [ ] 17-04-PLAN.md — Booking + confirmation page migration (PUB-06, PUB-07)
+- [ ] 17-05-PLAN.md — Cancel + reschedule token flows migration (PUB-08, PUB-09)
+- [ ] 17-06-PLAN.md — Edge pages re-skin: not-found + TokenNotActive (PUB-10, PUB-11)
+- [ ] 17-07-PLAN.md — EmbedShell restyle + --primary override + PoweredByNsi inside iframe (EMBED-08, EMBED-09, EMBED-10, EMBED-11)
+- [ ] 17-08-PLAN.md — Mini-preview-card migration + delete BrandedPage/GradientBackdrop/NSIGradientBackdrop/lib-branding-gradient (PUB-12)
+- [ ] 17-09-PLAN.md — Visual gate: deploy + Andrew eyeball with NSI blue + magenta + emerald + navy (MN-01)
 
 ---
 
@@ -274,7 +281,7 @@ Plans:
 | 14 — Typography + CSS Token Foundations | v1.2 | 1 / 1 | ✅ Complete | 2026-04-30 |
 | 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 2 / 2 | ✅ Complete | 2026-04-30 |
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 4 / 4 | ✅ Complete | 2026-04-30 |
-| 17 — Public Surfaces + Embed | v1.2 | 0 / TBD | Not started | - |
+| 17 — Public Surfaces + Embed | v1.2 | 0 / 9 | Planned | - |
 | 18 — Branding Editor Simplification | v1.2 | 0 / TBD | Not started | - |
 | 19 — Email Layer Simplification | v1.2 | 0 / TBD | Not started | - |
 | 20 — Dead Code + Test Cleanup | v1.2 | 0 / TBD | Not started | - |
@@ -290,4 +297,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-04-30 — Phase 16 complete (4/4 plans, 24/24 must-haves verified, Andrew approved live preview gates for 16-02/03/04). Next: `/gsd:plan-phase 17`.*
+*Roadmap last updated: 2026-04-30 — Phase 17 planned (9 plans across 5 waves: foundation atoms → PublicShell → 5 page migrations + embed restyle (parallel) → deletions → visual gate). Next: `/gsd:execute-phase 17`.*
