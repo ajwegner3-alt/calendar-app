@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { BackgroundGlow } from "@/app/_components/background-glow";
+import { Header } from "@/app/_components/header";
 
 export default async function OnboardingLayout({
   children,
@@ -24,14 +26,13 @@ export default async function OnboardingLayout({
   }
   if (me.onboarding_complete) redirect("/app");
 
-  // Wizard chrome (minimal — Phase 12 restyles): step indicator + container.
+  // Wizard chrome — Phase 16 re-skin: bg-gray-50 + BackgroundGlow + Header pill ("Setup").
   return (
-    <div className="min-h-screen bg-white p-8">
-      <div className="mx-auto max-w-xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Set up your booking page
-          </h1>
+    <div className="relative min-h-screen overflow-hidden bg-gray-50">
+      <BackgroundGlow />
+      <Header variant="auth" rightLabel="Setup" />
+      <main className="relative z-10 mx-auto w-full max-w-xl px-4 pt-20 md:pt-24 pb-12">
+        <div>
           <p className="mt-1 text-sm text-gray-500">
             Step {me.onboarding_step} of 3
           </p>
@@ -40,14 +41,14 @@ export default async function OnboardingLayout({
               <div
                 key={s}
                 className={`h-1.5 flex-1 rounded-full ${
-                  s <= me.onboarding_step ? "bg-blue-600" : "bg-gray-200"
+                  s <= me.onboarding_step ? "bg-blue-500" : "bg-gray-200"
                 }`}
               />
             ))}
           </div>
         </div>
-        {children}
-      </div>
+        <div className="mt-8">{children}</div>
+      </main>
     </div>
   );
 }
