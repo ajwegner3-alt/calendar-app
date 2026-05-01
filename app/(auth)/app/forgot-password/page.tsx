@@ -1,19 +1,25 @@
 import Link from "next/link";
-import { AuthHero } from "@/app/(auth)/_components/auth-hero";
+import { Header } from "@/app/_components/header";
+import { BackgroundGlow } from "@/app/_components/background-glow";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
 /**
- * Forgot password page (AUTH-09).
+ * Forgot password page (AUTH-09 / AUTH-13/15/16).
  *
  * Lives in the (auth)/app/ route group so it inherits the auth layout shell
  * (no sidebar). Served at /app/forgot-password.
+ *
+ * Phase 16-03 re-skin: single-column shell with bg-gray-50 + BackgroundGlow +
+ * Header (auth variant) + centered white card. Functional <ForgotPasswordForm />
+ * client island preserved verbatim.
  */
 export default function ForgotPasswordPage() {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left: form column */}
-      <main className="flex flex-col items-center justify-center bg-white px-6 py-12 md:py-20 lg:px-12">
-        <div className="w-full max-w-sm">
+    <div className="relative min-h-screen overflow-hidden bg-gray-50">
+      <BackgroundGlow />
+      <Header variant="auth" />
+      <main className="relative z-10 mx-auto w-full max-w-md px-4 pt-20 md:pt-24 pb-12">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <header className="mb-8">
             <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
               Forgot your password?
@@ -33,11 +39,6 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
       </main>
-      {/* Right: NSI hero (lg+ only) */}
-      <AuthHero
-        headline="We've got your back"
-        subtext="Enter your email and we'll send a reset link if it's registered."
-      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AuthHero } from "@/app/(auth)/_components/auth-hero";
+import { Header } from "@/app/_components/header";
+import { BackgroundGlow } from "@/app/_components/background-glow";
 import { ResendVerificationButton } from "./resend-verification-button";
 import { resendVerification } from "./actions";
 
@@ -14,16 +15,20 @@ interface Props {
  * Reads ?email= from query string to display the address to the user and
  * pre-fill the resend form.
  *
- * "Use a different email" link resolves to /app/signup (Plan 10-05).
+ * Phase 16-03 re-skin: single-column shell with bg-gray-50 + BackgroundGlow +
+ * Header (auth variant) + centered white card. Server-side searchParams parsing
+ * and <ResendVerificationButton action={resendVerification} initialEmail={email} />
+ * preserved verbatim.
  */
 export default async function VerifyEmailPage({ searchParams }: Props) {
   const { email } = await searchParams;
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left: form column */}
-      <main className="flex flex-col items-center justify-center bg-white px-6 py-12 md:py-20 lg:px-12">
-        <div className="w-full max-w-sm">
+    <div className="relative min-h-screen overflow-hidden bg-gray-50">
+      <BackgroundGlow />
+      <Header variant="auth" />
+      <main className="relative z-10 mx-auto w-full max-w-md px-4 pt-20 md:pt-24 pb-12">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <header className="mb-8">
             <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
               Check your inbox
@@ -58,11 +63,6 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
           </p>
         </div>
       </main>
-      {/* Right: NSI hero (lg+ only) */}
-      <AuthHero
-        headline="One quick step"
-        subtext="Check your inbox for the verification link. Click it to finish setting up your account."
-      />
     </div>
   );
 }
