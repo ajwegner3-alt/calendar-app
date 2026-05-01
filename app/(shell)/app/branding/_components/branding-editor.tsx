@@ -133,7 +133,6 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
             sidebarColor={sidebarColor}
             pageColor={backgroundColor}
             primaryColor={primaryColor}
-            shade={backgroundShade}
           />
 
           <Button

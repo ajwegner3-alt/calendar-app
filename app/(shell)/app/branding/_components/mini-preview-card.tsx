@@ -1,12 +1,9 @@
 "use client";
-import type { BackgroundShade } from "@/lib/branding/types";
-import { GradientBackdrop } from "@/app/_components/gradient-backdrop";
 
 interface MiniPreviewCardProps {
   sidebarColor: string | null;
   pageColor: string | null;
   primaryColor: string | null;
-  shade: BackgroundShade; // keep for GradientBackdrop
 }
 
 /**
@@ -20,8 +17,11 @@ interface MiniPreviewCardProps {
  * Phase 7 lesson: no dynamic Tailwind classes for runtime hex — all inline style.
  * CONTEXT.md lock: this is the ONLY in-page preview for the chrome layout.
  * Owners navigate to actual surfaces to see the full in-context experience.
+ *
+ * Phase 17-08 bridge: GradientBackdrop removed (flat color tint only).
+ * Phase 18 will fully rebuild this as a faux public booking page (BRAND-17).
  */
-export function MiniPreviewCard({ sidebarColor, pageColor, primaryColor, shade }: MiniPreviewCardProps) {
+export function MiniPreviewCard({ sidebarColor, pageColor, primaryColor }: MiniPreviewCardProps) {
   return (
     <div className="space-y-1.5">
       <p className="text-sm font-medium text-muted-foreground">Preview</p>
@@ -42,25 +42,17 @@ export function MiniPreviewCard({ sidebarColor, pageColor, primaryColor, shade }
           </div>
         </div>
 
-        {/* Page area (right of sidebar) */}
+        {/* Page area (right of sidebar) — flat color tint, gradient removed for v1.2 */}
         <div className="relative ml-12 h-full overflow-hidden">
-          {/* GradientBackdrop composited on top of page color — same as real dashboard */}
-          <GradientBackdrop color={pageColor} shade={shade} />
-
           {/* Faux card — always white, invariant of colors */}
           <div className="relative mx-3 mt-4 rounded-md bg-white p-3 shadow-sm">
-            {/* Shimmer title bar */}
             <div className="h-2.5 w-2/3 rounded-full bg-foreground/10 mb-2" />
-            {/* Shimmer body line */}
             <div className="h-2 w-1/2 rounded-full bg-foreground/8 mb-1" />
-            {/* Faux action buttons — reflect primaryColor */}
             <div className="mt-2 flex items-center gap-2">
-              {/* Faux primary button */}
               <div
                 className="h-6 w-14 rounded text-[0px]"
                 style={{ backgroundColor: primaryColor ?? "hsl(var(--primary))" }}
               />
-              {/* Faux switch on-state */}
               <div
                 className="h-4 w-7 rounded-full"
                 style={{ backgroundColor: primaryColor ?? "hsl(var(--primary))" }}
