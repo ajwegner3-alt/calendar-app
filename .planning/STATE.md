@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-30 — **Phase 15 complete (2/2 plans).** Owner shell re-skin is live on Vercel; Andrew approved at https://calendar-app-xi-smoky.vercel.app/. HDR-02 spec refined with sidebar-width offset.
+**Last updated:** 2026-04-30 — **Phase 16 plan 01 complete.** Header extended with `variant` ('owner'|'auth') + `rightLabel` props as additive API change. Owner-shell behavior preserved byte-for-byte; Wave 2 plans (16-02/03/04) unblocked.
 
 ## Project Reference
 
@@ -15,17 +15,17 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin — **COMPLETE (2/2 plans)**
-**Plan:** 15-02 of 2 — complete; Andrew approved live deploy
-**Status:** Phase 15 complete. Ready to plan Phase 16 (Auth + Onboarding Re-Skin).
-**Last activity:** 2026-04-30 — Phase 15 complete via `/gsd:execute-phase 15`. Andrew approved live deploy at https://calendar-app-xi-smoky.vercel.app/. HDR-02 refined with `md:left-[var(--sidebar-width)]` offset (commit 698e9fb) after live-eyeball revealed pill overlapping sidebar nav on desktop. SUMMARY.md written (commit f912670).
+**Phase:** Phase 16 — Auth + Onboarding Re-Skin — **IN PROGRESS (1/4 plans)**
+**Plan:** 16-01 of 4 — complete (Header variant + rightLabel API)
+**Status:** Wave 1 plan 16-01 complete. Wave 2 (Plans 16-02, 16-03, 16-04) unblocked.
+**Last activity:** 2026-04-30 — Plan 16-01 executed via `/gsd:execute-phase 16`. Header extended with `variant?: 'owner' | 'auth'` and `rightLabel?: string` props (commit 0248caf). Owner default preserves Phase 15 HDR-02 sidebar offset + SidebarTrigger byte-for-byte. `npx tsc --noEmit` clean for non-test files. SUMMARY.md written.
 
 **v1.2 Phase Progress:**
 
 ```
 Phase 14 [X] Typography + CSS Token Foundations  (14-01 complete — TYPO-01..07 shipped)
 Phase 15 [X] BackgroundGlow + Header Pill + Owner Shell Re-Skin  (15-01 + 15-02 complete; live + approved)
-Phase 16 [ ] Auth + Onboarding Re-Skin
+Phase 16 [~] Auth + Onboarding Re-Skin  (16-01 complete; 16-02/03/04 pending)
 Phase 17 [ ] Public Surfaces + Embed
 Phase 18 [ ] Branding Editor Simplification
 Phase 19 [ ] Email Layer Simplification
@@ -33,7 +33,7 @@ Phase 20 [ ] Dead Code + Test Cleanup
 Phase 21 [ ] Schema DROP Migration
 ```
 
-Progress: [██░░░░░░░░] 25% (2 / 8 phases complete)
+Progress: [██░░░░░░░░] 25% (2 / 8 phases complete; Phase 16 in progress at 1/4 plans)
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Progress: [██░░░░░░░░] 25% (2 / 8 phases complete)
 - Phase 14 — 25 min, 2 files, 7 requirements (TYPO-01..07). Additive only.
 - Phase 15 Plan 15-01 — ~30 min execution + visual-gate iteration on live Vercel preview, 3 new files (lib/brand.ts, background-glow.tsx, header.tsx), 9 requirements (GLOW-01..05, HDR-01..04, HDR-07, MN-02). Additive only.
 - Phase 15 Plan 15-02 — ~12 min task execution + checkpoint deploy + 1 post-eyeball fix-up commit, 10 source files modified + 1 fix-up (header.tsx), 11 requirements (OWNER-01..11). Net deletions in shell layout (chrome decommissioned).
+- Phase 16 Plan 16-01 — ~5 min, 1 file modified (header.tsx), additive API extension only. No call-site changes; tsc clean for non-test files; zero owner-shell regression.
 
 **v1.1 reference velocity (for calibration):**
 - 34 plans across 6 phases (Phases 10-13 incl. 12.5 + 12.6)
@@ -86,19 +87,27 @@ Progress: [██░░░░░░░░] 25% (2 / 8 phases complete)
 - **Single-source `--primary` cascade:** No per-account chrome wrapper; shadcn Button/Switch/Calendar inherit `:root --primary` directly. The Phase 12.6 `style={{ "--primary": ... }}` wrapper pattern is decommissioned and must NOT return.
 - **Accounts SELECT trim outcome (Plan 15-02 OWNER-11):** `slug` was NOT referenced outside `.select(...)` in `(shell)/layout.tsx`, so the deterministic grep procedure resolved to `.select("id")` (slug DROPPED). Other layouts/components that reference `account.slug` are unaffected.
 
+### Phase 16 Decisions (locked — inform Plans 16-02/03/04)
+
+- **Header `variant` prop is canonical for no-sidebar surfaces.** REQUIREMENTS.md AUTH-13's literal wording (`<Header variant="owner" />` for auth) is corrected: auth/onboarding pages use `variant="auth"`. Owner-shell continues to use the default. This is per RESEARCH.md section 3 — using `variant="owner"` on auth would either crash (no `SidebarProvider` for `SidebarTrigger`) or place the pill incorrectly (sidebar offset on no-sidebar pages).
+- **`SidebarTrigger` import retained at top of header.tsx** (not conditionally imported). Tree-shaking handles the dead branch when `variant="auth"`. Do not refactor to dynamic import — adds runtime cost for zero benefit.
+- **`rightLabel` prop precedes pathname-derived label.** When `rightLabel` is provided, `getContextLabel(pathname)` is bypassed entirely. Onboarding (`<Header variant="auth" rightLabel="Setup" />`) uses this for static "Setup" label across all 3 steps.
+- **Owner default behavior preserved byte-for-byte.** No call sites updated in Plan 16-01 — Plans 16-02/03/04 introduce the new variant at consumer surfaces.
+
 ### Pending Todos
 
-- None for Phase 15. Maintenance backlog (out of v1.2 scope): clean up pre-existing tsc errors in `tests/` directory (~20 errors in test files, all `TS7006`/`TS2305`).
+- Plans 16-02 (AuthHero + login/signup), 16-03 (5 short auth pages), 16-04 (onboarding) — Wave 2 of Phase 16.
+- Maintenance backlog (out of v1.2 scope): clean up pre-existing tsc errors in `tests/` directory (~20 errors, all `TS7006`/`TS2305`).
 
 ### Active Blockers
 
-None. Phase 15 complete; ready to plan Phase 16 (Auth + Onboarding Re-Skin).
+None. Plan 16-01 complete; Wave 2 plans unblocked.
 
 ## Session Continuity
 
-**Last session:** 2026-04-30 — Phase 15 execute via `/gsd:execute-phase 15`.
-**Stopped at:** Phase 15 complete. Plan 15-02 SUMMARY.md written (commit f912670). HDR-02 refined with sidebar-width offset (commit 698e9fb) after live-deploy eyeball. Andrew approved live deploy at https://calendar-app-xi-smoky.vercel.app/.
-**Resume:** `/gsd:plan-phase 16` (Auth + Onboarding Re-Skin).
+**Last session:** 2026-04-30 — Plan 16-01 execute via `/gsd:execute-phase 16`.
+**Stopped at:** Plan 16-01 complete. Header extended with `variant` + `rightLabel` props (commit 0248caf). SUMMARY.md written.
+**Resume:** Continue Phase 16 — execute Plan 16-02 (AuthHero re-skin + login/signup pages) next.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)
