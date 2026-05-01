@@ -15,15 +15,33 @@ function getContextLabel(pathname: string): string {
   return '';
 }
 
-export function Header() {
+interface HeaderProps {
+  variant?: 'owner' | 'auth';
+  rightLabel?: string;
+}
+
+/**
+ * Glass header pill. Default variant="owner" renders with sidebar offset and SidebarTrigger.
+ * variant="auth" renders without the sidebar offset and without SidebarTrigger — use on
+ * auth and onboarding pages that have no sidebar.
+ *
+ * rightLabel overrides the pathname-derived right-slot label. Used by onboarding to
+ * display a static "Setup" label across all 3 steps.
+ */
+export function Header({ variant = 'owner', rightLabel }: HeaderProps) {
   const pathname = usePathname();
-  const label = getContextLabel(pathname);
+  const label = rightLabel ?? getContextLabel(pathname);
+
+  const outerClassName =
+    variant === 'auth'
+      ? 'fixed top-2 md:top-6 left-0 right-0 z-30 px-4'
+      : 'fixed top-2 md:top-6 left-0 md:left-[var(--sidebar-width)] right-0 z-30 px-4';
 
   return (
-    <header className="fixed top-2 md:top-6 left-0 md:left-[var(--sidebar-width)] right-0 z-30 px-4">
+    <header className={outerClassName}>
       <div className="max-w-[1152px] mx-auto h-14 px-4 rounded-2xl flex items-center justify-between bg-white/90 backdrop-blur-sm border border-gray-200 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="md:hidden" />
+          {variant !== 'auth' && <SidebarTrigger className="md:hidden" />}
           <Link href="/app" className="text-lg font-extrabold tracking-[-0.04em]">
             <span className="text-gray-900">{WORDMARK.prefix}</span>
             <span className="text-blue-500">{WORDMARK.suffix}</span>
