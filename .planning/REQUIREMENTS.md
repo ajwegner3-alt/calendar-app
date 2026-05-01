@@ -127,15 +127,15 @@ Chromeless variant of public surfaces. Gains `--primary = brand_primary` overrid
 
 `/app/branding` collapses to 2 controls (logo + brand_primary). 3 deprecated pickers removed. `MiniPreviewCard` rebuilt as faux public booking page.
 
-- [ ] **BRAND-13**: `BrandingEditor` removes the "Sidebar color" picker, "Page background" picker, and "Background shade" picker
-- [ ] **BRAND-14**: `BrandingEditor` retains: `LogoUploader` + "Brand Primary Color" (`ColorPickerInput` for `brand_primary`). Label updated to "Booking page primary color"; description: "Used for the background glow, CTAs, and slot selection on your public booking pages."
-- [ ] **BRAND-15**: `IntensityPicker` component file (already deleted in Phase 12.6-02 — verify it's gone) confirmed removed
-- [ ] **BRAND-16**: `ShadePicker` component (Phase 12-01) removed from page (deleted in cleanup phase)
-- [ ] **BRAND-17**: `MiniPreviewCard` rebuilt: faux PUBLIC booking page (was faux dashboard in Phase 12.6). `bg-gray-50` base + blob in `brand_primary` (`blur-[60px] opacity-40` inline style) + white card `bg-white rounded-xl border border-gray-200 p-4 shadow-sm` centered + faux slot picker (3 buttons, one selected with `bg-primary` driven by `brand_primary` inline style) + tiny "Powered by NSI" `text-[10px] text-gray-400` at card bottom + faux pill at top showing logo or initial circle
-- [ ] **BRAND-18**: `saveBrandingAction` signature simplified from `{ backgroundColor, backgroundShade, chromeTintIntensity, sidebarColor }` to `{ logoUrl, brandPrimary }` (or whatever the existing signature is — strip the deprecated fields)
-- [ ] **BRAND-19**: `BrandingState` interface in editor + `Branding` type (in `lib/branding/types.ts`) drop `backgroundColor`, `backgroundShade`, `chromeTintIntensity`, `sidebarColor` fields
-- [ ] **BRAND-20**: `getBrandingForAccount` + `brandingFromRow` in `lib/branding/read-branding.ts` drop deprecated field reads from accounts row SELECT and return type
-- [ ] **BRAND-21**: `PreviewIframe` (live preview) plumbing unchanged; verify `?previewColor=` query param still drives the new `PublicShell` correctly
+- [x] **BRAND-13**: `BrandingEditor` removes the "Sidebar color" picker, "Page background" picker, and "Background shade" picker
+- [x] **BRAND-14**: `BrandingEditor` retains: `LogoUploader` + "Brand Primary Color" (`ColorPickerInput` for `brand_primary`). Label updated to "Booking page primary color"; description: "Used for the background glow, CTAs, and slot selection on your public booking pages."
+- [x] **BRAND-15**: `IntensityPicker` component file (already deleted in Phase 12.6-02 — verify it's gone) confirmed removed
+- [x] **BRAND-16**: `ShadePicker` component (Phase 12-01) removed from page (deleted in cleanup phase)
+- [x] **BRAND-17**: `MiniPreviewCard` rebuilt: faux PUBLIC booking page (was faux dashboard in Phase 12.6). `bg-gray-50` base + blob in `brand_primary` (`blur-[60px] opacity-40` inline style) + white card `bg-white rounded-xl border border-gray-200 p-4 shadow-sm` centered + faux slot picker (3 buttons, one selected with `bg-primary` driven by `brand_primary` inline style) + tiny "Powered by NSI" `text-[10px] text-gray-400` at card bottom + faux pill at top showing logo or initial circle
+- [x] **BRAND-18**: `saveBrandingAction` signature simplified from `{ backgroundColor, backgroundShade, chromeTintIntensity, sidebarColor }` to `{ logoUrl, brandPrimary }` (or whatever the existing signature is — strip the deprecated fields)
+- [x] **BRAND-19**: `BrandingState` interface in editor + `Branding` type (in `lib/branding/types.ts`) drop `backgroundColor`, `backgroundShade`, `chromeTintIntensity`, `sidebarColor` fields
+- [x] **BRAND-20**: `getBrandingForAccount` + `brandingFromRow` in `lib/branding/read-branding.ts` drop deprecated field reads from accounts row SELECT and return type
+- [x] **BRAND-21**: `PreviewIframe` (live preview) plumbing unchanged; verify `?previewColor=` query param still drives the new `PublicShell` correctly
 
 ### Email Layer Simplification
 
@@ -313,15 +313,15 @@ Populated by roadmapper 2026-04-30.
 | EMBED-09 | Phase 17 | Complete |
 | EMBED-10 | Phase 17 | Complete |
 | EMBED-11 | Phase 17 | Complete |
-| BRAND-13 | Phase 18 | Pending |
-| BRAND-14 | Phase 18 | Pending |
-| BRAND-15 | Phase 18 | Pending |
-| BRAND-16 | Phase 18 | Pending |
-| BRAND-17 | Phase 18 | Pending |
-| BRAND-18 | Phase 18 | Pending |
-| BRAND-19 | Phase 18 | Pending |
-| BRAND-20 | Phase 18 | Pending |
-| BRAND-21 | Phase 18 | Pending |
+| BRAND-13 | Phase 18 | Complete |
+| BRAND-14 | Phase 18 | Complete |
+| BRAND-15 | Phase 18 | Complete |
+| BRAND-16 | Phase 18 | Complete |
+| BRAND-17 | Phase 18 | Complete |
+| BRAND-18 | Phase 18 | Complete |
+| BRAND-19 | Phase 18 | Complete |
+| BRAND-20 | Phase 18 | Complete |
+| BRAND-21 | Phase 18 | Complete |
 | EMAIL-15 | Phase 19 | Pending |
 | EMAIL-16 | Phase 19 | Pending |
 | EMAIL-17 | Phase 19 | Pending |

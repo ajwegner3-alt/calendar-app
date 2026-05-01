@@ -191,9 +191,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Wave 1: shrink Branding type + reader + editor loader (BRAND-19, BRAND-20)
-- [ ] 18-02-PLAN.md — Wave 2: collapse BrandingEditor to 2 controls + rebuild MiniPreviewCard as faux public page + delete saveBrandingAction (BRAND-13..18, BRAND-21)
-- [ ] 18-03-PLAN.md — Wave 3: visual gate (deploy + Andrew eyeball, 8 gates)
+- [x] 18-01: shrink Branding type + reader + editor loader (BRAND-19, BRAND-20) — completed 2026-05-01
+- [x] 18-02: collapse BrandingEditor to 2 controls + rebuild MiniPreviewCard as faux public page + delete saveBrandingAction (BRAND-13..18, BRAND-21) — completed 2026-05-01
+- [x] 18-03: visual gate — Andrew approved 8/8 gates on live Vercel preview 2026-05-01
 
 ---
 
@@ -284,7 +284,7 @@ Plans:
 | 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 2 / 2 | ✅ Complete | 2026-04-30 |
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 4 / 4 | ✅ Complete | 2026-04-30 |
 | 17 — Public Surfaces + Embed | v1.2 | 9 / 9 | ✅ Complete | 2026-04-30 |
-| 18 — Branding Editor Simplification | v1.2 | 0 / 3 | Not started | - |
+| 18 — Branding Editor Simplification | v1.2 | 3 / 3 | ✅ Complete | 2026-05-01 |
 | 19 — Email Layer Simplification | v1.2 | 0 / TBD | Not started | - |
 | 20 — Dead Code + Test Cleanup | v1.2 | 0 / TBD | Not started | - |
 | 21 — Schema DROP Migration | v1.2 | 0 / TBD | Not started | - |
@@ -299,4 +299,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-04-30 — Phase 17 complete (9/9 plans, 18 requirements verified, 233 lines of legacy chrome deleted, Andrew approved 10/10 visual gates). Next: `/gsd:plan-phase 18` (Branding Editor Simplification).*
+*Roadmap last updated: 2026-05-01 — Phase 18 complete (3/3 plans, 9/9 BRAND-13..21 requirements verified, 5/5 success criteria verified, Andrew approved 8/8 visual gates). Next: `/gsd:plan-phase 19` (Email Layer Simplification).*

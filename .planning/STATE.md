@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-01 — **Phase 18 complete (2/2 plans).** Plan 18-02 (Wave 2) complete: BrandingEditor collapsed to 2 controls, MiniPreviewCard rebuilt as faux public booking page, saveBrandingAction deleted. tsc clean (only pre-existing tests/ baseline). Build clean. Both Wave 1+2 commits pushed to main.
+**Last updated:** 2026-05-01 — **Phase 18 complete (3/3 plans, 9/9 BRAND-13..21 requirements verified, 5/5 ROADMAP success criteria verified, Andrew approved 8/8 visual gates).** `/app/branding` editor collapsed to 2 controls (LogoUploader + brand_primary ColorPickerInput). 3 deprecated pickers (sidebar_color, background_color, ShadePicker) gone from JSX and from server-side write paths. `MiniPreviewCard` rebuilt as faux public booking page (gray-50 + brand_primary blob + glass pill + white rounded-xl card + 3-button slot row w/ middle selected + Powered-by-NSI). `saveBrandingAction` deleted entirely (BRAND-18 intent: zero server write paths for the 4 deprecated fields). Wave 1 + Wave 2 atomic commits shipped without push between waves (intentional tsc-broken state at editor layer between waves). Visual gate (Wave 3) passed clean — no fix-up commits required.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 18 — Branding Editor Simplification — **COMPLETE (2/2 plans)**
-**Plan:** 18-02 of 2 — complete; Wave 2 editor + preview rebuild done
-**Status:** Phase 18 complete. tsc clean. Build clean. Pushed to main. Phase 19 (Email Layer Simplification) is next.
-**Last activity:** 2026-05-01 — Executed Plan 18-02 (Wave 2). Collapsed BrandingEditor to 2 controls, rebuilt MiniPreviewCard as faux public booking page, deleted saveBrandingAction. Commits 64164aa (Wave 1, already present) + ccf61e0 (Wave 2). Pushed both to main.
+**Phase:** Phase 18 — Branding Editor Simplification — **COMPLETE (3/3 plans, 9/9 must-haves verified)**
+**Plan:** 18-03 of 3 — complete; visual gate approved 8/8 by Andrew
+**Status:** Phase 18 complete. tsc clean. Build clean. Pushed to main. Verifier passed clean. Phase 19 (Email Layer Simplification) is next.
+**Last activity:** 2026-05-01 — Phase 18 executed via `/gsd:execute-phase 18`. Wave 1 (18-01 type/reader/loader shrink, atomic 3-file commit) → Wave 2 (18-02 editor + preview rebuild + saveBrandingAction deletion, atomic 3-file commit, push) → Wave 3 (18-03 visual gate, Andrew 8/8 approved on https://calendar-app-xi-smoky.vercel.app/, no fix-up commits). Verifier confirmed 9/9 BRAND-13..21 requirements + 5/5 ROADMAP success criteria pass.
 
 **v1.2 Phase Progress:**
 
@@ -27,7 +27,7 @@ Phase 14 [X] Typography + CSS Token Foundations  (14-01 complete — TYPO-01..07
 Phase 15 [X] BackgroundGlow + Header Pill + Owner Shell Re-Skin  (15-01 + 15-02 complete; live + approved)
 Phase 16 [X] Auth + Onboarding Re-Skin  (16-01..04 complete; 24/24 must-haves verified; live + approved)
 Phase 17 [X] Public Surfaces + Embed  (17-01..09 complete; 24/24 must-haves verified; live + approved; 233 lines legacy chrome deleted)
-Phase 18 [X] Branding Editor Simplification  (18-01 + 18-02 complete; both waves done; pushed to main)
+Phase 18 [X] Branding Editor Simplification  (18-01..03 complete; 9/9 must-haves verified; live + approved 8/8 visual gates; no fix-ups)
 Phase 19 [ ] Email Layer Simplification
 Phase 20 [ ] Dead Code + Test Cleanup
 Phase 21 [ ] Schema DROP Migration
@@ -129,6 +129,17 @@ Progress: [██████░░░░] 62% (5 / 8 phases complete; Phase 19 
 - **mini-preview-card.tsx is a Phase 17 bridge edit only:** GradientBackdrop dependency removed to unblock deletion; Phase 18 will fully rebuild this component as a faux public booking page preview per BRAND-17. The current implementation is intentionally minimal.
 - **Stale Phase 5 markers (`PLAN-05-06-REPLACE-INLINE-*`) removed during 17-04 migration:** They served no current purpose and were a tidy-up consistent with the migration. No future phase should encounter them.
 
+### Phase 18 Decisions (locked — inform Phase 19+)
+
+- **Option B shim landed for the `Branding` interface:** `backgroundColor`, `backgroundShade`, `chromeTintIntensity`, `sidebarColor` are `@deprecated` *optional* fields on `lib/branding/types.ts` so `lib/branding/chrome-tint.ts` and its test continue to type-check until Phase 20 deletes them. `BrandingState` (editor-local) is fully shrunk to 5 fields — the shim is shared-type only. Both reader SELECTs (`getBrandingForAccount`, `loadBrandingForOwner`) production-stop reading the deprecated columns at runtime.
+- **CP-04 wave split (types-first):** Wave 1 commit (`64164aa`) intentionally left `branding-editor.tsx` in a tsc-broken state (it referenced `state.backgroundColor`/`state.backgroundShade`/`state.sidebarColor` which Wave 1 dropped from `BrandingState`). Wave 2 (`ccf61e0`) fixed those errors via the editor rewrite. **Push deferred until end of Wave 2** — pushing between waves would have failed the Vercel build. Treat this as the canonical pattern for any future "shrink type → rewrite consumer" two-wave plan.
+- **BRAND-18 resolved by deletion, not signature simplification:** `saveBrandingAction` was deleted entirely from `actions.ts` because Wave 2's rewrite leaves zero callers (`ColorPickerInput` calls `savePrimaryColorAction` directly via its internal save button; `LogoUploader` calls `uploadLogoAction`/`deleteLogoAction` directly). The requirement's *intent* — no server write path for the 4 deprecated fields — is satisfied more durably by deletion. Verifier confirmed clean.
+- **MiniPreviewCard prop interface:** `{brandPrimary, logoUrl, accountName}` (3 strings/null). Old props `{sidebarColor, pageColor, primaryColor}` are gone. The component is a *visual replica* of the public booking page — it does NOT use CSS variables, the dual `--brand-primary`/`--primary` contract, or the Phase 17 PublicShell wrapper. All runtime hex flows through inline `style={{}}` per MP-04 JIT lock (blob `background`, initial circle `backgroundColor`, selected slot `backgroundColor`).
+- **MiniPreviewCard scale tuning landed first try:** Card height + blob saturation + 3-slot density + reset-button placement all matched the plan scaffold on the first deploy. No fix-up commits required during the visual gate. Phase 19 (email) and Phase 20 (cleanup) start from a stable Phase 18 baseline.
+- **Reset to NSI blue (`#3B82F6`) is distinct from `DEFAULT_BRAND_PRIMARY = "#0A2540"`:** The reset button targets the NSI brand-lock color, not the legacy null-fallback color. Both values stay separate in the codebase — `DEFAULT_BRAND_PRIMARY` remains the `brandingFromRow` fallback when an account has null `brand_primary` (legacy data); `NSI_BLUE` is the Phase 18 reset constant in `branding-editor.tsx`. Don't merge them.
+- **Contrast warning threshold matches PublicShell `resolveGlowColor`:** `relativeLuminance(primaryColor) > 0.85` is the single source of truth in `lib/branding/contrast.ts`. Editor and PublicShell both read from this — when one threshold changes, the other should follow. Defensive `try/catch` around the call mirrors `public-shell.tsx:33-39` so bad hex mid-typing never crashes the editor.
+- **Visual gate plan path correction:** `18-03-visual-gate-PLAN.md` Gate 8 referenced `/login`; actual auth route is `/app/login` (route group `(auth)/app/login/page.tsx`). Caught by orchestrator curl probe before Andrew eyeball; the SUMMARY documents the mismatch. Plan text not amended (cosmetic, no future executor will re-run this plan). For Phase 19+ visual gates: prefer `git grep -rn "page.tsx" app/(auth)/` to confirm the actual route URL before writing the gate checklist.
+
 ### Pending Todos
 
 - Maintenance backlog (out of v1.2 scope): clean up pre-existing tsc errors in `tests/` directory (~20 errors, all `TS7006`/`TS2305`).
@@ -141,9 +152,9 @@ None. Phase 18 complete. Wave 1 (64164aa) + Wave 2 (ccf61e0) pushed to main. Bui
 
 ## Session Continuity
 
-**Last session:** 2026-05-01 — Plan 18-02 (Wave 2) executed.
-**Stopped at:** Plan 18-02 complete. Code commit ccf61e0. Both waves pushed to main. tsc and build clean.
-**Resume:** Phase 19 (Email Layer Simplification). Vercel deploy triggered by push — Andrew should eyeball /app/branding to verify MiniPreviewCard visual before proceeding to Phase 19.
+**Last session:** 2026-05-01 — Phase 18 executed via `/gsd:execute-phase 18`.
+**Stopped at:** Phase 18 complete (3/3 plans). Wave 1 (64164aa types/reader/loader) → Wave 2 (ccf61e0 editor/preview/actions, push) → Wave 3 (18-03 visual gate, Andrew 8/8 approved on https://calendar-app-xi-smoky.vercel.app/, no fix-ups). Verifier passed 9/9 + 5/5. ROADMAP/STATE/REQUIREMENTS updated; phase completion bundled in single commit.
+**Resume:** `/gsd:plan-phase 19` (Email Layer Simplification — depends on Phase 14 CSS tokens, can run in parallel with Phases 15-18 conceptually but placed sequentially for deploy clarity. EmailBranding interface collapses to `{name, logo_url, brand_primary}`; sender priority chain simplifies; nsi-mark.png replaced with text "Powered by North Star Integrations").
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)
