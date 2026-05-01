@@ -2,6 +2,8 @@
 // Source: lead-scoring-with-tools/website-analysis-tools/app/components/BackgroundGlow.tsx
 // Adapted: fixed → absolute (CP-06 / GLOW-03), color prop added (GLOW-02),
 //          blob left-offsets reduced (580→200, 380→100) to fit sidebar-constrained container.
+// Phase 17 (MP-10): blob 2 terminus changed from #111827 → transparent so customer-
+// tinted glows on bg-gray-50 public surfaces render cleanly without a visible dark smear.
 
 interface BackgroundGlowProps {
   color?: string;
@@ -28,7 +30,7 @@ export function BackgroundGlow({ color = "#3B82F6" }: BackgroundGlowProps) {
           top: '420px',
           left: 'calc(50% + 0px)',
           transform: 'translateX(-50%)',
-          background: `linear-gradient(to top right, ${color}, #111827)`,
+          background: `linear-gradient(to top right, ${color}, transparent)`,
         }}
       />
     </div>
