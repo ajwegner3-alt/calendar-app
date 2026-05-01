@@ -1,62 +1,102 @@
 "use client";
 
 interface MiniPreviewCardProps {
-  sidebarColor: string | null;
-  pageColor: string | null;
-  primaryColor: string | null;
+  brandPrimary: string;
+  logoUrl: string | null;
+  accountName: string;
 }
 
 /**
- * 3-color inline preview card showing a faux dashboard layout.
+ * Faux PUBLIC booking page preview. Mirrors Phase 17 PublicShell visual
+ * grammar (gray-50 base + brand_primary blob + glass pill + white card +
+ * Powered-by-NSI footer) at miniature scale so owners see what their
+ * brand_primary will produce on the real public booking page BEFORE saving.
  *
- * Phase 12.6 rebuild: shows all three direct-color surfaces simultaneously:
- * - Faux sidebar strip: filled with sidebarColor (null = CSS default)
- * - Faux page area: filled with pageColor (null = CSS default)
- * - Faux primary button + switch: filled with primaryColor (null = CSS default)
+ * Phase 18 BRAND-17: replaces the Phase 12.6 faux-dashboard preview.
+ * MP-04 JIT lock: runtime hex flows through inline style only — never
+ * Tailwind classes.
  *
- * Phase 7 lesson: no dynamic Tailwind classes for runtime hex — all inline style.
- * CONTEXT.md lock: this is the ONLY in-page preview for the chrome layout.
- * Owners navigate to actual surfaces to see the full in-context experience.
- *
- * Phase 17-08 bridge: GradientBackdrop removed (flat color tint only).
- * Phase 18 will fully rebuild this as a faux public booking page (BRAND-17).
+ * Props are reactive to parent state — every keystroke updates the preview.
  */
-export function MiniPreviewCard({ sidebarColor, pageColor, primaryColor }: MiniPreviewCardProps) {
+export function MiniPreviewCard({ brandPrimary, logoUrl, accountName }: MiniPreviewCardProps) {
+  const initial = (accountName.charAt(0) || "P").toUpperCase();
+
   return (
     <div className="space-y-1.5">
       <p className="text-sm font-medium text-muted-foreground">Preview</p>
-      <div
-        className="relative h-48 overflow-hidden rounded-lg border"
-        style={{ backgroundColor: pageColor ?? undefined }}
-      >
-        {/* Faux sidebar strip */}
+
+      {/* Faux public page: bg-gray-50 + blob + glass pill + white card + footer */}
+      <div className="relative h-56 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+        {/* Brand-primary blob — inline style for JIT lock (MP-04) */}
         <div
-          className="absolute left-0 top-0 bottom-0 w-12 border-r border-border/30"
-          style={{ backgroundColor: sidebarColor ?? "hsl(var(--sidebar))" }}
-        >
-          {/* Sidebar shimmer items */}
-          <div className="flex flex-col gap-2 p-2 pt-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-2 rounded-full bg-foreground/15 w-full" />
-            ))}
-          </div>
+          aria-hidden
+          className="absolute h-32 w-32 rounded-full opacity-40"
+          style={{
+            top: "-16px",
+            left: "calc(50% + 30px)",
+            transform: "translateX(-50%)",
+            background: `linear-gradient(to top right, ${brandPrimary}, transparent)`,
+            filter: "blur(60px)",
+          }}
+        />
+
+        {/* Faux glass pill at top — logo or initial circle */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 backdrop-blur-sm border border-gray-200 shadow-sm">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" className="h-4 w-auto" style={{ maxHeight: 16, maxWidth: 60 }} />
+          ) : (
+            <div
+              className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-semibold text-white"
+              style={{ backgroundColor: brandPrimary }}
+              aria-hidden="true"
+            >
+              {initial}
+            </div>
+          )}
         </div>
 
-        {/* Page area (right of sidebar) — flat color tint, gradient removed for v1.2 */}
-        <div className="relative ml-12 h-full overflow-hidden">
-          {/* Faux card — always white, invariant of colors */}
-          <div className="relative mx-3 mt-4 rounded-md bg-white p-3 shadow-sm">
-            <div className="h-2.5 w-2/3 rounded-full bg-foreground/10 mb-2" />
-            <div className="h-2 w-1/2 rounded-full bg-foreground/8 mb-1" />
-            <div className="mt-2 flex items-center gap-2">
-              <div
-                className="h-6 w-14 rounded text-[0px]"
-                style={{ backgroundColor: primaryColor ?? "hsl(var(--primary))" }}
-              />
-              <div
-                className="h-4 w-7 rounded-full"
-                style={{ backgroundColor: primaryColor ?? "hsl(var(--primary))" }}
-              />
+        {/* Faux white card — slot picker preview */}
+        <div className="absolute inset-x-4 top-12 bottom-4 flex flex-col">
+          <div className="flex-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            {/* Faux event title strip */}
+            <div className="mb-3 space-y-1">
+              <div className="h-2 w-2/3 rounded-full bg-gray-200" />
+              <div className="h-1.5 w-1/3 rounded-full bg-gray-100" />
+            </div>
+
+            {/* Faux 3-button slot picker — middle button selected with brand_primary */}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden
+                className="h-6 rounded border border-gray-200 bg-white text-[10px] text-gray-600"
+              >
+                9:00
+              </button>
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden
+                className="h-6 rounded text-[10px] font-medium text-white"
+                style={{ backgroundColor: brandPrimary }}
+              >
+                10:00
+              </button>
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden
+                className="h-6 rounded border border-gray-200 bg-white text-[10px] text-gray-600"
+              >
+                11:00
+              </button>
+            </div>
+
+            {/* Powered-by-NSI footer at card bottom */}
+            <div className="mt-3 text-center text-[10px] text-gray-400">
+              Powered by North Star Integrations
             </div>
           </div>
         </div>

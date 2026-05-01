@@ -2,14 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  primaryColorSchema,
-  MAX_LOGO_BYTES,
-  backgroundColorSchema,
-  backgroundShadeSchema,
-  sidebarColorSchema,
-} from "./schema";
-import type { BackgroundShade } from "@/lib/branding/types";
+import { primaryColorSchema, MAX_LOGO_BYTES } from "./schema";
 
 export interface ActionResult<T = void> {
   ok?: boolean;
@@ -126,74 +119,6 @@ export async function deleteLogoAction(): Promise<ActionResult> {
       .update({ logo_url: null })
       .eq("id", accountId);
     if (error) return { error: `DB update failed: ${error.message}` };
-    revalidatePath("/app/branding");
-    return { ok: true };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Unknown error" };
-  }
-}
-
-/**
- * Phase 12.6: persist background_color, background_shade, and sidebar_color
- * to the owner's account.
- *
- * Replaces Phase 12.5 chrome_tint_intensity parameter with sidebar_color.
- * Defensive: empty strings are treated as null (clears the column).
- * Validates all three fields via Zod before writing.
- */
-export async function saveBrandingAction(payload: {
-  backgroundColor: string | null;
-  backgroundShade: BackgroundShade;
-  sidebarColor: string | null;
-}): Promise<ActionResult> {
-  // Treat empty string as null (owner cleared the field)
-  const rawColor =
-    payload.backgroundColor === "" ? null : payload.backgroundColor;
-
-  const colorResult = backgroundColorSchema.safeParse(rawColor);
-  if (!colorResult.success) {
-    return {
-      fieldErrors: {
-        backgroundColor: colorResult.error.issues.map((i) => i.message),
-      },
-    };
-  }
-
-  const shadeResult = backgroundShadeSchema.safeParse(payload.backgroundShade);
-  if (!shadeResult.success) {
-    return {
-      fieldErrors: {
-        backgroundShade: shadeResult.error.issues.map((i) => i.message),
-      },
-    };
-  }
-
-  // Treat empty string as null (owner cleared the sidebar color field)
-  const rawSidebarColor = payload.sidebarColor === "" ? null : payload.sidebarColor;
-
-  const sidebarColorResult = sidebarColorSchema.safeParse(rawSidebarColor);
-  if (!sidebarColorResult.success) {
-    return {
-      fieldErrors: {
-        sidebarColor: sidebarColorResult.error.issues.map((i) => i.message),
-      },
-    };
-  }
-
-  try {
-    const accountId = await getOwnerAccountIdOrThrow();
-    const admin = createAdminClient();
-    const { error } = await admin
-      .from("accounts")
-      .update({
-        background_color: colorResult.data ?? null,
-        background_shade: shadeResult.data,
-        sidebar_color: sidebarColorResult.data ?? null,
-      })
-      .eq("id", accountId);
-
-    if (error) return { error: `DB update failed: ${error.message}` };
-
     revalidatePath("/app/branding");
     return { ok: true };
   } catch (e) {

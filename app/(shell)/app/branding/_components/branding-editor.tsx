@@ -1,77 +1,53 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { relativeLuminance } from "@/lib/branding/contrast";
 import type { BrandingState } from "../_lib/load-branding";
-import type { BackgroundShade } from "@/lib/branding/types";
 import { LogoUploader } from "./logo-uploader";
 import { ColorPickerInput } from "./color-picker-input";
-import { PreviewIframe } from "./preview-iframe";
-import { ShadePicker } from "./shade-picker";
 import { MiniPreviewCard } from "./mini-preview-card";
-import { saveBrandingAction } from "../_lib/actions";
+import { PreviewIframe } from "./preview-iframe";
 
 interface BrandingEditorProps {
   state: BrandingState;
 }
 
+const NSI_BLUE = "#3B82F6";
+const LUMINANCE_NEAR_WHITE_THRESHOLD = 0.85; // Matches Phase 17 PublicShell resolveGlowColor — single source of truth
+
 /**
- * Top-level branding editor orchestrator.
+ * Phase 18 (BRAND-13..21): collapsed to two controls — logo + brand_primary.
  *
- * Phase 12.6: owns three live color preview fields (replacing Phase 12.5 chromeTintIntensity):
- * - primaryColor: "Button & accent color" — used for buttons, switches, focus rings
- * - sidebarColor: "Sidebar color" — direct hex fill for sidebar background
- * - backgroundColor: "Page background" — direct hex fill for page area background
- * - backgroundShade: "Background shade" — gradient backdrop intensity (unchanged)
- * - logoUrl: logo (unchanged)
+ * Layout: controls left column / MiniPreviewCard above PreviewIframe right column.
+ * Order in left column: logo first, then color picker (identity before style).
  *
- * Changes to any field propagate into the MiniPreviewCard immediately, giving the
- * owner a live preview BEFORE they save (CONTEXT lock).
+ * Color save: ColorPickerInput's default showSaveButton=true mode wires
+ * savePrimaryColorAction directly. No top-level handler needed.
  *
- * Layout: two-column on md+ (editor left, preview right).
+ * Logo save: LogoUploader wires uploadLogoAction / deleteLogoAction directly.
+ *
+ * MP-04 JIT lock honored throughout — runtime hex flows via inline style only
+ * (see MiniPreviewCard implementation).
  */
 export function BrandingEditor({ state }: BrandingEditorProps) {
-  const [primaryColor, setPrimaryColor] = useState(state.primaryColor ?? "#0A2540");
+  const [primaryColor, setPrimaryColor] = useState(state.primaryColor ?? NSI_BLUE);
   const [logoUrl, setLogoUrl] = useState<string | null>(state.logoUrl);
 
-  // Phase 12: background gradient state
-  const [backgroundColor, setBackgroundColor] = useState<string | null>(
-    state.backgroundColor,
-  );
-  const [backgroundShade, setBackgroundShade] = useState<BackgroundShade>(
-    state.backgroundShade,
-  );
-
-  // Phase 12.6: direct sidebar color state (replaces chromeTintIntensity)
-  const [sidebarColor, setSidebarColor] = useState<string | null>(
-    state.sidebarColor,
-  );
-
-  const [isSavingBackground, startBackgroundSave] = useTransition();
-
-  function handleSaveBackground() {
-    startBackgroundSave(async () => {
-      const result = await saveBrandingAction({
-        backgroundColor,
-        backgroundShade,
-        sidebarColor,
-      });
-      if (result.error) {
-        toast.error(result.error);
-      } else if (result.fieldErrors) {
-        const firstError = Object.values(result.fieldErrors).flat()[0];
-        if (firstError) toast.error(firstError);
-      } else {
-        toast.success("Background saved.");
-      }
-    });
+  // Contrast warning: matches Phase 17 PublicShell luminance > 0.85 fallback threshold.
+  // Defensive try/catch — bad hex never crashes the editor (mirrors public-shell.tsx).
+  let isNearWhite = false;
+  try {
+    isNearWhite = relativeLuminance(primaryColor) > LUMINANCE_NEAR_WHITE_THRESHOLD;
+  } catch {
+    isNearWhite = false;
   }
 
   return (
     <div className="grid gap-8 md:grid-cols-2">
-      {/* Left column: controls */}
+      {/* LEFT COLUMN — controls */}
       <section className="space-y-8">
+        {/* Logo first */}
         <div className="space-y-3">
           <h2 className="text-lg font-medium">Logo</h2>
           <p className="text-sm text-muted-foreground">
@@ -84,79 +60,61 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
           />
         </div>
 
+        {/* Brand primary color second */}
         <div className="space-y-3">
-          <h2 className="text-lg font-medium">Button &amp; accent color</h2>
+          <h2 className="text-lg font-medium">Booking page primary color</h2>
           <p className="text-sm text-muted-foreground">
-            Used for buttons, switches, and focus rings throughout your dashboard.
+            Used for the background glow, CTAs, and slot selection on your public booking pages.
           </p>
           <ColorPickerInput value={primaryColor} onChange={setPrimaryColor} />
-        </div>
 
-        {/* Phase 12.6: Sidebar color */}
-        <div className="space-y-3">
-          <h2 className="text-lg font-medium">Sidebar color</h2>
-          <p className="text-sm text-muted-foreground">
-            Sets the sidebar background. Leave blank to use the default light gray.
-          </p>
-          <ColorPickerInput
-            value={sidebarColor ?? "#0A2540"}
-            onChange={(hex) => setSidebarColor(hex)}
-            showSaveButton={false}
-            showSwatches={true}
-          />
-        </div>
+          {/* Reset to NSI blue escape hatch */}
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPrimaryColor(NSI_BLUE)}
+            >
+              Reset to NSI blue ({NSI_BLUE})
+            </Button>
+          </div>
 
-        {/* Phase 12.6: Page background (was "Background color") */}
-        <div className="space-y-3">
-          <h2 className="text-lg font-medium">Page background</h2>
-          <p className="text-sm text-muted-foreground">
-            Sets the dashboard page area background. Leave blank for the default light gray.
-          </p>
-          <ColorPickerInput
-            value={backgroundColor ?? "#0A2540"}
-            onChange={(hex) => setBackgroundColor(hex)}
-            showSaveButton={false}
-            showSwatches={true}
-          />
-        </div>
-
-        {/* Phase 12: Background shade */}
-        <div className="space-y-3">
-          <h2 className="text-lg font-medium">Background shade</h2>
-          <p className="text-sm text-muted-foreground">
-            Controls gradient intensity. "Subtle" is a soft accent; "Bold" is a full Cruip-style pattern.
-          </p>
-          <ShadePicker value={backgroundShade} onChange={setBackgroundShade} />
-
-          {/* Phase 12.6: 3-color mini preview */}
-          <MiniPreviewCard
-            sidebarColor={sidebarColor}
-            pageColor={backgroundColor}
-            primaryColor={primaryColor}
-          />
-
-          <Button
-            onClick={handleSaveBackground}
-            disabled={isSavingBackground}
-            size="sm"
-          >
-            {isSavingBackground ? "Saving…" : "Save background"}
-          </Button>
+          {/* Contrast warning — informational only, save still allowed */}
+          {isNearWhite ? (
+            <p className="text-sm text-amber-600">
+              This color may be hard to read on white backgrounds.
+            </p>
+          ) : null}
         </div>
       </section>
 
-      {/* Right column: live preview */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">Live preview</h2>
-        <p className="text-sm text-muted-foreground">
-          Updates instantly as you change logo or color — before you save.
-        </p>
-        <PreviewIframe
-          accountSlug={state.accountSlug}
-          firstActiveEventSlug={state.firstActiveEventSlug}
-          previewColor={primaryColor}
-          previewLogo={logoUrl}
-        />
+      {/* RIGHT COLUMN — MiniPreviewCard above PreviewIframe */}
+      <section className="space-y-6">
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium">Mini preview</h2>
+          <p className="text-sm text-muted-foreground">
+            Updates instantly as you change logo or color — before you save.
+          </p>
+          <MiniPreviewCard
+            brandPrimary={primaryColor}
+            logoUrl={logoUrl}
+            accountName={state.accountSlug}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium">Live booking page</h2>
+          <p className="text-sm text-muted-foreground">
+            Real embed widget — updates after you save the color.
+          </p>
+          <PreviewIframe
+            accountSlug={state.accountSlug}
+            firstActiveEventSlug={state.firstActiveEventSlug}
+            previewColor={primaryColor}
+            previewLogo={logoUrl}
+          />
+        </div>
       </section>
     </div>
   );
