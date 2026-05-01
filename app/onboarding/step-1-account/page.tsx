@@ -2,7 +2,7 @@ import { AccountForm } from "./account-form";
 
 export default function Step1AccountPage() {
   return (
-    <div>
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
       <h2 className="text-xl font-medium text-gray-900">
         Name your booking page
       </h2>

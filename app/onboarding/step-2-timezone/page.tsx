@@ -2,7 +2,7 @@ import { TimezoneForm } from "./timezone-form";
 
 export default function Step2TimezonePage() {
   return (
-    <div>
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
       <h2 className="text-xl font-medium text-gray-900">Confirm your timezone</h2>
       <p className="mt-1 text-sm text-gray-500">
         Your booking slots will be shown to visitors in your timezone.
