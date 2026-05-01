@@ -275,6 +275,7 @@ Edit `app/(shell)/app/branding/_lib/load-branding.ts`:
 4. `loadBrandingForOwner` accounts SELECT is `"id, slug, logo_url, brand_primary"` (BRAND-20 runtime stop-reading).
 5. `getBrandingForAccount` accounts SELECT is `"logo_url, brand_primary"` (BRAND-20 runtime stop-reading).
 6. Single atomic git commit covering all three files. Suggested message: `refactor(18-01): shrink Branding type + reader + editor loader (BRAND-19, BRAND-20)`.
+7. **DO NOT `git push` at end of Wave 1.** The repo is in an intentional tsc-broken state at the editor layer (`branding-editor.tsx` references the now-dropped `state.backgroundColor`/`state.backgroundShade`/`state.sidebarColor` fields). Wave 2 commits the UI fix; Wave 3 pushes both commits at once. Push between waves WILL fail Vercel build because `npm run build` cannot succeed until Wave 2 lands. Commit only — do not push.
 </success_criteria>
 
 <output>
@@ -286,4 +287,6 @@ After completion, create `.planning/phases/18-branding-editor-simplification/18-
 - `chrome-tint.ts` + its test still clean (verify command output)
 - Files of record: 3 changed, line count delta
 - Hand-off to Wave 2: `branding-editor.tsx` import sites need rewriting
+
+**Do NOT push — Wave 2 must commit before any push.** The Wave 1 commit leaves the repo in an intentional tsc-broken state at `branding-editor.tsx`. Pushing now would fail the Vercel build. Stop after writing the SUMMARY and commit; the executor advances to Wave 2 next.
 </output>

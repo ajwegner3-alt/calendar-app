@@ -18,7 +18,7 @@ must_haves:
     - "Color picker block shows an inline contrast warning when relativeLuminance(primaryColor) > 0.85 with copy: 'This color may be hard to read on white backgrounds.' Save remains allowed (informational only)."
     - "MiniPreviewCard rebuilt as faux PUBLIC booking page: bg-gray-50 base + brand_primary blob (blur-[60px] opacity-40 inline style — JIT lock per MP-04) + white card (bg-white rounded-xl border border-gray-200 p-4 shadow-sm) + faux 3-button slot picker (one selected with brand_primary inline style) + tiny 'Powered by NSI' text-[10px] text-gray-400 + faux pill at top showing logo or initial circle"
     - "MiniPreviewCard accepts new props {brandPrimary, logoUrl, accountName} (or equivalent) — old props {sidebarColor, pageColor, primaryColor} are gone"
-    - "saveBrandingAction is DELETED from app/(shell)/app/branding/_lib/actions.ts (per RESEARCH.md Q2 — no callers remain after editor rewrite). Imports of backgroundColorSchema, backgroundShadeSchema, sidebarColorSchema, and BackgroundShade type are removed from actions.ts."
+    - "BRAND-18 satisfied: no server write path exists for `backgroundColor`, `backgroundShade`, `chromeTintIntensity`, `sidebarColor` (achieved by deleting `saveBrandingAction`; `savePrimaryColorAction` writes only `brand_primary`; `uploadLogoAction`/`deleteLogoAction` write only `logo_url`). Imports of backgroundColorSchema, backgroundShadeSchema, sidebarColorSchema, and BackgroundShade type are removed from actions.ts."
     - "savePrimaryColorAction (line 95-116) UNCHANGED — ColorPickerInput's default showSaveButton mode wires the color save"
     - "uploadLogoAction + deleteLogoAction UNCHANGED"
     - "PreviewIframe (preview-iframe.tsx) is verified as untouched — BRAND-21 is verify-only"
@@ -115,6 +115,18 @@ Output: simplified `/app/branding` page that looks like a public booking page pr
 5. `background_shade` ENUM type drops in Phase 21 (not relevant here).
 6. DROP migration is two-step deploy (Phase 21).
 
+## BRAND-18 intent reconciliation
+BRAND-18's spec text reads "saveBrandingAction signature simplified to `{ logoUrl, brandPrimary }`" — a literal reader could interpret this as "strip parameters from the existing function but keep the function." That interpretation is wrong for this codebase.
+
+**BRAND-18's INTENT is:** "no server write path for the four deprecated fields (`backgroundColor`, `backgroundShade`, `chromeTintIntensity`, `sidebarColor`) exists." Per RESEARCH.md Q2, after the Wave 2 editor rewrite, `saveBrandingAction` has zero remaining callers — `ColorPickerInput`'s default `showSaveButton=true` mode calls `savePrimaryColorAction` directly (writes only `brand_primary`), and `LogoUploader` calls `uploadLogoAction`/`deleteLogoAction` directly (writes only `logo_url`).
+
+**Deletion (vs. emptying) achieves the intent more cleanly:**
+- An empty `saveBrandingAction({ logoUrl, brandPrimary })` would be dead code — never called, no value.
+- Deleting it removes the dead code AND prevents future regressions where a developer might wire something to it.
+- The traceability requirement is satisfied: zero deprecated-field write paths remain, regardless of whether the function shell exists.
+
+This plan therefore DELETES `saveBrandingAction` entirely (Task 3). The BRAND-18 must_have is phrased as "no write path exists for the deprecated fields" rather than "function signature is simplified" because the cleaner outcome is total elimination.
+
 ## Phase 18 Locked Decisions (do NOT revisit)
 - **Two controls only.** LogoUploader (first) + brand_primary ColorPickerInput (second). The 3 deprecated pickers (sidebar, page background, ShadePicker) are GONE from the JSX. The `shade-picker.tsx` component FILE stays on disk — Phase 20 (CLEAN-07) deletes it. Just remove the import + usage.
 - **Layout:** controls left column / MiniPreviewCard above PreviewIframe in right column. Logo first, then color picker.
@@ -127,7 +139,7 @@ Output: simplified `/app/branding` page that looks like a public booking page pr
   - Faux pill at top showing logo (or initial circle if no logo)
 - **Contrast warning:** when `relativeLuminance(brand_primary) > 0.85`. Threshold matches PublicShell `resolveGlowColor` exactly (single source of truth). Copy: "This color may be hard to read on white backgrounds." Informational only — Save remains enabled.
 - **Reset to NSI blue (#3B82F6)** button. ONE-CLICK escape hatch. Note: `#3B82F6` is the NSI blue brand color (Phase 14 `--color-primary`); it is NOT the same as `DEFAULT_BRAND_PRIMARY = "#0A2540"` (the legacy fallback used by `brandingFromRow` for accounts with null `brand_primary`). Do NOT change `DEFAULT_BRAND_PRIMARY`.
-- **Q2 resolution: DELETE `saveBrandingAction`** entirely. `ColorPickerInput` (default `showSaveButton=true` mode) already wires `savePrimaryColorAction` directly via its internal "Save color" button. Logo save is handled by `LogoUploader` (calls `uploadLogoAction` / `deleteLogoAction`). No remaining caller for `saveBrandingAction` after editor rewrite.
+- **Q2 resolution: DELETE `saveBrandingAction`** entirely (see "BRAND-18 intent reconciliation" above). `ColorPickerInput` (default `showSaveButton=true` mode) already wires `savePrimaryColorAction` directly via its internal "Save color" button. Logo save is handled by `LogoUploader` (calls `uploadLogoAction` / `deleteLogoAction`). No remaining caller for `saveBrandingAction` after editor rewrite.
 - **Q3 resolution:** No live-update rewiring. `MiniPreviewCard` is already reactive via parent state (every keystroke updates props). `PreviewIframe` already re-keys on `previewColor` change (`preview-iframe.tsx:59`). No debounce. Both update on every keystroke.
 - **Q4 resolution:** No color picker presets. Default `ColorPickerInput` behavior unchanged (existing `showSwatches` defaults to `false`).
 - **Q5 resolution:** Page intro copy unchanged (`page.tsx` left alone).
@@ -138,13 +150,15 @@ Output: simplified `/app/branding` page that looks like a public booking page pr
 ## Atomic commit boundary
 This plan ships ONE commit covering BrandingEditor + MiniPreviewCard + actions.ts. MP-03 lock: prop interface change in MiniPreviewCard MUST land in same commit as BrandingEditor import-site update. saveBrandingAction deletion goes with them because the editor stops calling it.
 
+**Each task below STAGES files but does NOT commit.** The atomic commit happens once after Task 3 verification passes (see `<commit_gate>` section below). Task-by-task `<done>` blocks explicitly remind the executor not to commit early.
+
 ## Requirement coverage (this plan)
 - BRAND-13: 3 deprecated pickers removed from JSX (sidebar_color ColorPickerInput, background_color ColorPickerInput, ShadePicker)
 - BRAND-14: LogoUploader + brand_primary ColorPickerInput retained; label updated to "Booking page primary color"; description: "Used for the background glow, CTAs, and slot selection on your public booking pages."
-- BRAND-15: IntensityPicker confirmed already deleted (Phase 12.6-02). Verify with grep — no JSX changes needed (already gone).
+- BRAND-15: IntensityPicker confirmed already deleted (Phase 12.6-02). Verify with grep at the `<verification>` block — no JSX changes needed (already gone).
 - BRAND-16: ShadePicker import + usage removed from BrandingEditor (the file itself stays — Phase 20 CLEAN-07 deletes)
 - BRAND-17: MiniPreviewCard rebuilt as faux public booking page preview
-- BRAND-18: saveBrandingAction deleted (signature simplification by elimination — color save handled by savePrimaryColorAction; logo save unchanged)
+- BRAND-18: `saveBrandingAction` deleted (no remaining callers — see "BRAND-18 intent reconciliation" above). Net effect: zero server write paths for the four deprecated fields. `savePrimaryColorAction` writes only `brand_primary`; `uploadLogoAction`/`deleteLogoAction` write only `logo_url`.
 - BRAND-21: PreviewIframe verified intact (no edits)
 - (BRAND-19, BRAND-20 closed in Wave 1.)
 
@@ -326,6 +340,11 @@ export function MiniPreviewCard({ brandPrimary, logoUrl, accountName }: MiniPrev
    ```
    Expect: brandPrimary used in style attributes (blob `background`, initial circle `backgroundColor`, selected slot `backgroundColor`).
 4. Confirm no `<BackgroundGlow>` or `<PoweredByNsi>` imports.
+5. Stage but do not commit:
+   ```bash
+   git add app/\(shell\)/app/branding/_components/mini-preview-card.tsx
+   git status   # Confirm staged; verify HEAD is still the Wave 1 commit (no new commits since)
+   ```
   </verify>
   <done>
 - File rewritten with new prop interface
@@ -333,6 +352,7 @@ export function MiniPreviewCard({ brandPrimary, logoUrl, accountName }: MiniPrev
 - All runtime hex flows through inline `style={{}}` — JIT lock honored
 - No dynamic-hex Tailwind classes
 - No `<BackgroundGlow>` / `<PoweredByNsi>` imports
+- **Stage but do not commit.** Atomic commit happens after Task 3 completes (see `<commit_gate>` below). Run `git status` to confirm `mini-preview-card.tsx` is staged AND that HEAD is still the Wave 1 `refactor(18-01)` commit (no new commits since Wave 1).
   </done>
 </task>
 
@@ -487,7 +507,7 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
 ```
 
 **Key implementation notes:**
-- `NSI_BLUE = "#3B82F6"` is the brand reset target per CONTEXT.md. Note: the parent fallback for missing `state.primaryColor` is also `NSI_BLUE` (per the v1.2 lock that stripped legacy `#0A2540` chrome). This is INTENTIONAL — Wave 1 left `DEFAULT_BRAND_PRIMARY = "#0A2540"` in `read-branding.ts` for legacy data integrity, but the editor's UX default for NEW accounts is NSI blue. If `state.primaryColor` is null, the editor displays NSI blue and prompts the user to either keep it or change it.
+- `NSI_BLUE = "#3B82F6"` is the brand reset target per CONTEXT.md. The parent fallback for missing `state.primaryColor` is also `NSI_BLUE` — this is INTENTIONAL. Legacy DB-null accounts already get `#0A2540` (`DEFAULT_BRAND_PRIMARY`) upstream from `brandingFromRow` (`lib/branding/read-branding.ts`), so by the time `state.primaryColor` reaches this editor it should always be populated for existing accounts. The `?? NSI_BLUE` fallback in `useState(state.primaryColor ?? NSI_BLUE)` only displays NSI blue if `state.primaryColor` is null for some unexpected reason (e.g., a brand-new account with no upstream fallback yet, or a future code path that bypasses `brandingFromRow`). The Wave 1 lock keeps `DEFAULT_BRAND_PRIMARY = "#0A2540"` in `read-branding.ts` for legacy data integrity; the editor's UX default for net-new accounts is NSI blue.
 - Reset button: `<Button variant="outline" size="sm" onClick={() => setPrimaryColor(NSI_BLUE)}>` — clears any custom color back to NSI blue. The `ColorPickerInput`'s internal `useState`/`localText` sync at `color-picker-input.tsx:64-74` propagates the change correctly (Pitfall 5 from RESEARCH.md — already handled by existing pattern).
 - Contrast warning: `relativeLuminance(primaryColor) > 0.85` matches PublicShell's `resolveGlowColor` threshold exactly (`public-shell.tsx:33-39`). Copy: "This color may be hard to read on white backgrounds." Color: `text-amber-600` (Tailwind warning yellow). Save remains enabled — informational ONLY.
 - Defensive `try/catch` around `relativeLuminance` mirrors `public-shell.tsx:33-39` — bad hex strings (mid-typing) don't crash the editor.
@@ -536,6 +556,12 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
    grep -nE "relativeLuminance|0\.85|NSI_BLUE|#3B82F6|This color may be hard" app/\(shell\)/app/branding/_components/branding-editor.tsx
    ```
    Expect: presence of all five.
+
+5. Stage but do not commit:
+   ```bash
+   git add app/\(shell\)/app/branding/_components/branding-editor.tsx
+   git status   # Confirm BOTH branding-editor.tsx AND mini-preview-card.tsx (from Task 1) are staged; HEAD is still the Wave 1 commit
+   ```
   </verify>
   <done>
 - BrandingEditor file rewritten with 2 controls only
@@ -545,6 +571,7 @@ export function BrandingEditor({ state }: BrandingEditorProps) {
 - Contrast warning gated on `relativeLuminance > 0.85`
 - 3 deprecated picker blocks removed
 - saveBrandingAction call removed (Task 3 will delete the action itself)
+- **Stage but do not commit.** Atomic commit happens after Task 3 completes (see `<commit_gate>` below). Run `git status` to confirm Tasks 1+2 files are staged AND that HEAD is still the Wave 1 `refactor(18-01)` commit (no new commits since Wave 1).
   </done>
 </task>
 
@@ -610,6 +637,12 @@ Edit `app/(shell)/app/branding/_lib/actions.ts`:
    git diff app/\(shell\)/app/branding/_components/preview-iframe.tsx
    ```
    Expect: empty diff (no changes).
+7. Stage but do not commit yet:
+   ```bash
+   git add app/\(shell\)/app/branding/_lib/actions.ts
+   git status   # Confirm all 3 files staged (mini-preview-card.tsx, branding-editor.tsx, actions.ts); HEAD still Wave 1 commit
+   ```
+   The atomic commit happens at the `<commit_gate>` below — NOT inside this task.
   </verify>
   <done>
 - `saveBrandingAction` deleted from `actions.ts`
@@ -620,6 +653,7 @@ Edit `app/(shell)/app/branding/_lib/actions.ts`:
 - `tsc --noEmit` clean (only pre-existing `branding-gradient.test.ts` baseline)
 - `npm run build` succeeds
 - `preview-iframe.tsx` confirmed unmodified (BRAND-21)
+- **Stage but do not commit.** Atomic commit is performed by the `<commit_gate>` step after this task. Run `git status` to confirm all 3 files are staged AND that HEAD is still the Wave 1 `refactor(18-01)` commit. Do NOT run `git commit` inside this task — it happens once at the gate.
   </done>
 </task>
 
@@ -643,15 +677,51 @@ Edit `app/(shell)/app/branding/_lib/actions.ts`:
    # JIT-lock compliance in MiniPreviewCard
    grep -n "bg-\[" app/\(shell\)/app/branding/_components/mini-preview-card.tsx
    # Expect: zero hits (no dynamic-hex Tailwind classes)
+
+   # BRAND-15 verification: IntensityPicker confirmed already deleted (Phase 12.6-02 baseline)
+   grep -rn "IntensityPicker" app/\(shell\)/app/branding/ | wc -l
+   # Expect: 0 (no imports, no JSX usage, no leftover references — closes BRAND-15)
    ```
 4. PreviewIframe is unmodified:
    ```bash
    git diff app/\(shell\)/app/branding/_components/preview-iframe.tsx
    # Expect: empty diff
    ```
-5. Atomic commit boundary: ALL THREE FILES (`branding-editor.tsx`, `mini-preview-card.tsx`, `actions.ts`) staged and committed in ONE commit. MP-03 lock — never an intermediate commit with mismatched prop interface.
+5. Atomic commit boundary: ALL THREE FILES (`branding-editor.tsx`, `mini-preview-card.tsx`, `actions.ts`) staged for ONE commit (executed at `<commit_gate>` below). MP-03 lock — never an intermediate commit with mismatched prop interface.
 6. **No Vercel deploy in this plan.** Wave 3 visual-gate plan deploys + Andrew eyeballs.
 </verification>
+
+<commit_gate>
+**Atomic commit step — execute ONCE, only after Tasks 1, 2, 3 all pass their `<verify>` blocks.**
+
+1. Confirm exactly 3 files are staged and no others:
+   ```bash
+   git diff --cached --stat
+   ```
+   Expect output to list exactly these 3 paths and nothing else:
+   - `app/(shell)/app/branding/_components/branding-editor.tsx`
+   - `app/(shell)/app/branding/_components/mini-preview-card.tsx`
+   - `app/(shell)/app/branding/_lib/actions.ts`
+
+   If any other file is staged (e.g., `preview-iframe.tsx`, `shade-picker.tsx`, schema files), STOP — investigate and unstage. BRAND-21 forbids `preview-iframe.tsx` modification.
+
+2. Confirm HEAD is still the Wave 1 commit (no commits since Wave 1 finished):
+   ```bash
+   git log --oneline -3
+   ```
+   Expect top entry: `refactor(18-01): shrink Branding type + reader + editor loader (BRAND-19, BRAND-20)`.
+
+3. Commit ONCE atomically:
+   ```bash
+   git commit -m "feat(18-02): collapse branding editor to 2 controls + rebuild MiniPreviewCard (BRAND-13..18, 21)"
+   ```
+
+   (The expanded multi-line message in `<success_criteria>` item 7 is also acceptable; the short form here keeps the gate scriptable.)
+
+4. **Push policy:** Pushing now is acceptable because Wave 2's commit makes the build green again. Equally acceptable: defer the push to Wave 3 (the visual-gate plan handles deploy). Both paths are fine — choose based on whether Wave 3 is starting immediately or there will be a pause. If pushing now, run `git push` after the commit succeeds.
+
+If `git diff --cached --stat` shows the wrong file count or HEAD is not the Wave 1 commit, do NOT proceed — the atomic boundary has been violated and the repo state needs reset before continuing.
+</commit_gate>
 
 <success_criteria>
 1. `app/(shell)/app/branding/_components/branding-editor.tsx` rewritten — 2 controls only, new layout, reset button, contrast warning.
@@ -660,7 +730,7 @@ Edit `app/(shell)/app/branding/_lib/actions.ts`:
 4. tsc clean (baseline only); build clean.
 5. ShadePicker file (`shade-picker.tsx`) untouched on disk (Phase 20 territory). Grep confirms no imports remaining.
 6. PreviewIframe untouched (BRAND-21 verify-only).
-7. **Single atomic git commit** covering the 3 modified files. Suggested message:
+7. **Single atomic git commit** covering the 3 modified files (executed at `<commit_gate>`). Suggested expanded message:
    ```
    feat(18-02): collapse branding editor to 2 controls + rebuild MiniPreviewCard
 
