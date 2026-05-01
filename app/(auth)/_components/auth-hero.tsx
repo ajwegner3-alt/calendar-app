@@ -1,4 +1,4 @@
-import { NSIGradientBackdrop } from "@/components/nsi-gradient-backdrop";
+import { BackgroundGlow } from "@/app/_components/background-glow";
 
 interface AuthHeroProps {
   /** Page-specific headline override (e.g. "Welcome back" on login). */
@@ -12,6 +12,9 @@ interface AuthHeroProps {
  * CONTEXT.md lock: NSI tokens fixed (auth pages have no account context).
  * Renders on lg: as the right-side panel of a split-panel layout;
  * hidden on smaller breakpoints (form-only on mobile).
+ *
+ * Phase 16-02: backdrop swapped from NSIGradientBackdrop (dark navy) to
+ * BackgroundGlow (NSI blue #3B82F6) per AUTH-12. Marketing copy preserved verbatim.
  */
 export function AuthHero({
   headline = "Bookings without the back-and-forth.",
@@ -19,7 +22,7 @@ export function AuthHero({
 }: AuthHeroProps) {
   return (
     <aside className="relative hidden overflow-hidden bg-gray-50 lg:flex lg:flex-col lg:items-start lg:justify-center lg:px-12 lg:py-20">
-      <NSIGradientBackdrop />
+      <BackgroundGlow />
       <div className="relative z-10 max-w-md">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/80 px-3 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
