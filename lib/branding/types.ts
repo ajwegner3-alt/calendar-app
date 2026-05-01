@@ -17,15 +17,17 @@ export interface Branding {
   primaryColor: string;
   /** WCAG-computed text color for use on top of primaryColor backgrounds. */
   textColor: "#ffffff" | "#000000";
-  // Phase 12 additions
-  /** Per-account hex tint for gradient backdrops. null = use gray-50 fallback at consumer. */
-  backgroundColor: string | null;
-  /** Gradient intensity. Never null (DB DEFAULT 'subtle'). */
-  backgroundShade: BackgroundShade;
-  // Phase 12.5 additions
-  /** Chrome tint intensity. Never null (DB DEFAULT 'subtle'). Kept for backward compat — Wave 2 consumers use resolveChromeColors instead. */
-  chromeTintIntensity: ChromeTintIntensity;
-  // Phase 12.6 additions
-  /** Per-account sidebar fill color. Null = shadcn --sidebar default. */
-  sidebarColor: string | null;
+
+  // Phase 18: deprecated — kept as optional shims so lib/branding/chrome-tint.ts
+  // and tests/branding-chrome-tint.test.ts type-check until Phase 20 deletes them.
+  // Phase 20 (CLEAN-07..09) will remove these fields entirely.
+
+  /** @deprecated Phase 18 — Phase 20 removes. */
+  backgroundColor?: string | null;
+  /** @deprecated Phase 18 — Phase 20 removes. */
+  backgroundShade?: BackgroundShade;
+  /** @deprecated Phase 18 — Phase 20 removes. */
+  chromeTintIntensity?: ChromeTintIntensity;
+  /** @deprecated Phase 18 — Phase 20 removes. */
+  sidebarColor?: string | null;
 }

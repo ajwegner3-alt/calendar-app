@@ -1,6 +1,5 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { BackgroundShade } from "@/lib/branding/types";
 
 export interface BrandingState {
   accountId: string;
@@ -8,14 +7,7 @@ export interface BrandingState {
   logoUrl: string | null;
   primaryColor: string | null;
   firstActiveEventSlug: string | null; // for preview iframe target; null = no events yet
-  // Phase 12 additions
-  backgroundColor: string | null;
-  backgroundShade: BackgroundShade;
-  // Phase 12.6: direct sidebar color (replaces chromeTintIntensity in editor state)
-  sidebarColor: string | null;
 }
-
-const VALID_SHADES: BackgroundShade[] = ["none", "subtle", "bold"];
 
 /**
  * Loads branding state for the OWNER's account.
@@ -23,6 +15,10 @@ const VALID_SHADES: BackgroundShade[] = ["none", "subtle", "bold"];
  * Auth model: uses RLS-scoped server client (createClient from @supabase/ssr).
  * The owner is logged in; RLS scopes to their account_id automatically.
  * Returns null if owner is not linked to any account (Phase 2 unlinked state).
+ *
+ * Phase 18 (BRAND-19, BRAND-20): BrandingState shrunk to 5 fields (dropped
+ * backgroundColor, backgroundShade, sidebarColor). SELECT shrunk to
+ * id, slug, logo_url, brand_primary — deprecated columns no longer read at runtime.
  */
 export async function loadBrandingForOwner(): Promise<BrandingState | null> {
   const supabase = await createClient();
@@ -36,9 +32,7 @@ export async function loadBrandingForOwner(): Promise<BrandingState | null> {
 
   const { data: account } = await supabase
     .from("accounts")
-    .select(
-      "id, slug, logo_url, brand_primary, background_color, background_shade, sidebar_color",
-    )
+    .select("id, slug, logo_url, brand_primary")
     .eq("id", accountId)
     .maybeSingle();
 
@@ -55,19 +49,11 @@ export async function loadBrandingForOwner(): Promise<BrandingState | null> {
     .limit(1)
     .maybeSingle();
 
-  const shade = account.background_shade as BackgroundShade;
-  const backgroundShade: BackgroundShade = VALID_SHADES.includes(shade)
-    ? shade
-    : "subtle";
-
   return {
     accountId: account.id,
     accountSlug: account.slug,
     logoUrl: account.logo_url,
     primaryColor: account.brand_primary,
     firstActiveEventSlug: firstEvent?.slug ?? null,
-    backgroundColor: account.background_color ?? null,
-    backgroundShade,
-    sidebarColor: account.sidebar_color ?? null,
   };
 }

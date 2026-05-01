@@ -17,7 +17,12 @@ export const DEFAULT_BRAND_PRIMARY = "#0A2540";
  * (e.g., booking page loader, /[account] index loader) to avoid a
  * redundant DB round-trip.
  *
- * @param row - Partial accounts row with logo_url, brand_primary, and Phase 12 columns.
+ * Phase 18: SELECT in getBrandingForAccount no longer reads background_color,
+ * background_shade, chrome_tint_intensity, sidebar_color from the accounts row.
+ * The shim fields on the returned Branding default to safe values (null/null/"subtle"/"subtle")
+ * so chrome-tint.ts and its test continue to type-check until Phase 20 deletes them.
+ *
+ * @param row - Partial accounts row with logo_url, brand_primary, and optional Phase 12 columns.
  * @returns Resolved Branding with fallback defaults.
  */
 export function brandingFromRow(row: {
@@ -64,6 +69,11 @@ export function brandingFromRow(row: {
  * Branding (logoUrl null, primaryColor DEFAULT, textColor white).
  * Caller decides whether to surface the error — this helper never throws.
  *
+ * Phase 18 (BRAND-20): SELECT shrunk to logo_url, brand_primary only.
+ * Deprecated columns (background_color, background_shade, chrome_tint_intensity,
+ * sidebar_color) are no longer read at runtime. The shim fields in the returned
+ * Branding object default to safe values via brandingFromRow's fallback logic.
+ *
  * @param accountId - UUID of the account.
  * @returns Resolved Branding object, always valid.
  */
@@ -74,7 +84,7 @@ export async function getBrandingForAccount(
     const supabase = createAdminClient();
     const { data: row } = await supabase
       .from("accounts")
-      .select("logo_url, brand_primary, background_color, background_shade, chrome_tint_intensity, sidebar_color")
+      .select("logo_url, brand_primary")
       .eq("id", accountId)
       .maybeSingle();
 
