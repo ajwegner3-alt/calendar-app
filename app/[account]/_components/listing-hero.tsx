@@ -1,43 +1,31 @@
-import { GradientBackdrop } from "@/app/_components/gradient-backdrop";
-import type { BackgroundShade } from "@/lib/branding/types";
-
 interface ListingHeroProps {
   accountName: string;
   logoUrl: string | null;
   brandPrimary: string | null;
-  backgroundColor: string | null;
-  backgroundShade: BackgroundShade;
 }
 
 /**
- * Cruip-styled hero card for the /[account] public landing page.
+ * Hero card for the /[account] public landing page.
  *
- * Renders a self-contained gradient spotlight panel (separate from the page-level
- * BrandedPage gradient backdrop). The inner GradientBackdrop provides strong
- * visual emphasis on the hero card itself.
+ * Phase 17 (PUB-05): Inner GradientBackdrop removed — page-level BackgroundGlow
+ * (rendered by PublicShell) provides all ambient color. The hero card itself is
+ * a clean white rounded-2xl panel.
  *
- * Color fallback chain: backgroundColor → brandPrimary → gray-50 (#F8FAFC).
- * When backgroundColor is null, brand_primary is used so the hero looks branded
- * even before the owner explicitly picks a background color.
+ * No-logo fallback: brand_primary-tinted initial circle (canonical pattern,
+ * shared with PublicHeader — see Plan 17-01 HDR-06 lock).
  *
- * Phase 7 lock: NEVER dynamic Tailwind classes for runtime hex — inline style only.
- * Consumer: place inside a `relative` parent for GradientBackdrop positioning.
+ * MP-04 lock: runtime hex flows through inline style only, never Tailwind JIT classes.
  */
 export function ListingHero({
   accountName,
   logoUrl,
   brandPrimary,
-  backgroundColor,
-  backgroundShade,
 }: ListingHeroProps) {
-  // Fall back to brand_primary so hero is always branded even without background_color.
-  const backdropColor = backgroundColor ?? brandPrimary ?? null;
   const avatarColor = brandPrimary ?? "#0A2540";
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border bg-white px-6 py-12 text-center md:py-20">
-      <GradientBackdrop color={backdropColor} shade={backgroundShade} />
-      <div className="relative z-10 flex flex-col items-center gap-4">
+    <section className="rounded-2xl border border-gray-200 bg-white px-6 py-12 text-center shadow-sm md:py-20">
+      <div className="flex flex-col items-center gap-4">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt={accountName} className="h-16 w-auto" />
