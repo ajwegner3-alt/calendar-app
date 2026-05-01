@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BrandedPage } from "@/app/_components/branded-page";
-import type { BackgroundShade } from "@/lib/branding/types";
+import { PublicShell } from "@/app/_components/public-shell";
+import { brandingFromRow } from "@/lib/branding/read-branding";
 import { loadAccountListing } from "./_lib/load-account-listing";
 import { EventTypeCard } from "./_components/event-type-card";
 import { AccountEmptyState } from "./_components/empty-state";
@@ -36,23 +36,15 @@ export default async function AccountIndexPage({
   const data = await loadAccountListing(account);
   if (!data) notFound();
 
-  const backgroundShade = (data.account.background_shade ?? "subtle") as BackgroundShade;
+  const branding = brandingFromRow(data.account);
 
   return (
-    <BrandedPage
-      logoUrl={data.account.logo_url}
-      primaryColor={data.account.brand_primary}
-      accountName={data.account.name}
-      backgroundColor={data.account.background_color ?? null}
-      backgroundShade={backgroundShade}
-    >
-      <main className="mx-auto max-w-5xl px-6 py-12 md:py-20">
+    <PublicShell branding={branding} accountName={data.account.name}>
+      <div className="mx-auto max-w-5xl px-6 py-12 md:py-20">
         <ListingHero
           accountName={data.account.name}
           logoUrl={data.account.logo_url}
           brandPrimary={data.account.brand_primary}
-          backgroundColor={data.account.background_color}
-          backgroundShade={backgroundShade}
         />
         <section className="mt-10">
           {data.eventTypes.length === 0 ? (
@@ -73,7 +65,7 @@ export default async function AccountIndexPage({
             </div>
           )}
         </section>
-      </main>
-    </BrandedPage>
+      </div>
+    </PublicShell>
   );
 }
