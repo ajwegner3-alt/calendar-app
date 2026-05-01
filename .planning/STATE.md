@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-30 — **Phase 16 complete (4/4 plans, 24/24 must-haves verified).** All 7 auth pages + 3-step onboarding wizard re-skinned with NSI shell (BackgroundGlow + auth-variant Header pill + bg-gray-50 + white cards). Andrew approved 3 visual gates on live Vercel preview.
+**Last updated:** 2026-04-30 — **Phase 17 complete (9/9 plans, 24/24 must-haves verified).** All 5 public booking surfaces + embed widget re-skinned with NSI visual language driven by customer `brand_primary`. PublicShell replaces BrandedPage; PoweredByNsi footer renders on every public page and inside every embed iframe. 4 legacy files deleted (BrandedPage, GradientBackdrop, NSIGradientBackdrop, lib/branding/gradient.ts) — 233 lines removed. Andrew approved 10/10 visual gates on live Vercel preview.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 16 — Auth + Onboarding Re-Skin — **COMPLETE (4/4 plans)**
-**Plan:** 16-04 of 4 — complete; full phase verified 24/24 must-haves passed
-**Status:** Phase 16 complete. Ready to plan Phase 17 (Public Surfaces + Embed).
-**Last activity:** 2026-04-30 — Phase 16 executed via `/gsd:execute-phase 16`. Wave 1 (16-01) shipped Header variant API; Wave 2 (16-02 AuthHero+login/signup, 16-03 5 short auth pages, 16-04 onboarding) ran in parallel with 3 visual gates on live Vercel preview at https://calendar-app-xi-smoky.vercel.app/. Andrew approved all gates 2026-04-30. Verifier confirmed all 24 must-haves and zero owner-shell regression.
+**Phase:** Phase 17 — Public Surfaces + Embed — **COMPLETE (9/9 plans)**
+**Plan:** 17-09 of 9 — complete; full phase verified 24/24 must-haves passed
+**Status:** Phase 17 complete. Ready to plan Phase 18 (Branding Editor Simplification).
+**Last activity:** 2026-04-30 — Phase 17 executed via `/gsd:execute-phase 17`. Wave 1 (17-01 foundation atoms) + Wave 2 (17-02 PublicShell) → Wave 3 (5 parallel plans: 17-03 listing, 17-04 booking+confirmed, 17-05 token flows, 17-06 edge pages, 17-07 embed restyle) → Wave 4 (17-08 deletions + mini-preview bridge) → Wave 5 (17-09 visual gate). Andrew approved all 10 gates 2026-04-30 on https://calendar-app-xi-smoky.vercel.app/. Verifier confirmed 24/24 must-haves passed. 233 lines of legacy chrome (BrandedPage + 3 gradient files) deleted; codebase now single-pattern (BackgroundGlow + PublicShell).
 
 **v1.2 Phase Progress:**
 
@@ -26,14 +26,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 Phase 14 [X] Typography + CSS Token Foundations  (14-01 complete — TYPO-01..07 shipped)
 Phase 15 [X] BackgroundGlow + Header Pill + Owner Shell Re-Skin  (15-01 + 15-02 complete; live + approved)
 Phase 16 [X] Auth + Onboarding Re-Skin  (16-01..04 complete; 24/24 must-haves verified; live + approved)
-Phase 17 [ ] Public Surfaces + Embed
+Phase 17 [X] Public Surfaces + Embed  (17-01..09 complete; 24/24 must-haves verified; live + approved; 233 lines legacy chrome deleted)
 Phase 18 [ ] Branding Editor Simplification
 Phase 19 [ ] Email Layer Simplification
 Phase 20 [ ] Dead Code + Test Cleanup
 Phase 21 [ ] Schema DROP Migration
 ```
 
-Progress: [████░░░░░░] 38% (3 / 8 phases complete)
+Progress: [█████░░░░░] 50% (4 / 8 phases complete)
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [████░░░░░░] 38% (3 / 8 phases complete)
 - Phase 16 Plan 16-02 — ~3 min execution + Vercel deploy + visual gate, 3 files modified (auth-hero.tsx, login/page.tsx, signup/page.tsx). Single-page mobile glow approach landed.
 - Phase 16 Plan 16-03 — ~3 min execution + Vercel deploy + visual+functional gate, 5 files modified (forgot-password, verify-email, reset-password, auth-error, account-deleted). account-deleted upgraded from bare anchor to styled NSI Button.
 - Phase 16 Plan 16-04 — ~2 min execution + Vercel deploy + visual+E2E gate, 4 files modified (layout + 3 step pages). Layout-level h1 dropped (CONTEXT.md discretion default — pill + Setup label + per-step h2 carry context).
+- Phase 17 — ~50 min total wall clock for 9 plans across 5 waves. Wave 1 (17-01 atoms ~8 min) → Wave 2 (17-02 PublicShell ~5 min) → Wave 3 (5 plans parallel: 17-03 ~8 min, 17-04 ~10 min, 17-05 ~2 min, 17-06 ~5 min, 17-07 ~8 min — completed in ~10 min wall clock parallel) → Wave 4 (17-08 deletions ~3 min) → Wave 5 (17-09 single Vercel deploy + 10-gate eyeball, no fix-ups). 18 requirements (PUB-01..12, HDR-05..06, EMBED-08..11). Net deletions: 4 files, 233 lines of legacy chrome.
 
 **v1.1 reference velocity (for calibration):**
 - 34 plans across 6 phases (Phases 10-13 incl. 12.5 + 12.6)
@@ -101,19 +102,36 @@ Progress: [████░░░░░░] 38% (3 / 8 phases complete)
 - **`account-deleted` upgraded:** Previously bare-bones page with `<a className="text-blue-600 underline">`. Now uses full NSI shell + styled `<Button asChild><Link>` for "Back to log in". Treat as the canonical pattern for any future bare-bones auth landing page.
 - **Onboarding layout-level h1 dropped:** CONTEXT.md discretion default chose to remove "Set up your booking page" h1 since pill + "Setup" rightLabel + "Step X of 3" subtext + per-step h2 carry context. Restoreable in one line if Andrew wants it back.
 
+### Phase 17 Decisions (locked — inform Phase 18+)
+
+- **Header is multi-variant after all** (correction to Phase 15 lock): Phase 17 added `variant="public"` rather than introducing a separate `PublicHeader` component. The `'owner' | 'auth' | 'public'` union is now canonical. Public branch carries `branding?: Branding` + `accountName?: string` props for the customer logo/initial pill; reads no pathname.
+- **PublicShell sets BOTH `--brand-primary` AND `--primary`** (with their `-foreground` counterparts) on a wrapper div around children. Required because the codebase has both consumer patterns active simultaneously: `BookingForm` submit button reads `var(--brand-primary, #0A2540)` from Phase 12.6 era; `SlotPicker` selected state uses Tailwind `bg-primary` which reads `--primary`. Setting only one leaves the other unbranded. Phase 18 BrandingEditor preview can rely on this dual-var contract.
+- **PublicShell luminance fallback threshold = 0.85.** When `relativeLuminance(brand_primary) > 0.85`, glow color falls back to NSI blue `#3B82F6` so the glow remains visible against `bg-gray-50`. Defensive `try/catch` ensures bad hex strings never crash the shell.
+- **CP-05 — embed CSS-var ownership confirmed live:** CSS variables do NOT cross iframe document boundaries. EmbedShell sets its OWN `--primary` + `--primary-foreground` independently from PublicShell. This is the single most important Phase 17 invariant — verified by Andrew on live preview (NSI blue selected slot on `/embed/nsi`, magenta on `/embed/nsi-rls-test`). The Phase 12.6 `style={{ "--primary": ... }}` wrapper pattern that was decommissioned for the OWNER shell IS REQUIRED for the embed; both can be true.
+- **MP-10 — BackgroundGlow blob 2 terminus is `transparent`, not `#111827`:** Phase 15 owner shell got away with the dark navy terminus because the sidebar masked it. On `bg-gray-50` with arbitrary `brand_primary` (magenta, emerald), the dark terminus produced visible "smear" in test renders. Both blobs now terminate at `transparent`. Re-tested in Wave 5; clean across all 4 test account colors.
+- **BackgroundGlow blob offsets translate cleanly to no-sidebar containing block:** `calc(50% + 100px)` (top) and `calc(50% + 0px)` (lower) work correctly on full-viewport public pages without re-tuning. Phase 15's reference-UI adaptation rule satisfied via Wave 5 visual gate; no offset adjustments needed.
+- **Public hero card uses `rounded-2xl`** (not `rounded-xl` like other v1.2 cards). PUB-05 spec choice — more pronounced curve for the marquee element. Other public cards (confirmation, cancel, reschedule, edge) keep `rounded-xl` v1.2 lock.
+- **Edge pages (not-found, TokenNotActive) intentionally do NOT use PublicShell:** No `Branding` is available before account context resolves. Plain `min-h-screen bg-gray-50` + centered `rounded-xl` card per PUB-10/PUB-11. No glass pill, no glow, no PoweredByNsi footer. Treat as canonical pattern for any future pre-account error state.
+- **EmbedShell stays single-circle gradient (NOT BackgroundGlow):** Iframe canvas (300-500px tall) is too small for BackgroundGlow's 2-blob pattern — second blob would never be visible. EmbedShell's existing single-circle pattern at `opacity-40 + blur(160px)` matches BackgroundGlow blob 1 ambiance and is the correct visual scale.
+- **PoweredByNsi renders inside the embed iframe** (not just on host pages). CONTEXT.md lock — every public-side surface gets the attribution. EmbedHeightReporter handles the new height automatically via ResizeObserver; no reporter code change needed.
+- **mini-preview-card.tsx is a Phase 17 bridge edit only:** GradientBackdrop dependency removed to unblock deletion; Phase 18 will fully rebuild this component as a faux public booking page preview per BRAND-17. The current implementation is intentionally minimal.
+- **Stale Phase 5 markers (`PLAN-05-06-REPLACE-INLINE-*`) removed during 17-04 migration:** They served no current purpose and were a tidy-up consistent with the migration. No future phase should encounter them.
+
 ### Pending Todos
 
 - Maintenance backlog (out of v1.2 scope): clean up pre-existing tsc errors in `tests/` directory (~20 errors, all `TS7006`/`TS2305`).
+- `tests/branding-gradient.test.ts` imports the deleted `shadeToGradient` from `lib/branding/gradient.ts` (Phase 17 deleted) — Phase 20 (CLEAN-04..06) will delete this test file.
+- `AccountSummary` type in `app/embed/[account]/[event-slug]/_lib/types.ts` still includes `background_color` and `background_shade` fields (no longer read by EmbedShell). Removed when columns drop in Phase 21.
 
 ### Active Blockers
 
-None. Phase 16 complete; ready to plan Phase 17 (Public Surfaces + Embed).
+None. Phase 17 complete; ready to plan Phase 18 (Branding Editor Simplification).
 
 ## Session Continuity
 
-**Last session:** 2026-04-30 — Phase 16 execute via `/gsd:execute-phase 16`.
-**Stopped at:** Phase 16 complete (4/4 plans). Visual gates approved on live preview by Andrew. Verifier: 24/24 must-haves passed. ROADMAP/STATE/REQUIREMENTS updated; phase completion bundled in single commit.
-**Resume:** `/gsd:plan-phase 17` (Public Surfaces + Embed).
+**Last session:** 2026-04-30 — Phase 17 execute via `/gsd:execute-phase 17`.
+**Stopped at:** Phase 17 complete (9/9 plans). All 10 visual gates approved on live preview by Andrew. Verifier: 24/24 must-haves passed across all plans. ROADMAP/STATE/REQUIREMENTS updated; phase completion bundled in single commit.
+**Resume:** `/gsd:plan-phase 18` (Branding Editor Simplification — depends on PublicShell which now exists; rebuilds MiniPreviewCard as faux public page preview, simplifies BrandingEditor to logo + brand_primary picker only, drops sidebar_color/background_color/background_shade pickers from UI and server-side write paths).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)
