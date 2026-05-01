@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { loadEventTypeForBookingPage } from "./_lib/load-event-type";
-// PLAN-05-06-REPLACE-IMPORT-START
 import { BookingShell } from "./_components/booking-shell";
-// PLAN-05-06-REPLACE-IMPORT-END
-import { BrandedPage } from "@/app/_components/branded-page";
-import type { BackgroundShade } from "@/lib/branding/types";
+import { PublicShell } from "@/app/_components/public-shell";
+import { brandingFromRow } from "@/lib/branding/read-branding";
 
 interface RouteParams {
   account: string;
@@ -39,20 +37,11 @@ export default async function BookingPage({
   const data = await loadEventTypeForBookingPage(account, eventSlug);
   if (!data) notFound();
 
-  const backgroundShade = (data.account.background_shade ?? "subtle") as BackgroundShade;
+  const branding = brandingFromRow(data.account);
 
   return (
-    <BrandedPage
-      logoUrl={data.account.logo_url}
-      primaryColor={data.account.brand_primary}
-      accountName={data.account.name}
-      backgroundColor={data.account.background_color ?? null}
-      backgroundShade={backgroundShade}
-    >
-      {/* PLAN-05-06-REPLACE-INLINE-START */}
-      {/* BookingShell is a "use client" component (Plan 05-06). Real import above. */}
-      {/* PLAN-05-06-REPLACE-INLINE-END */}
+    <PublicShell branding={branding} accountName={data.account.name}>
       <BookingShell account={data.account} eventType={data.eventType} />
-    </BrandedPage>
+    </PublicShell>
   );
 }
