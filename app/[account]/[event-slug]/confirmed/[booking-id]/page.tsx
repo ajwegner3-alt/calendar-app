@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { loadConfirmedBooking } from "./_lib/load-confirmed-booking";
-import { BrandedPage } from "@/app/_components/branded-page";
+import { PublicShell } from "@/app/_components/public-shell";
+import { brandingFromRow } from "@/lib/branding/read-branding";
 
 interface RouteParams {
   account: string;
@@ -88,6 +89,11 @@ export default async function ConfirmedBookingPage({
   const { booking, account: acct, eventType } = data;
   const isConfirmed = booking.status === "confirmed";
 
+  const branding = brandingFromRow({
+    logo_url: acct.logo_url,
+    brand_primary: acct.brand_primary,
+  });
+
   // Format date/time in the BOOKER's own timezone (CONTEXT decision #7).
   // TZDate from @date-fns/tz v1 — same pattern as lib/email/send-booking-confirmation.ts.
   const startInBookerTz = new TZDate(
@@ -107,13 +113,9 @@ export default async function ConfirmedBookingPage({
     // Phase 6 may set status to 'cancelled' or 'rescheduled'.
     // Render a friendly fallback without breaking this URL for the booker.
     return (
-      <BrandedPage
-        logoUrl={acct.logo_url}
-        primaryColor={acct.brand_primary}
-        accountName={acct.name}
-      >
-        <main className="mx-auto max-w-xl px-6 py-16">
-          <section className="rounded-lg border p-8 text-center">
+      <PublicShell branding={branding} accountName={acct.name}>
+        <div className="mx-auto max-w-xl px-6 py-16">
+          <section className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 text-center shadow-sm">
             <h1 className="text-xl font-semibold mb-3">
               This booking is no longer active.
             </h1>
@@ -121,18 +123,14 @@ export default async function ConfirmedBookingPage({
               Check your email for the latest details about your appointment.
             </p>
           </section>
-        </main>
-      </BrandedPage>
+        </div>
+      </PublicShell>
     );
   }
 
   return (
-    <BrandedPage
-      logoUrl={acct.logo_url}
-      primaryColor={acct.brand_primary}
-      accountName={acct.name}
-    >
-      <main className="mx-auto max-w-xl px-6 py-16">
+    <PublicShell branding={branding} accountName={acct.name}>
+      <div className="mx-auto max-w-xl px-6 py-16">
         {/* Success header */}
         <header className="mb-8 text-center">
           <div
@@ -151,7 +149,7 @@ export default async function ConfirmedBookingPage({
         </header>
 
         {/* Booking details card */}
-        <dl className="rounded-lg border p-6 space-y-3 text-sm">
+        <dl className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 space-y-3 text-sm shadow-sm">
           <BookingRow label="Event">{eventType.name}</BookingRow>
           <BookingRow label="When">
             <span>{dateLine}</span>
@@ -165,8 +163,8 @@ export default async function ConfirmedBookingPage({
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Confirmation sent to <strong>{maskedEmail}</strong> with calendar invite.
         </p>
-      </main>
-    </BrandedPage>
+      </div>
+    </PublicShell>
   );
 }
 
