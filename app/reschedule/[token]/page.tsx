@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { TokenNotActive } from "@/app/_components/token-not-active";
 import { resolveRescheduleToken } from "./_lib/resolve-reschedule-token";
 import { RescheduleShell } from "./_components/reschedule-shell";
-import { BrandedPage } from "@/app/_components/branded-page";
+import { PublicShell } from "@/app/_components/public-shell";
+import { brandingFromRow } from "@/lib/branding/read-branding";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,14 +38,14 @@ export default async function ReschedulePage({ params }: PageProps) {
   const oldDate = format(oldStartTz, "EEEE, MMMM d, yyyy");
   const oldTime = format(oldStartTz, "h:mm a (z)");
 
+  const branding = brandingFromRow({
+    logo_url: account.logo_url ?? null,
+    brand_primary: account.brand_primary ?? null,
+  });
   return (
-    <BrandedPage
-      logoUrl={account.logo_url ?? null}
-      primaryColor={account.brand_primary ?? null}
-      accountName={account.name}
-    >
-      <div className="mx-auto max-w-2xl p-6 sm:p-10">
-        <div className="rounded-lg border bg-card p-6 sm:p-8">
+    <PublicShell branding={branding} accountName={account.name}>
+      <div className="mx-auto max-w-2xl px-6 sm:px-10">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
           <h1 className="text-xl font-semibold mb-2">Reschedule your booking</h1>
           <p className="text-sm text-muted-foreground mb-4">
             Pick a new time for your appointment with <strong>{account.name}</strong>.
@@ -70,6 +71,6 @@ export default async function ReschedulePage({ params }: PageProps) {
           />
         </div>
       </div>
-    </BrandedPage>
+    </PublicShell>
   );
 }
