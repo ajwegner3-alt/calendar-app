@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-04-30 — **Phase 16 plan 01 complete.** Header extended with `variant` ('owner'|'auth') + `rightLabel` props as additive API change. Owner-shell behavior preserved byte-for-byte; Wave 2 plans (16-02/03/04) unblocked.
+**Last updated:** 2026-04-30 — **Phase 16 complete (4/4 plans, 24/24 must-haves verified).** All 7 auth pages + 3-step onboarding wizard re-skinned with NSI shell (BackgroundGlow + auth-variant Header pill + bg-gray-50 + white cards). Andrew approved 3 visual gates on live Vercel preview.
 
 ## Project Reference
 
@@ -15,17 +15,17 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 16 — Auth + Onboarding Re-Skin — **IN PROGRESS (1/4 plans)**
-**Plan:** 16-01 of 4 — complete (Header variant + rightLabel API)
-**Status:** Wave 1 plan 16-01 complete. Wave 2 (Plans 16-02, 16-03, 16-04) unblocked.
-**Last activity:** 2026-04-30 — Plan 16-01 executed via `/gsd:execute-phase 16`. Header extended with `variant?: 'owner' | 'auth'` and `rightLabel?: string` props (commit 0248caf). Owner default preserves Phase 15 HDR-02 sidebar offset + SidebarTrigger byte-for-byte. `npx tsc --noEmit` clean for non-test files. SUMMARY.md written.
+**Phase:** Phase 16 — Auth + Onboarding Re-Skin — **COMPLETE (4/4 plans)**
+**Plan:** 16-04 of 4 — complete; full phase verified 24/24 must-haves passed
+**Status:** Phase 16 complete. Ready to plan Phase 17 (Public Surfaces + Embed).
+**Last activity:** 2026-04-30 — Phase 16 executed via `/gsd:execute-phase 16`. Wave 1 (16-01) shipped Header variant API; Wave 2 (16-02 AuthHero+login/signup, 16-03 5 short auth pages, 16-04 onboarding) ran in parallel with 3 visual gates on live Vercel preview at https://calendar-app-xi-smoky.vercel.app/. Andrew approved all gates 2026-04-30. Verifier confirmed all 24 must-haves and zero owner-shell regression.
 
 **v1.2 Phase Progress:**
 
 ```
 Phase 14 [X] Typography + CSS Token Foundations  (14-01 complete — TYPO-01..07 shipped)
 Phase 15 [X] BackgroundGlow + Header Pill + Owner Shell Re-Skin  (15-01 + 15-02 complete; live + approved)
-Phase 16 [~] Auth + Onboarding Re-Skin  (16-01 complete; 16-02/03/04 pending)
+Phase 16 [X] Auth + Onboarding Re-Skin  (16-01..04 complete; 24/24 must-haves verified; live + approved)
 Phase 17 [ ] Public Surfaces + Embed
 Phase 18 [ ] Branding Editor Simplification
 Phase 19 [ ] Email Layer Simplification
@@ -33,7 +33,7 @@ Phase 20 [ ] Dead Code + Test Cleanup
 Phase 21 [ ] Schema DROP Migration
 ```
 
-Progress: [██░░░░░░░░] 25% (2 / 8 phases complete; Phase 16 in progress at 1/4 plans)
+Progress: [████░░░░░░] 38% (3 / 8 phases complete)
 
 ## Performance Metrics
 
@@ -42,6 +42,9 @@ Progress: [██░░░░░░░░] 25% (2 / 8 phases complete; Phase 16 
 - Phase 15 Plan 15-01 — ~30 min execution + visual-gate iteration on live Vercel preview, 3 new files (lib/brand.ts, background-glow.tsx, header.tsx), 9 requirements (GLOW-01..05, HDR-01..04, HDR-07, MN-02). Additive only.
 - Phase 15 Plan 15-02 — ~12 min task execution + checkpoint deploy + 1 post-eyeball fix-up commit, 10 source files modified + 1 fix-up (header.tsx), 11 requirements (OWNER-01..11). Net deletions in shell layout (chrome decommissioned).
 - Phase 16 Plan 16-01 — ~5 min, 1 file modified (header.tsx), additive API extension only. No call-site changes; tsc clean for non-test files; zero owner-shell regression.
+- Phase 16 Plan 16-02 — ~3 min execution + Vercel deploy + visual gate, 3 files modified (auth-hero.tsx, login/page.tsx, signup/page.tsx). Single-page mobile glow approach landed.
+- Phase 16 Plan 16-03 — ~3 min execution + Vercel deploy + visual+functional gate, 5 files modified (forgot-password, verify-email, reset-password, auth-error, account-deleted). account-deleted upgraded from bare anchor to styled NSI Button.
+- Phase 16 Plan 16-04 — ~2 min execution + Vercel deploy + visual+E2E gate, 4 files modified (layout + 3 step pages). Layout-level h1 dropped (CONTEXT.md discretion default — pill + Setup label + per-step h2 carry context).
 
 **v1.1 reference velocity (for calibration):**
 - 34 plans across 6 phases (Phases 10-13 incl. 12.5 + 12.6)
@@ -93,21 +96,24 @@ Progress: [██░░░░░░░░] 25% (2 / 8 phases complete; Phase 16 
 - **`SidebarTrigger` import retained at top of header.tsx** (not conditionally imported). Tree-shaking handles the dead branch when `variant="auth"`. Do not refactor to dynamic import — adds runtime cost for zero benefit.
 - **`rightLabel` prop precedes pathname-derived label.** When `rightLabel` is provided, `getContextLabel(pathname)` is bypassed entirely. Onboarding (`<Header variant="auth" rightLabel="Setup" />`) uses this for static "Setup" label across all 3 steps.
 - **Owner default behavior preserved byte-for-byte.** No call sites updated in Plan 16-01 — Plans 16-02/03/04 introduce the new variant at consumer surfaces.
+- **Auth/onboarding card class is `rounded-xl` (NOT `rounded-lg`).** Phase 15 owner-shell cards use `rounded-lg` (8px); Phase 16 auth/onboarding cards use `rounded-xl` (12px) — slightly more rounded by intentional design distinction. Verified against `border border-gray-200 bg-white p-6 shadow-sm` for the rest of the class.
+- **Mobile glow on split-panel auth pages:** `/login` and `/signup` wrap each page in `relative min-h-screen overflow-hidden bg-gray-50` with `lg:hidden` `<BackgroundGlow />` for mobile-only ambient glow. Form column uses `bg-white/0` on mobile (glow visible) → `lg:bg-white` on desktop (solid white split-panel). Phase 17 `PublicShell` may want to mirror this if any public surface goes split-panel.
+- **`account-deleted` upgraded:** Previously bare-bones page with `<a className="text-blue-600 underline">`. Now uses full NSI shell + styled `<Button asChild><Link>` for "Back to log in". Treat as the canonical pattern for any future bare-bones auth landing page.
+- **Onboarding layout-level h1 dropped:** CONTEXT.md discretion default chose to remove "Set up your booking page" h1 since pill + "Setup" rightLabel + "Step X of 3" subtext + per-step h2 carry context. Restoreable in one line if Andrew wants it back.
 
 ### Pending Todos
 
-- Plans 16-02 (AuthHero + login/signup), 16-03 (5 short auth pages), 16-04 (onboarding) — Wave 2 of Phase 16.
 - Maintenance backlog (out of v1.2 scope): clean up pre-existing tsc errors in `tests/` directory (~20 errors, all `TS7006`/`TS2305`).
 
 ### Active Blockers
 
-None. Plan 16-01 complete; Wave 2 plans unblocked.
+None. Phase 16 complete; ready to plan Phase 17 (Public Surfaces + Embed).
 
 ## Session Continuity
 
-**Last session:** 2026-04-30 — Plan 16-01 execute via `/gsd:execute-phase 16`.
-**Stopped at:** Plan 16-01 complete. Header extended with `variant` + `rightLabel` props (commit 0248caf). SUMMARY.md written.
-**Resume:** Continue Phase 16 — execute Plan 16-02 (AuthHero re-skin + login/signup pages) next.
+**Last session:** 2026-04-30 — Phase 16 execute via `/gsd:execute-phase 16`.
+**Stopped at:** Phase 16 complete (4/4 plans). Visual gates approved on live preview by Andrew. Verifier: 24/24 must-haves passed. ROADMAP/STATE/REQUIREMENTS updated; phase completion bundled in single commit.
+**Resume:** `/gsd:plan-phase 17` (Public Surfaces + Embed).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)

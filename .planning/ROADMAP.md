@@ -129,11 +129,13 @@ Plans:
 4. All existing auth functional flows work without regression: submit the login form, confirm it redirects to `/app`; submit `/forgot-password` with a test email, confirm the "check your email" state is reached. No form breakage.
 5. Deploy succeeds with zero TypeScript errors; test suite unchanged.
 
-**Plans:** TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 16-01: Auth pages re-skin (7 pages + NSIGradientBackdrop removal)
-- [ ] 16-02: Onboarding wizard re-skin (3 steps)
+- [x] 16-01: Header component variant + rightLabel prop extension — completed 2026-04-30
+- [x] 16-02: AuthHero re-skin (BackgroundGlow swap) + login/signup pages add Header pill — completed 2026-04-30
+- [x] 16-03: 5 short auth pages re-skin (forgot-password, verify-email, reset-password, auth-error, account-deleted) — completed 2026-04-30
+- [x] 16-04: Onboarding layout re-skin + 3 step page card wrappers + bg-blue-500 progress swap — completed 2026-04-30
 
 ---
 
@@ -271,7 +273,7 @@ Plans:
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14 — Typography + CSS Token Foundations | v1.2 | 1 / 1 | ✅ Complete | 2026-04-30 |
 | 15 — BackgroundGlow + Header Pill + Owner Shell Re-Skin | v1.2 | 2 / 2 | ✅ Complete | 2026-04-30 |
-| 16 — Auth + Onboarding Re-Skin | v1.2 | 0 / TBD | Not started | - |
+| 16 — Auth + Onboarding Re-Skin | v1.2 | 4 / 4 | ✅ Complete | 2026-04-30 |
 | 17 — Public Surfaces + Embed | v1.2 | 0 / TBD | Not started | - |
 | 18 — Branding Editor Simplification | v1.2 | 0 / TBD | Not started | - |
 | 19 — Email Layer Simplification | v1.2 | 0 / TBD | Not started | - |
@@ -288,4 +290,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-04-30 — Phase 15 complete (2/2 plans, all 22 GLOW/HDR/OWNER requirements verified, Andrew approved live deploy). Next: `/gsd:plan-phase 16`.*
+*Roadmap last updated: 2026-04-30 — Phase 16 complete (4/4 plans, 24/24 must-haves verified, Andrew approved live preview gates for 16-02/03/04). Next: `/gsd:plan-phase 17`.*
