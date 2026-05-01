@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-01 — **Phase 18 in progress (1/2 plans complete).** Plan 18-01 (Wave 1) complete: Branding type/reader/loader layer shrunk. `BrandingState` collapsed to 5 fields, both SELECTs shrunk to logo_url + brand_primary, Option B @deprecated shim in place. Repo in intentional tsc-broken state at branding-editor.tsx (Wave 2 fixes). No push yet.
+**Last updated:** 2026-05-01 — **Phase 18 complete (2/2 plans).** Plan 18-02 (Wave 2) complete: BrandingEditor collapsed to 2 controls, MiniPreviewCard rebuilt as faux public booking page, saveBrandingAction deleted. tsc clean (only pre-existing tests/ baseline). Build clean. Both Wave 1+2 commits pushed to main.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 18 — Branding Editor Simplification — **IN PROGRESS (1/2 plans)**
-**Plan:** 18-01 of 2 — complete; Wave 1 type/reader/loader shrink done
-**Status:** Phase 18 Wave 1 complete. Wave 2 (18-02 editor + preview rebuild) next — fixes branding-editor.tsx tsc errors and rebuilds MiniPreviewCard.
-**Last activity:** 2026-05-01 — Executed Plan 18-01 (Wave 1). Shrunk Branding type to Option B deprecated-optional shim, shrunk both reader SELECTs, collapsed BrandingState to 5 fields. Commit 64164aa. No push — repo in intentional tsc-broken state at branding-editor.tsx awaiting Wave 2.
+**Phase:** Phase 18 — Branding Editor Simplification — **COMPLETE (2/2 plans)**
+**Plan:** 18-02 of 2 — complete; Wave 2 editor + preview rebuild done
+**Status:** Phase 18 complete. tsc clean. Build clean. Pushed to main. Phase 19 (Email Layer Simplification) is next.
+**Last activity:** 2026-05-01 — Executed Plan 18-02 (Wave 2). Collapsed BrandingEditor to 2 controls, rebuilt MiniPreviewCard as faux public booking page, deleted saveBrandingAction. Commits 64164aa (Wave 1, already present) + ccf61e0 (Wave 2). Pushed both to main.
 
 **v1.2 Phase Progress:**
 
@@ -27,13 +27,13 @@ Phase 14 [X] Typography + CSS Token Foundations  (14-01 complete — TYPO-01..07
 Phase 15 [X] BackgroundGlow + Header Pill + Owner Shell Re-Skin  (15-01 + 15-02 complete; live + approved)
 Phase 16 [X] Auth + Onboarding Re-Skin  (16-01..04 complete; 24/24 must-haves verified; live + approved)
 Phase 17 [X] Public Surfaces + Embed  (17-01..09 complete; 24/24 must-haves verified; live + approved; 233 lines legacy chrome deleted)
-Phase 18 [~] Branding Editor Simplification  (18-01 complete Wave 1; 18-02 pending Wave 2)
+Phase 18 [X] Branding Editor Simplification  (18-01 + 18-02 complete; both waves done; pushed to main)
 Phase 19 [ ] Email Layer Simplification
 Phase 20 [ ] Dead Code + Test Cleanup
 Phase 21 [ ] Schema DROP Migration
 ```
 
-Progress: [█████░░░░░] 50% (4 / 8 phases complete; Phase 18 in progress)
+Progress: [██████░░░░] 62% (5 / 8 phases complete; Phase 19 next)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [█████░░░░░] 50% (4 / 8 phases complete; Phase 18 
 - Phase 16 Plan 16-03 — ~3 min execution + Vercel deploy + visual+functional gate, 5 files modified (forgot-password, verify-email, reset-password, auth-error, account-deleted). account-deleted upgraded from bare anchor to styled NSI Button.
 - Phase 16 Plan 16-04 — ~2 min execution + Vercel deploy + visual+E2E gate, 4 files modified (layout + 3 step pages). Layout-level h1 dropped (CONTEXT.md discretion default — pill + Setup label + per-step h2 carry context).
 - Phase 17 — ~50 min total wall clock for 9 plans across 5 waves. Wave 1 (17-01 atoms ~8 min) → Wave 2 (17-02 PublicShell ~5 min) → Wave 3 (5 plans parallel: 17-03 ~8 min, 17-04 ~10 min, 17-05 ~2 min, 17-06 ~5 min, 17-07 ~8 min — completed in ~10 min wall clock parallel) → Wave 4 (17-08 deletions ~3 min) → Wave 5 (17-09 single Vercel deploy + 10-gate eyeball, no fix-ups). 18 requirements (PUB-01..12, HDR-05..06, EMBED-08..11). Net deletions: 4 files, 233 lines of legacy chrome.
+- Phase 18 — ~25 min total wall clock for 2 plans across 2 waves. Wave 1 (18-01 type/reader/loader shrink ~10 min) + Wave 2 (18-02 editor+preview rebuild ~15 min). 9 requirements (BRAND-13..21). Net deletions: 77 lines (163→122 editor, 202→127 actions.ts; mini-preview-card +39 for faux-public-page rebuild). 2 atomic commits + 2 docs commits.
 
 **v1.1 reference velocity (for calibration):**
 - 34 plans across 6 phases (Phases 10-13 incl. 12.5 + 12.6)
@@ -102,12 +103,16 @@ Progress: [█████░░░░░] 50% (4 / 8 phases complete; Phase 18 
 - **`account-deleted` upgraded:** Previously bare-bones page with `<a className="text-blue-600 underline">`. Now uses full NSI shell + styled `<Button asChild><Link>` for "Back to log in". Treat as the canonical pattern for any future bare-bones auth landing page.
 - **Onboarding layout-level h1 dropped:** CONTEXT.md discretion default chose to remove "Set up your booking page" h1 since pill + "Setup" rightLabel + "Step X of 3" subtext + per-step h2 carry context. Restoreable in one line if Andrew wants it back.
 
-### Phase 18 Decisions (locked — Wave 1 complete)
+### Phase 18 Decisions (locked — both waves complete)
 
 - **Q1 resolution: Option B (deprecated-optional shim)** — `Branding` keeps `backgroundColor`/`backgroundShade`/`chromeTintIntensity`/`sidebarColor` as `@deprecated` optional fields. `chrome-tint.ts` and `tests/branding-chrome-tint.test.ts` stay type-clean until Phase 20 deletes them.
 - **SELECT shrink is the meaningful BRAND-20 win** — production code stops reading deprecated columns at runtime despite shim fields remaining on the type. `getBrandingForAccount` SELECT is now `"logo_url, brand_primary"`. `loadBrandingForOwner` SELECT is now `"id, slug, logo_url, brand_primary"`.
 - **`brandingFromRow` body kept intact** — shim fields populated with safe defaults so callers passing full account rows (email senders, embed page) remain unbroken.
-- **Wave 1 intentional tsc-break at branding-editor.tsx** — 3 errors on `state.backgroundColor`, `state.backgroundShade`, `state.sidebarColor`. Wave 2 (18-02) fixes these. Do NOT push until Wave 2 lands.
+- **Q2 resolution: DELETE `saveBrandingAction` entirely** — zero remaining callers after Wave 2 editor rewrite; deletion (vs. empty signature) prevents future regressions. BRAND-18 intent satisfied: no server write path for the 4 deprecated fields.
+- **MiniPreviewCard faux-public-page pattern** — gray-50 base + brand_primary blob (blur 60px, opacity 40, inline style) + glass pill (logo or initial circle) + white rounded-xl card + 3-button slot picker (middle selected with brand_primary) + "Powered by North Star Integrations" text-[10px] text-gray-400.
+- **Contrast warning threshold = 0.85** — matches Phase 17 PublicShell `resolveGlowColor` (single source of truth in `lib/branding/contrast.ts`). Informational only; Save remains enabled.
+- **NSI_BLUE = #3B82F6 in editor** — Reset button target. DEFAULT_BRAND_PRIMARY = #0A2540 in read-branding.ts preserved for legacy data integrity. Both values intentionally separate.
+- **shade-picker.tsx stays on disk** — Phase 20 CLEAN-07 deletes it. Wave 2 only removed import + JSX usage.
 
 ### Phase 17 Decisions (locked — inform Phase 18+)
 
@@ -132,13 +137,13 @@ Progress: [█████░░░░░] 50% (4 / 8 phases complete; Phase 18 
 
 ### Active Blockers
 
-**Do NOT push to Vercel until Wave 2 (18-02) lands.** `branding-editor.tsx` has 3 intentional tsc errors (state.backgroundColor, state.backgroundShade, state.sidebarColor) that Wave 2 fixes. `npm run build` will fail until Wave 2 ships. Wave 2 commit + Wave 1 commit pushed together satisfy the Vercel build gate.
+None. Phase 18 complete. Wave 1 (64164aa) + Wave 2 (ccf61e0) pushed to main. Build green. Ready for Phase 19.
 
 ## Session Continuity
 
-**Last session:** 2026-05-01 — Plan 18-01 (Wave 1) executed.
-**Stopped at:** Plan 18-01 complete. Code commit 64164aa. Repo in intentional tsc-broken state at branding-editor.tsx. No push yet.
-**Resume:** Execute Plan 18-02 (Wave 2 — editor + preview rebuild). Fixes branding-editor.tsx, rewrites MiniPreviewCard as faux public booking page preview, shrinks saveBrandingAction. After 18-02 commits, push both waves together. Then Wave 3 (18-03) visual gate checkpoint.
+**Last session:** 2026-05-01 — Plan 18-02 (Wave 2) executed.
+**Stopped at:** Plan 18-02 complete. Code commit ccf61e0. Both waves pushed to main. tsc and build clean.
+**Resume:** Phase 19 (Email Layer Simplification). Vercel deploy triggered by push — Andrew should eyeball /app/branding to verify MiniPreviewCard visual before proceeding to Phase 19.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)
