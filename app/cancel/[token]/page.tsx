@@ -5,7 +5,8 @@ import { format } from "date-fns";
 import { TokenNotActive } from "@/app/_components/token-not-active";
 import { resolveCancelToken } from "./_lib/resolve-cancel-token";
 import { CancelConfirmForm } from "./_components/cancel-confirm-form";
-import { BrandedPage } from "@/app/_components/branded-page";
+import { PublicShell } from "@/app/_components/public-shell";
+import { brandingFromRow } from "@/lib/branding/read-branding";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,14 +32,14 @@ export default async function CancelPage({ params }: PageProps) {
   }
 
   if (resolved.state === "cancelled") {
+    const cancelledBranding = brandingFromRow({
+      logo_url: resolved.account?.logo_url ?? null,
+      brand_primary: resolved.account?.brand_primary ?? null,
+    });
     return (
-      <BrandedPage
-        logoUrl={resolved.account?.logo_url ?? null}
-        primaryColor={resolved.account?.brand_primary ?? null}
-        accountName={resolved.account?.name ?? "NSI"}
-      >
-        <div className="mx-auto max-w-md p-6 sm:p-10">
-          <div className="rounded-lg border bg-card p-6 sm:p-8 text-center">
+      <PublicShell branding={cancelledBranding} accountName={resolved.account?.name ?? "NSI"}>
+        <div className="mx-auto max-w-md px-6 sm:px-10">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 text-center shadow-sm">
             <h1 className="text-xl font-semibold mb-2">Booking cancelled</h1>
             <p className="text-sm text-muted-foreground mb-6">Your appointment has been cancelled.</p>
             {resolved.account && resolved.eventType ? (
@@ -55,7 +56,7 @@ export default async function CancelPage({ params }: PageProps) {
             ) : null}
           </div>
         </div>
-      </BrandedPage>
+      </PublicShell>
     );
   }
 
@@ -69,14 +70,14 @@ export default async function CancelPage({ params }: PageProps) {
   const dateLine = format(startTz, "EEEE, MMMM d, yyyy");
   const timeLine = format(startTz, "h:mm a (z)");
 
+  const activeBranding = brandingFromRow({
+    logo_url: account.logo_url ?? null,
+    brand_primary: account.brand_primary ?? null,
+  });
   return (
-    <BrandedPage
-      logoUrl={account.logo_url ?? null}
-      primaryColor={account.brand_primary ?? null}
-      accountName={account.name}
-    >
-      <div className="mx-auto max-w-md p-6 sm:p-10">
-        <div className="rounded-lg border bg-card p-6 sm:p-8">
+    <PublicShell branding={activeBranding} accountName={account.name}>
+      <div className="mx-auto max-w-md px-6 sm:px-10">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
           <h1 className="text-xl font-semibold mb-2">Cancel this booking?</h1>
           <p className="text-sm text-muted-foreground mb-6">
             You&apos;re about to cancel your appointment with <strong>{account.name}</strong>.
@@ -102,6 +103,6 @@ export default async function CancelPage({ params }: PageProps) {
           </Suspense>
         </div>
       </div>
-    </BrandedPage>
+    </PublicShell>
   );
 }
