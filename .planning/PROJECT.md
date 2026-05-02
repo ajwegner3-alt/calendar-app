@@ -2,13 +2,13 @@
 
 ## What This Is
 
-A multi-tenant Calendly-style booking tool for trade contractors. Visitors land on a contractor's website, pick an available slot in a branded widget, and walk away with a confirmed booking and a calendar invite in their inbox. **v1.0 shipped 2026-04-27** with Andrew's NSI account end-to-end (single-tenant in production; multi-tenant plumbing baked into the schema). **v1.1 shipped 2026-04-30** opening the tool to public signup (anyone can self-serve at `/signup`), adding per-event-type capacity (race-safe slot_index mechanism replacing v1.0's partial unique index), and rebranding all 5 owner-facing + public surfaces with the Cruip "Simple Light" aesthetic + direct per-account color controls (sidebar / page / primary). The branded embeddable widget (script + iframe; auto-resizes via `nsi-booking:height` postMessage) is what makes it a sellable deliverable for client websites, not just a personal tool.
+A multi-tenant Calendly-style booking tool for trade contractors. Visitors land on a contractor's website, pick an available slot in a branded widget, and walk away with a confirmed booking and a calendar invite in their inbox. **v1.0 shipped 2026-04-27** with Andrew's NSI account end-to-end (single-tenant in production; multi-tenant plumbing baked into the schema). **v1.1 shipped 2026-04-30** opening the tool to public signup, adding per-event-type capacity (race-safe slot_index mechanism), and rebranding 5 owner-facing + public surfaces with the Cruip "Simple Light" aesthetic + direct per-account color controls. **v1.2 shipped 2026-05-02** locking the entire owner-facing app to a unified North Star Integrations visual language (`bg-gray-50` + blue-blot `BackgroundGlow` + glass "NorthStar" header pill + Inter weights 400-800), preserving each contractor's `brand_primary` only on public booking surfaces and the 6 transactional emails. v1.2 was the first net-deletion milestone (NET -792 lines runtime; 4 deprecated `accounts` columns + 2 ENUM types permanently dropped from production Postgres via two-step deploy protocol; branding editor collapsed from 5 controls to 2). The branded embeddable widget (script + iframe; auto-resizes via `nsi-booking:height` postMessage) is what makes it a sellable deliverable for client websites, not just a personal tool.
 
 ## Core Value
 
 A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-(Validated in v1.0 — core value held; ship pivot reinforced widget-first distribution as the actual product wedge. v1.1 confirmed: opening signup did not change the core value statement; the booker experience is unchanged from v1.0 except for accent-color branding now reflecting the contractor's choice across all 6 transactional emails + the booking page itself.)
+(Validated in v1.0 — core value held; ship pivot reinforced widget-first distribution as the actual product wedge. v1.1 confirmed: opening signup did not change the core value statement; the booker experience is unchanged from v1.0 except for accent-color branding now reflecting the contractor's choice. v1.2 confirmed once more: the owner-facing visual lockdown to NSI did not affect the booker experience — public booking pages, embed widget, and transactional emails still render with the contractor's `brand_primary`. Owner-side identity now reads as an NSI product, not a generic calendar.)
 
 ## Requirements
 
@@ -67,61 +67,37 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 - ✓ `FUTURE_DIRECTIONS.md` §8 appended with v1.1 marathon waiver record + carry-overs — v1.1 (QA-15)
 - ✓ Andrew explicit ship sign-off — v1.1 (QA-14, verbatim 2026-04-30 "consider everything good. close out the milestone")
 
-## Current Milestone: v1.2 — NSI Brand Lock-Down + UI Overhaul
+**v1.2 — shipped 2026-05-02 (95 of 95 requirements complete; 100%):**
 
-**Started:** 2026-04-30. **Status:** Scoping (research → requirements → roadmap).
+- ✓ Typography + CSS token foundations: Inter weights 400-800 + Roboto Mono via `next/font/google`; `globals.css` em-based letter-spacing; `--color-primary` flipped to `#3B82F6` — v1.2 (TYPO-01..07)
+- ✓ `BackgroundGlow` component (Server Component, two-blob lead-scoring layout, `position: absolute`, optional `color` prop) at `app/_components/background-glow.tsx` — v1.2 (GLOW-01..05)
+- ✓ Glass `Header` pill (3 variants: owner / auth / public) at `app/_components/header.tsx`; "NorthStar" wordmark from `lib/brand.ts WORDMARK` constant — v1.2 (HDR-01..08)
+- ✓ Owner shell re-skin: per-account chrome theming stripped from `(shell)/layout.tsx` + `AppSidebar`; `<Header variant="owner" />` rendered shell-wide; 14 owner-page cards standardized — v1.2 (OWNER-01..11)
+- ✓ All 7 auth pages + 3-step onboarding wizard re-skinned with `BackgroundGlow` (NSI blue) + glass pill + gray-50 base — v1.2 (AUTH-12..17, ONBOARD-10..15)
+- ✓ `PublicShell` component replaces `BrandedPage` across 5 public surfaces; customer `brand_primary` drives `BackgroundGlow` tint + glass pill; "Powered by North Star Integrations" footer — v1.2 (PUB-01..12, HDR-05..06)
+- ✓ Embed widget re-skin: `bg-gray-50` base, single-circle gradient retained (correct for iframe canvas), iframe-local `--primary` override; `PoweredByNsi` rendered inside iframe — v1.2 (EMBED-08..11)
+- ✓ Branding editor collapsed to 2 controls (logo + "Booking page primary color"); `MiniPreviewCard` rebuilt as faux public booking page; `saveBrandingAction` deleted entirely — v1.2 (BRAND-13..21)
+- ✓ Email layer simplified: `EmailBranding` interface = `{ name, logo_url, brand_primary }`; color resolution = `brand_primary → DEFAULT`; footer text-only — v1.2 (EMAIL-15..20)
+- ✓ Dead code cleanup: 5 deprecated theming files deleted (`chrome-tint.ts`, `shade-picker.tsx`, `branding-chrome-tint.test.ts`, `branding-gradient.test.ts`, `branding-schema.test.ts`); `Branding` interface canonical 3-field shape — v1.2 (CLEAN-01..10)
+- ✓ Schema DROP migration: 4 deprecated `accounts` columns + 2 ENUM types permanently removed from production Postgres via two-step deploy protocol (CP-03 30-min drain) — v1.2 (DB-01..11)
+- ✓ `FUTURE_DIRECTIONS.md` §8.4 v1.2 backlog closed via Phase 21 strikethrough — v1.2 (DB-11)
+- ✓ Andrew explicit ship sign-off — v1.2 (Phase 21 production booking smoke test PASSED 2026-05-02; verifier 8/8 must-haves on live DB + git history)
 
-**Goal:** Establish a unified North Star Integrations visual language across the entire owner-facing app. Re-skin every owner surface to match the lead-scoring tool's "Simple Light" aesthetic (`bg-gray-50` + blue-blot `BackgroundGlow` backdrop + glass header pill + Inter + "NorthStar" wordmark) so anyone using the app immediately recognizes it as an NSI product. Public booking surfaces (booking page + embed + emails) remain the only places where each contractor's own colors apply, using the same layout pattern with the customer's `brand_primary` substituted in.
+## Current Milestone: v1.3 — Marathon QA + Infrastructure (PLANNING)
 
-**Branding rule (locked):**
+**Started:** TBD (post-v1.2 ship 2026-05-02). **Status:** Backlog defined; awaiting `/gsd:new-milestone` to formalize scope.
 
-| Surface | Whose colors |
-|---|---|
-| Owner-facing app (`/app/*`, `/auth/*`, `/onboarding/*`, `/signup`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`, `/account-deleted`) | **NSI ONLY** — `bg-gray-50` + blue-blot backdrop + "NorthStar" wordmark + `--primary = #3B82F6` always. Per-account color overrides shipped in Phase 12.6 are stripped from the owner shell. |
-| Public booking page (`/[account]`, `/[account]/[event-slug]`) | **Customer** — same layout pattern, blob tint = customer `brand_primary`, pill = customer logo + name (NOT "NorthStar"), "Powered by NSI" footer mark visible to bookers. |
-| Embed widget (`/embed/[account]/[event-slug]`) | **Customer** — trimmed for iframe, same pattern. |
-| Transactional emails (6 senders) | **Customer** — header band tinted from customer `brand_primary` (priority chain simplified — no more `sidebar_color → brand_primary → DEFAULT`). |
+**Provisional goal:** Close the third-deferral marathon QA (QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2), execute the long-deferred infrastructure migrations (Resend / Vercel Pro hourly cron / live cross-client email QA), and land the long-tail auth additions (OAuth, magic-link, hard-delete cron, soft-delete grace, slug 301, onboarding analytics, timing-oracle hardening). Final NSI brand asset image swap to replace the placeholder `public/nsi-mark.png` (105 bytes solid-navy).
 
-**Reference site (visual target):**
+**Carry-over backlog (defined; canonical enumeration in `FUTURE_DIRECTIONS.md` §8):**
 
-`C:\Users\andre\OneDrive - Creighton University\Desktop\Claude-Code-Projects\lead-scoring-with-tools\website-analysis-tools\`. Public landing at `/free-audit`. Concrete components Claude must replicate or vendor:
+- **Marathon QA (third deferral):** QA-09 signup E2E (production), QA-10 multi-tenant UI walkthrough (3 accounts), QA-11 capacity=3 race E2E, QA-12 3-account branded smoke, QA-13 EmbedCodeDialog at 320/768/1024 viewports. Pre-flight QA artifacts kept on prod since v1.1.
+- **Infrastructure:** Resend migration (replaces Gmail SMTP, ~$10/mo for 5k emails, closes EMAIL-08); Vercel Pro upgrade + flip cron from `0 13 * * *` daily to `0 * * * *` hourly; live cross-client email QA (Outlook desktop, Apple Mail iOS, Yahoo).
+- **Auth additions:** OAuth signup (Google / GitHub) — `/auth/confirm` already supports magiclink type; magic-link / passwordless login; hard-delete cron purge (v1.1 ships soft-delete only); soft-delete grace period (account restore on re-login within N days); slug 301 redirect for old slugs after change; onboarding analytics event log; constant-time delay on signup + forgot-password forms (P-A1 timing-oracle hardening).
+- **Brand asset:** Final NSI mark image swap (`public/nsi-mark.png` placeholder, 105 bytes solid-navy); add NSI mark image to "Powered by NSI" footer on web + emails (currently text-only per v1.2 EMAIL-19 + PUB-04).
+- **Carry-over tech debt:** `react-hooks/incompatible-library` warning on `event-type-form.tsx:99`; pre-existing `tsc --noEmit` test-mock alias errors (~22 errors in `tests/`); `generateMetadata` double-load on public booking page; Supabase service-role key rotation (legacy JWT → `sb_secret_*`); `rate_limit_events` test DB cleanup gap; `/app/unlinked` UX hole for soft-deleted accounts on re-login.
 
-- `app/components/BackgroundGlow.tsx` — fixed-position blue-blot backdrop (`w-80 h-80 rounded-full blur-[160px]`, two divs at `top:-32 left:calc(50% + 580px)` and `top:420 left:calc(50% + 380px)`, gradients `linear-gradient(to top right, #3B82F6, transparent)` and `#3B82F6 → #111827`, opacity 0.35–0.4)
-- `app/components/Header.tsx` — `fixed top-2 md:top-6 z-30`, glass pill `bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl`, "NorthStar" wordmark (gray-900 + blue-500 split, `font-extrabold tracking-[-0.04em]`)
-- `app/dashboard/layout.tsx` — `min-h-screen bg-gray-50 pt-20 md:pt-24` shell pattern
-- `app/globals.css` — Inter + Roboto Mono via `next/font/google`; `body { background: #F9FAFB; tracking: -0.017em; }`; `h1, h2, h3 { tracking: -0.037em; }`; AOS scroll-reveal pattern
-
-**Underlying design system:** Cruip "Simple Light" Tailwind landing system at `C:\Users\andre\OneDrive - Creighton University\Desktop\Claude-Code-Projects\website-creation\.claude\skills\tailwind-landing-page\SKILL.md` (already referenced in v1.1 research). Adjacent skills under `website-creation/.claude/skills/`: `different-styles`, `artifacts-builder`, `hero-section-contractor`, `hero-section-medspa`, `roofing-template`.
-
-**Target features (active scope):**
-
-- **NSI brand lock-down** — strip per-account theming from owner shell (`--primary` override removed from `(shell)` layout; `sidebar_color` override removed from `AppSidebar`; `chromeTint*` call sites removed). All shadcn primary buttons / switches / focus rings / active indicators show NSI blue-500 on owner side.
-- **`BackgroundGlow` component** — vendor or replicate from lead-scoring; NSI blue blots on owner side, customer-`brand_primary`-tinted on public side.
-- **Glass header pill** — "NorthStar" wordmark on owner side; customer logo + name on public side. Replaces or extends current `app/(shell)/_components/floating-header-pill.tsx` pattern (note: that file was deleted in Phase 12.5-02; the pattern is now plain `SidebarTrigger` hamburger — needs to come back as a full pill matching lead-scoring `Header.tsx`).
-- **Owner shell re-skin** — every page under `/app/*` re-skinned to match lead-scoring visual language while keeping the v1.1 sidebar IA (Home / Event Types / Availability / Bookings / Branding / Settings). Sidebar gets new visual skin only — no IA change.
-- **Auth pages re-skin** — login / signup / forgot-password / reset-password / verify-email / auth-error / account-deleted. Replace `NSIGradientBackdrop` with the new `BackgroundGlow` pattern.
-- **Onboarding wizard re-skin** — 3 steps under `/onboarding/*`. Same visual language.
-- **Public booking page + embed re-skin** — `/[account]` index, `/[account]/[event-slug]` per-event, `/embed/[account]/[event-slug]`. Match lead-scoring layout pattern; blob tint = customer `brand_primary`. "Powered by NSI" footer mark visible to bookers.
-- **Branding editor simplification** — collapse to logo + `brand_primary` + `brand_accent` (2 colors). Deprecate `sidebar_color` / `background_color` / `background_shade` / `chrome_tint_intensity` columns and their pickers / preview wiring. `MiniPreviewCard` rebuilt to show new pattern (faux booking page with blob backdrop).
-- **Email re-skin** — header band uses `brand_primary` directly (no more `sidebar_color → brand_primary → DEFAULT` chain). "Powered by NSI" footer mark consistent with public booking page.
-- **Schema cleanup migration** — last phase: DROP deprecated columns + remove `chromeTintToCss` compat export from `lib/branding/chrome-tint.ts` + clean up dead code paths.
-
-**Carry-overs RE-deferred to v1.3 (out of v1.2 scope):**
-
-- v1.1 marathon QA (QA-09..QA-13) + ~21 per-phase manual checks accumulated through Phases 10/11/12/12.5/12.6.
-- v1.0 marathon RE-deferred items: EMBED-07, EMAIL-08, QA-01..QA-06.
-- Resend migration (replaces Gmail SMTP, ~$10/mo for 5k emails, closes EMAIL-08).
-- Vercel Pro upgrade + flip cron from `0 13 * * *` daily to `0 * * * *` hourly.
-- Live cross-client email QA — Outlook desktop, Apple Mail iOS, Yahoo (deferred since v1.0).
-- OAuth signup (Google / GitHub) — `/auth/confirm` already supports magiclink type.
-- Magic-link / passwordless login — same handler ready.
-- Hard-delete cron purge (v1.1 ships soft-delete only).
-- Slug 301 redirect for old slugs after change.
-- Soft-delete grace period (account restore on re-login within N days).
-- Onboarding analytics event log.
-- Constant-time delay on signup + forgot-password forms (P-A1 timing-oracle hardening).
-- `rate_limit_events` test DB cleanup (4 transient bookings-api.test.ts failures).
-- Final NSI mark image (`public/nsi-mark.png` placeholder) — IF v1.2 emails / booking page reference an NSI mark image, may be folded in; otherwise defer.
+**Out of scope (carried from v1.2):** No new monetization layer (Stripe / billing); no Google Calendar sync; no SMS notifications; no mobile app; no round-robin / team scheduling; no workflow builder; no recurring bookings; no waitlists / group bookings; no two-way SMS; no per-event-type availability schedules; no multiple reminders (24h + 1h); no configurable reminder timing.
 
 ### Out of Scope
 
@@ -147,17 +123,18 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 
 ## Context
 
-**Production state at v1.1 ship (2026-04-30):**
+**Production state at v1.2 ship (2026-05-02):**
 
-- 29,450 LOC TypeScript/TSX in the runtime tree (v1.0: 20,417; v1.1 added ~9,033 net).
-- 33,817 lines inserted + 2,153 lines deleted across 239 files in the v1.1 milestone span (`v1.0..HEAD`).
-- 357 cumulative commits (222 v1.0 + 135 v1.1; v1.1 git range `4ae2e92` → `e3119bc`).
-- 277 passing + 4 skipped automated tests across 26 test files.
+- 21,871 LOC TypeScript/TSX in the runtime tree (v1.0: 20,417; v1.1: 29,450; v1.2: NET -7,579 from v1.1 close — first net-deletion milestone).
+- 910 lines inserted + 1,702 lines deleted across 74 files (excluding `.planning/`) in the v1.2 milestone span.
+- 448 cumulative commits (222 v1.0 + 135 v1.1 + 91 v1.2; v1.2 git range `9263770` → `d81a990`).
+- 222 passing + 4 skipped automated tests across 24 test files (3 deprecated-theming test files deleted in Phase 20).
 - Production URL: `https://calendar-app-xi-smoky.vercel.app` (auto-deploys from `main`).
 - GitHub: `https://github.com/ajwegner3-alt/calendar-app`.
 - Supabase project ref: `mogfnutxrrbtvnaupoun` (region West US 2, Postgres 17.6.1).
-- Seeded NSI account: `slug=nsi`, `id=ba8e712d-28b7-4071-b3d4-361fb6fb7a60`, timezone `America/Chicago`, `owner_email=ajwegner3@gmail.com`.
-- Pre-flight QA artifacts on prod (KEPT for v1.2 marathon): Test User 3 (`andrew.wegner.3@gmail.com`, slug `nsi-rls-test-3`), capacity-test event_type (`5344a500-acd5-4336-b195-ebea16f8dec4`), 3 distinct branding profiles applied to nsi/nsi-rls-test/nsi-rls-test-3 (navy/magenta/emerald-null).
+- Seeded NSI account: `slug=nsi`, `id=ba8e712d-28b7-4071-b3d4-361fb6fb7a60`, timezone `America/Chicago`, `owner_email=ajwegner3@gmail.com`. NSI `brand_primary` = `#0A2540` (dark navy; Phase 21 smoke confirmed).
+- `accounts` table schema (post-Phase-21): `id`, `slug`, `name`, `owner_email`, `logo_url`, `brand_primary`, `timezone`, `onboarding_complete` (and standard timestamps). Deprecated columns (`sidebar_color`, `background_color`, `background_shade`, `chrome_tint_intensity`) PERMANENTLY DROPPED.
+- Pre-flight QA artifacts on prod (KEPT for v1.3 marathon): Test User 3 (`andrew.wegner.3@gmail.com`, slug `nsi-rls-test-3`), capacity-test event_type (`5344a500-acd5-4336-b195-ebea16f8dec4`), 3 distinct branding profiles applied to nsi/nsi-rls-test/nsi-rls-test-3 (navy/magenta/emerald-null).
 
 **Tech stack (as shipped):**
 
@@ -183,6 +160,21 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 - **Reminder cron claim-once via CAS UPDATE** — `WHERE reminder_sent_at IS NULL` claim guarantees exactly one reminder per booking even with duplicate cron invocations. Reminder retry on send failure = NONE by design (RESEARCH Pitfall 4).
 - **Vendor over npm-link for sibling tools** — Vercel build cannot resolve `file:../` paths. Future cross-project tools must be vendored into `lib/` (or published to npm).
 
+**v1.2 architectural patterns added:**
+
+- **Two-step DROP migration deploy protocol (CP-03)** — code-stop-reading deploy first; wait minimum 30 minutes for stale Vercel function instances to drain; then apply DROP SQL via locked `db query --linked -f` workaround. First production application in Phase 21. Pattern reusable for any future DROP that touches columns currently read by deployed code.
+- **`db query --linked -f` LOCKED as the canonical migration apply method** — `npx supabase db push --linked` is broken in this repo (orphan timestamps in remote tracking table). All schema migrations from v1.1 forward use the workaround.
+- **Atomic `BEGIN/COMMIT` migration with `IF EXISTS` guards + `DO $$ RAISE NOTICE` header** — pattern for any defensive forward-only schema migration. Substantive defensive checks (grep, tsc, pg_type existence) live in pre-flight gates, NOT in SQL.
+- **`.SKIP` extension for inert rollback artifacts** — `<TIMESTAMP+1>_readd_<thing>.sql.SKIP` authored alongside DROP migrations. Excluded from Supabase migration runner. Activate by renaming if rollback genuinely required (forward-only posture by default).
+- **Held-local commit during drain windows** — Phase 21 Task 2 commit was held LOCAL (not pushed) during the 30-min drain so a push wouldn't restart the timer. Pattern for any future protocol that gates on "no new code deploys for N minutes".
+- **CSS variable scope contract: variables do NOT cross iframe document boundaries** (CP-05) — confirmed in Phase 17. Embed widget sets its OWN `--primary` independently from parent PublicShell. Phase 12.6's `style={{ "--primary": ... }}` wrapper pattern is decommissioned for owner shell but REQUIRED for embed.
+- **Single-source `--primary` cascade on owner shell** — `:root --primary: oklch(0.606 0.195 264.5)` (closest oklch to `#3B82F6`); shadcn Button / Switch / Calendar / focus rings inherit directly; no per-account chrome wrapper. Locked for owner side. Public side keeps the dual `--brand-primary` + `--primary` contract via `PublicShell`.
+- **Multi-variant `Header` component** (`'owner' | 'auth' | 'public'`) — single component, three branches; `variant="auth"` skips `SidebarTrigger`; `variant="public"` carries `branding?` + `accountName?` props. Reusable for any future no-sidebar surface.
+- **Owner shell card class lock** — `rounded-lg border border-gray-200 bg-white p-6 shadow-sm`. Auth/onboarding cards use `rounded-xl` (12px) by intentional design distinction. Public hero card uses `rounded-2xl` (more pronounced curve).
+- **Visual gates run on live Vercel preview, not local dev** — wip commits used for gates are reverted in follow-up commits; both stay in history. "All testing is done live" project rule honored.
+- **JIT pitfall lock (MP-04)** — runtime hex via inline `style={{}}` only. NEVER `bg-[${color}]` dynamic Tailwind (purged at build time, not regenerated at runtime). Applies to `BackgroundGlow color`, blob inline styles, `MiniPreviewCard` runtime color props, all email senders' band color.
+- **First net-deletion milestone pattern** — v1.2 deleted 8 deprecated component files + 3 test files + 4 DB columns + 2 ENUM types. NET -792 lines runtime. Pattern: deprecate-with-shim (Phase 18) → migrate-consumers (Phases 15-17, 19) → delete-tests-then-functions (Phase 20) → DROP-DB-with-drain (Phase 21). Deletion-heavy phases follow this 4-step ordering.
+
 **v1.1 architectural patterns added:**
 
 - **Postgres SECURITY DEFINER provisioning trigger + Server Action UPDATE hybrid** — trigger creates stub `accounts(slug=null, name=null, onboarding_complete=false)` on every `auth.users` INSERT (atomicity-first); wizard UPDATEs to (slug, name, onboarding_complete=true) via RLS-scoped Server Action (UX-error-clarity). Pattern reusable for any future "row must exist before user can interact, but final values come later" provisioning flow.
@@ -193,19 +185,20 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 - **Email header band priority chain** — `branding.sidebarColor ?? branding.brand_primary ?? DEFAULT_BRAND_PRIMARY` for solid-color rendering. No VML, no CSS gradients (Outlook + Yahoo support).
 - **Quota-guard wrapper for Gmail SMTP** — `checkAndConsumeQuota()` in `lib/email-sender/quota-guard.ts`; signup-side senders fail-closed at cap; bookings/reminders bypass to protect core flow.
 
-**Known issues / technical debt (carried into v1.2, see FUTURE_DIRECTIONS.md §4 + §8):**
+**Known issues / technical debt (carried into v1.3, see FUTURE_DIRECTIONS.md §4 + §8):**
 
-- 1 documented ESLint warning (`react-hooks/incompatible-library` on `event-type-form.tsx:99` — RHF `watch()` not memoizable; refactor to `useWatch`). v1.0 carry-over, RE-confirmed at v1.1 close.
-- Pre-existing `tsc --noEmit` test-mock alias errors (mock exports aliased only in `vitest.config.ts`, not `tsconfig.json`). v1.0 carry-over, RE-confirmed at v1.1 close.
-- Migration drift workaround: `supabase db push --linked` fails; locked alternative is `supabase db query --linked -f`. v1.0 carry-over.
+- 1 documented ESLint warning (`react-hooks/incompatible-library` on `event-type-form.tsx:99` — RHF `watch()` not memoizable; refactor to `useWatch`). v1.0 carry-over, RE-confirmed at v1.1 + v1.2 close.
+- Pre-existing `tsc --noEmit` test-mock alias errors in `tests/` (~22 errors, all `TS7006`/`TS2305`; mock exports aliased only in `vitest.config.ts`, not `tsconfig.json`). v1.0 carry-over, RE-confirmed at v1.2 close as baseline.
+- Migration drift workaround: `supabase db push --linked` fails; locked alternative is `supabase db query --linked -f`. v1.0 carry-over; first DROP migration (Phase 21) used the workaround successfully.
 - `generateMetadata` double-load on public booking page (acceptable; can wrap in `import { cache } from 'react'`). v1.0 carry-over.
 - Supabase service-role key still legacy JWT (`sb_secret_*` format not yet rolled out). v1.0 carry-over; waiting on Supabase rollout.
 - Plan 08-05/06/07 wave-2 git-index race (multi-agent commits swept in untracked sibling files; future YOLO multi-wave runs should serialize commits or use per-agent worktrees). v1.0 carry-over.
-- `accounts.chrome_tint_intensity` column kept post-Phase 12.6 (no longer read by production code; `chromeTintToCss` compat export retained for Phase 12.5 tests). v1.2 cleanup: DROP column + remove compat export pair. v1.1 introduced.
-- Vercel cron remains on Hobby tier `0 13 * * *` daily schedule; flip `vercel.json` to `0 * * * *` after Vercel Pro upgrade. v1.0 carry-over, RE-confirmed.
-- `rate_limit_events` test DB cleanup gap — 4 transient bookings-api.test.ts failures observed when the table accumulates between runs. v1.1 introduced.
+- Vercel cron remains on Hobby tier `0 13 * * *` daily schedule; flip `vercel.json` to `0 * * * *` after Vercel Pro upgrade. v1.0 carry-over, RE-confirmed at v1.2 close.
+- `rate_limit_events` test DB cleanup gap — 4 transient bookings-api.test.ts failures observed when the table accumulates between runs; rate-limited integration tests require 60-90s cooldown between vitest runs. v1.1 introduced; RE-confirmed at v1.2 close as pre-existing environment constraint.
 - `/app/unlinked` UX hole for soft-deleted accounts on re-login. v1.1 introduced (Plan 10-07 acceptable trade-off).
-- `public/nsi-mark.png` placeholder (105 bytes solid-navy) — replace with final NSI brand asset. v1.1 introduced; Andrew explicit deferral.
+- `public/nsi-mark.png` placeholder (105 bytes solid-navy) — replaced with text-only "Powered by North Star Integrations" footer in v1.2 (EMAIL-19 + PUB-04). Image asset still in `public/`; cleanup at v1.3 image swap.
+- Two known comment-only files (`app/(shell)/layout.tsx`, `app/embed/[account]/[event-slug]/_components/embed-shell.tsx`) contain inert JSDoc/comment references to dropped column names — left in place as inert documentation post-Phase-21 DROP.
+- `app/embed/[account]/[event-slug]/_lib/types.ts` `AccountSummary` retained `background_color` + `background_shade` fields through Phase 20; cleaned by Phase 21 DROP migration but the local interface still has the fields. Cosmetic; not load-bearing post-DROP.
 
 **Existing tooling reused:**
 
@@ -252,6 +245,16 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 | Email gradient strategy = solid-color-only (no VML, no CSS gradients) | CONTEXT.md lock per Phase 12 plan; lowest risk for v1.1 given Outlook desktop + Yahoo zero gradient support; trade-off is less visual parity with web surfaces | ✓ Good — `renderEmailBrandedHeader` ships solid-color band across all 6 transactional senders; live cross-client QA deferred to v1.2 but the architecture is correct. |
 | `--primary` CSS variable override scope: dashboard `(shell)` only | Public `/[account]` and `/embed` surfaces NOT in scope; Phase 12.6 lock; deferred to v1.2 if Andrew requests | — Pending — v1.2 may extend to public surfaces if branded-button rendering on the booker side becomes important; not requested at v1.1 sign-off. |
 | Phase 13 marathon waived by Andrew at sign-off 2026-04-30 | Verbatim "consider everything good. close out the milestone." Ship gate is code-level verifier passes (Phases 10/11/12/12.5/12.6) + Andrew live Vercel approval of 12.6 + 277 passing tests | ⚠ Revisit — same waiver pattern as v1.0 → v1.1 (marathon scope-cut). Pre-flight artifacts for v1.2 marathon are KEPT on prod (Test User 3, capacity-test event, 3 branding profiles). v1.2 should either commit time-boxed marathon execution upfront or formally adopt deploy-and-eyeball as the production gate. |
+| v1.2 owner shell locked to NSI ONLY; per-account chrome theming stripped from `(shell)/layout.tsx` + `AppSidebar` | Phase 12.6's per-account `--primary` wrapper made the owner side feel like a generic Calendly clone, not an NSI product. Lead-scoring "Simple Light" reference was the visual target. | ✓ Good — Andrew approved live Vercel after Phase 15 deploy. Owner side now reads as an NSI product. Public booking surfaces still ship the contractor's `brand_primary`. |
+| v1.2 `BrandedPage` REPLACED with new `PublicShell` | Clean break retired `GradientBackdrop` + `NSIGradientBackdrop` complexity in one move; avoided 2-month deprecation window. | ✓ Good — Phase 17 9-plan migration landed in 5 waves; Andrew approved 10/10 visual gates. 233 lines legacy chrome deleted. |
+| v1.2 `brand_accent` column DROPPED at scoping (never built) | Adding then dropping a column is unnecessary thrash; lead-scoring uses single accent color; trade contractors don't need 2 brand colors. | ✓ Good — saved a roundtrip; ships as 1 color (`brand_primary`) only. |
+| v1.2 Branding editor collapsed from 5 controls to 2 (logo + brand_primary) | 3 deprecated controls (`sidebar_color`, `background_color`, `background_shade`) were leftovers from Phase 12.5/12.6 chrome experimentation. After owner shell locked to NSI, they had no effect on the owner side and were redundant on the booker side (where `brand_primary` already drives the customer color). | ✓ Good — `saveBrandingAction` deleted entirely (zero callers post-rewrite); `MiniPreviewCard` rebuilt as faux public booking page; Andrew approved 8/8 visual gates Phase 18. |
+| v1.2 Two-step DROP deploy protocol (CP-03) | The 4 deprecated columns + 2 ENUM types were still being read by deployed Vercel function instances after Phase 20 ship; dropping them immediately would 500 stale function instances. Mandatory 30-minute drain window. | ✓ Good — Phase 21 first production application; drain satisfied by 25× minimum (772 minutes overnight); zero booking failures during the smoke test against the schema-cleaned table. Pattern locked for any future DROP migration. |
+| v1.2 `db query --linked -f` LOCKED as canonical migration apply method | `npx supabase db push --linked` is broken in this repo (orphan timestamps in remote tracking table). Workaround proven in v1.1 capacity migration; v1.2 first DROP migration further validated. | ✓ Good — Phase 21 applied successfully; 3 verification queries confirmed the schema state. |
+| v1.2 Atomic single-commit pattern (CP-02) for cross-cutting interface changes | Phase 19 (`EmailBranding` collapse) had no external consumers outside the email layer itself; types-first wave split was unnecessary overhead. | ✓ Good — single commit `0130415` landed clean; the 5th `sendReminderBooker` caller was discovered and fixed inline (pre-flight tsc gate caught it); CP-02 atomic lock preserved. |
+| v1.2 Types-first wave split for shim-and-rewrite (CP-04) | Phase 18 (`Branding` interface shrink) had `chrome-tint.ts` + its test as type-broken intermediate consumers; Wave 1 commit intentionally tsc-broken; Wave 2 fixed via editor rewrite; push deferred until end of Wave 2. | ✓ Good — clean break landed despite tsc-broken intermediate; production deploy succeeded on first push at end of Wave 2. Pattern reusable for any "shrink type → rewrite consumer" two-wave plan. |
+| v1.2 First net-deletion milestone (NET -792 lines runtime) | After 3 milestones of additive growth (v1.0 + v1.1 = 29,450 LOC), v1.2 deliberately shipped deletion-heavy: 8 deprecated component files + 3 test files + 4 DB columns + 2 ENUM types. | ✓ Good — codebase shrunk to 21,871 LOC; test suite shrunk to 222 passing (broken-on-import tests removed); CI faster. Pattern: deprecate-with-shim → migrate-consumers → delete-tests-then-functions → DROP-DB-with-drain. |
+| Marathon QA waived AGAIN at v1.2 sign-off (third deferral) | Phase 21 production booking smoke test confirmed end-to-end correctness against schema-cleaned `accounts` table; verifier 8/8 must-haves PASSED. Andrew opted for direct `/gsd:complete-milestone` over `/gsd:audit-milestone`. | ⚠ Revisit — third consecutive marathon deferral (v1.0 → v1.1 → v1.2 → v1.3). Pattern is fully formed: deploy-and-eyeball is the de-facto production gate. v1.3 should formalize this — either commit time-boxed marathon execution UP FRONT (with hard ship gate) OR formally adopt deploy-and-eyeball as the canonical production gate and retire the QA-09..QA-13 + 21-item carryover backlog. |
 
 ---
-*Last updated: 2026-04-30 after v1.2 milestone scoping (NSI Brand Lock-Down + UI Overhaul)*
+*Last updated: 2026-05-02 after v1.2 milestone (NSI Brand Lock-Down + UI Overhaul) shipped + archived*

@@ -1,5 +1,39 @@
 # Project Milestones: Calendar App (NSI Booking Tool)
 
+## v1.2 NSI Brand Lock-Down + UI Overhaul (Shipped: 2026-05-02)
+
+**Delivered:** Unified North Star Integrations visual language across the entire owner-facing app — `bg-gray-50` + blue-blot `BackgroundGlow` + glass "NorthStar" header pill + Inter weights 400-800 — while preserving each contractor's `brand_primary` on public booking surfaces and the 6 transactional emails. Per-account chrome theming stripped from the owner shell. Branding editor collapsed from 5 controls to 2 (logo + `brand_primary`). 4 deprecated `accounts` columns and 2 ENUM types permanently dropped from production Postgres via two-step deploy protocol. First net-deletion milestone (NET -792 lines).
+
+**Phases completed:** 14-21 — 8 phases, 22 plans total.
+
+**Key accomplishments:**
+
+- **Owner shell + auth + onboarding re-skinned to lead-scoring "Simple Light" reference** — `BackgroundGlow` + glass `Header` pill with "NorthStar" wordmark + gray-50 base + Inter weights 400-800 + Roboto Mono. Phase 12.6's `--primary` wrapper div decommissioned; shadcn primary inherits NSI blue-500 directly via `:root --primary`. 14 owner-page cards standardized to `rounded-lg border border-gray-200 bg-white p-6 shadow-sm`. Andrew live-approved on Vercel after Phase 15 deploy.
+- **Public booking + embed surfaces unified under `PublicShell`** — replaced legacy `BrandedPage` + `GradientBackdrop` + `NSIGradientBackdrop`. Customer `brand_primary` drives `BackgroundGlow` tint, glass pill (logo or initial circle), and slot-picker `--primary`. Embed widget sets its OWN `--primary` independently (CP-05 confirmed: CSS vars don't cross iframe boundaries). PoweredByNsi footer renders inside iframe. 233 lines legacy chrome deleted in Phase 17. Andrew approved 10/10 visual gates 2026-04-30.
+- **Branding editor collapsed from 5 controls to 2** — removed `sidebar_color`, `background_color`, `background_shade` pickers; kept logo uploader + "Booking page primary color". `MiniPreviewCard` rebuilt as faux public booking page (gray-50 + brand-primary blob + white card + slot picker). `saveBrandingAction` deleted entirely (zero callers post-rewrite). Andrew approved 8/8 visual gates 2026-05-01.
+- **Email layer simplified atomically** — `EmailBranding` interface collapsed to `{ name, logo_url, brand_primary }`. Color resolution simplified from 3-step `sidebarColor → brand_primary → DEFAULT` chain to `brand_primary → DEFAULT`. All 6 senders + 4 route/cron callers + 2 tests in single atomic deploy (`0130415`). Footer `nsi-mark.png` replaced with text-only "Powered by North Star Integrations". 5th `sendReminderBooker` caller (manual-trigger reminder path) discovered and fixed in same commit.
+- **653 lines of deprecated theming dead code deleted** — `chrome-tint.ts`, `shade-picker.tsx`, `branding-chrome-tint.test.ts`, `branding-gradient.test.ts`, `branding-schema.test.ts`. `Branding` interface canonical shape (3 fields: `logoUrl`, `primaryColor`, `textColor`). `brandingFromRow` stripped to 2-param signature. AccountSummary + AccountListingData column drops. Single atomic commit `8ec82d5`.
+- **4 deprecated DB columns + 2 ENUM types permanently dropped via two-step deploy protocol** — `sidebar_color`, `background_color`, `background_shade`, `chrome_tint_intensity` columns removed from `accounts`. `background_shade` and `chrome_tint_intensity` ENUM types removed from `pg_type`. Pre-flight gates (CP-01 grep + tsc + ENUM existence) → 30-min Vercel function drain (CP-03, satisfied by 25× minimum at 772 minutes overnight) → atomic `BEGIN/COMMIT` migration via locked `db query --linked -f` workaround → 3-query post-verification → real production booking smoke test → §8.4 backlog closure. First production application of the v1.2-locked workflow.
+- **Apply method `db query --linked -f` LOCKED.** `npx supabase db push` is broken in this repo (orphan timestamps in remote tracking table per PROJECT.md §200). All schema migrations from v1.1 forward use the workaround. Phase 21 was first DROP migration to use it.
+- **First net-deletion milestone in project history.** v1.0 + v1.1 were additive (29,450 LOC at v1.1 close); v1.2 ended at 21,871 LOC TS/TSX in runtime tree (NET -7,579 LOC across the milestone span, including the planning ramp-up; 91 commits, 910 inserted, 1,702 deleted excluding `.planning/`).
+
+**Stats:**
+
+- 74 files changed across the v1.2 phase span (excluding `.planning/`)
+- 910 lines inserted; 1,702 lines deleted (NET -792 lines runtime; first net-deletion milestone)
+- 21,871 LOC TypeScript/TSX in the runtime tree at sign-off (down from 29,450 at v1.1 close)
+- 8 phases, 22 plans, ~80 tasks, 91 commits
+- 3 days from kickoff (2026-04-30) to ship (2026-05-02)
+- 222 passing automated tests (down from 277 at v1.1 close — 3 deprecated-theming test files deleted in Phase 20)
+
+**Git range:** `9263770` (`feat(14-01): load Inter weights 400-800 + Roboto Mono`) → `d81a990` (`docs(21): complete schema-drop-migration phase`)
+
+**Sign-off:** Andrew confirmed `smoke passed` on Phase 21 production booking 2026-05-02 — booking submitted at `/nsi/30-minute-consultation`, confirmation email arrived with `#0A2540` (NSI `brand_primary`) header band rendered correctly against schema-cleaned `accounts` table.
+
+**What's next:** v1.3 — execute the third-deferral marathon QA (QA-09..QA-13) + ~21 per-phase manual checks accumulated through v1.2 + Resend migration (closes EMAIL-08, ~$10/mo for 5k emails) + Vercel Pro hourly cron flip + final NSI mark image swap + live cross-client email QA + OAuth signup + magic-link login + hard-delete cron + soft-delete grace + slug 301 redirect. See `FUTURE_DIRECTIONS.md` §8 for canonical v1.3 backlog.
+
+---
+
 ## v1.1 Multi-User + Capacity + Branded UI (Shipped: 2026-04-30)
 
 **Delivered:** Public multi-user signup with email verification + 3-step onboarding wizard + per-event-type booking capacity (race-safe slot_index mechanism replacing v1.0 partial unique index) + Cruip "Simple Light" visual overhaul across all 5 owner-facing and public surfaces with direct per-account color controls (sidebar / page / primary) wired to shadcn `--primary` CSS variable for full dashboard chrome theming.
