@@ -70,12 +70,12 @@ export function HomeCalendar({ bookings, onDayClick }: HomeCalendarProps) {
               {...buttonProps}
               className={[
                 "relative isolate z-10 flex aspect-square w-full min-w-[var(--cell-size,theme(spacing.9))] flex-col items-center justify-center gap-0.5 rounded-[var(--cell-radius,var(--radius-md))] border-0 text-sm leading-none font-normal",
-                "hover:bg-accent hover:text-accent-foreground",
+                "hover:bg-gray-100 hover:text-gray-900",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isSelected
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-gray-700 text-white"
                   : modifiers.today
-                    ? "bg-muted text-foreground"
+                    ? "bg-muted text-foreground font-semibold ring-1 ring-gray-300 rounded-[var(--cell-radius,var(--radius-md))]"
                     : "",
                 modifiers.outside ? "text-muted-foreground opacity-50" : "",
                 modifiers.disabled ? "opacity-50 pointer-events-none" : "",
@@ -96,7 +96,7 @@ export function HomeCalendar({ bookings, onDayClick }: HomeCalendarProps) {
                       style={{
                         backgroundColor: isSelected
                           ? "currentColor"
-                          : "hsl(var(--primary))",
+                          : "#9CA3AF",
                       }}
                     />
                   ))}
