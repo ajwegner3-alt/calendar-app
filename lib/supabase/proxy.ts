@@ -24,13 +24,21 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
+          );
+          // AUTH-20 v1.3: forward cache-control headers from @supabase/ssr@0.10.2's
+          // SetAllCookies callback. Without this, cache directives emitted during
+          // token refresh aren't propagated to the response, which can cause CDN
+          // cache poisoning on rotation. The `headers` argument is part of the
+          // current SetAllCookies type signature.
+          Object.entries(headers ?? {}).forEach(([key, value]) =>
+            supabaseResponse.headers.set(key, value),
           );
         },
       },
