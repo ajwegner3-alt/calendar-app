@@ -1,24 +1,24 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **v1.2 MILESTONE ARCHIVED.** All 8 phases (14-21) shipped; archives created at `.planning/milestones/v1.2-ROADMAP.md` + `.planning/milestones/v1.2-REQUIREMENTS.md`. ROADMAP.md collapsed to one-line summary; REQUIREMENTS.md deleted (fresh one needed for v1.3 via `/gsd:new-milestone`). Git tagged `v1.2`. Total project state: 23 phases shipped, 108 plans, 448 commits, 21,871 LOC TS/TSX runtime, 222 passing tests.
+**Last updated:** 2026-05-02 — **v1.3 MILESTONE STARTED.** Scope locked via `/gsd:new-milestone` questioning: 8 surgical bug-fix + polish items across Auth/Public Booking/Owner UI. All v1.2 carry-over backlog (Marathon QA, Resend, OAuth, NSI mark image, tech debt) DEFERRED to v1.4 by Andrew at scoping. Research SKIPPED (bug-fix scope on existing surfaces; no new domain). Awaiting REQUIREMENTS.md → ROADMAP.md generation.
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.2 close-out)
+See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Awaiting v1.3 scoping. Backlog defined in `PROJECT.md` "Current Milestone: v1.3" section + `FUTURE_DIRECTIONS.md` §8 (third-deferral marathon QA + Resend migration + Vercel Pro hourly cron flip + live cross-client email QA + OAuth/magic-link/hard-delete cron/soft-delete grace/slug 301/onboarding analytics/timing-oracle hardening + final NSI mark image swap).
+**Current focus:** v1.3 — Bug Fixes + Polish. 8 items: signup-link bug, sign-in layout flip, 30-day session TTL, mobile calendar centering, desktop slot-picker layout collision fix, account-index event-type cards page, owner Home calendar orange-highlight removal, copyable booking link on event-type edit page.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.2 — SHIPPED 2026-05-02 (archived).
-**Phase:** None active.
-**Plan:** None active.
-**Status:** Awaiting `/gsd:new-milestone` to formalize v1.3 scope (questioning → research → requirements → roadmap).
-**Last activity:** 2026-05-02 — `/gsd:complete-milestone` archived v1.2 (ROADMAP collapsed, REQUIREMENTS deleted, MILESTONES.md updated, PROJECT.md evolved, git tagged `v1.2`).
+**Milestone:** v1.3 — Bug Fixes + Polish (PLANNING).
+**Phase:** Not started (defining requirements).
+**Plan:** —
+**Status:** Defining requirements.
+**Last activity:** 2026-05-02 — `/gsd:new-milestone` v1.3 scoped (8 items locked; carryover deferred to v1.4; research skipped).
 
 **Cumulative project progress:**
 
@@ -26,7 +26,8 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.2 close-out)
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
 v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 135 commits, shipped 2026-04-30)
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
-v1.3 [ ] Marathon QA + Infrastructure (TBD — awaiting /gsd:new-milestone)
+v1.3 [◆] Bug Fixes + Polish           (Phases 22+, 8 requirements scoped, awaiting REQUIREMENTS.md + ROADMAP.md)
+v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NSI mark image + tech debt)
 ```
 
 ## Performance Metrics
@@ -72,9 +73,9 @@ v1.3 [ ] Marathon QA + Infrastructure (TBD — awaiting /gsd:new-milestone)
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — `/gsd:complete-milestone 1.2`.
-**Stopped at:** v1.2 archived. ROADMAP.md collapsed; REQUIREMENTS.md deleted; MILESTONES.md prepended; PROJECT.md evolved; STATE.md reset; git tagged `v1.2`.
-**Resume:** `/gsd:new-milestone` (start v1.3 scoping — questioning → research → requirements → roadmap). Backlog already defined in `PROJECT.md` "Current Milestone: v1.3" section + `FUTURE_DIRECTIONS.md` §8.
+**Last session:** 2026-05-02 — `/gsd:new-milestone` v1.3 scoping.
+**Stopped at:** PROJECT.md updated with v1.3 scope; STATE.md reset; about to write REQUIREMENTS.md + spawn roadmapper.
+**Resume:** `/gsd:plan-phase 22` (after roadmapper completes and Andrew approves the proposed phase structure).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)

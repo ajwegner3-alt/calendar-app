@@ -83,19 +83,29 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 - ✓ `FUTURE_DIRECTIONS.md` §8.4 v1.2 backlog closed via Phase 21 strikethrough — v1.2 (DB-11)
 - ✓ Andrew explicit ship sign-off — v1.2 (Phase 21 production booking smoke test PASSED 2026-05-02; verifier 8/8 must-haves on live DB + git history)
 
-## Current Milestone: v1.3 — Marathon QA + Infrastructure (PLANNING)
+## Current Milestone: v1.3 — Bug Fixes + Polish (PLANNING)
 
-**Started:** TBD (post-v1.2 ship 2026-05-02). **Status:** Backlog defined; awaiting `/gsd:new-milestone` to formalize scope.
+**Started:** 2026-05-02 (immediately after v1.2 ship). **Status:** Scope locked via `/gsd:new-milestone` questioning; awaiting REQUIREMENTS.md + ROADMAP.md generation.
 
-**Provisional goal:** Close the third-deferral marathon QA (QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2), execute the long-deferred infrastructure migrations (Resend / Vercel Pro hourly cron / live cross-client email QA), and land the long-tail auth additions (OAuth, magic-link, hard-delete cron, soft-delete grace, slug 301, onboarding analytics, timing-oracle hardening). Final NSI brand asset image swap to replace the placeholder `public/nsi-mark.png` (105 bytes solid-navy).
+**Goal:** Close 8 surgical bug-fix and polish items surfaced from Andrew's post-v1.2 live use. No new architecture, no new packages, no new domain capabilities. Pure UX hardening + one minor backend tweak (session TTL extension). All v1.2 carry-over backlog (Marathon QA, Resend/Vercel Pro, OAuth/magic-link, NSI mark image, tech debt) DEFERRED to v1.4.
 
-**Carry-over backlog (defined; canonical enumeration in `FUTURE_DIRECTIONS.md` §8):**
+**Target features (8 items, 3 categories):**
 
-- **Marathon QA (third deferral):** QA-09 signup E2E (production), QA-10 multi-tenant UI walkthrough (3 accounts), QA-11 capacity=3 race E2E, QA-12 3-account branded smoke, QA-13 EmbedCodeDialog at 320/768/1024 viewports. Pre-flight QA artifacts kept on prod since v1.1.
-- **Infrastructure:** Resend migration (replaces Gmail SMTP, ~$10/mo for 5k emails, closes EMAIL-08); Vercel Pro upgrade + flip cron from `0 13 * * *` daily to `0 * * * *` hourly; live cross-client email QA (Outlook desktop, Apple Mail iOS, Yahoo).
-- **Auth additions:** OAuth signup (Google / GitHub) — `/auth/confirm` already supports magiclink type; magic-link / passwordless login; hard-delete cron purge (v1.1 ships soft-delete only); soft-delete grace period (account restore on re-login within N days); slug 301 redirect for old slugs after change; onboarding analytics event log; constant-time delay on signup + forgot-password forms (P-A1 timing-oracle hardening).
-- **Brand asset:** Final NSI mark image swap (`public/nsi-mark.png` placeholder, 105 bytes solid-navy); add NSI mark image to "Powered by NSI" footer on web + emails (currently text-only per v1.2 EMAIL-19 + PUB-04).
-- **Carry-over tech debt:** `react-hooks/incompatible-library` warning on `event-type-form.tsx:99`; pre-existing `tsc --noEmit` test-mock alias errors (~22 errors in `tests/`); `generateMetadata` double-load on public booking page; Supabase service-role key rotation (legacy JWT → `sb_secret_*`); `rate_limit_events` test DB cleanup gap; `/app/unlinked` UX hole for soft-deleted accounts on re-login.
+**Auth (3):**
+- Signup link from `/login` navigates correctly to `/signup` (currently broken — link click does nothing)
+- Sign-in page layout flip — info pane on **left**, form on **right** (current is reversed from intended Cruip split-panel direction)
+- Session lifetime extended to 30-day Supabase sliding refresh (Andrew currently re-authenticates too frequently)
+
+**Public booking (3):**
+- Mobile: slot picker calendar centered on `/[account]/[event-slug]` (currently off-center on small viewports)
+- Desktop: fix layout collision where the timezone hint ("Times shown in America/Chicago") + "Pick a date to see available times:" instruction overlap the calendar widget
+- New `/[account]` index lists all public event types as cards (booker first-touch picks event type → routes to existing slot picker)
+
+**Owner UI (2):**
+- Owner Home tab monthly calendar — remove orange button highlights (likely surviving `--color-accent: #F97316` from globals.css); replace with grey or NSI blue
+- Copyable booking-link field at top of `/app/event-types/[id]` edit page (so owners can quickly grab a sendable per-event URL)
+
+**Out of scope for v1.3 (deferred to v1.4 explicitly):** All 5 v1.2 carry-over clusters punted at scoping (Marathon QA QA-09..QA-13 + ~21 per-phase manual checks; Resend migration + Vercel Pro hourly cron flip + live cross-client email QA; OAuth signup + magic-link + hard-delete cron + soft-delete grace + slug 301 + onboarding analytics + timing-oracle hardening; final NSI mark image swap; carryover tech debt 7 items). Canonical enumeration retained in `FUTURE_DIRECTIONS.md` §8.
 
 **Out of scope (carried from v1.2):** No new monetization layer (Stripe / billing); no Google Calendar sync; no SMS notifications; no mobile app; no round-robin / team scheduling; no workflow builder; no recurring bookings; no waitlists / group bookings; no two-way SMS; no per-event-type availability schedules; no multiple reminders (24h + 1h); no configurable reminder timing.
 
@@ -257,4 +267,4 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 | Marathon QA waived AGAIN at v1.2 sign-off (third deferral) | Phase 21 production booking smoke test confirmed end-to-end correctness against schema-cleaned `accounts` table; verifier 8/8 must-haves PASSED. Andrew opted for direct `/gsd:complete-milestone` over `/gsd:audit-milestone`. | ⚠ Revisit — third consecutive marathon deferral (v1.0 → v1.1 → v1.2 → v1.3). Pattern is fully formed: deploy-and-eyeball is the de-facto production gate. v1.3 should formalize this — either commit time-boxed marathon execution UP FRONT (with hard ship gate) OR formally adopt deploy-and-eyeball as the canonical production gate and retire the QA-09..QA-13 + 21-item carryover backlog. |
 
 ---
-*Last updated: 2026-05-02 after v1.2 milestone (NSI Brand Lock-Down + UI Overhaul) shipped + archived*
+*Last updated: 2026-05-02 after v1.3 milestone scope locked (Bug Fixes + Polish — 8 items across Auth/Public Booking/Owner UI; carryover backlog deferred to v1.4)*
