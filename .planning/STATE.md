@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **v1.3 MILESTONE STARTED.** Scope locked via `/gsd:new-milestone` questioning: 8 surgical bug-fix + polish items across Auth/Public Booking/Owner UI. All v1.2 carry-over backlog (Marathon QA, Resend, OAuth, NSI mark image, tech debt) DEFERRED to v1.4 by Andrew at scoping. Research SKIPPED (bug-fix scope on existing surfaces; no new domain). Awaiting REQUIREMENTS.md → ROADMAP.md generation.
+**Last updated:** 2026-05-02 — **v1.3 ROADMAP CREATED.** Scope locked via `/gsd:new-milestone` questioning: 8 surgical bug-fix + polish items mapped to 3 phases (22-24). All v1.2 carry-over backlog (Marathon QA, Resend, OAuth, NSI mark image, tech debt) DEFERRED to v1.4 by Andrew at scoping. Research SKIPPED (bug-fix scope on existing surfaces; no new domain). Awaiting `/gsd:plan-phase 22`.
 
 ## Project Reference
 
@@ -8,17 +8,20 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.3 — Bug Fixes + Polish. 8 items: signup-link bug, sign-in layout flip, 30-day session TTL, mobile calendar centering, desktop slot-picker layout collision fix, account-index event-type cards page, owner Home calendar orange-highlight removal, copyable booking link on event-type edit page.
+**Current focus:** v1.3 — Bug Fixes + Polish. 8 items across 3 phases:
+- Phase 22 (Auth Fixes): signup-link bug, sign-in layout flip, 30-day session TTL.
+- Phase 23 (Public Booking Fixes): mobile calendar centering, desktop slot-picker layout collision fix, account-index event-type cards page.
+- Phase 24 (Owner UI Polish): owner Home calendar orange-highlight removal, copyable booking link on event-type edit page.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.3 — Bug Fixes + Polish (PLANNING).
-**Phase:** Not started (defining requirements).
+**Phase:** Not started (awaiting /gsd:plan-phase 22).
 **Plan:** —
-**Status:** Defining requirements.
-**Last activity:** 2026-05-02 — `/gsd:new-milestone` v1.3 scoped (8 items locked; carryover deferred to v1.4; research skipped).
+**Status:** Roadmap created; 3 phases scoped; 8/8 requirements mapped.
+**Last activity:** 2026-05-02 — `gsd-roadmapper` produced `.planning/ROADMAP.md` v1.3 section + populated REQUIREMENTS.md traceability.
 
 **Cumulative project progress:**
 
@@ -26,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
 v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 135 commits, shipped 2026-04-30)
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
-v1.3 [◆] Bug Fixes + Polish           (Phases 22+, 8 requirements scoped, awaiting REQUIREMENTS.md + ROADMAP.md)
+v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., awaiting plan-phase)
 v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NSI mark image + tech debt)
 ```
 
@@ -49,11 +52,12 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 (See `PROJECT.md` "Context" → "Architectural patterns established" + "v1.1 architectural patterns added" + "v1.2 architectural patterns added" for the canonical record.)
 
 **v1.2 highlights worth keeping in mind for v1.3:**
-- Two-step DROP deploy protocol (CP-03) is locked. Any future column DROP follows the same: code-stop-reading deploy → 30-min drain → DROP SQL.
+- Two-step DROP deploy protocol (CP-03) is locked. Any future column DROP follows the same: code-stop-reading deploy → 30-min drain → DROP SQL. (v1.3 has no schema changes — N/A this milestone.)
 - `db query --linked -f` is the canonical migration apply method. `db push` remains broken in this repo per PROJECT.md §200.
-- `Header` component is multi-variant (`'owner' | 'auth' | 'public'`). Reusable for any future no-sidebar surface.
+- `Header` component is multi-variant (`'owner' | 'auth' | 'public'`). Reusable for any future no-sidebar surface — including the new `/[account]` event-type cards page in Phase 23 (PUB-15) which should use `variant="public"`.
 - Owner shell is NSI-locked. Per-account chrome theming WILL NOT return on owner side. Public surfaces keep customer `brand_primary`.
-- Visual gates run on live Vercel preview. Andrew's deploy-and-eyeball is the de-facto production gate (third-time pattern across v1.0/v1.1/v1.2).
+- Visual gates run on live Vercel preview. Andrew's deploy-and-eyeball is the de-facto production gate (third-time pattern across v1.0/v1.1/v1.2; formally adopted as the canonical production gate for v1.3 — no marathon QA phase scheduled).
+- JIT pitfall lock (MP-04): runtime hex via inline `style={{}}` only. NEVER `bg-[${color}]` dynamic Tailwind. Applies to PUB-15 event-type cards if they tint anything per-account.
 
 ### v1.2 ship-time invariants (still true post-archive)
 
@@ -62,26 +66,27 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 - `EmailBranding` interface canonical shape: `{ name, logo_url, brand_primary }` (3 fields).
 - Email-layer `DEFAULT_BRAND_PRIMARY = "#3B82F6"` (NSI blue-500); web-layer `DEFAULT_BRAND_PRIMARY = "#0A2540"` (legacy null-fallback). Different purposes; do NOT unify.
 - NSI account `brand_primary` = `#0A2540` (dark navy; below 0.85 luminance threshold; no PublicShell glow fallback).
-- Pre-flight QA artifacts on prod (KEPT for v1.3 marathon): Test User 3, capacity-test event_type, 3 distinct branding profiles (navy/magenta/emerald-null).
+- Pre-flight QA artifacts on prod (KEPT for v1.4 marathon): Test User 3, capacity-test event_type, 3 distinct branding profiles (navy/magenta/emerald-null).
 
 ### Active blockers / open items
 
-- **Marathon QA carryover (third deferral):** QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2. v1.3 should either commit time-boxed marathon execution upfront OR formally adopt deploy-and-eyeball as the canonical production gate.
-- **Infrastructure migrations awaiting v1.3:** Resend migration (closes EMAIL-08), Vercel Pro upgrade + hourly cron flip, live cross-client email QA.
-- **Tech debt baseline:** ~22 pre-existing tsc errors in `tests/` (TS7006/TS2305) — out of scope for v1.0/v1.1/v1.2. v1.3 should clean up.
-- **Cosmetic:** `app/embed/[account]/[event-slug]/_lib/types.ts AccountSummary` retains `background_color` + `background_shade` fields (cosmetic; columns dropped from DB; not load-bearing).
+- **Marathon QA carryover (third deferral, now formally adopted as deploy-and-eyeball):** QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2 are DEFERRED to v1.4. v1.3 has NO marathon QA phase by Andrew's explicit choice at scoping.
+- **Infrastructure migrations awaiting v1.4:** Resend migration (closes EMAIL-08), Vercel Pro upgrade + hourly cron flip, live cross-client email QA.
+- **Tech debt baseline:** ~22 pre-existing tsc errors in `tests/` (TS7006/TS2305) — DEBT-02; carried to v1.4.
+- **Cosmetic:** `app/embed/[account]/[event-slug]/_lib/types.ts AccountSummary` retains `background_color` + `background_shade` fields — DEBT-07; carried to v1.4.
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — `/gsd:new-milestone` v1.3 scoping.
-**Stopped at:** PROJECT.md updated with v1.3 scope; STATE.md reset; about to write REQUIREMENTS.md + spawn roadmapper.
-**Resume:** `/gsd:plan-phase 22` (after roadmapper completes and Andrew approves the proposed phase structure).
+**Last session:** 2026-05-02 — `gsd-roadmapper` produced v1.3 ROADMAP.md + populated REQUIREMENTS.md traceability.
+**Stopped at:** ROADMAP.md updated with Phases 22-24; REQUIREMENTS.md traceability filled (8/8 mapped); STATE.md updated.
+**Resume:** `/gsd:plan-phase 22` to begin Phase 22 (Auth Fixes).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)
-- `.planning/ROADMAP.md` — collapsed milestone summaries (v1.0/v1.1/v1.2 archived)
+- `.planning/ROADMAP.md` — collapsed milestone summaries (v1.0/v1.1/v1.2 archived) + v1.3 active section (Phases 22-24)
+- `.planning/REQUIREMENTS.md` — v1.3 requirements with traceability (8/8 mapped)
 - `.planning/MILESTONES.md` — full ship records (v1.0/v1.1/v1.2)
 - `.planning/STATE.md` — this file
 - `.planning/milestones/v1.2-ROADMAP.md` — full v1.2 phase detail archive
 - `.planning/milestones/v1.2-REQUIREMENTS.md` — v1.2 requirements archive (95/95 complete)
-- `FUTURE_DIRECTIONS.md` — v1.3 backlog enumeration
+- `FUTURE_DIRECTIONS.md` — v1.4 backlog enumeration (formerly v1.3 backlog; carryover punted)

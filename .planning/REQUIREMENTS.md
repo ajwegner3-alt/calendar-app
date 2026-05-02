@@ -95,24 +95,21 @@ Explicit boundaries — documented to prevent scope creep INTO v1.3 (the carryov
 
 ## Traceability
 
-To be populated during roadmap creation by `gsd-roadmapper`.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-18 | TBD | Pending |
-| AUTH-19 | TBD | Pending |
-| AUTH-20 | TBD | Pending |
-| PUB-13 | TBD | Pending |
-| PUB-14 | TBD | Pending |
-| PUB-15 | TBD | Pending |
-| OWNER-12 | TBD | Pending |
-| OWNER-13 | TBD | Pending |
+| AUTH-18 | Phase 22 | Pending |
+| AUTH-19 | Phase 22 | Pending |
+| AUTH-20 | Phase 22 | Pending |
+| PUB-13 | Phase 23 | Pending |
+| PUB-14 | Phase 23 | Pending |
+| PUB-15 | Phase 23 | Pending |
+| OWNER-12 | Phase 24 | Pending |
+| OWNER-13 | Phase 24 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 8 total
-- Mapped to phases: 0 (awaiting roadmap)
-- Unmapped: 8 ⚠️ (expected pre-roadmap)
+- Mapped to phases: 8 / Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-02*
-*Last updated: 2026-05-02 after v1.3 milestone scope lock*
+*Last updated: 2026-05-02 after v1.3 roadmap created — all 8 requirements mapped to Phases 22-24*
