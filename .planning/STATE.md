@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **22-02 COMPLETE.** AUTH-20 proxy.ts setAll cache-header patch + session persistence verification. 2 tasks (1 auto + 1 human-verify). 400-day cookie confirmed; Supabase dashboard timebox/inactivity both 0. Phase 22 fully complete.
+**Last updated:** 2026-05-02 — **23-01 COMPLETE.** PUB-15 generateMetadata title fix: `app/[account]/page.tsx` title now reads `Book with ${name}`. 1 task. Build clean, 222 tests passing.
 
 ## Project Reference
 
@@ -18,10 +18,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 ## Current Position
 
 **Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
-**Phase:** 22 of 3 (Auth Fixes — COMPLETE).
-**Plan:** 02 of 2 in Phase 22 (COMPLETE).
-**Status:** Phase 22 fully complete. Phase 23 (Public Booking Fixes) is next.
-**Last activity:** 2026-05-02 — Completed 22-02-PLAN.md (AUTH-20 session persistence).
+**Phase:** 23 of 3 (Public Booking Fixes — IN PROGRESS).
+**Plan:** 01 of 3 in Phase 23 (COMPLETE).
+**Status:** Phase 23 started. Plan 23-01 complete (PUB-15 title). Plans 23-02 (PUB-13) and 23-03 (PUB-14) remain.
+**Last activity:** 2026-05-02 — Completed 23-01-PLAN.md (PUB-15 browser title fix).
 
 **Cumulative project progress:**
 
@@ -84,9 +84,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — Executed 22-02-PLAN.md (AUTH-20 session persistence). 1 auto task + human-verify checkpoint resolved. Commits: 662229a (proxy.ts patch), cfa460b (docs).
-**Stopped at:** Completed 22-02-PLAN.md. Phase 22 fully closed.
-**Resume:** Execute Phase 23 — Public Booking Fixes (PUB-13 mobile calendar, PUB-14 slot-picker layout, PUB-15 account-index event-type cards).
+**Last session:** 2026-05-02 — Executed 23-01-PLAN.md (PUB-15 generateMetadata title). 1 auto task. Commit: 9c90a1c (fix), docs commit follows.
+**Stopped at:** Completed 23-01-PLAN.md. PUB-15 title gap closed.
+**Resume:** Execute Phase 23 plans 02 and 03 — PUB-13 (mobile calendar centering) and PUB-14 (desktop slot-picker layout collision).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)
