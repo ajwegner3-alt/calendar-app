@@ -28,6 +28,20 @@ export default async function EditEventTypePage({
 
   const eventType = data as EventTypeRow;
 
+  // Resolve owner's account slug so BookingLinkField can render the real public URL.
+  // Canonical RPC pattern from event-types/page.tsx (Phase 7 lock).
+  const { data: accountIds } = await supabase.rpc("current_owner_account_ids");
+  const ids = Array.isArray(accountIds) ? accountIds : [];
+  let accountSlug = "nsi"; // safe fallback; replaced below if DB resolves
+  if (ids.length > 0) {
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("slug")
+      .eq("id", ids[0])
+      .maybeSingle();
+    if (account?.slug) accountSlug = account.slug;
+  }
+
   return (
     <div className="max-w-3xl flex flex-col gap-6">
       <header>
@@ -39,6 +53,7 @@ export default async function EditEventTypePage({
       <EventTypeForm
         mode="edit"
         eventTypeId={eventType.id}
+        accountSlug={accountSlug}
         defaultValues={{
           name: eventType.name,
           slug: eventType.slug,

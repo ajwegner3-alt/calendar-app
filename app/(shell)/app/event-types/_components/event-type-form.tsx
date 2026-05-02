@@ -31,7 +31,7 @@ import {
 } from "../_lib/actions";
 import { slugify } from "@/lib/slugify";
 import { QuestionList } from "./question-list";
-import { UrlPreview } from "./url-preview";
+import { BookingLinkField } from "./booking-link-field";
 import { LocationField } from "../[id]/edit/_components/location-field";
 
 type FormMode = "create" | "edit";
@@ -54,10 +54,12 @@ const DEFAULTS: EventTypeInput = {
 export function EventTypeForm({
   mode,
   eventTypeId,
+  accountSlug,
   defaultValues,
 }: {
   mode: FormMode;
   eventTypeId?: string;
+  accountSlug: string;
   defaultValues?: EventTypeInput;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -226,6 +228,11 @@ export function EventTypeForm({
       className="flex flex-col gap-6"
       noValidate
     >
+      {/* OWNER-13 (Phase 24 Plan 24-02): copyable per-event booking-link field.
+          Rendered as the first form section so currentSlug = watch("slug")
+          live-updates the URL on every keystroke without lifting state. */}
+      <BookingLinkField accountSlug={accountSlug} eventSlug={currentSlug} />
+
       {serverError && (
         <Alert variant="destructive" role="alert">
           <AlertDescription>{serverError}</AlertDescription>
@@ -269,7 +276,6 @@ export function EventTypeForm({
             </AlertDescription>
           </Alert>
         )}
-        <UrlPreview slug={currentSlug} />
       </div>
 
       {/* Duration */}
