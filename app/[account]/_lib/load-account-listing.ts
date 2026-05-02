@@ -20,7 +20,7 @@ export async function loadAccountListing(
 
   const { data: account, error: accountError } = await supabase
     .from("accounts")
-    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary, background_color, background_shade")
+    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
     .eq("slug", accountSlug)
     // ACCT-03: soft-deleted accounts return 404 on all public surfaces (Plan 10-07)
     .is("deleted_at", null)

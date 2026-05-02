@@ -69,7 +69,6 @@ function makeAccountRow() {
     name: "Test Account",
     logo_url: null,
     brand_primary: "#0A2540",
-    background_color: null,
     owner_email: "owner@example.com",
     reminder_include_custom_answers: true,
     reminder_include_location: true,

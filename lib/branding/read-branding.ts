@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pickTextColor } from "@/lib/branding/contrast";
-import type { Branding, BackgroundShade, ChromeTintIntensity } from "@/lib/branding/types";
+import type { Branding } from "@/lib/branding/types";
 
 /**
  * Default primary brand color — NSI navy (matches Phase 2 lock:
@@ -17,43 +17,22 @@ export const DEFAULT_BRAND_PRIMARY = "#0A2540";
  * (e.g., booking page loader, /[account] index loader) to avoid a
  * redundant DB round-trip.
  *
- * Phase 18: SELECT in getBrandingForAccount no longer reads background_color,
- * background_shade, chrome_tint_intensity, sidebar_color from the accounts row.
- * The shim fields on the returned Branding default to safe values (null/null/"subtle"/"subtle")
- * so chrome-tint.ts and its test continue to type-check until Phase 20 deletes them.
+ * Phase 20: @deprecated optional shim fields removed from Branding interface.
+ * brandingFromRow now accepts only the two columns that are actually read
+ * at runtime (logo_url, brand_primary).
  *
- * @param row - Partial accounts row with logo_url, brand_primary, and optional Phase 12 columns.
+ * @param row - Partial accounts row with logo_url and brand_primary.
  * @returns Resolved Branding with fallback defaults.
  */
 export function brandingFromRow(row: {
   logo_url: string | null;
   brand_primary: string | null;
-  background_color?: string | null;
-  background_shade?: string | null;
-  chrome_tint_intensity?: string | null;
-  sidebar_color?: string | null;
 }): Branding {
   const primaryColor = row.brand_primary ?? DEFAULT_BRAND_PRIMARY;
-  const validShades: BackgroundShade[] = ["none", "subtle", "bold"];
-  const shade = row.background_shade as BackgroundShade;
-  const backgroundShade: BackgroundShade = validShades.includes(shade)
-    ? shade
-    : "subtle";
-
-  const validIntensities: ChromeTintIntensity[] = ["none", "subtle", "full"];
-  const rawIntensity = row.chrome_tint_intensity as ChromeTintIntensity;
-  const chromeTintIntensity: ChromeTintIntensity = validIntensities.includes(rawIntensity)
-    ? rawIntensity
-    : "subtle";
-
   return {
     logoUrl: row.logo_url ?? null,
     primaryColor,
     textColor: pickTextColor(primaryColor),
-    backgroundColor: row.background_color ?? null,
-    backgroundShade,
-    chromeTintIntensity,
-    sidebarColor: row.sidebar_color ?? null,
   };
 }
 
@@ -70,9 +49,7 @@ export function brandingFromRow(row: {
  * Caller decides whether to surface the error — this helper never throws.
  *
  * Phase 18 (BRAND-20): SELECT shrunk to logo_url, brand_primary only.
- * Deprecated columns (background_color, background_shade, chrome_tint_intensity,
- * sidebar_color) are no longer read at runtime. The shim fields in the returned
- * Branding object default to safe values via brandingFromRow's fallback logic.
+ * Phase 20: deprecated column references removed from brandingFromRow signature.
  *
  * @param accountId - UUID of the account.
  * @returns Resolved Branding object, always valid.
