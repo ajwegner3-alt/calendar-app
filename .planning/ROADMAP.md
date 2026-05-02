@@ -238,10 +238,10 @@ Plans:
 4. `lib/branding/` directory contains only `contrast.ts`, `read-branding.ts`, `types.ts` (and optionally `chrome-tint.ts` is fully deleted if `resolveChromeColors` is also removed). No dead files remain.
 5. Deploy succeeds; Vercel build confirms zero compilation errors in the cleaned codebase.
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 20-01: Test deletion + function deletion + component file deletions + stale-reference grep verification
+- [ ] 20-01-PLAN.md — Atomic deletion sweep: 5 file deletions + 8 surgical edits + Branding shim collapse + AccountSummary/AccountListingData column drops + 4-gate pre-commit verification
 
 ---
 
@@ -286,7 +286,7 @@ Plans:
 | 17 — Public Surfaces + Embed | v1.2 | 9 / 9 | ✅ Complete | 2026-04-30 |
 | 18 — Branding Editor Simplification | v1.2 | 3 / 3 | ✅ Complete | 2026-05-01 |
 | 19 — Email Layer Simplification | v1.2 | 1 / 1 | ✅ Complete | 2026-05-01 |
-| 20 — Dead Code + Test Cleanup | v1.2 | 0 / TBD | Not started | - |
+| 20 — Dead Code + Test Cleanup | v1.2 | 0 / 1 | Planned | - |
 | 21 — Schema DROP Migration | v1.2 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
