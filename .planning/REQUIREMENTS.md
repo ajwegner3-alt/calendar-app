@@ -11,9 +11,9 @@
 
 ### Auth
 
-- [ ] **AUTH-18**: Clicking the "Sign up" link from `/login` navigates to `/signup` (currently the click does nothing — anchor href / Next.js Link routing bug)
-- [ ] **AUTH-19**: Sign-in page (`/login`) layout has the informational pane on the LEFT and the email/password form on the RIGHT (current layout is reversed; flip the Cruip split-panel direction)
-- [ ] **AUTH-20**: Authenticated owner sessions persist for 30 days via Supabase sliding refresh window (currently re-prompts to log in too frequently; configure `expiry_seconds` and refresh-token rotation accordingly)
+- [x] **AUTH-18**: Clicking the "Sign up" link from `/login` navigates to `/signup` (currently the click does nothing — anchor href / Next.js Link routing bug)
+- [x] **AUTH-19**: Sign-in page (`/login`) layout has the informational pane on the LEFT and the email/password form on the RIGHT (current layout is reversed; flip the Cruip split-panel direction)
+- [x] **AUTH-20**: Authenticated owner sessions persist for 30 days via Supabase sliding refresh window (currently re-prompts to log in too frequently; configure `expiry_seconds` and refresh-token rotation accordingly)
 
 ### Public Booking
 
@@ -97,9 +97,9 @@ Explicit boundaries — documented to prevent scope creep INTO v1.3 (the carryov
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-18 | Phase 22 | Pending |
-| AUTH-19 | Phase 22 | Pending |
-| AUTH-20 | Phase 22 | Pending |
+| AUTH-18 | Phase 22 | Complete |
+| AUTH-19 | Phase 22 | Complete |
+| AUTH-20 | Phase 22 | Complete |
 | PUB-13 | Phase 23 | Pending |
 | PUB-14 | Phase 23 | Pending |
 | PUB-15 | Phase 23 | Pending |

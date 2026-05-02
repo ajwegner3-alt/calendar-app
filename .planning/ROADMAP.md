@@ -79,8 +79,8 @@ Surgical bug-fix and polish milestone surfaced from Andrew's post-v1.2 live use.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — AUTH-18 middleware allow-list fix + AUTH-19 login page column swap (Wave 1, autonomous)
-- [ ] 22-02-PLAN.md — AUTH-20 proxy.ts setAll headers patch + manual session-persistence verification (Wave 2, has human-verify checkpoint)
+- [x] 22-01-PLAN.md — AUTH-18 middleware allow-list fix + AUTH-19 login page column swap (Wave 1, autonomous) — completed 2026-05-02
+- [x] 22-02-PLAN.md — AUTH-20 proxy.ts setAll headers patch + manual session-persistence verification (Wave 2, has human-verify checkpoint) — completed 2026-05-02
 
 ---
 
@@ -130,7 +130,8 @@ Plans:
 | 1-9 | v1.0 | 52 / 52 | ✅ Shipped | 2026-04-27 |
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
-| 22-24 | v1.3 | 0 / 6 (est.) | 🔄 In progress | — |
+| 22 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
+| 23-24 | v1.3 | 0 / 4 (est.) | 🔄 In progress | — |
 
 ## Cumulative Stats
 
@@ -143,4 +144,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-02 — v1.3 milestone roadmap created. 3 phases ready for planning.*
+*Roadmap last updated: 2026-05-02 — Phase 22 (Auth Fixes) complete. AUTH-18, AUTH-19, AUTH-20 all verified. 2 phases remaining (23, 24).*
