@@ -241,7 +241,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 20-01-PLAN.md — Atomic deletion sweep: 5 file deletions + 8 surgical edits + Branding shim collapse + AccountSummary/AccountListingData column drops + 4-gate pre-commit verification
+- [x] 20-01: Atomic deletion sweep — 5 file deletions + 8 surgical edits + Branding shim collapse + AccountSummary/AccountListingData column drops + 4-gate pre-commit verification — completed 2026-05-01
 
 ---
 
@@ -286,7 +286,7 @@ Plans:
 | 17 — Public Surfaces + Embed | v1.2 | 9 / 9 | ✅ Complete | 2026-04-30 |
 | 18 — Branding Editor Simplification | v1.2 | 3 / 3 | ✅ Complete | 2026-05-01 |
 | 19 — Email Layer Simplification | v1.2 | 1 / 1 | ✅ Complete | 2026-05-01 |
-| 20 — Dead Code + Test Cleanup | v1.2 | 0 / 1 | Planned | - |
+| 20 — Dead Code + Test Cleanup | v1.2 | 1 / 1 | ✅ Complete | 2026-05-01 |
 | 21 — Schema DROP Migration | v1.2 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
@@ -299,4 +299,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-01 — Phase 19 complete (1/1 plans, 6/6 EMAIL-15..20 requirements verified, 5/5 ROADMAP success criteria verified, Andrew approved live confirmation email). Next: `/gsd:plan-phase 20` (Dead Code + Test Cleanup).*
+*Roadmap last updated: 2026-05-01 — Phase 20 complete (1/1 plans, 10/10 CLEAN-01..10 requirements verified, 5/5 ROADMAP success criteria verified, atomic commit `8ec82d5`). Next: `/gsd:plan-phase 21` (Schema DROP Migration — last v1.2 phase).*

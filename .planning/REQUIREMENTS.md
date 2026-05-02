@@ -152,16 +152,16 @@ Chromeless variant of public surfaces. Gains `--primary = brand_primary` overrid
 
 Concentrated deletion phase. All deletes happen AFTER consumers migrate (Phases 2-6). Tests deleted before functions.
 
-- [ ] **CLEAN-01**: Delete `tests/branding-chrome-tint.test.ts` (the only `chromeTintToCss` consumer)
-- [ ] **CLEAN-02**: Delete `chromeTintToCss` + `chromeTintTextColor` exports from `lib/branding/chrome-tint.ts` (function bodies + exports)
-- [ ] **CLEAN-03**: Delete `lib/branding/chrome-tint.ts` entirely if no remaining exports (`resolveChromeColors` is also removed since OWNER-01..04 strip its 2 call sites)
-- [ ] **CLEAN-04**: Delete `app/_components/gradient-backdrop.tsx` (`GradientBackdrop` component; superseded by `BackgroundGlow`)
-- [ ] **CLEAN-05**: Delete `components/nsi-gradient-backdrop.tsx` (`NSIGradientBackdrop` component; superseded by `BackgroundGlow`)
-- [ ] **CLEAN-06**: Delete `lib/branding/gradient.ts` (`shadeToGradient` helper; no remaining consumers after PUB-12 + EMBED-09)
-- [ ] **CLEAN-07**: Delete `app/(shell)/app/branding/_components/shade-picker.tsx` (component removed from page in BRAND-16)
-- [ ] **CLEAN-08**: Delete `app/(shell)/_components/floating-header-pill.tsx` (already deleted in Phase 12.5-02 per STATE.md — VERIFY it's gone, log NO-OP if confirmed)
-- [ ] **CLEAN-09**: Delete `app/(shell)/app/branding/_components/intensity-picker.tsx` (already deleted in Phase 12.6-02 per STATE.md — VERIFY it's gone, log NO-OP if confirmed)
-- [ ] **CLEAN-10**: Codebase-wide grep for stale references to deleted components (`GradientBackdrop`, `NSIGradientBackdrop`, `IntensityPicker`, `FloatingHeaderPill`, `ShadePicker`, `chromeTintToCss`, `chromeTintTextColor`, `resolveChromeColors`, `shadeToGradient`) — zero matches expected before next phase
+- [x] **CLEAN-01**: Delete `tests/branding-chrome-tint.test.ts` (the only `chromeTintToCss` consumer)
+- [x] **CLEAN-02**: Delete `chromeTintToCss` + `chromeTintTextColor` exports from `lib/branding/chrome-tint.ts` (function bodies + exports)
+- [x] **CLEAN-03**: Delete `lib/branding/chrome-tint.ts` entirely if no remaining exports (`resolveChromeColors` is also removed since OWNER-01..04 strip its 2 call sites)
+- [x] **CLEAN-04**: Delete `app/_components/gradient-backdrop.tsx` (`GradientBackdrop` component; superseded by `BackgroundGlow`)
+- [x] **CLEAN-05**: Delete `components/nsi-gradient-backdrop.tsx` (`NSIGradientBackdrop` component; superseded by `BackgroundGlow`)
+- [x] **CLEAN-06**: Delete `lib/branding/gradient.ts` (`shadeToGradient` helper; no remaining consumers after PUB-12 + EMBED-09)
+- [x] **CLEAN-07**: Delete `app/(shell)/app/branding/_components/shade-picker.tsx` (component removed from page in BRAND-16)
+- [x] **CLEAN-08**: Delete `app/(shell)/_components/floating-header-pill.tsx` (already deleted in Phase 12.5-02 per STATE.md — VERIFY it's gone, log NO-OP if confirmed)
+- [x] **CLEAN-09**: Delete `app/(shell)/app/branding/_components/intensity-picker.tsx` (already deleted in Phase 12.6-02 per STATE.md — VERIFY it's gone, log NO-OP if confirmed)
+- [x] **CLEAN-10**: Codebase-wide grep for stale references to deleted components (`GradientBackdrop`, `NSIGradientBackdrop`, `IntensityPicker`, `FloatingHeaderPill`, `ShadePicker`, `chromeTintToCss`, `chromeTintTextColor`, `resolveChromeColors`, `shadeToGradient`) — zero matches expected before next phase
 
 ### Schema DROP Migration
 
@@ -328,16 +328,16 @@ Populated by roadmapper 2026-04-30.
 | EMAIL-18 | Phase 19 | Complete |
 | EMAIL-19 | Phase 19 | Complete |
 | EMAIL-20 | Phase 19 | Complete |
-| CLEAN-01 | Phase 20 | Pending |
-| CLEAN-02 | Phase 20 | Pending |
-| CLEAN-03 | Phase 20 | Pending |
-| CLEAN-04 | Phase 20 | Pending |
-| CLEAN-05 | Phase 20 | Pending |
-| CLEAN-06 | Phase 20 | Pending |
-| CLEAN-07 | Phase 20 | Pending |
-| CLEAN-08 | Phase 20 | Pending |
-| CLEAN-09 | Phase 20 | Pending |
-| CLEAN-10 | Phase 20 | Pending |
+| CLEAN-01 | Phase 20 | Complete |
+| CLEAN-02 | Phase 20 | Complete |
+| CLEAN-03 | Phase 20 | Complete |
+| CLEAN-04 | Phase 20 | Complete |
+| CLEAN-05 | Phase 20 | Complete |
+| CLEAN-06 | Phase 20 | Complete |
+| CLEAN-07 | Phase 20 | Complete |
+| CLEAN-08 | Phase 20 | Complete |
+| CLEAN-09 | Phase 20 | Complete |
+| CLEAN-10 | Phase 20 | Complete |
 | DB-01 | Phase 21 | Pending |
 | DB-02 | Phase 21 | Pending |
 | DB-03 | Phase 21 | Pending |
