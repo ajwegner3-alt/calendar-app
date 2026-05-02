@@ -43,12 +43,21 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  // Phase 2: gate /app/* on authentication. Let /app/login through regardless.
+  // Phase 2: gate /app/* on authentication. Public auth routes are reachable
+  // without a session so unauthenticated users can sign up, recover passwords,
+  // and confirm email tokens.
+  // AUTH-18 (v1.3): /app/signup was broken because only /app/login was exempted.
+  const publicAuthPaths = [
+    "/app/login",
+    "/app/signup",
+    "/app/forgot-password",
+    "/app/verify-email",
+  ];
   const { pathname } = request.nextUrl;
   if (
     !user &&
     pathname.startsWith("/app") &&
-    pathname !== "/app/login"
+    !publicAuthPaths.includes(pathname)
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/app/login";
