@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **PHASE 23 COMPLETE.** PUB-13/14/15 all verified via Andrew live deploy approval. Plan 23-01 (metadata title), Plan 23-02 (slot-picker centering + tz hint hoist). Mid-verify follow-up: `mx-auto` swapped to `justify-self-center` for grid-native centering after live mobile check failed initial fix. 1 phase remaining (24 — Owner UI Polish).
+**Last updated:** 2026-05-02 — **Plan 24-01 COMPLETE (code-side).** OWNER-12 home calendar de-oranged via per-instance className overrides on `app/(shell)/app/_components/home-calendar.tsx`; selected/today/hover/has-bookings dot now grey-only (selected = gray-700, NOT NSI blue per CONTEXT lock). Shared `components/ui/calendar.tsx` and `globals.css --color-accent` token preserved (3 other consumers still use orange). Build + 222 tests pass. Live-deploy visual verification pending. Plan 24-02 (OWNER-13 copyable booking link) remains in Phase 24.
 
 ## Project Reference
 
@@ -18,10 +18,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 ## Current Position
 
 **Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
-**Phase:** 23 of 3 (Public Booking Fixes — COMPLETE).
-**Plan:** 02 of 2 in Phase 23 (COMPLETE).
-**Status:** Phase 23 fully complete. Phase 24 (Owner UI Polish) is next.
-**Last activity:** 2026-05-02 — Andrew approved Phase 23 mobile centering on live deploy after `justify-self-center` follow-up commit.
+**Phase:** 24 of 3 (Owner UI Polish — IN PROGRESS).
+**Plan:** 01 of 2 in Phase 24 (CODE-COMPLETE; live-deploy verification pending).
+**Status:** Plan 24-01 (OWNER-12 home calendar de-orange) committed at `2397f4c`. Plan 24-02 (OWNER-13 copyable booking link) is next.
+**Last activity:** 2026-05-02 — Executed Plan 24-01: 3 className/style edits in `home-calendar.tsx`, build + 222 tests pass, atomic commit `2397f4c`.
 
 **Cumulative project progress:**
 
@@ -82,6 +82,13 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 - Public booker timezone hint pattern: full-width `<p>` hoisted ABOVE the `grid gap-6 lg:grid-cols-2` wrapper via React fragment. "Pick a date to see available times." stays in the right-column conditional ladder (CONTEXT discretion → kept).
 - Browser title format on `/[account]` is locked: `Book with ${data.account.name}` (NOT `${name} — Book a time`). If any future surface adds a public listing page, follow this format.
 
+### Phase 24 owner-ui decisions (Plan 24-01)
+
+- `/app/home` day-button states are GREY-ONLY: hover = `bg-gray-100`, selected = `bg-gray-700 text-white` (NOT `bg-primary` / NSI blue), today = `bg-muted` + `font-semibold` + `ring-1 ring-gray-300`, has-bookings dot = `#9CA3AF` (Tailwind gray-400 inline hex). NSI brand color does NOT appear in any home-calendar day-button state.
+- `globals.css --color-accent` token (orange `#F97316`) is PRESERVED. Three consumers depend on it: public booker `.day-has-slots::after` dot, bookings-table hover, cancel-confirm-form hover. Any future "remove this orange" request must be evaluated per-consumer, NOT globally.
+- Per-instance className override is the canonical pattern when one consumer needs to diverge from a shared design token. Confirmed Phase 23 invariant: shared `components/ui/calendar.tsx` stays untouched; per-`<Calendar>` instance className overrides handle local variation.
+- Booking-dot color is the lone hard-coded hex inside home-calendar.tsx (inline style, MP-04 compliant — no JIT dynamic Tailwind). If a future request requires runtime per-account theming of this dot, switch to inline style with a derived hex string, never `bg-[${color}]`.
+
 ### Active blockers / open items
 
 - **Marathon QA carryover (third deferral, now formally adopted as deploy-and-eyeball):** QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2 are DEFERRED to v1.4. v1.3 has NO marathon QA phase by Andrew's explicit choice at scoping.
@@ -91,9 +98,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — Executed Phase 23 (Plans 23-01 + 23-02). Andrew live-verified mobile centering after `justify-self-center` follow-up (commit 23973c9). Phase 23 fully closed.
-**Stopped at:** Phase 23 complete. PUB-13/14/15 all verified.
-**Resume:** Phase 24 (Owner UI Polish: OWNER-12 home calendar orange-highlight removal, OWNER-13 copyable booking link on event-type edit page).
+**Last session:** 2026-05-02 — Executed Plan 24-01 (OWNER-12 home calendar de-orange). 3 className/style edits in `app/(shell)/app/_components/home-calendar.tsx`, atomic commit `2397f4c`. Build clean, 222 tests pass + 4 skipped.
+**Stopped at:** Plan 24-01 code-complete; live-deploy visual verification pending Andrew.
+**Resume:** Plan 24-02 (OWNER-13 copyable booking link on event-type edit page) — last plan in Phase 24, last phase in v1.3.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)
