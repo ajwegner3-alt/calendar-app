@@ -338,17 +338,17 @@ Populated by roadmapper 2026-04-30.
 | CLEAN-08 | Phase 20 | Complete |
 | CLEAN-09 | Phase 20 | Complete |
 | CLEAN-10 | Phase 20 | Complete |
-| DB-01 | Phase 21 | Pending |
-| DB-02 | Phase 21 | Pending |
-| DB-03 | Phase 21 | Pending |
-| DB-04 | Phase 21 | Pending |
-| DB-05 | Phase 21 | Pending |
-| DB-06 | Phase 21 | Pending |
-| DB-07 | Phase 21 | Pending |
-| DB-08 | Phase 21 | Pending |
-| DB-09 | Phase 21 | Pending |
-| DB-10 | Phase 21 | Pending |
-| DB-11 | Phase 21 | Pending |
+| DB-01 | Phase 21 | Complete |
+| DB-02 | Phase 21 | Complete |
+| DB-03 | Phase 21 | Complete |
+| DB-04 | Phase 21 | Complete |
+| DB-05 | Phase 21 | Complete |
+| DB-06 | Phase 21 | Complete |
+| DB-07 | Phase 21 | Complete |
+| DB-08 | Phase 21 | Complete |
+| DB-09 | Phase 21 | Complete |
+| DB-10 | Phase 21 | Complete |
+| DB-11 | Phase 21 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 95 total

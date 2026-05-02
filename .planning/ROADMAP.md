@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1-9 (52 plans) — shipped 2026-04-27. Full archive: [`milestones/v1.0-ROADMAP.md`](./milestones/v1.0-ROADMAP.md).
 - ✅ **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (34 plans, including decimal Phases 12.5 + 12.6) — shipped 2026-04-30. Full archive: [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md).
-- 🚧 **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (in progress, started 2026-04-30).
+- ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (all 8 phases complete; schema cleanup landed 2026-05-02). Awaiting milestone audit/archive.
 
 ## Phases
 
@@ -39,7 +39,7 @@ See [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md) for full phase 
 
 </details>
 
-### 🚧 v1.2 NSI Brand Lock-Down + UI Overhaul (Phases 14-21)
+### ✅ v1.2 NSI Brand Lock-Down + UI Overhaul (Phases 14-21)
 
 **Milestone Goal:** Establish a unified North Star Integrations visual language across the entire owner-facing app (`bg-gray-50` + blue-blot `BackgroundGlow` + glass header pill + Inter + "NorthStar" wordmark). Public booking surfaces and the 6 transactional emails remain the only places where each contractor's `brand_primary` applies. Strip all per-account theming from the owner shell. Clean up deprecated branding columns from the DB.
 
@@ -270,7 +270,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 21-01-PLAN.md — Pre-flight gates (CP-01 grep + tsc + ENUM existence) → 30-min drain checkpoint → atomic DROP migration via `db query --linked -f` → post-migration verification → production booking smoke test → smoke cleanup → FUTURE_DIRECTIONS.md §8.4 closure → SUMMARY
+- [x] 21-01: Atomic DROP migration (4 columns + 2 ENUMs) via `db query --linked -f` + post-migration verification + production booking smoke test + FUTURE_DIRECTIONS §8.4 closure — completed 2026-05-02
 
 ---
 
@@ -287,7 +287,7 @@ Plans:
 | 18 — Branding Editor Simplification | v1.2 | 3 / 3 | ✅ Complete | 2026-05-01 |
 | 19 — Email Layer Simplification | v1.2 | 1 / 1 | ✅ Complete | 2026-05-01 |
 | 20 — Dead Code + Test Cleanup | v1.2 | 1 / 1 | ✅ Complete | 2026-05-01 |
-| 21 — Schema DROP Migration | v1.2 | 0 / TBD | Not started | - |
+| 21 — Schema DROP Migration | v1.2 | 1 / 1 | ✅ Complete | 2026-05-02 |
 
 ## Cumulative Stats
 
@@ -299,4 +299,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-01 — Phase 20 complete (1/1 plans, 10/10 CLEAN-01..10 requirements verified, 5/5 ROADMAP success criteria verified, atomic commit `8ec82d5`). Next: `/gsd:plan-phase 21` (Schema DROP Migration — last v1.2 phase).*
+*Roadmap last updated: 2026-05-02 — Phase 21 complete (1/1 plans, 11/11 DB-01..11 requirements verified, 8/8 must-haves verified, commits `ca1f357` + `5595948`). v1.2 milestone schema cleanup CLOSED. All 8 v1.2 phases complete. Next: `/gsd:audit-milestone` or `/gsd:complete-milestone`.*

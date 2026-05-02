@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-01 — **Phase 20 complete (1/1 plans, all CLEAN-01..10 requirements satisfied).** Deleted 653 lines of deprecated theming dead code: chrome-tint.ts, shade-picker.tsx, branding-chrome-tint.test.ts, branding-gradient.test.ts, branding-schema.test.ts. Collapsed Phase 18 `@deprecated` optional shim fields on `Branding` interface (now 3 fields: logoUrl, primaryColor, textColor). Stripped `brandingFromRow` to 2-param signature. Dropped background_color + background_shade from AccountSummary, AccountListingData, and both DB SELECT strings. Phase 21 CP-01 grep-zero precondition satisfied. Single atomic commit `8ec82d5`. tsc clean (baseline tests/ errors out of scope). vitest 222 passed (266 - 44 = 222; gradient's 8 were already broken-on-import before Phase 20).
+**Last updated:** 2026-05-02 — **Phase 21 complete (1/1 plans, all DB-01..DB-11 requirements satisfied). v1.2 MILESTONE COMPLETE — all 8 phases shipped.** DROP migration `20260502034300_v12_drop_deprecated_branding_columns.sql` applied via `db query --linked -f`: 4 deprecated `accounts` columns (`sidebar_color`, `background_color`, `background_shade`, `chrome_tint_intensity`) + 2 ENUM types (`background_shade`, `chrome_tint_intensity`) permanently dropped from production Postgres. Three post-migration verification queries clean (0 rows for negative checks; positive `\d accounts` shows `brand_primary` + `logo_url`). Production booking smoke test PASSED — booking submitted at `https://calendar-app-xi-smoky.vercel.app/nsi/30-minute-consultation`, confirmation email arrived with `#0A2540` (NSI `brand_primary`) header band. Smoke booking deleted post-confirmation. FUTURE_DIRECTIONS.md §8.4 closed-out via strikethrough. Two atomic commits: `ca1f357` (migration + .SKIP rollback artifact) + `5595948` (FUTURE_DIRECTIONS + SUMMARY). 30-min CP-03 drain protocol satisfied by 25x (772 minutes overnight). Verifier 8/8 must-haves PASSED.
 
 ## Project Reference
 
@@ -14,11 +14,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 
 ## Current Position
 
-**Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 20 — Dead Code + Test Cleanup — **COMPLETE (1/1 plans, all CLEAN-01..10 requirements satisfied)**
-**Plan:** 20-01 of 1 — complete; no live eyeball gate (pure delete + gates sufficient per CONTEXT.md)
-**Status:** Phase 20 complete. tsc clean. vitest 222 passed. Pushed to main `8ec82d5`. Phase 21 (Schema DROP Migration) is next.
-**Last activity:** 2026-05-01 — Phase 20 executed via `/gsd:execute-phase 20`. Tasks 1-3 (NO-OP audit + deletion sweep + 4-gate pre-commit + atomic commit `8ec82d5` + push). 13 files in 1 atomic commit. tsc clean (baseline errors out of scope). vitest 222 passed. Both grep gates satisfied (comment-only hits acknowledged). Phase 21 CP-01 precondition verified.
+**Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul — **COMPLETE (8/8 phases shipped 2026-05-02)**
+**Phase:** Phase 21 — Schema DROP Migration — **COMPLETE (1/1 plans, all DB-01..DB-11 requirements satisfied)**
+**Plan:** 21-01 of 1 — complete; verifier PASSED 8/8 must-haves on live DB + git history
+**Status:** v1.2 milestone schema-cleanup CLOSED. All 8 v1.2 phases shipped. Pushed to main: `ca1f357` (migration + .SKIP) + `5595948` (FUTURE_DIRECTIONS §8.4 + SUMMARY). Awaiting milestone audit/archive. Next operator command: `/gsd:audit-milestone` or `/gsd:complete-milestone`.
+**Last activity:** 2026-05-02 — Phase 21 executed via `/gsd:execute-phase 21`. Tasks 1-2 (pre-flight gates + author migration + .SKIP rollback, commit `ca1f357` held local) → Task 3 (30-min drain checkpoint, satisfied overnight 12h 52m) → Task 4 (apply migration via `db query --linked -f` + 3 verification queries clean + push) → Task 5 (production booking smoke test PASSED — `#0A2540` header band confirmed) → Task 6 (smoke booking deleted, FUTURE_DIRECTIONS §8.4 strikethrough closure, SUMMARY authored, commit `5595948` pushed). Verifier confirmed 8/8 must-haves against live DB + git history.
 
 **v1.2 Phase Progress:**
 
@@ -30,10 +30,10 @@ Phase 17 [X] Public Surfaces + Embed  (17-01..09 complete; 24/24 must-haves veri
 Phase 18 [X] Branding Editor Simplification  (18-01..03 complete; 9/9 must-haves verified; live + approved 8/8 visual gates; no fix-ups)
 Phase 19 [X] Email Layer Simplification  (19-01 complete; 6/6 must-haves verified; live + approved; 1 deviation fixed inline; single atomic commit 0130415)
 Phase 20 [X] Dead Code + Test Cleanup  (20-01 complete; all CLEAN-01..10 satisfied; 653 lines deleted; single atomic commit 8ec82d5)
-Phase 21 [ ] Schema DROP Migration
+Phase 21 [X] Schema DROP Migration  (21-01 complete; all DB-01..11 satisfied; 4 columns + 2 ENUM types dropped; smoke passed; commits ca1f357 + 5595948)
 ```
 
-Progress: [█████████░] 87.5% (7 / 8 phases complete; Phase 21 next)
+Progress: [██████████] 100% (8 / 8 phases complete — v1.2 MILESTONE COMPLETE)
 
 ## Performance Metrics
 
@@ -171,9 +171,9 @@ None. Phase 20 complete. Atomic commit `8ec82d5` pushed to main. tsc clean. vite
 
 ## Session Continuity
 
-**Last session:** 2026-05-01 — Phase 20 executed via `/gsd:execute-phase 20`.
-**Stopped at:** Phase 20 complete (1/1 plans). Tasks 1-3 (NO-OP audit + deletion sweep + 4-gate pre-commit + atomic commit `8ec82d5`, push). tsc clean (baseline tests/ errors out of scope). vitest 222 passed. Both grep gates clean. SUMMARY written; STATE updated.
-**Resume:** `/gsd:plan-phase 21` (Schema DROP Migration — DROPs sidebar_color, background_color, background_shade, chrome_tint_intensity columns + background_shade ENUM from Postgres).
+**Last session:** 2026-05-02 — Phase 21 executed via `/gsd:execute-phase 21`.
+**Stopped at:** Phase 21 complete (1/1 plans, 8/8 must-haves verified). Two atomic commits on origin/main: `ca1f357` + `5595948`. v1.2 milestone schema-cleanup CLOSED. All 8 v1.2 phases shipped.
+**Resume:** `/gsd:audit-milestone` (recommended — full v1.2 audit pass before archiving) OR `/gsd:complete-milestone` (skip audit, archive directly).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)
