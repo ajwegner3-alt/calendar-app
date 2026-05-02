@@ -27,7 +27,9 @@ export default async function LoginPage({ searchParams }: Props) {
         <BackgroundGlow />
       </div>
       <div className="relative grid min-h-screen lg:grid-cols-2">
-        {/* Left: form column */}
+        {/* Left: NSI hero (lg+ only) — AUTH-19 v1.3: hero LEFT, form RIGHT */}
+        <AuthHero headline="Welcome back to your bookings" />
+        {/* Right: form column */}
         <main className="flex flex-col items-center justify-center bg-white/0 px-6 pt-20 pb-12 md:pt-24 md:pb-20 lg:bg-white lg:px-12">
           <div className="w-full max-w-sm">
             <header className="mb-8">
@@ -41,8 +43,6 @@ export default async function LoginPage({ searchParams }: Props) {
             <LoginForm resetSuccess={reset === "success"} />
           </div>
         </main>
-        {/* Right: NSI hero (lg+ only) */}
-        <AuthHero headline="Welcome back to your bookings" />
       </div>
     </div>
   );
