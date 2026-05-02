@@ -1,0 +1,36 @@
+-- Phase 21 ROLLBACK — DO NOT RUN UNLESS PHASE 21 SMOKE FAILS AND DIAGNOSIS REQUIRES.
+-- To activate: rename to .sql, run: npx supabase db query --linked -f <renamed>.sql
+-- Recreates 4 deprecated branding columns + 2 ENUM types in their original Phase 12 / 12.5 / 12.6 shape.
+
+BEGIN;
+  -- Phase 12: background_color (text, hex CHECK)
+  ALTER TABLE accounts
+    ADD COLUMN IF NOT EXISTS background_color text
+      CHECK (background_color IS NULL OR background_color ~* '^#[0-9a-f]{6}$');
+
+  -- Phase 12: background_shade ENUM + column (NOT NULL DEFAULT 'subtle')
+  DO $$ BEGIN
+    CREATE TYPE background_shade AS ENUM ('none', 'subtle', 'bold');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  ALTER TABLE accounts
+    ADD COLUMN IF NOT EXISTS background_shade background_shade NOT NULL DEFAULT 'subtle';
+
+  -- Phase 12.5: chrome_tint_intensity ENUM + column (NOT NULL DEFAULT 'subtle')
+  DO $$ BEGIN
+    CREATE TYPE chrome_tint_intensity AS ENUM ('none', 'subtle', 'full');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  ALTER TABLE accounts
+    ADD COLUMN IF NOT EXISTS chrome_tint_intensity chrome_tint_intensity NOT NULL DEFAULT 'subtle';
+
+  -- Phase 12.6: sidebar_color (text, hex CHECK)
+  ALTER TABLE accounts
+    ADD COLUMN IF NOT EXISTS sidebar_color text
+      CHECK (sidebar_color IS NULL OR sidebar_color ~* '^#[0-9a-f]{6}$');
+
+  COMMENT ON COLUMN accounts.background_color IS
+    'Phase 12: per-account hex tint for gradient backdrops. NULL = falls back to gray-50.';
+  COMMENT ON COLUMN accounts.background_shade IS
+    'Phase 12: gradient intensity. none=flat tint of background_color (4% over white); subtle=light circles; bold=full Cruip pattern.';
+  COMMENT ON COLUMN accounts.sidebar_color IS
+    'Per-account sidebar background color. Null = shadcn default (--sidebar token). Phase 12.6.';
+COMMIT;
