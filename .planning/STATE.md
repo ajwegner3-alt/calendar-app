@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **23-02 COMPLETE.** PUB-13 mx-auto Calendar centering + PUB-14 timezone hint hoisted above grid. 2 tasks. Build clean, 222 tests passing.
+**Last updated:** 2026-05-02 — **PHASE 23 COMPLETE.** PUB-13/14/15 all verified via Andrew live deploy approval. Plan 23-01 (metadata title), Plan 23-02 (slot-picker centering + tz hint hoist). Mid-verify follow-up: `mx-auto` swapped to `justify-self-center` for grid-native centering after live mobile check failed initial fix. 1 phase remaining (24 — Owner UI Polish).
 
 ## Project Reference
 
@@ -18,10 +18,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 ## Current Position
 
 **Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
-**Phase:** 23 of 3 (Public Booking Fixes — IN PROGRESS).
-**Plan:** 02 of 3 in Phase 23 (COMPLETE).
-**Status:** Phase 23 in progress. Plans 23-01 (PUB-15) and 23-02 (PUB-13, PUB-14) complete. Phase 23 fully closed pending visual deploy review.
-**Last activity:** 2026-05-02 — Completed 23-02-PLAN.md (PUB-13 calendar centering + PUB-14 timezone hint hoist).
+**Phase:** 23 of 3 (Public Booking Fixes — COMPLETE).
+**Plan:** 02 of 2 in Phase 23 (COMPLETE).
+**Status:** Phase 23 fully complete. Phase 24 (Owner UI Polish) is next.
+**Last activity:** 2026-05-02 — Andrew approved Phase 23 mobile centering on live deploy after `justify-self-center` follow-up commit.
 
 **Cumulative project progress:**
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
 v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 135 commits, shipped 2026-04-30)
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
-v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., Phase 22 DONE)
+v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., Phases 22+23 DONE)
 v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NSI mark image + tech debt)
 ```
 
@@ -75,6 +75,13 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 - Supabase hosted dashboard Auth → Sessions: timebox = 0, inactivity = 0 (Free plan; no override). Confirmed 2026-05-02.
 - ROADMAP success criterion #3 ("close browser, reopen next day, stay authenticated") tracked observationally over next week. No blocking item for Phase 23 start.
 
+### Phase 23 public-booking decisions (carry into Phase 24)
+
+- `<Calendar>` widget centering inside a CSS grid cell uses `justify-self-center`, NOT `mx-auto`. The shadcn Calendar root has `w-fit`, and `mx-auto` did not reliably center it within a grid track on mobile during live deploy testing — `justify-self: center` is the canonical grid-item alignment property and worked. If Phase 24 touches `/app/home` calendar centering, follow this pattern.
+- Shared `components/ui/calendar.tsx` remains untouched at end of Phase 23 (only the per-instance className on the slot-picker `<Calendar>` was modified). Phase 24 OWNER-12 (orange-highlight removal) should similarly avoid editing the shared component if at all possible — prefer instance-level overrides or `globals.css` token swaps.
+- Public booker timezone hint pattern: full-width `<p>` hoisted ABOVE the `grid gap-6 lg:grid-cols-2` wrapper via React fragment. "Pick a date to see available times." stays in the right-column conditional ladder (CONTEXT discretion → kept).
+- Browser title format on `/[account]` is locked: `Book with ${data.account.name}` (NOT `${name} — Book a time`). If any future surface adds a public listing page, follow this format.
+
 ### Active blockers / open items
 
 - **Marathon QA carryover (third deferral, now formally adopted as deploy-and-eyeball):** QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2 are DEFERRED to v1.4. v1.3 has NO marathon QA phase by Andrew's explicit choice at scoping.
@@ -84,9 +91,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — Executed 23-02-PLAN.md (PUB-13 Calendar centering + PUB-14 timezone hint hoist). 2 auto tasks. Commits: 7467dae (PUB-13 fix), e94a287 (PUB-14 fix), docs commit follows.
-**Stopped at:** Completed 23-02-PLAN.md. All Phase 23 code changes done. Visual deploy review pending.
-**Resume:** Push to Vercel, visual review of public booking page on mobile + desktop. Then Phase 24 (Owner UI Polish: home calendar highlight, copyable booking link).
+**Last session:** 2026-05-02 — Executed Phase 23 (Plans 23-01 + 23-02). Andrew live-verified mobile centering after `justify-self-center` follow-up (commit 23973c9). Phase 23 fully closed.
+**Stopped at:** Phase 23 complete. PUB-13/14/15 all verified.
+**Resume:** Phase 24 (Owner UI Polish: OWNER-12 home calendar orange-highlight removal, OWNER-13 copyable booking link on event-type edit page).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)

@@ -17,9 +17,9 @@
 
 ### Public Booking
 
-- [ ] **PUB-13**: On mobile viewports (< 768px) the slot picker calendar widget renders horizontally centered within the public booking card on `/[account]/[event-slug]` (currently off-center)
-- [ ] **PUB-14**: On desktop viewports the timezone hint ("Times shown in America/Chicago") and the "Pick a date to see available times:" instruction do not visually overlap the calendar widget on `/[account]/[event-slug]` (current layout collision; fix container width / spacing / z-order)
-- [ ] **PUB-15**: The public account index page (`/[account]`) lists every public event type for that account as a selectable card (logo / event name / duration / "Book this" CTA → routes to `/[account]/[event-slug]`); replaces the current bare landing-page state where bookers must already know the event slug
+- [x] **PUB-13**: On mobile viewports (< 768px) the slot picker calendar widget renders horizontally centered within the public booking card on `/[account]/[event-slug]` (currently off-center)
+- [x] **PUB-14**: On desktop viewports the timezone hint ("Times shown in America/Chicago") and the "Pick a date to see available times:" instruction do not visually overlap the calendar widget on `/[account]/[event-slug]` (current layout collision; fix container width / spacing / z-order)
+- [x] **PUB-15**: The public account index page (`/[account]`) lists every public event type for that account as a selectable card (logo / event name / duration / "Book this" CTA → routes to `/[account]/[event-slug]`); replaces the current bare landing-page state where bookers must already know the event slug
 
 ### Owner UI
 
@@ -100,9 +100,9 @@ Explicit boundaries — documented to prevent scope creep INTO v1.3 (the carryov
 | AUTH-18 | Phase 22 | Complete |
 | AUTH-19 | Phase 22 | Complete |
 | AUTH-20 | Phase 22 | Complete |
-| PUB-13 | Phase 23 | Pending |
-| PUB-14 | Phase 23 | Pending |
-| PUB-15 | Phase 23 | Pending |
+| PUB-13 | Phase 23 | Complete |
+| PUB-14 | Phase 23 | Complete |
+| PUB-15 | Phase 23 | Complete |
 | OWNER-12 | Phase 24 | Pending |
 | OWNER-13 | Phase 24 | Pending |
 
@@ -112,4 +112,4 @@ Explicit boundaries — documented to prevent scope creep INTO v1.3 (the carryov
 
 ---
 *Requirements defined: 2026-05-02*
-*Last updated: 2026-05-02 after v1.3 roadmap created — all 8 requirements mapped to Phases 22-24*
+*Last updated: 2026-05-02 — Phase 23 complete. PUB-13/14/15 verified (Andrew live deploy approval). 5/8 requirements complete; 3 remaining (Phase 24).*

@@ -102,8 +102,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 23-01-PLAN.md — PUB-15 metadata title fix on `/[account]/page.tsx` (Wave 1, autonomous, parallel with 23-02)
-- [ ] 23-02-PLAN.md — PUB-13 mobile calendar centering + PUB-14 timezone hint hoist on `slot-picker.tsx` (Wave 1, autonomous, parallel with 23-01)
+- [x] 23-01-PLAN.md — PUB-15 metadata title fix on `/[account]/page.tsx` (Wave 1, autonomous, parallel with 23-02) — completed 2026-05-02
+- [x] 23-02-PLAN.md — PUB-13 mobile calendar centering + PUB-14 timezone hint hoist on `slot-picker.tsx` (Wave 1, autonomous, parallel with 23-01) — completed 2026-05-02 (mid-verify follow-up: `mx-auto` swapped to `justify-self-center` for grid-native centering after live mobile check)
 
 ---
 
@@ -135,7 +135,8 @@ Plans:
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
-| 23-24 | v1.3 | 0 / 4 (est.) | 🔄 In progress | — |
+| 23 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
+| 24 | v1.3 | 0 / 2 (est.) | 🔄 In progress | — |
 
 ## Cumulative Stats
 
@@ -148,4 +149,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-02 — Phase 22 (Auth Fixes) complete. AUTH-18, AUTH-19, AUTH-20 all verified. 2 phases remaining (23, 24).*
+*Roadmap last updated: 2026-05-02 — Phase 23 (Public Booking Fixes) complete. PUB-13/14/15 verified via Andrew live deploy approval. 1 phase remaining (24).*
