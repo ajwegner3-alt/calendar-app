@@ -217,7 +217,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 19-01-PLAN.md — EmailBranding interface collapse + 5 senders + 4 callers + 2 tests (atomic single-wave deploy)
+- [x] 19-01: EmailBranding interface collapse + 5 senders + 4 callers + 2 tests (atomic single-wave deploy) — completed 2026-05-01
 
 ---
 
@@ -285,7 +285,7 @@ Plans:
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 4 / 4 | ✅ Complete | 2026-04-30 |
 | 17 — Public Surfaces + Embed | v1.2 | 9 / 9 | ✅ Complete | 2026-04-30 |
 | 18 — Branding Editor Simplification | v1.2 | 3 / 3 | ✅ Complete | 2026-05-01 |
-| 19 — Email Layer Simplification | v1.2 | 0 / 1 | Planned | - |
+| 19 — Email Layer Simplification | v1.2 | 1 / 1 | ✅ Complete | 2026-05-01 |
 | 20 — Dead Code + Test Cleanup | v1.2 | 0 / TBD | Not started | - |
 | 21 — Schema DROP Migration | v1.2 | 0 / TBD | Not started | - |
 
@@ -299,4 +299,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-01 — Phase 18 complete (3/3 plans, 9/9 BRAND-13..21 requirements verified, 5/5 success criteria verified, Andrew approved 8/8 visual gates). Next: `/gsd:plan-phase 19` (Email Layer Simplification).*
+*Roadmap last updated: 2026-05-01 — Phase 19 complete (1/1 plans, 6/6 EMAIL-15..20 requirements verified, 5/5 ROADMAP success criteria verified, Andrew approved live confirmation email). Next: `/gsd:plan-phase 20` (Dead Code + Test Cleanup).*

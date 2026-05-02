@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-01 — **Phase 18 complete (3/3 plans, 9/9 BRAND-13..21 requirements verified, 5/5 ROADMAP success criteria verified, Andrew approved 8/8 visual gates).** `/app/branding` editor collapsed to 2 controls (LogoUploader + brand_primary ColorPickerInput). 3 deprecated pickers (sidebar_color, background_color, ShadePicker) gone from JSX and from server-side write paths. `MiniPreviewCard` rebuilt as faux public booking page (gray-50 + brand_primary blob + glass pill + white rounded-xl card + 3-button slot row w/ middle selected + Powered-by-NSI). `saveBrandingAction` deleted entirely (BRAND-18 intent: zero server write paths for the 4 deprecated fields). Wave 1 + Wave 2 atomic commits shipped without push between waves (intentional tsc-broken state at editor layer between waves). Visual gate (Wave 3) passed clean — no fix-up commits required.
+**Last updated:** 2026-05-01 — **Phase 19 complete (1/1 plans, 6/6 EMAIL-15..20 requirements verified, Andrew approved live smoke test).** `EmailBranding` interface collapsed from 6 fields to 3 (`name`, `logo_url`, `brand_primary`). Email-layer `DEFAULT_BRAND_PRIMARY` flipped `#0A2540` → `#3B82F6` (NSI blue-500); web-layer default intentionally unchanged (divergence locked). `renderEmailFooter` replaced `nsi-mark.png` img with text-only "Powered by North Star Integrations" anchor to `northstarintegrations.com` (URL corrected from wrong `nsintegrations.com`). 5 sender files + 4 caller files + 2 test files updated; 5th caller deviation (`(shell)/app/bookings/[id]/_lib/actions.ts`) found and fixed inline (Rule 3). Single atomic commit `0130415` — no intermediate tsc-broken state. tsc clean, vitest 266 passed, Vercel build green, Andrew approved.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 18 — Branding Editor Simplification — **COMPLETE (3/3 plans, 9/9 must-haves verified)**
-**Plan:** 18-03 of 3 — complete; visual gate approved 8/8 by Andrew
-**Status:** Phase 18 complete. tsc clean. Build clean. Pushed to main. Verifier passed clean. Phase 19 (Email Layer Simplification) is next.
-**Last activity:** 2026-05-01 — Phase 18 executed via `/gsd:execute-phase 18`. Wave 1 (18-01 type/reader/loader shrink, atomic 3-file commit) → Wave 2 (18-02 editor + preview rebuild + saveBrandingAction deletion, atomic 3-file commit, push) → Wave 3 (18-03 visual gate, Andrew 8/8 approved on https://calendar-app-xi-smoky.vercel.app/, no fix-up commits). Verifier confirmed 9/9 BRAND-13..21 requirements + 5/5 ROADMAP success criteria pass.
+**Phase:** Phase 19 — Email Layer Simplification — **COMPLETE (1/1 plans, 6/6 must-haves verified)**
+**Plan:** 19-01 of 1 — complete; live smoke test approved by Andrew 2026-05-01
+**Status:** Phase 19 complete. tsc clean. Build clean. Pushed to main. Verifier passed clean. Phase 20 (Dead Code + Test Cleanup) is next.
+**Last activity:** 2026-05-01 — Phase 19 executed via `/gsd:execute-phase 19`. Tasks 1-14 (code + pre-flight + atomic commit `0130415`) + Task 15 (live smoke test, Andrew approved). 13 files in 1 atomic commit (12 planned + 1 deviation: 5th sendReminderBooker caller). tsc clean, 8 grep gates passed, vitest 266 passed, Vercel green, Andrew confirmed #3B82F6 header band + text-only footer + northstarintegrations.com link + plain-text MIME part.
 
 **v1.2 Phase Progress:**
 
@@ -28,12 +28,12 @@ Phase 15 [X] BackgroundGlow + Header Pill + Owner Shell Re-Skin  (15-01 + 15-02 
 Phase 16 [X] Auth + Onboarding Re-Skin  (16-01..04 complete; 24/24 must-haves verified; live + approved)
 Phase 17 [X] Public Surfaces + Embed  (17-01..09 complete; 24/24 must-haves verified; live + approved; 233 lines legacy chrome deleted)
 Phase 18 [X] Branding Editor Simplification  (18-01..03 complete; 9/9 must-haves verified; live + approved 8/8 visual gates; no fix-ups)
-Phase 19 [ ] Email Layer Simplification
+Phase 19 [X] Email Layer Simplification  (19-01 complete; 6/6 must-haves verified; live + approved; 1 deviation fixed inline; single atomic commit 0130415)
 Phase 20 [ ] Dead Code + Test Cleanup
 Phase 21 [ ] Schema DROP Migration
 ```
 
-Progress: [██████░░░░] 62% (5 / 8 phases complete; Phase 19 next)
+Progress: [████████░░] 75% (6 / 8 phases complete; Phase 20 next)
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [██████░░░░] 62% (5 / 8 phases complete; Phase 19 
 - Phase 16 Plan 16-04 — ~2 min execution + Vercel deploy + visual+E2E gate, 4 files modified (layout + 3 step pages). Layout-level h1 dropped (CONTEXT.md discretion default — pill + Setup label + per-step h2 carry context).
 - Phase 17 — ~50 min total wall clock for 9 plans across 5 waves. Wave 1 (17-01 atoms ~8 min) → Wave 2 (17-02 PublicShell ~5 min) → Wave 3 (5 plans parallel: 17-03 ~8 min, 17-04 ~10 min, 17-05 ~2 min, 17-06 ~5 min, 17-07 ~8 min — completed in ~10 min wall clock parallel) → Wave 4 (17-08 deletions ~3 min) → Wave 5 (17-09 single Vercel deploy + 10-gate eyeball, no fix-ups). 18 requirements (PUB-01..12, HDR-05..06, EMBED-08..11). Net deletions: 4 files, 233 lines of legacy chrome.
 - Phase 18 — ~25 min total wall clock for 2 plans across 2 waves. Wave 1 (18-01 type/reader/loader shrink ~10 min) + Wave 2 (18-02 editor+preview rebuild ~15 min). 9 requirements (BRAND-13..21). Net deletions: 77 lines (163→122 editor, 202→127 actions.ts; mini-preview-card +39 for faux-public-page rebuild). 2 atomic commits + 2 docs commits.
+- Phase 19 — ~35 min total wall clock for 1 plan, single wave. Tasks 1-14 (code + pre-flight + commit) + Task 15 (live smoke test). 6 requirements (EMAIL-15..20). 13 files (12 planned + 1 deviation: 5th sendReminderBooker caller). Single atomic commit `0130415`. tsc clean, 8 grep gates passed, vitest 266 passed. No fix-up commits.
 
 **v1.1 reference velocity (for calibration):**
 - 34 plans across 6 phases (Phases 10-13 incl. 12.5 + 12.6)
@@ -114,6 +115,13 @@ Progress: [██████░░░░] 62% (5 / 8 phases complete; Phase 19 
 - **NSI_BLUE = #3B82F6 in editor** — Reset button target. DEFAULT_BRAND_PRIMARY = #0A2540 in read-branding.ts preserved for legacy data integrity. Both values intentionally separate.
 - **shade-picker.tsx stays on disk** — Phase 20 CLEAN-07 deletes it. Wave 2 only removed import + JSX usage.
 
+### Phase 19 Decisions (locked — inform Phase 20+)
+
+- **Email-layer DEFAULT_BRAND_PRIMARY = #3B82F6 (NSI blue-500); web-layer = #0A2540 (intentional divergence).** `lib/email/branding-blocks.ts` email default is NSI blue-500 — the visual identity color the NSI confirmation email header band should show. `lib/branding/read-branding.ts` web-layer default stays `#0A2540` — the legacy null-data fallback for accounts with no `brand_primary` on file. Different purposes; do NOT unify.
+- **Atomic single-commit pattern (CP-02) worked without tsc-broken intermediate state.** Phase 19 had no external consumers of `EmailBranding` outside the email layer itself (contrast with Phase 18's `chrome-tint.ts` requiring a types-first wave). All 13 files landed in one commit — clean from the first push.
+- **5th sendReminderBooker caller deviation found and fixed in same commit.** `app/(shell)/app/bookings/[id]/_lib/actions.ts` is a manual-trigger reminder path that research missed. Pre-flight Gate 1 (tsc) surfaced it. Fixed inline per Rule 3; no separate fix-up commit; CP-02 atomic lock preserved. Future email-layer changes must also audit this path.
+- **Footer URL corrected: nsintegrations.com → northstarintegrations.com.** The legacy `renderEmailFooter` had the wrong short domain. CONTEXT.md specified the long-form domain. Corrected as part of Task 1 (branding-blocks.ts Edit 4). Andrew confirmed the link opens the correct domain in the live smoke test.
+
 ### Phase 17 Decisions (locked — inform Phase 18+)
 
 - **Header is multi-variant after all** (correction to Phase 15 lock): Phase 17 added `variant="public"` rather than introducing a separate `PublicHeader` component. The `'owner' | 'auth' | 'public'` union is now canonical. Public branch carries `branding?: Branding` + `accountName?: string` props for the customer logo/initial pill; reads no pathname.
@@ -148,13 +156,13 @@ Progress: [██████░░░░] 62% (5 / 8 phases complete; Phase 19 
 
 ### Active Blockers
 
-None. Phase 18 complete. Wave 1 (64164aa) + Wave 2 (ccf61e0) pushed to main. Build green. Ready for Phase 19.
+None. Phase 19 complete. Atomic commit `0130415` pushed to main. Build green. Ready for Phase 20.
 
 ## Session Continuity
 
-**Last session:** 2026-05-01 — Phase 18 executed via `/gsd:execute-phase 18`.
-**Stopped at:** Phase 18 complete (3/3 plans). Wave 1 (64164aa types/reader/loader) → Wave 2 (ccf61e0 editor/preview/actions, push) → Wave 3 (18-03 visual gate, Andrew 8/8 approved on https://calendar-app-xi-smoky.vercel.app/, no fix-ups). Verifier passed 9/9 + 5/5. ROADMAP/STATE/REQUIREMENTS updated; phase completion bundled in single commit.
-**Resume:** `/gsd:plan-phase 19` (Email Layer Simplification — depends on Phase 14 CSS tokens, can run in parallel with Phases 15-18 conceptually but placed sequentially for deploy clarity. EmailBranding interface collapses to `{name, logo_url, brand_primary}`; sender priority chain simplifies; nsi-mark.png replaced with text "Powered by North Star Integrations").
+**Last session:** 2026-05-01 — Phase 19 executed via `/gsd:execute-phase 19`.
+**Stopped at:** Phase 19 complete (1/1 plans). Tasks 1-14 (code + pre-flight + atomic commit `0130415`, push) → Task 15 (live smoke test, Andrew approved 2026-05-01 on https://calendar-app-xi-smoky.vercel.app/). tsc clean, 8 grep gates passed, vitest 266 passed. 1 deviation (5th sendReminderBooker caller) fixed inline. SUMMARY written; STATE updated.
+**Resume:** `/gsd:plan-phase 20` (Dead Code + Test Cleanup — deletes chrome-tint.ts, shade-picker.tsx, branding-gradient test, other Phase 18/19 now-dead paths).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)

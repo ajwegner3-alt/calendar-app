@@ -141,12 +141,12 @@ Chromeless variant of public surfaces. Gains `--primary = brand_primary` overrid
 
 `EmailBranding` interface collapses. Color priority chain `sidebarColor → brand_primary → DEFAULT` simplifies to `brand_primary → DEFAULT`. All 6 senders + 4 route/cron callers updated atomically.
 
-- [ ] **EMAIL-15**: `EmailBranding` interface in `lib/email/branding-blocks.ts` (or wherever defined) collapses to `{ name: string; logo_url: string | null; brand_primary: string | null }` — remove `backgroundColor`, `sidebarColor`, `chromeTintIntensity` fields
-- [ ] **EMAIL-16**: `renderEmailBrandedHeader` color resolution simplified to `branding.brand_primary ?? DEFAULT_BRAND_PRIMARY` (single fallback). Header band visual unchanged (still solid-color `<table>` band, still no VML, still no CSS gradients)
-- [ ] **EMAIL-17**: All 6 transactional senders updated to construct + pass slim `EmailBranding`: `send-booking-confirmation.ts`, `send-booking-emails.ts`, `send-cancel-emails.ts`, `send-reschedule-emails.ts`, `send-reminder-booker.ts`, `send-owner-notification.ts`
-- [ ] **EMAIL-18**: All 4 route/cron callers updated to SELECT only the columns the new `EmailBranding` needs: `app/api/bookings/route.ts`, `app/api/cron/send-reminders/route.ts`, `lib/bookings/cancel.ts`, `lib/bookings/reschedule.ts`
-- [ ] **EMAIL-19**: `renderEmailFooter` removes the `nsi-mark.png` `<img>` tag and the `NSI_MARK_URL` conditional; renders text-only "Powered by North Star Integrations" footer
-- [ ] **EMAIL-20**: Plain-text alternatives on booker-facing senders preserved (Phase 12-06 shipped these on confirmation + cancel-booker + reschedule-booker)
+- [x] **EMAIL-15**: `EmailBranding` interface in `lib/email/branding-blocks.ts` (or wherever defined) collapses to `{ name: string; logo_url: string | null; brand_primary: string | null }` — remove `backgroundColor`, `sidebarColor`, `chromeTintIntensity` fields
+- [x] **EMAIL-16**: `renderEmailBrandedHeader` color resolution simplified to `branding.brand_primary ?? DEFAULT_BRAND_PRIMARY` (single fallback). Header band visual unchanged (still solid-color `<table>` band, still no VML, still no CSS gradients)
+- [x] **EMAIL-17**: All 6 transactional senders updated to construct + pass slim `EmailBranding`: `send-booking-confirmation.ts`, `send-booking-emails.ts`, `send-cancel-emails.ts`, `send-reschedule-emails.ts`, `send-reminder-booker.ts`, `send-owner-notification.ts`
+- [x] **EMAIL-18**: All 4 route/cron callers updated to SELECT only the columns the new `EmailBranding` needs: `app/api/bookings/route.ts`, `app/api/cron/send-reminders/route.ts`, `lib/bookings/cancel.ts`, `lib/bookings/reschedule.ts`
+- [x] **EMAIL-19**: `renderEmailFooter` removes the `nsi-mark.png` `<img>` tag and the `NSI_MARK_URL` conditional; renders text-only "Powered by North Star Integrations" footer
+- [x] **EMAIL-20**: Plain-text alternatives on booker-facing senders preserved (Phase 12-06 shipped these on confirmation + cancel-booker + reschedule-booker)
 
 ### Dead Code Cleanup
 
@@ -322,12 +322,12 @@ Populated by roadmapper 2026-04-30.
 | BRAND-19 | Phase 18 | Complete |
 | BRAND-20 | Phase 18 | Complete |
 | BRAND-21 | Phase 18 | Complete |
-| EMAIL-15 | Phase 19 | Pending |
-| EMAIL-16 | Phase 19 | Pending |
-| EMAIL-17 | Phase 19 | Pending |
-| EMAIL-18 | Phase 19 | Pending |
-| EMAIL-19 | Phase 19 | Pending |
-| EMAIL-20 | Phase 19 | Pending |
+| EMAIL-15 | Phase 19 | Complete |
+| EMAIL-16 | Phase 19 | Complete |
+| EMAIL-17 | Phase 19 | Complete |
+| EMAIL-18 | Phase 19 | Complete |
+| EMAIL-19 | Phase 19 | Complete |
+| EMAIL-20 | Phase 19 | Complete |
 | CLEAN-01 | Phase 20 | Pending |
 | CLEAN-02 | Phase 20 | Pending |
 | CLEAN-03 | Phase 20 | Pending |
