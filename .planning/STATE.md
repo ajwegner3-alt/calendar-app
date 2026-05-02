@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **22-01 COMPLETE.** AUTH-18 middleware allow-list + AUTH-19 login column swap. 2 tasks, 2 commits. All checks pass (build, typecheck, 222 tests). Browser smoke deferred to Andrew (deploy-and-eyeball).
+**Last updated:** 2026-05-02 — **22-02 COMPLETE.** AUTH-20 proxy.ts setAll cache-header patch + session persistence verification. 2 tasks (1 auto + 1 human-verify). 400-day cookie confirmed; Supabase dashboard timebox/inactivity both 0. Phase 22 fully complete.
 
 ## Project Reference
 
@@ -18,10 +18,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 ## Current Position
 
 **Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
-**Phase:** 22 of 3 (Auth Fixes — in progress).
-**Plan:** 01 of 3 in Phase 22 (COMPLETE).
-**Status:** 22-01 complete. 22-02 (session TTL fix) is next.
-**Last activity:** 2026-05-02 — Completed 22-01-PLAN.md (AUTH-18 + AUTH-19).
+**Phase:** 22 of 3 (Auth Fixes — COMPLETE).
+**Plan:** 02 of 2 in Phase 22 (COMPLETE).
+**Status:** Phase 22 fully complete. Phase 23 (Public Booking Fixes) is next.
+**Last activity:** 2026-05-02 — Completed 22-02-PLAN.md (AUTH-20 session persistence).
 
 **Cumulative project progress:**
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
 v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 135 commits, shipped 2026-04-30)
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
-v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., 22-01 DONE)
+v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., Phase 22 DONE)
 v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NSI mark image + tech debt)
 ```
 
@@ -68,6 +68,13 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 - NSI account `brand_primary` = `#0A2540` (dark navy; below 0.85 luminance threshold; no PublicShell glow fallback).
 - Pre-flight QA artifacts on prod (KEPT for v1.4 marathon): Test User 3, capacity-test event_type, 3 distinct branding profiles (navy/magenta/emerald-null).
 
+### Phase 22 auth decisions (carry into v1.3 phases 23-24)
+
+- `@supabase/ssr@0.10.2` default `maxAge` = 400 days. Do NOT add `cookieOptions.maxAge` override — it would shorten sessions.
+- `proxy.ts` `setAll` signature is now `(cookiesToSet, headers)` with `Object.entries(headers ?? {})` forwarding cache-control headers. Maintain this pattern if proxy.ts is touched in future phases.
+- Supabase hosted dashboard Auth → Sessions: timebox = 0, inactivity = 0 (Free plan; no override). Confirmed 2026-05-02.
+- ROADMAP success criterion #3 ("close browser, reopen next day, stay authenticated") tracked observationally over next week. No blocking item for Phase 23 start.
+
 ### Active blockers / open items
 
 - **Marathon QA carryover (third deferral, now formally adopted as deploy-and-eyeball):** QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2 are DEFERRED to v1.4. v1.3 has NO marathon QA phase by Andrew's explicit choice at scoping.
@@ -77,9 +84,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 18:36–18:40 UTC — Executed 22-01-PLAN.md (AUTH-18 + AUTH-19). 2 tasks, 2 commits (d564546, c972c8e).
-**Stopped at:** Completed 22-01-PLAN.md. Browser smoke deferred to Andrew on live deploy.
-**Resume:** Execute 22-02-PLAN.md (session TTL fix — 30-day Supabase session). Push to Vercel for Andrew's visual gate after 22-02 complete.
+**Last session:** 2026-05-02 — Executed 22-02-PLAN.md (AUTH-20 session persistence). 1 auto task + human-verify checkpoint resolved. Commits: 662229a (proxy.ts patch), cfa460b (docs).
+**Stopped at:** Completed 22-02-PLAN.md. Phase 22 fully closed.
+**Resume:** Execute Phase 23 — Public Booking Fixes (PUB-13 mobile calendar, PUB-14 slot-picker layout, PUB-15 account-index event-type cards).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)
