@@ -22,7 +22,7 @@ export async function generateMetadata({
     return { title: "Page not found" };
   }
   return {
-    title: `${data.account.name} — Book a time`,
+    title: `Book with ${data.account.name}`,
     description: `Pick a time to meet with ${data.account.name}.`,
   };
 }
