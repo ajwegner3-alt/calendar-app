@@ -99,7 +99,11 @@ Plans:
 3. Visiting `/[account]` (e.g., `/nsi`) renders a landing page listing every public event type for that account as a selectable card, each showing the account logo, event name, duration, and a CTA that routes to `/[account]/[event-slug]` for booking.
 4. From the `/[account]` index, clicking any event-type card lands the booker on the existing slot-picker page in the booker's local timezone with no regression to the v1.2 booking flow.
 
-**Estimated plans:** 2 (Plan 23-01: PUB-13 + PUB-14 slot-picker layout fixes on `/[account]/[event-slug]` — paired because both are CSS/spacing tweaks on the same surface; Plan 23-02: PUB-15 new `/[account]` event-type cards index page).
+**Plans:** 2 plans
+
+Plans:
+- [ ] 23-01-PLAN.md — PUB-15 metadata title fix on `/[account]/page.tsx` (Wave 1, autonomous, parallel with 23-02)
+- [ ] 23-02-PLAN.md — PUB-13 mobile calendar centering + PUB-14 timezone hint hoist on `slot-picker.tsx` (Wave 1, autonomous, parallel with 23-01)
 
 ---
 
