@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-01 — **Phase 19 complete (1/1 plans, 6/6 EMAIL-15..20 requirements verified, Andrew approved live smoke test).** `EmailBranding` interface collapsed from 6 fields to 3 (`name`, `logo_url`, `brand_primary`). Email-layer `DEFAULT_BRAND_PRIMARY` flipped `#0A2540` → `#3B82F6` (NSI blue-500); web-layer default intentionally unchanged (divergence locked). `renderEmailFooter` replaced `nsi-mark.png` img with text-only "Powered by North Star Integrations" anchor to `northstarintegrations.com` (URL corrected from wrong `nsintegrations.com`). 5 sender files + 4 caller files + 2 test files updated; 5th caller deviation (`(shell)/app/bookings/[id]/_lib/actions.ts`) found and fixed inline (Rule 3). Single atomic commit `0130415` — no intermediate tsc-broken state. tsc clean, vitest 266 passed, Vercel build green, Andrew approved.
+**Last updated:** 2026-05-01 — **Phase 20 complete (1/1 plans, all CLEAN-01..10 requirements satisfied).** Deleted 653 lines of deprecated theming dead code: chrome-tint.ts, shade-picker.tsx, branding-chrome-tint.test.ts, branding-gradient.test.ts, branding-schema.test.ts. Collapsed Phase 18 `@deprecated` optional shim fields on `Branding` interface (now 3 fields: logoUrl, primaryColor, textColor). Stripped `brandingFromRow` to 2-param signature. Dropped background_color + background_shade from AccountSummary, AccountListingData, and both DB SELECT strings. Phase 21 CP-01 grep-zero precondition satisfied. Single atomic commit `8ec82d5`. tsc clean (baseline tests/ errors out of scope). vitest 222 passed (266 - 44 = 222; gradient's 8 were already broken-on-import before Phase 20).
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-30 for v1.2 scoping)
 ## Current Position
 
 **Milestone:** v1.2 — NSI Brand Lock-Down + UI Overhaul (started 2026-04-30)
-**Phase:** Phase 19 — Email Layer Simplification — **COMPLETE (1/1 plans, 6/6 must-haves verified)**
-**Plan:** 19-01 of 1 — complete; live smoke test approved by Andrew 2026-05-01
-**Status:** Phase 19 complete. tsc clean. Build clean. Pushed to main. Verifier passed clean. Phase 20 (Dead Code + Test Cleanup) is next.
-**Last activity:** 2026-05-01 — Phase 19 executed via `/gsd:execute-phase 19`. Tasks 1-14 (code + pre-flight + atomic commit `0130415`) + Task 15 (live smoke test, Andrew approved). 13 files in 1 atomic commit (12 planned + 1 deviation: 5th sendReminderBooker caller). tsc clean, 8 grep gates passed, vitest 266 passed, Vercel green, Andrew confirmed #3B82F6 header band + text-only footer + northstarintegrations.com link + plain-text MIME part.
+**Phase:** Phase 20 — Dead Code + Test Cleanup — **COMPLETE (1/1 plans, all CLEAN-01..10 requirements satisfied)**
+**Plan:** 20-01 of 1 — complete; no live eyeball gate (pure delete + gates sufficient per CONTEXT.md)
+**Status:** Phase 20 complete. tsc clean. vitest 222 passed. Pushed to main `8ec82d5`. Phase 21 (Schema DROP Migration) is next.
+**Last activity:** 2026-05-01 — Phase 20 executed via `/gsd:execute-phase 20`. Tasks 1-3 (NO-OP audit + deletion sweep + 4-gate pre-commit + atomic commit `8ec82d5` + push). 13 files in 1 atomic commit. tsc clean (baseline errors out of scope). vitest 222 passed. Both grep gates satisfied (comment-only hits acknowledged). Phase 21 CP-01 precondition verified.
 
 **v1.2 Phase Progress:**
 
@@ -29,11 +29,11 @@ Phase 16 [X] Auth + Onboarding Re-Skin  (16-01..04 complete; 24/24 must-haves ve
 Phase 17 [X] Public Surfaces + Embed  (17-01..09 complete; 24/24 must-haves verified; live + approved; 233 lines legacy chrome deleted)
 Phase 18 [X] Branding Editor Simplification  (18-01..03 complete; 9/9 must-haves verified; live + approved 8/8 visual gates; no fix-ups)
 Phase 19 [X] Email Layer Simplification  (19-01 complete; 6/6 must-haves verified; live + approved; 1 deviation fixed inline; single atomic commit 0130415)
-Phase 20 [ ] Dead Code + Test Cleanup
+Phase 20 [X] Dead Code + Test Cleanup  (20-01 complete; all CLEAN-01..10 satisfied; 653 lines deleted; single atomic commit 8ec82d5)
 Phase 21 [ ] Schema DROP Migration
 ```
 
-Progress: [████████░░] 75% (6 / 8 phases complete; Phase 20 next)
+Progress: [█████████░] 87.5% (7 / 8 phases complete; Phase 21 next)
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Progress: [████████░░] 75% (6 / 8 phases complete; Phase 20 
 - Phase 17 — ~50 min total wall clock for 9 plans across 5 waves. Wave 1 (17-01 atoms ~8 min) → Wave 2 (17-02 PublicShell ~5 min) → Wave 3 (5 plans parallel: 17-03 ~8 min, 17-04 ~10 min, 17-05 ~2 min, 17-06 ~5 min, 17-07 ~8 min — completed in ~10 min wall clock parallel) → Wave 4 (17-08 deletions ~3 min) → Wave 5 (17-09 single Vercel deploy + 10-gate eyeball, no fix-ups). 18 requirements (PUB-01..12, HDR-05..06, EMBED-08..11). Net deletions: 4 files, 233 lines of legacy chrome.
 - Phase 18 — ~25 min total wall clock for 2 plans across 2 waves. Wave 1 (18-01 type/reader/loader shrink ~10 min) + Wave 2 (18-02 editor+preview rebuild ~15 min). 9 requirements (BRAND-13..21). Net deletions: 77 lines (163→122 editor, 202→127 actions.ts; mini-preview-card +39 for faux-public-page rebuild). 2 atomic commits + 2 docs commits.
 - Phase 19 — ~35 min total wall clock for 1 plan, single wave. Tasks 1-14 (code + pre-flight + commit) + Task 15 (live smoke test). 6 requirements (EMAIL-15..20). 13 files (12 planned + 1 deviation: 5th sendReminderBooker caller). Single atomic commit `0130415`. tsc clean, 8 grep gates passed, vitest 266 passed. No fix-up commits.
+- Phase 20 — ~45 min total wall clock for 1 plan, 3 tasks. All CLEAN-01..10 requirements (5 live deletions/edits + 5 verified NO-OPs). 13 files in 1 atomic commit `8ec82d5` (5 deletions + 8 surgical edits, 653 lines removed). tsc clean (baseline errors out of scope). vitest 222 passed (266 - 44; gradient's 8 were already broken-on-import). Both grep gates clean (comment-only hits acknowledged). No Andrew live-eyeball gate (pure delete per CONTEXT.md). Phase 21 CP-01 precondition satisfied.
 
 **v1.1 reference velocity (for calibration):**
 - 34 plans across 6 phases (Phases 10-13 incl. 12.5 + 12.6)
@@ -122,6 +123,16 @@ Progress: [████████░░] 75% (6 / 8 phases complete; Phase 20 
 - **5th sendReminderBooker caller deviation found and fixed in same commit.** `app/(shell)/app/bookings/[id]/_lib/actions.ts` is a manual-trigger reminder path that research missed. Pre-flight Gate 1 (tsc) surfaced it. Fixed inline per Rule 3; no separate fix-up commit; CP-02 atomic lock preserved. Future email-layer changes must also audit this path.
 - **Footer URL corrected: nsintegrations.com → northstarintegrations.com.** The legacy `renderEmailFooter` had the wrong short domain. CONTEXT.md specified the long-form domain. Corrected as part of Task 1 (branding-blocks.ts Edit 4). Andrew confirmed the link opens the correct domain in the live smoke test.
 
+### Phase 20 Decisions (locked — inform Phase 21)
+
+- **Branding interface canonical shape (Phase 20+): 3 fields — logoUrl, primaryColor, textColor.** All 4 `@deprecated` optional fields (backgroundColor, backgroundShade, chromeTintIntensity, sidebarColor) removed. No consumers reference them.
+- **brandingFromRow canonical signature (Phase 20+): `{logo_url: string|null, brand_primary: string|null}`.** Body stripped of all deprecated field handling. Clean break confirmed safe by full caller audit in RESEARCH.md.
+- **Test count baseline update: 222 (not 266).** branding-gradient.test.ts's 8 tests were broken-on-import before Phase 20; deleting the file reduces failing count, not passing count. Phase 21's vitest baseline = 222 passing + 4 skipped.
+- **Rate-limited integration tests (bookings-api, cancel-reschedule-api) require cooldown between vitest runs.** Not a Phase 20 regression — pre-existing environment constraint. Allow 60-90 seconds between full vitest runs to avoid 429 false failures.
+- **Gate 4 (DB column grep) comment-only hits acknowledged:** app/(shell)/layout.tsx and app/embed/[account]/[event-slug]/_components/embed-shell.tsx contain inert documentation references to deprecated column names. Not runtime reads. Phase 21 can treat these as known-inert.
+- **Phase 21 CP-01 precondition satisfied:** Zero runtime reads of sidebar_color, background_color, background_shade, chrome_tint_intensity in non-migration TypeScript. Phase 21 will re-verify independently.
+- **app/embed/[account]/[event-slug]/_lib/types.ts still has background_color + background_shade fields.** Phase 21 owns cleanup of this file (it corresponds to the EmbedShell which Phase 21's DROP migration handles).
+
 ### Phase 17 Decisions (locked — inform Phase 18+)
 
 - **Header is multi-variant after all** (correction to Phase 15 lock): Phase 17 added `variant="public"` rather than introducing a separate `PublicHeader` component. The `'owner' | 'auth' | 'public'` union is now canonical. Public branch carries `branding?: Branding` + `accountName?: string` props for the customer logo/initial pill; reads no pathname.
@@ -151,18 +162,18 @@ Progress: [████████░░] 75% (6 / 8 phases complete; Phase 20 
 ### Pending Todos
 
 - Maintenance backlog (out of v1.2 scope): clean up pre-existing tsc errors in `tests/` directory (~20 errors, all `TS7006`/`TS2305`).
-- `tests/branding-gradient.test.ts` imports the deleted `shadeToGradient` from `lib/branding/gradient.ts` (Phase 17 deleted) — Phase 20 (CLEAN-04..06) will delete this test file.
-- `AccountSummary` type in `app/embed/[account]/[event-slug]/_lib/types.ts` still includes `background_color` and `background_shade` fields (no longer read by EmbedShell). Removed when columns drop in Phase 21.
+- ~~`tests/branding-gradient.test.ts` imports the deleted `shadeToGradient` from `lib/branding/gradient.ts` (Phase 17 deleted) — Phase 20 (CLEAN-04..06) will delete this test file.~~ **DONE in Phase 20 (commit 8ec82d5)**
+- ~~`AccountSummary` type in `app/embed/[account]/[event-slug]/_lib/types.ts` still includes `background_color` and `background_shade` fields (no longer read by EmbedShell). Removed when columns drop in Phase 21.~~ **DONE in Phase 20 — AccountSummary (app/[account]/[event-slug]/_lib/types.ts) and AccountListingData cleaned. Note: app/embed/[account]/[event-slug]/_lib/types.ts still has these fields; Phase 21 DROP migration handles the embed types file.**
 
 ### Active Blockers
 
-None. Phase 19 complete. Atomic commit `0130415` pushed to main. Build green. Ready for Phase 20.
+None. Phase 20 complete. Atomic commit `8ec82d5` pushed to main. tsc clean. vitest 222 passed. Phase 21 CP-01 grep-zero precondition satisfied. Ready for Phase 21.
 
 ## Session Continuity
 
-**Last session:** 2026-05-01 — Phase 19 executed via `/gsd:execute-phase 19`.
-**Stopped at:** Phase 19 complete (1/1 plans). Tasks 1-14 (code + pre-flight + atomic commit `0130415`, push) → Task 15 (live smoke test, Andrew approved 2026-05-01 on https://calendar-app-xi-smoky.vercel.app/). tsc clean, 8 grep gates passed, vitest 266 passed. 1 deviation (5th sendReminderBooker caller) fixed inline. SUMMARY written; STATE updated.
-**Resume:** `/gsd:plan-phase 20` (Dead Code + Test Cleanup — deletes chrome-tint.ts, shade-picker.tsx, branding-gradient test, other Phase 18/19 now-dead paths).
+**Last session:** 2026-05-01 — Phase 20 executed via `/gsd:execute-phase 20`.
+**Stopped at:** Phase 20 complete (1/1 plans). Tasks 1-3 (NO-OP audit + deletion sweep + 4-gate pre-commit + atomic commit `8ec82d5`, push). tsc clean (baseline tests/ errors out of scope). vitest 222 passed. Both grep gates clean. SUMMARY written; STATE updated.
+**Resume:** `/gsd:plan-phase 21` (Schema DROP Migration — DROPs sidebar_color, background_color, background_shade, chrome_tint_intensity columns + background_shade ENUM from Postgres).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (v1.2 scoping current)
