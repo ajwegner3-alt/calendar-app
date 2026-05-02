@@ -118,79 +118,81 @@ export function SlotPicker(props: SlotPickerProps) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {/* Calendar: left on desktop, top on mobile */}
-      <Calendar
-        mode="single"
-        selected={
-          props.selectedDate
-            ? new Date(props.selectedDate + "T00:00:00")
-            : undefined
-        }
-        onSelect={(d) => {
-          if (!d) return;
-          props.onSelectDate(dateToLocalYMD(d));
-          props.onSelectSlot(null); // clear slot when date changes
-        }}
-        modifiers={{
-          hasSlots: (d) => markedDates.has(dateToLocalYMD(d)),
-        }}
-        modifiersClassNames={{ hasSlots: "day-has-slots" }}
-        className="mx-auto rounded-md border"
-      />
+    <>
+      <p className="text-xs text-muted-foreground mb-3">
+        Times shown in {props.bookerTimezone}
+      </p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Calendar: left on desktop, top on mobile */}
+        <Calendar
+          mode="single"
+          selected={
+            props.selectedDate
+              ? new Date(props.selectedDate + "T00:00:00")
+              : undefined
+          }
+          onSelect={(d) => {
+            if (!d) return;
+            props.onSelectDate(dateToLocalYMD(d));
+            props.onSelectSlot(null); // clear slot when date changes
+          }}
+          modifiers={{
+            hasSlots: (d) => markedDates.has(dateToLocalYMD(d)),
+          }}
+          modifiersClassNames={{ hasSlots: "day-has-slots" }}
+          className="mx-auto rounded-md border"
+        />
 
-      {/* Slot list: right on desktop, below on mobile */}
-      <div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Times shown in {props.bookerTimezone}
-        </p>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading times&hellip;</p>
-        ) : fetchError ? (
-          <p className="text-sm text-destructive">{fetchError}</p>
-        ) : !props.selectedDate ? (
-          <p className="text-sm text-muted-foreground">
-            Pick a date to see available times.
-          </p>
-        ) : slotsForSelectedDate.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No times available on this date.
-          </p>
-        ) : (
-          <ul className="grid gap-2">
-            {slotsForSelectedDate.map((s) => {
-              const label = format(
-                new TZDate(new Date(s.start_at), props.bookerTimezone),
-                "h:mm a",
-              );
-              const isSelected = props.selectedSlot?.start_at === s.start_at;
-              return (
-                <li key={s.start_at}>
-                  <button
-                    type="button"
-                    onClick={() => props.onSelectSlot(s)}
-                    className={
-                      "w-full rounded-md border px-3 py-2 text-sm text-left font-medium transition-colors " +
-                      (isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-muted border-border")
-                    }
-                  >
-                    {label}
-                    {typeof s.remaining_capacity === "number" && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {s.remaining_capacity === 1
-                          ? "1 spot left"
-                          : `${s.remaining_capacity} spots left`}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        {/* Slot list: right on desktop, below on mobile */}
+        <div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading times&hellip;</p>
+          ) : fetchError ? (
+            <p className="text-sm text-destructive">{fetchError}</p>
+          ) : !props.selectedDate ? (
+            <p className="text-sm text-muted-foreground">
+              Pick a date to see available times.
+            </p>
+          ) : slotsForSelectedDate.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No times available on this date.
+            </p>
+          ) : (
+            <ul className="grid gap-2">
+              {slotsForSelectedDate.map((s) => {
+                const label = format(
+                  new TZDate(new Date(s.start_at), props.bookerTimezone),
+                  "h:mm a",
+                );
+                const isSelected = props.selectedSlot?.start_at === s.start_at;
+                return (
+                  <li key={s.start_at}>
+                    <button
+                      type="button"
+                      onClick={() => props.onSelectSlot(s)}
+                      className={
+                        "w-full rounded-md border px-3 py-2 text-sm text-left font-medium transition-colors " +
+                        (isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-border")
+                      }
+                    >
+                      {label}
+                      {typeof s.remaining_capacity === "number" && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {s.remaining_capacity === 1
+                            ? "1 spot left"
+                            : `${s.remaining_capacity} spots left`}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
