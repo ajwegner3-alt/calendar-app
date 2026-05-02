@@ -122,7 +122,11 @@ Plans:
 3. Clicking the copy button next to that field copies the URL to the clipboard and shows brief visual confirmation (toast / icon-flip / "Copied!" text).
 4. The booking-link URL is correctly constructed from the current account slug and event slug — verified by pasting into a new browser tab and landing on the working public booking page for that event type.
 
-**Estimated plans:** 2 (Plan 24-01: OWNER-12 orange-highlight removal — calendar component CSS / variant audit; Plan 24-02: OWNER-13 copyable booking-link field + clipboard integration on event-type edit page).
+**Plans:** 2 plans
+
+Plans:
+- [ ] 24-01-PLAN.md — OWNER-12 home calendar de-orange (Wave 1, autonomous, parallel with 24-02): replace bg-accent / bg-primary day-button states with grey-only treatment in app/(shell)/app/_components/home-calendar.tsx
+- [ ] 24-02-PLAN.md — OWNER-13 copyable booking-link field on event-type edit page (Wave 1, autonomous, parallel with 24-01): new BookingLinkField component, edit/page.tsx fetches account slug, replaces and deletes UrlPreview
 
 </details>
 
