@@ -76,7 +76,11 @@ Surgical bug-fix and polish milestone surfaced from Andrew's post-v1.2 live use.
 3. After a successful login, the owner can close the browser, reopen it the next day, navigate back to `/app`, and remain authenticated without being redirected to `/login` (sliding 30-day refresh window).
 4. The 30-day session TTL applies on next login or refresh-token rotation; existing sessions are not retroactively extended (acceptable trade-off — Andrew will log in once and the longer TTL kicks in from there).
 
-**Estimated plans:** 2 (Plan 22-01: AUTH-18 link bug fix + AUTH-19 layout flip — both UI-only on `/login`; Plan 22-02: AUTH-20 Supabase session config + verification).
+**Plans:** 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — AUTH-18 middleware allow-list fix + AUTH-19 login page column swap (Wave 1, autonomous)
+- [ ] 22-02-PLAN.md — AUTH-20 proxy.ts setAll headers patch + manual session-persistence verification (Wave 2, has human-verify checkpoint)
 
 ---
 
