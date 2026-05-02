@@ -136,7 +136,7 @@ export function SlotPicker(props: SlotPickerProps) {
           hasSlots: (d) => markedDates.has(dateToLocalYMD(d)),
         }}
         modifiersClassNames={{ hasSlots: "day-has-slots" }}
-        className="rounded-md border"
+        className="mx-auto rounded-md border"
       />
 
       {/* Slot list: right on desktop, below on mobile */}
