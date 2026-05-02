@@ -214,10 +214,10 @@ Plans:
 4. `vitest` passes with no unexpected test failures — `email-branded-header.test.ts` fixtures no longer include deprecated fields (or test is updated to use the simplified interface).
 5. Deploy succeeds; the 6 email sender files and 4 route/cron callers all compile cleanly.
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 19-01: EmailBranding interface collapse + all 6 senders + 4 route/cron callers (atomic)
+- [ ] 19-01-PLAN.md — EmailBranding interface collapse + 5 senders + 4 callers + 2 tests (atomic single-wave deploy)
 
 ---
 
@@ -285,7 +285,7 @@ Plans:
 | 16 — Auth + Onboarding Re-Skin | v1.2 | 4 / 4 | ✅ Complete | 2026-04-30 |
 | 17 — Public Surfaces + Embed | v1.2 | 9 / 9 | ✅ Complete | 2026-04-30 |
 | 18 — Branding Editor Simplification | v1.2 | 3 / 3 | ✅ Complete | 2026-05-01 |
-| 19 — Email Layer Simplification | v1.2 | 0 / TBD | Not started | - |
+| 19 — Email Layer Simplification | v1.2 | 0 / 1 | Planned | - |
 | 20 — Dead Code + Test Cleanup | v1.2 | 0 / TBD | Not started | - |
 | 21 — Schema DROP Migration | v1.2 | 0 / TBD | Not started | - |
 
