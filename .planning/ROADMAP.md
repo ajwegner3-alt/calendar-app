@@ -267,10 +267,10 @@ Plans:
 4. After running the migration via `npx supabase db query --linked -f <migration.sql>`: `\d accounts` in Supabase SQL editor shows no `sidebar_color`, `background_color`, `background_shade`, or `chrome_tint_intensity` columns; `\dT` shows no `background_shade` or `chrome_tint_intensity` ENUM types (DB-10).
 5. Production booking flow smoke test passes: Andrew submits a test booking on `https://calendar-app-xi-smoky.vercel.app/nsi/[event-slug]`, receives a confirmation email with the correct `brand_primary` color header band — no 500 errors on the booking route (DB-10).
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 21-01: Pre-flight verification + DROP migration SQL + post-migration smoke test + FUTURE_DIRECTIONS.md update
+- [ ] 21-01-PLAN.md — Pre-flight gates (CP-01 grep + tsc + ENUM existence) → 30-min drain checkpoint → atomic DROP migration via `db query --linked -f` → post-migration verification → production booking smoke test → smoke cleanup → FUTURE_DIRECTIONS.md §8.4 closure → SUMMARY
 
 ---
 
