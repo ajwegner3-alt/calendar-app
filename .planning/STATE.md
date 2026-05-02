@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **v1.3 ROADMAP CREATED.** Scope locked via `/gsd:new-milestone` questioning: 8 surgical bug-fix + polish items mapped to 3 phases (22-24). All v1.2 carry-over backlog (Marathon QA, Resend, OAuth, NSI mark image, tech debt) DEFERRED to v1.4 by Andrew at scoping. Research SKIPPED (bug-fix scope on existing surfaces; no new domain). Awaiting `/gsd:plan-phase 22`.
+**Last updated:** 2026-05-02 — **22-01 COMPLETE.** AUTH-18 middleware allow-list + AUTH-19 login column swap. 2 tasks, 2 commits. All checks pass (build, typecheck, 222 tests). Browser smoke deferred to Andrew (deploy-and-eyeball).
 
 ## Project Reference
 
@@ -17,11 +17,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 
 ## Current Position
 
-**Milestone:** v1.3 — Bug Fixes + Polish (PLANNING).
-**Phase:** Not started (awaiting /gsd:plan-phase 22).
-**Plan:** —
-**Status:** Roadmap created; 3 phases scoped; 8/8 requirements mapped.
-**Last activity:** 2026-05-02 — `gsd-roadmapper` produced `.planning/ROADMAP.md` v1.3 section + populated REQUIREMENTS.md traceability.
+**Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
+**Phase:** 22 of 3 (Auth Fixes — in progress).
+**Plan:** 01 of 3 in Phase 22 (COMPLETE).
+**Status:** 22-01 complete. 22-02 (session TTL fix) is next.
+**Last activity:** 2026-05-02 — Completed 22-01-PLAN.md (AUTH-18 + AUTH-19).
 
 **Cumulative project progress:**
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
 v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 135 commits, shipped 2026-04-30)
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
-v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., awaiting plan-phase)
+v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., 22-01 DONE)
 v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NSI mark image + tech debt)
 ```
 
@@ -77,9 +77,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — `gsd-roadmapper` produced v1.3 ROADMAP.md + populated REQUIREMENTS.md traceability.
-**Stopped at:** ROADMAP.md updated with Phases 22-24; REQUIREMENTS.md traceability filled (8/8 mapped); STATE.md updated.
-**Resume:** `/gsd:plan-phase 22` to begin Phase 22 (Auth Fixes).
+**Last session:** 2026-05-02 18:36–18:40 UTC — Executed 22-01-PLAN.md (AUTH-18 + AUTH-19). 2 tasks, 2 commits (d564546, c972c8e).
+**Stopped at:** Completed 22-01-PLAN.md. Browser smoke deferred to Andrew on live deploy.
+**Resume:** Execute 22-02-PLAN.md (session TTL fix — 30-day Supabase session). Push to Vercel for Andrew's visual gate after 22-02 complete.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)
