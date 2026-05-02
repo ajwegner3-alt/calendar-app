@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **23-01 COMPLETE.** PUB-15 generateMetadata title fix: `app/[account]/page.tsx` title now reads `Book with ${name}`. 1 task. Build clean, 222 tests passing.
+**Last updated:** 2026-05-02 — **23-02 COMPLETE.** PUB-13 mx-auto Calendar centering + PUB-14 timezone hint hoisted above grid. 2 tasks. Build clean, 222 tests passing.
 
 ## Project Reference
 
@@ -19,9 +19,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 
 **Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
 **Phase:** 23 of 3 (Public Booking Fixes — IN PROGRESS).
-**Plan:** 01 of 3 in Phase 23 (COMPLETE).
-**Status:** Phase 23 started. Plan 23-01 complete (PUB-15 title). Plans 23-02 (PUB-13) and 23-03 (PUB-14) remain.
-**Last activity:** 2026-05-02 — Completed 23-01-PLAN.md (PUB-15 browser title fix).
+**Plan:** 02 of 3 in Phase 23 (COMPLETE).
+**Status:** Phase 23 in progress. Plans 23-01 (PUB-15) and 23-02 (PUB-13, PUB-14) complete. Phase 23 fully closed pending visual deploy review.
+**Last activity:** 2026-05-02 — Completed 23-02-PLAN.md (PUB-13 calendar centering + PUB-14 timezone hint hoist).
 
 **Cumulative project progress:**
 
@@ -84,9 +84,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — Executed 23-01-PLAN.md (PUB-15 generateMetadata title). 1 auto task. Commit: 9c90a1c (fix), docs commit follows.
-**Stopped at:** Completed 23-01-PLAN.md. PUB-15 title gap closed.
-**Resume:** Execute Phase 23 plans 02 and 03 — PUB-13 (mobile calendar centering) and PUB-14 (desktop slot-picker layout collision).
+**Last session:** 2026-05-02 — Executed 23-02-PLAN.md (PUB-13 Calendar centering + PUB-14 timezone hint hoist). 2 auto tasks. Commits: 7467dae (PUB-13 fix), e94a287 (PUB-14 fix), docs commit follows.
+**Stopped at:** Completed 23-02-PLAN.md. All Phase 23 code changes done. Visual deploy review pending.
+**Resume:** Push to Vercel, visual review of public booking page on mobile + desktop. Then Phase 24 (Owner UI Polish: home calendar highlight, copyable booking link).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)
