@@ -44,7 +44,7 @@ const eventType = {
   location:         null,
 };
 
-/** Account with branded sidebar_color — ensures header band uses non-default color (EMAIL-14 priority chain) */
+/** Account with branded brand_primary — ensures header band uses non-default color (Phase 19 simplified interface) */
 const account = {
   id:           "ba8e712d-28b7-4071-b3d4-361fb6fb7a60",
   name:         "Acme Plumbing",
@@ -53,8 +53,6 @@ const account = {
   owner_email:  "owner@acme.example.com",
   logo_url:     null,
   brand_primary: "#0A2540",
-  background_color: "#1A3A5C", // kept for backward compat (no longer drives header band in Phase 12.6)
-  sidebar_color: "#1A3A5C",    // Phase 12.6: primary email header band source (sidebarColor → brand_primary → DEFAULT)
 };
 
 const APP_URL = "https://book.acme.example.com";
@@ -94,7 +92,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     assertBrandedEmail(html);
 
     // Correct background color in header
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
 
     // Body content unchanged (apostrophe is in static string so not HTML-escaped)
     expect(html).toContain("You're booked.");
@@ -119,7 +117,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     const html = String(call.html ?? "");
 
     assertBrandedEmail(html);
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
     expect(html).toContain("New booking");
     expect(html).toContain("Alex Booker");
 
@@ -145,7 +143,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     const html = String(bookerCall!.html ?? "");
 
     assertBrandedEmail(html);
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
     expect(html).toContain("Appointment cancelled");
 
     // Plain-text alternative (EMAIL-10 extended)
@@ -171,7 +169,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     const html = String(ownerCall!.html ?? "");
 
     assertBrandedEmail(html);
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
     expect(html).toContain("Booking cancelled");
   });
 
@@ -197,7 +195,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     const html = String(bookerCall!.html ?? "");
 
     assertBrandedEmail(html);
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
     expect(html).toContain("rescheduled");
 
     // Plain-text alternative (EMAIL-10 extended)
@@ -228,7 +226,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     const html = String(ownerCall!.html ?? "");
 
     assertBrandedEmail(html);
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
     expect(html).toContain("Booking rescheduled");
   });
 
@@ -253,8 +251,6 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
         name:             account.name,
         logo_url:         account.logo_url,
         brand_primary:    account.brand_primary,
-        background_color: account.background_color,
-        sidebar_color:    account.sidebar_color,
         owner_email:      account.owner_email,
         reminder_include_custom_answers:  false,
         reminder_include_location:        false,
@@ -270,7 +266,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     const html = String(call.html ?? "");
 
     assertBrandedEmail(html);
-    expect(html).toContain("background-color:#1A3A5C");
+    expect(html).toContain("background-color:#0A2540");
     expect(html).toContain("See you tomorrow");
 
     // Plain-text alternative

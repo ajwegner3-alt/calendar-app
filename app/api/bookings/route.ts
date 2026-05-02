@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
 
   const { data: account, error: acctError } = await supabase
     .from("accounts")
-    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary, background_color, chrome_tint_intensity, sidebar_color")
+    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
     .eq("id", eventType.account_id)
     .single();
 
@@ -303,9 +303,6 @@ export async function POST(req: NextRequest) {
       slug: account.slug,
       logo_url: account.logo_url ?? null,
       brand_primary: account.brand_primary ?? null,
-      background_color: account.background_color ?? null,
-      chrome_tint_intensity: account.chrome_tint_intensity ?? null,
-      sidebar_color: account.sidebar_color ?? null,
     },
     rawCancelToken: tokens.rawCancel,
     rawRescheduleToken: tokens.rawReschedule,
@@ -327,9 +324,6 @@ export async function POST(req: NextRequest) {
         owner_email: account.owner_email,
         logo_url: account.logo_url ?? null,
         brand_primary: account.brand_primary ?? null,
-        background_color: account.background_color ?? null,
-        chrome_tint_intensity: account.chrome_tint_intensity ?? null,
-        sidebar_color: account.sidebar_color ?? null,
       },
     },
   }));
@@ -394,7 +388,7 @@ export async function POST(req: NextRequest) {
         .select(`
           event_types!inner(name, duration_minutes, location),
           accounts!inner(
-            slug, name, logo_url, brand_primary, background_color, chrome_tint_intensity, sidebar_color,
+            slug, name, logo_url, brand_primary,
             owner_email,
             reminder_include_custom_answers,
             reminder_include_location,
@@ -439,9 +433,6 @@ export async function POST(req: NextRequest) {
             name: enrichedAccount.name,
             logo_url: enrichedAccount.logo_url,
             brand_primary: enrichedAccount.brand_primary,
-            background_color: enrichedAccount.background_color ?? null,
-            chrome_tint_intensity: enrichedAccount.chrome_tint_intensity ?? null,
-            sidebar_color: enrichedAccount.sidebar_color ?? null,
             owner_email: enrichedAccount.owner_email,
             reminder_include_custom_answers: enrichedAccount.reminder_include_custom_answers,
             reminder_include_location: enrichedAccount.reminder_include_location,

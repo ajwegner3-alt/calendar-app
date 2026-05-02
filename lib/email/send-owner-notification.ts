@@ -28,12 +28,6 @@ interface AccountRecord {
   owner_email: string | null;
   logo_url: string | null;
   brand_primary: string | null;
-  /** Plan 12-01 column: accounts.background_color (nullable hex). No longer drives header band (Phase 12.6). */
-  background_color?: string | null;
-  /** Phase 12.5 column: accounts.chrome_tint_intensity. Deprecated in Phase 12.6. */
-  chrome_tint_intensity?: string | null;
-  /** Phase 12.6 column: accounts.sidebar_color. Primary email header band color (EMAIL-14). */
-  sidebar_color?: string | null;
 }
 
 export interface SendOwnerNotificationArgs {
@@ -79,8 +73,6 @@ export async function sendOwnerNotification(
     name: account.name,
     logo_url: account.logo_url,
     brand_primary: account.brand_primary,
-    backgroundColor: account.background_color ?? null,
-    sidebarColor: account.sidebar_color ?? null,
   };
 
   // Build custom-question answers rows (only rendered if answers exist)
@@ -122,7 +114,7 @@ ${answerEntries
     <tr>
       <td style="padding: 6px 16px 6px 0; color: #555; white-space: nowrap; vertical-align: top;">Email:</td>
       <td style="padding: 6px 0; vertical-align: top;">
-        <a href="mailto:${escapeHtml(booking.booker_email)}" style="color: #0A2540;">${escapeHtml(booking.booker_email)}</a>
+        <a href="mailto:${escapeHtml(booking.booker_email)}" style="color: ${escapeHtml(account.brand_primary ?? '#3B82F6')};">${escapeHtml(booking.booker_email)}</a>
       </td>
     </tr>
     ${

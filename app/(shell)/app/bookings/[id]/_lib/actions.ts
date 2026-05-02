@@ -141,7 +141,7 @@ export async function sendReminderForBookingAction(
   const { data: accounts } = await supabase
     .from("accounts")
     .select(
-      "id, slug, name, logo_url, brand_primary, background_color, chrome_tint_intensity, sidebar_color, owner_email, reminder_include_custom_answers, reminder_include_location, reminder_include_lifecycle_links",
+      "id, slug, name, logo_url, brand_primary, owner_email, reminder_include_custom_answers, reminder_include_location, reminder_include_lifecycle_links",
     )
     .eq("owner_user_id", claimsData.claims.sub)
     .is("deleted_at", null)
@@ -221,9 +221,6 @@ export async function sendReminderForBookingAction(
         name: account.name,
         logo_url: account.logo_url,
         brand_primary: account.brand_primary,
-        background_color: account.background_color ?? null,
-        chrome_tint_intensity: account.chrome_tint_intensity ?? null,
-        sidebar_color: account.sidebar_color ?? null,
         owner_email: account.owner_email,
         reminder_include_custom_answers: account.reminder_include_custom_answers,
         reminder_include_location: account.reminder_include_location,

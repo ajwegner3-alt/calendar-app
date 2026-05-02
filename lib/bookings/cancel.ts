@@ -87,7 +87,7 @@ export async function cancelBooking(
     .select(
       `id, account_id, event_type_id, start_at, end_at, booker_name, booker_email, booker_phone, booker_timezone, answers,
        event_types!inner(name, description, duration_minutes, slug),
-       accounts!inner(name, slug, timezone, owner_email, logo_url, brand_primary, background_color, chrome_tint_intensity, sidebar_color)`,
+       accounts!inner(name, slug, timezone, owner_email, logo_url, brand_primary)`,
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -178,9 +178,6 @@ export async function cancelBooking(
         owner_email: account.owner_email ?? null,
         logo_url: account.logo_url ?? null,
         brand_primary: account.brand_primary ?? null,
-        background_color: account.background_color ?? null,
-        chrome_tint_intensity: account.chrome_tint_intensity ?? null,
-        sidebar_color: account.sidebar_color ?? null,
       },
       actor,
       reason,

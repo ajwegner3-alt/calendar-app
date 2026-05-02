@@ -1,7 +1,8 @@
 // @vitest-environment node
 /**
  * Plan 12-06 Task 1 — unit tests for renderEmailBrandedHeader and stripHtml.
- * Plan 12.6-03 Task 1 — extended for sidebarColor priority chain (EMAIL-14).
+ * Phase 19 update — sidebarColor/backgroundColor/chromeTintIntensity fields removed from
+ * EmailBranding interface. Tests updated to simplified 3-field interface.
  *
  * These tests run without any DB connection (pure function tests on branding-blocks.ts).
  * No Supabase / email-sender / server-only imports required.
@@ -18,17 +19,15 @@ function baseBranding(overrides: Partial<EmailBranding> = {}): EmailBranding {
     name: "Acme Plumbing",
     logo_url: null,
     brand_primary: "#0A2540",
-    backgroundColor: null,
     ...overrides,
   };
 }
 
 describe("renderEmailBrandedHeader", () => {
-  it("[#1] dark sidebarColor → uses sidebarColor for header band (EMAIL-14 priority chain)", () => {
+  it("[#1] dark brand_primary → uses brand_primary for header band color", () => {
     const html = renderEmailBrandedHeader(
-      baseBranding({ sidebarColor: "#1A3A5C" }),
+      baseBranding({ brand_primary: "#1A3A5C" }),
     );
-    // sidebarColor takes top priority
     expect(html).toContain("background-color:#1A3A5C");
     expect(html).toContain('bgcolor="#1A3A5C"');
     // Dark bg: pickTextColor returns #ffffff
@@ -36,9 +35,9 @@ describe("renderEmailBrandedHeader", () => {
     expect(html).toContain("Acme Plumbing");
   });
 
-  it("[#2] light sidebarColor → white band, black text (WCAG contrast)", () => {
+  it("[#2] light brand_primary → white band, black text (WCAG contrast)", () => {
     const html = renderEmailBrandedHeader(
-      baseBranding({ sidebarColor: "#ffffff" }),
+      baseBranding({ brand_primary: "#ffffff" }),
     );
     expect(html).toContain("background-color:#ffffff");
     expect(html).toContain('bgcolor="#ffffff"');
@@ -50,7 +49,7 @@ describe("renderEmailBrandedHeader", () => {
   it("[#3] logoUrl set → renders <img> not text fallback", () => {
     const html = renderEmailBrandedHeader(
       baseBranding({
-        sidebarColor: "#1A3A5C",
+        brand_primary: "#1A3A5C",
         logo_url: "https://example.com/logo.png",
       }),
     );
@@ -68,20 +67,20 @@ describe("renderEmailBrandedHeader", () => {
     expect(html).toContain("Acme Plumbing");
   });
 
-  it("[#5] sidebarColor null/undefined → falls back to brand_primary (EMAIL-14)", () => {
+  it("[#5] brand_primary set → drives the band background color", () => {
     const html = renderEmailBrandedHeader(
-      baseBranding({ sidebarColor: null, brand_primary: "#F97316" }),
+      baseBranding({ brand_primary: "#F97316" }),
     );
     expect(html).toContain("background-color:#F97316");
     expect(html).toContain('bgcolor="#F97316"');
   });
 
-  it("[#6] sidebarColor and brand_primary both null → falls back to DEFAULT_BRAND_PRIMARY (#0A2540)", () => {
+  it("[#6] brand_primary null → falls back to DEFAULT_BRAND_PRIMARY (#3B82F6, NSI blue-500)", () => {
     const html = renderEmailBrandedHeader(
-      baseBranding({ sidebarColor: null, brand_primary: null }),
+      baseBranding({ brand_primary: null }),
     );
-    // DEFAULT_BRAND_PRIMARY is #0A2540
-    expect(html).toContain("background-color:#0A2540");
+    // Phase 19: email-layer DEFAULT_BRAND_PRIMARY is now #3B82F6 (NSI blue-500)
+    expect(html).toContain("background-color:#3B82F6");
   });
 
   it("[#7] table structure: role=presentation, width=100%, bgcolor attr for Outlook", () => {
@@ -96,35 +95,6 @@ describe("renderEmailBrandedHeader", () => {
       baseBranding({ name: `Bob's & "Best" Plumbing <Co>` }),
     );
     expect(html).toContain("Bob&#39;s &amp; &quot;Best&quot; Plumbing &lt;Co&gt;");
-  });
-
-  it("[#9] sidebarColor takes precedence over brand_primary (EMAIL-14 chain)", () => {
-    // sidebarColor=#FF0000 should win even when brand_primary is different
-    const html = renderEmailBrandedHeader(
-      baseBranding({ sidebarColor: "#FF0000", brand_primary: "#0A2540" }),
-    );
-    expect(html).toContain("background-color:#FF0000");
-    expect(html).not.toContain("background-color:#0A2540");
-  });
-
-  it("[#10] chromeTintIntensity is accepted (backward compat, ignored by resolver)", () => {
-    // chromeTintIntensity is kept in the interface for backward compat;
-    // it no longer drives color resolution in Phase 12.6
-    const html = renderEmailBrandedHeader(
-      baseBranding({ sidebarColor: "#1A3A5C", chromeTintIntensity: "none" }),
-    );
-    // sidebarColor still wins regardless of chromeTintIntensity
-    expect(html).toContain("background-color:#1A3A5C");
-  });
-
-  it("[#11] backgroundColor field accepted (backward compat, ignored by resolver since 12.6)", () => {
-    // backgroundColor is kept in interface for backward compat but no longer drives header band
-    const html = renderEmailBrandedHeader(
-      baseBranding({ backgroundColor: "#AABBCC", sidebarColor: null, brand_primary: "#0A2540" }),
-    );
-    // brand_primary wins because sidebarColor is null and backgroundColor is ignored
-    expect(html).toContain("background-color:#0A2540");
-    expect(html).not.toContain("background-color:#AABBCC");
   });
 });
 
