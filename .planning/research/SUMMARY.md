@@ -1,19 +1,18 @@
-# Research Summary: calendar-app v1.2
-# NSI Brand Lock-Down + UI Overhaul
+# Research Summary: calendar-app v1.4
+# Slot Correctness + Polish
 
-**Synthesized:** 2026-04-30
+**Synthesized:** 2026-05-02
 **Research files:** STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md
-**Milestone:** v1.2
+**Milestone:** v1.4 -- 5 items / 11 requirements
+**Phase numbering continues from:** 25 (v1.3 ended at Phase 24)
 
 ---
 
 ## Executive Summary
 
-v1.2 is a purely visual milestone with zero new functional capabilities, routes, or npm packages. The scope is a clean branding split: owner-facing surfaces lock to NSI corporate identity (blue-500 primary, gray-50 backgrounds, BackgroundGlow ambiance component, NorthStar wordmark in Roboto Mono) while public-facing and embed surfaces continue rendering the customer brand_primary color. All 4 research agents converge on the same 7-8 phase execution sequence: typography and CSS token foundations first, BackgroundGlow component and owner shell re-skin second, auth/onboarding third, public surfaces fourth (pending two open questions), branding editor and email simplification fifth and sixth, dead code cleanup seventh, and schema DROP migration mandatory last.
+v1.4 closes the only remaining safety gap in the booking system: a confirmed booking for Event Type A does not block a concurrent POST to Event Type B at the same time on the same account. The display layer has been account-scoped since v1.1 (route.ts:138 queries all confirmed bookings for the account regardless of event type); the INSERT layer has never been. Three research agents independently identify the same fix: an EXCLUDE USING gist constraint with btree_gist extension, a stored-generated during tstzrange column, and a partial predicate WHERE (status = confirmed). A fourth path (BEFORE INSERT/UPDATE trigger, Option B) is documented in ARCHITECTURE.md as an alternative but is demoted to fallback only. STACK.md verified the exact constraint DDL against production Postgres 17.6.1 and confirmed all four behavioral edge cases (overlap blocked, adjacent allowed, different account allowed, non-confirmed status allowed). PITFALLS.md independently derived and confirmed the event_type_id WITH <> operator requirement to preserve group-booking capacity coexistence. All mechanism decisions are locked.
 
-The dominant risk is the schema DROP migration at the end. Four deprecated columns (sidebar_color, background_color, background_shade, chrome_tint_intensity) currently appear in SELECT strings across 10+ files spanning routes, lib, and email senders. Every reader must be updated before the DROP SQL runs, and a mandatory ~30-minute Vercel drain window must separate the final code-stop-reading deploy from the migration. The chromeTintToCss utility function has zero application call sites but one test file that imports it; that test must be deleted before the function file can be deleted.
-
-Two architectural decisions remain open and must be resolved by Andrew before Phase 4 (public surfaces) can be planned: (1) whether brand_accent is kept as a wirable accent column or dropped entirely, and (2) whether the existing BrandedPage component is extended in place or replaced with a clean PublicShell component. Both decisions have clear tradeoffs documented in the research files. All other v1.2 design decisions are locked.
+The constraint design is settled; the execution risk is operational, not architectural. Two hazards dominate: (1) the pre-flight diagnostic SQL must return zero rows before the migration runs -- the reported duplicate booking is exactly the class of violation that aborts VALIDATE CONSTRAINT -- and (2) error code 23P01 (exclusion_violation) must be explicitly caught in both app/api/bookings/route.ts:212-249 and lib/bookings/reschedule.ts, or the DB enforcement surfaces as a confusing 500 instead of a user-recoverable 409. The four polish items (AUTH-21/22, OWNER-14, OWNER-15, BOOK-01/02) carry low risk and are independent of the constraint work; they can proceed in parallel.
 
 ---
 
@@ -21,203 +20,140 @@ Two architectural decisions remain open and must be resolved by Andrew before Ph
 
 ### From STACK.md
 
-**Zero new npm packages.** All required capabilities exist in the current stack.
-
-**Three required font deltas:**
-- Inter weight array: change from `["400"]` to `["400","500","600","700","800"]` in `app/layout.tsx`
-- Roboto Mono: add as `next/font/google` declaration (not an npm install)
-- Letter-spacing: switch from `tracking-tight` rem-based to em-based rules (`-0.017em` body, `-0.037em` h1-h3)
-
-**BackgroundGlow:** Replicate from the lead-scoring reference (`lead-scoring-with-tools/website-analysis-tools/`). Do NOT vendor verbatim. Needs `color?: string` prop defaulting to `#3B82F6`. Must be `position: absolute` (not fixed) to respect SidebarInset containment and iframe height reporting.
-
-**Tailwind v4 native:** `backdrop-blur-sm` works natively; no plugin needed.
-
-**AOS:** Never installed in calendar-app; skip entirely. Do not add.
-
-**New file to create:** `app/_components/background-glow.tsx`
+- **Constraint mechanism locked (live-verified):** EXCLUDE USING gist (account_id WITH =, event_type_id WITH <>, during WITH &&) WHERE (status = confirmed) with btree_gist v1.7 compiles and behaves correctly on Postgres 17.6.1. All four behavioral cases verified by direct execution against production.
+- **Generated column required:** during tstzrange GENERATED ALWAYS AS (tstzrange(start_at, end_at, half-open)) STORED must be added before the constraint. Function-based expression in EXCLUDE rejected -- Postgres requires a stored column reference, not an inline expression.
+- **btree_gist is not installed by default:** pg_available_extensions shows v1.7 available but installed_version: null. CREATE EXTENSION IF NOT EXISTS btree_gist must be the first statement in the migration.
+- **Error code 23P01:** PostgREST surfaces Postgres SQLSTATE directly as .error.code on the Supabase JS client. 23P01 is distinct from 23505 and is NOT suppressed by ON CONFLICT DO NOTHING.
+- **Migration apply path locked:** echo | npx supabase db query --linked -f <file> -- identical to the existing workaround. EXCLUDE constraints run inside a normal transaction; no CONCURRENTLY path needed.
+- **Zero new npm packages.** Existing @supabase/supabase-js + postgres (direct) stack covers everything.
+- **Retry loop must not increment slot_index on 23P01:** A different slot_index changes the bookings_capacity_slot_idx tuple but the time range stays the same -- the EXCLUDE constraint fires again. Break immediately and return 409 CONTRACTOR_BUSY.
 
 ---
 
 ### From FEATURES.md
 
-**Surface-by-surface visual contracts confirmed for 19 surfaces.** Key rules:
-
-| Surface group | Background | Primary color |
-|---|---|---|
-| Owner shell (dashboard, settings) | gray-50 + BackgroundGlow | NSI blue-500 |
-| Auth pages (login, register) | gray-50 + BackgroundGlow | NSI blue-500 |
-| Onboarding | gray-50 + BackgroundGlow | NSI blue-500 |
-| Public booking pages | white/gray-50 | customer brand_primary |
-| Embed | white | customer brand_primary |
-| Emails | white | customer brand_primary |
-
-**saveBrandingAction new signature:** `{ logoUrl, brandPrimary }` (logo upload stays separate). The brand_accent field is excluded from this signature pending Open Question 1 resolution.
-
-**Email senders to update (6 files):**
-- `send-booking-confirmation.ts`
-- `send-booking-emails.ts`
-- `send-cancel-emails.ts`
-- `send-reschedule-emails.ts`
-- `send-reminder-booker.ts`
-- `send-owner-notification.ts`
-
-**"Powered by NSI" treatment:**
-- Web footer: text-only (`Powered by North Star Integrations`); `nsi-mark.png` is a 105-byte solid navy placeholder, not production-ready
-- Embed: no mark at all (would be cropped, interferes with height reporting)
-
-**FEATURES.md recommendation on brand_accent:** DROP (Option D). One color is correct UX for trade contractors; lead-scoring reference uses only blue-500.
-
-**FEATURES.md recommendation on BrandedPage:** Replace with new PublicShell component (clean break, retires GradientBackdrop complexity).
+- **Core invariant:** One contractor = one slot at a time, across ALL event types. Display layer enforces this; INSERT layer does not. v1.4 closes the gap.
+- **Group-booking capacity must coexist:** max_bookings_per_slot > 1 (same event type, different slot_index) must continue to work. The event_type_id WITH <> operator allows same-event-type overlap while blocking cross-event-type overlap -- exact semantics required.
+- **Reschedule semantics confirmed:** lib/bookings/reschedule.ts does a single in-place UPDATE (status stays confirmed, coordinates change). The EXCLUDE constraint handles UPDATE-in-place correctly without special carveouts.
+- **Buffer is account-scoped and read-time only:** end_at stores raw booking end; buffer applied only in slotConflictsWithBookings. v1.4 does not change buffer logic.
+- **BOOK-01/02 must ship in this milestone:** /app/bookings is crashing in production. Independent of the DB constraint work.
+- **Surgical polish items are zero data-layer risk:** AUTH-21/22 (auth-hero.tsx:27-31), OWNER-14 (home-calendar.tsx DayButton bg-gray-700 to bg-primary), OWNER-15 (DayButton --cell-size CSS property override). Per-instance className changes only; components/ui/calendar.tsx and globals.css --color-accent must not be touched.
 
 ---
 
 ### From ARCHITECTURE.md
 
-**`--primary` CSS variable override location:** Single `<div style={{ "--primary": chrome.primaryColor, "--primary-foreground": chrome.primaryTextColor }}>` wrapper at `app/(shell)/layout.tsx` lines 62-66. Removing this wrapper + updating `@theme { --color-primary: #3B82F6 }` in `globals.css` fixes all shadcn Buttons, Switches, and focus rings with no per-component changes.
+> **Cross-agent disagreement resolved:** ARCHITECTURE.md initially recommended Option B (BEFORE INSERT/UPDATE trigger) and flagged Option A (WITH <> EXCLUDE form) as needing synthesizer verification. STACK.md live-verified the constraint DDL; PITFALLS.md independently derived the full event_type_id WITH <> form with correct semantics. **Option A is the locked primary mechanism. Option B is fallback only.**
 
-**chromeTintToCss call sites:** Zero application call sites confirmed. Only `tests/branding-chrome-tint.test.ts` imports it. Delete test file BEFORE deleting the function file.
-
-**Deprecated columns with exact file locations:**
-
-`sidebar_color` readers: `api/bookings/route.ts`, `cron/send-reminders/route.ts`, `lib/bookings/cancel.ts`, `lib/bookings/reschedule.ts`
-
-`background_color` readers: same 4 files plus email senders
-
-`background_shade` readers: same files; note `DROP TYPE background_shade` required (Postgres ENUM, not just a column)
-
-`chrome_tint_intensity` readers: same files; `chromeTintToCss` utility
-
-**Two header components (not one with variant prop):**
-- `OwnerHeader`: client component, uses `usePathname`
-- `PublicHeader`: server component, renders logo/name
-
-**ARCHITECTURE.md recommendation on brand_accent:** KEEP. Column already exists in initial schema; `--color-accent: #F97316` already in `@theme`; wiring to `.day-has-slots::after` calendar dot is ~10 lines.
-
-**ARCHITECTURE.md recommendation on BrandedPage:** Extend in place. Smaller diff; no need to update 5 page-level call sites.
-
-**7-phase sequence from ARCHITECTURE.md:** Foundations, Auth+Onboarding, Public+Embed, Branding Editor, Email, Dead Code, Schema DROP.
+- **Option A preferable over Option B:** No PL/pgSQL function to maintain, no AND id <> NEW.id reschedule carveout required, standard declarative Postgres DDL.
+- **Reschedule UPDATE-in-place is constraint-safe:** Postgres EXCLUDE evaluates NEW vs. all other rows atomically; old coordinates are replaced in-place with no transient double-presence.
+- **Pre-flight diagnostic SQL provided:** Self-join on bookings to find existing confirmed cross-event-type overlaps. Must return zero rows before constraint creation.
+- **Phase 27 internal sequencing:** Pre-flight diagnostic -> extension + column + constraint (single migration file) -> 23P01 error mapping in route.ts and reschedule.ts -> new tests.
+- **Bookings crash debug starting point:** queryBookings() _lib/queries.ts:85 -> event_types!inner join normalization -> null/undefined event_types access in bookings-table.tsx:66. Check Vercel server logs first.
+- **OWNER-15 correct fix:** Override --cell-size CSS custom property on the Calendar instance. Do NOT add overflow-x-auto to the Calendar root (creates horizontal scroll, wrong UX for a date picker).
 
 ---
 
 ### From PITFALLS.md
 
-**Critical pitfalls (must not miss):**
+- **V14-CP-01 -- btree_gist missing blocks deploy:** First statement in migration must be CREATE EXTENSION IF NOT EXISTS btree_gist. Without it, EXCLUDE USING gist on UUID raises an error and the migration aborts entirely.
+- **V14-CP-02 -- Wrong range bound causes false conflicts:** Use half-open interval [) (inclusive start, exclusive end). Fully-closed [] makes adjacent slots collide. Regression test: 09:00-09:30 and 09:30-10:00, different event types, same account -- both must succeed.
+- **V14-CP-04 -- Naive EXCLUDE breaks group booking:** The event_type_id WITH <> operator is mandatory. Without it, same-event-type group bookings (slot_index 1, 2, 3) are blocked. Regression test required.
+- **V14-CP-06 -- Pre-flight is a hard gate:** Existing overlapping confirmed bookings abort VALIDATE CONSTRAINT. Run the diagnostic SQL before ANY migration SQL.
+- **V14-MP-01 -- 23P01 falls into 500 branch:** route.ts:243 only branches on 23505. Add explicit 23P01 branch before 23505 check; break immediately; return 409 CROSS_EVENT_CONFLICT.
+- **V14-MP-02 -- Reschedule route also needs 23P01:** Add 23P01 -> slot_taken branch in reschedule.ts:149.
+- **V14-mp-02 -- Auth pill location is auth-hero.tsx:27-31:** NOT in header.tsx or a layout file. Remove only the pill div; do not modify the Header variant=auth shared else-branch.
 
-| ID | Pitfall | Prevention |
+---
+
+## Locked Decisions
+
+All major decisions are locked. No open questions require Andrew input before planning.
+
+| Decision | Resolution | Source(s) |
 |---|---|---|
-| CP-01 | `api/bookings/route.ts` line 171 reads `chrome_tint_intensity`, `sidebar_color` in SELECT -- will 500 at DROP time | Pre-flight grep: zero hits required before running DROP SQL |
-| CP-02 | `EmailBranding` interface change must be atomic -- all 10 files in one deploy wave | Single PR for all email sender changes |
-| CP-03 | Stale Vercel function instances live up to 30 min post-deploy | Mandatory 30-min drain window between code deploy and DROP migration SQL |
-| CP-04 | `brandingFromRow` and `Branding` interface must shrink together | Update `types.ts` first to surface TypeScript errors compile-time |
-| CP-05 | Embed iframe missing `--primary` override | Add `--primary` override to `EmbedShell` independently from `BrandedPage` |
-| CP-06 | BackgroundGlow inside `overflow-hidden` + transform ancestor causes clipping | Audit ancestor chain; component must be `absolute` not `fixed` |
-
-**Moderate pitfalls:**
-
-| ID | Pitfall | Prevention |
-|---|---|---|
-| MP-04 | JIT dynamic class names -- runtime hex via inline style ONLY | Never dynamic className with bracket syntax; always `style={{ background: color }}` |
-| MP-06 | Test file imports `chromeTintToCss` -- delete test BEFORE deleting function | Phase 7 must delete test first, then function |
-| MP-10 | Second blob gradient terminus must be `transparent` (not `#111827`) on public surfaces with dynamic brand_primary | Review gradient stops before merge |
-
-**"Looks Done But Isn't" checklist (13 items provided in PITFALLS.md)** -- must be run after Phase 3 (owner surfaces) and after Phase 4 (public surfaces) before proceeding.
-
----
-
-## Open Questions (Must Resolve Before Phase 4)
-
-### Open Question 1: What does brand_accent actually control?
-
-**FEATURES.md says:** DROP brand_accent entirely. One accent color is wrong UX for trade contractors; lead-scoring reference uses only blue-500 for all interactive elements.
-
-**ARCHITECTURE.md says:** Keep brand_accent. The column exists, `--color-accent: #F97316` is already in `@theme`, and wiring it to `.day-has-slots::after` calendar dot is ~10 lines. It is the only user-visible semantic use today.
-
-**Decision required from Andrew.** Neither option is blocked technically. This affects `saveBrandingAction` signature, the branding editor UI, and whether the Supabase column persists.
+| Constraint mechanism (PRIMARY) | EXCLUDE USING gist (account_id WITH =, event_type_id WITH <>, during WITH &&) WHERE (status=confirmed) | STACK.md (live verification) + PITFALLS.md (independent derivation) -- overrides ARCHITECTURE.md Option B |
+| Constraint mechanism (FALLBACK) | Option B: BEFORE INSERT/UPDATE trigger | ARCHITECTURE.md |
+| btree_gist version | v1.7, available in production, not installed by default | STACK.md |
+| Range column | during tstzrange GENERATED ALWAYS AS (tstzrange(start_at, end_at, half-open [))) STORED | STACK.md |
+| Range bounds | half-open [) -- inclusive start, exclusive end | STACK.md + PITFALLS.md CP-02 |
+| Error code surfaced | 23P01 via PostgREST .error.code, NOT caught by ON CONFLICT | STACK.md |
+| App error mapping (new bookings) | 23P01 -> break retry loop -> 409 CROSS_EVENT_CONFLICT / CONTRACTOR_BUSY | STACK.md + PITFALLS.md MP-01 |
+| App error mapping (reschedule) | 23P01 -> slot_taken in reschedule.ts:149 | PITFALLS.md MP-02 + ARCHITECTURE.md |
+| Migration apply path | echo | npx supabase db query --linked -f <file> (single file, all 3 statements) | STACK.md |
+| Retry loop behavior on 23P01 | Break immediately; do not increment slot_index | STACK.md |
+| Group-booking coexistence | event_type_id WITH <> in EXCLUDE; bookings_capacity_slot_idx unchanged | FEATURES.md + PITFALLS.md CP-04 |
+| Reschedule semantics | UPDATE-in-place; EXCLUDE handles natively; no id <> NEW.id carveout needed | ARCHITECTURE.md |
+| OWNER-15 fix | Override --cell-size on instance; no overflow-x-auto | ARCHITECTURE.md + PITFALLS.md mp-01 |
+| OWNER-14 fix | Replace bg-gray-700 with bg-primary in DayButton isSelected branch | FEATURES.md + PITFALLS.md mp-03 |
+| AUTH-21/22 fix location | auth-hero.tsx:27-31 pill div only; header.tsx untouched | ARCHITECTURE.md + PITFALLS.md mp-02 |
+| Phase numbering | Phase 25, 26, 27 | Context (v1.3 ended at Phase 24) |
+| v1.3 invariants | Do NOT touch components/ui/calendar.tsx, globals.css --color-accent, shared shadcn components | FEATURES.md + PITFALLS.md |
 
 ---
 
-### Open Question 2: Does BrandedPage survive or become PublicShell?
+## Unanimous Findings (Locks for Roadmapper)
 
-**FEATURES.md says:** Replace BrandedPage with a new PublicShell component. Clean break; retires GradientBackdrop complexity; clearer naming.
+All four research agents agree on these without qualification:
 
-**ARCHITECTURE.md says:** Extend BrandedPage in place. Smaller diff; no need to update 5 page-level call sites; preserves existing import paths.
-
-**Decision required from Andrew.** This is a refactor-scope decision, not a correctness decision. Both produce identical end-user output.
-
----
-
-## Unanimous Findings (Locked)
-
-These findings have no disagreement across research files:
-
-- Zero new npm packages for v1.2
-- Inter weight array must expand to `["400","500","600","700","800"]`
-- Roboto Mono added via `next/font/google` (no npm install)
-- Letter-spacing switched to em-based rules
-- BackgroundGlow replicated (not vendored) with `color?: string` prop, `position: absolute`
-- Owner side: NSI blue-500 + gray-50 + BackgroundGlow
-- Public/embed/email: customer `brand_primary`
-- `--primary` override removed from `(shell)/layout.tsx`; `@theme` updated in `globals.css`
-- chromeTintToCss test deleted before function deleted
-- Schema DROP is the final phase with 30-min mandatory drain window
-- `DROP TYPE background_shade` (not just DROP COLUMN)
-- Two separate header components: OwnerHeader + PublicHeader
-- AOS: skip entirely
-- JIT pitfall: inline style for runtime hex colors, never dynamic class names
+- Zero new npm packages for v1.4
+- Pre-flight diagnostic SQL must return zero rows before any migration is applied -- hard gate, not suggestion
+- bookings_capacity_slot_idx is NOT replaced or modified; the new EXCLUDE constraint is additive
+- WHERE (status = confirmed) partial predicate is required on the EXCLUDE constraint
+- Phase 27 internal sequence is fixed: pre-flight -> migration -> error mapping -> tests
+- Phase 25 (surgical polish) and Phase 26 (crash debug) are parallel-safe with each other and independent of Phase 27
+- Per-instance className overrides only for Phase 25; no shared component modifications
+- New pg-driver tests must use the skipIfNoDirectUrl guard pattern from race-guard.test.ts
+- Buffer logic is account-scoped and read-time only; v1.4 does not change it
+- Option B (trigger) is fallback only; Option A (EXCLUDE) is primary
 
 ---
 
 ## Implications for Roadmap
 
-### Suggested Phase Structure (8 phases)
+### Suggested Phase Structure (3 phases: 25, 26, 27)
 
-**Phase 1: Typography + CSS Token Foundations**
-- Rationale: Everything downstream depends on font loading and `--primary` token. Zero risk; fully isolated.
-- Delivers: Inter weights, Roboto Mono, em-based letter-spacing, `--color-primary: #3B82F6` in `@theme`, removal of `--primary` wrapper from `(shell)/layout.tsx`
-- Pitfalls to avoid: CP-04 (update types.ts first)
-- Research flag: NONE -- standard Next.js font patterns
+---
 
-**Phase 2: BackgroundGlow Component + Owner Shell Re-Skin**
-- Rationale: Owner surfaces use NSI colors only; no open questions block this.
-- Delivers: `background-glow.tsx` component, gray-50 backgrounds on dashboard/settings, NorthStar wordmark in OwnerHeader
-- Pitfalls to avoid: CP-06 (no overflow-hidden ancestor), MP-04 (no JIT class names)
-- Research flag: NONE -- reference implementation available
+**Phase 25 -- Surgical Polish (AUTH-21/22, OWNER-14, OWNER-15)**
 
-**Phase 3: Auth + Onboarding Re-Skin**
-- Rationale: Isolated pages; same NSI treatment as Phase 2; no customer data involved.
-- Delivers: Login, register, onboarding pages with gray-50 + BackgroundGlow + blue-500
-- Pitfalls to avoid: MP-04
-- Research flag: NONE
+- **Rationale:** Pure UI fixes with no data-layer dependencies. All three items are per-instance className changes in auth-hero.tsx and home-calendar.tsx. Zero migration risk. Parallel-safe with Phase 26.
+- **Delivers:** Auth pages without NSI pill branding; home calendar selected-day in NSI blue; home calendar renders without overflow at 375px.
+- **Pitfalls to avoid:** V14-mp-01 (no overflow-x-auto), V14-mp-02 (auth-hero.tsx:27-31 only), V14-mp-03 (bg-primary token, not hex)
+- **Research flag:** NONE -- all fix locations precisely identified
 
-**Phase 4: Public Booking Surfaces + Embed**
-- Rationale: Requires Open Question 2 resolved (BrandedPage vs PublicShell). Cannot start until Andrew decides.
-- Delivers: PublicHeader with customer brand_primary, public booking pages re-skinned, embed `--primary` override added to EmbedShell
-- Pitfalls to avoid: CP-05 (embed needs own override), MP-10 (gradient terminus), CP-07 (day-has-slots dot is accent not primary -- do not change)
-- Research flag: MODERATE -- Open Question 2 must be resolved first
+---
 
-**Phase 5: Branding Editor Simplification**
-- Rationale: `saveBrandingAction` signature change; depends on Open Question 1 resolved (brand_accent keep/drop).
-- Delivers: Simplified branding editor UI, updated action signature, logo upload UX
-- Pitfalls to avoid: CP-04 (shrink Branding interface and brandingFromRow together)
-- Research flag: NONE once Open Question 1 resolved
+**Phase 26 -- Bookings Page Crash Debug (BOOK-01/02)**
 
-**Phase 6: Email Layer Simplification**
-- Rationale: Parallelizable with Phase 5 if team allows; 6 email senders must update together atomically.
-- Delivers: EmailBranding interface simplified, all 6 senders updated, deprecated column reads removed from email layer
-- Pitfalls to avoid: CP-02 (atomic deploy for all 10 email files)
-- Research flag: NONE
+- **Rationale:** Production page actively broken. Independent of all constraint work. Diagnosis-first: Vercel server logs -> reproduce in SQL Editor -> fix confirmed root cause only.
+- **Delivers:** /app/bookings loads without crashing; event_types join edge case handled.
+- **Pitfalls to avoid:** V14-MP-04 (diagnostic-first; no speculative null guards before root cause confirmed)
+- **Research flag:** LOW -- debug path well-defined; root cause narrowed to event_types join normalization or RLS artifact in _lib/queries.ts:85-92
 
-**Phase 7: Dead Code + Test Cleanup**
-- Rationale: Must come after Phases 5-6 confirm no remaining call sites for deprecated code.
-- Delivers: chromeTintToCss test deleted, function deleted, GradientBackdrop deleted (if BrandedPage replaced), any other orphaned branding utilities
-- Pitfalls to avoid: MP-06 (delete test before function)
-- Research flag: NONE
+---
 
-**Phase 8: Schema DROP Migration**
-- Rationale: Mandatory last. All code must stop reading deprecated columns before DROP SQL runs.
-- Delivers: DROP COLUMN sidebar_color, background_color, chrome_tint_intensity; DROP COLUMN + DROP TYPE background_shade; migration verified
-- Pitfalls to avoid: CP-01 (pre-flight grep), CP-03 (30-min drain window), MN-01 (Vercel eyeball checkpoint)
-- Research flag: NONE -- well-documented two-step deploy pattern
+**Phase 27 -- Slot Correctness (SLOT-01..05)**
+
+- **Rationale:** Headline item; highest risk due to DB migration. All mechanism decisions locked -- execution is the remaining work. No dependency on Phase 25 or 26.
+- **Internal sequence (hard order):**
+  1. Run pre-flight diagnostic SQL (zero rows required before proceeding)
+  2. Apply single migration: CREATE EXTENSION IF NOT EXISTS btree_gist -> ADD COLUMN during tstzrange GENERATED ALWAYS AS (tstzrange(start_at, end_at, half-open)) STORED -> ADD CONSTRAINT bookings_no_account_cross_event_overlap EXCLUDE USING gist (account_id WITH =, event_type_id WITH <>, during WITH &&) WHERE (status = confirmed)
+  3. Add 23P01 branch in app/api/bookings/route.ts before the 23505 branch; break retry loop; return 409 CROSS_EVENT_CONFLICT
+  4. Add 23P01 -> slot_taken branch in lib/bookings/reschedule.ts
+  5. Write tests/cross-event-overlap.test.ts: basic block, group-booking regression, adjacent-slot non-collision
+- **Delivers:** DB-layer account-scoped overlap enforcement; cross-event concurrent bookings rejected at INSERT; reschedule to conflicting slot returns 409; full test coverage.
+- **Pitfalls to avoid:** V14-CP-01 through V14-CP-07, V14-MP-01, V14-MP-02, V14-MP-05 (see PITFALLS.md)
+- **Research flag:** NONE -- DDL live-verified; error codes confirmed; test pattern in race-guard.test.ts
+
+---
+
+**Cross-Phase Notes**
+
+- Phase 25 and Phase 26 are **parallel-safe**: assign to separate sub-tasks or run in either order.
+- Phase 27 is **independent of both**: does not depend on polish or crash fix landing first.
+- If Phase 26 root cause is schema-related (unlikely), re-evaluate before running Phase 27 migration.
+- The Looks Done But Isnt checklist in PITFALLS.md (10 items) is the Phase 27 acceptance gate.
 
 ---
 
@@ -225,37 +161,40 @@ These findings have no disagreement across research files:
 
 | Area | Confidence | Notes |
 |---|---|---|
-| Stack | HIGH | Zero ambiguity; all agents agree; specific file locations confirmed |
-| Features | HIGH | 19 surfaces documented; 2 open questions are scope decisions, not unknowns |
-| Architecture | HIGH | Exact line numbers provided; call sites enumerated; component boundaries clear |
-| Pitfalls | HIGH | Critical pitfalls well-documented with specific prevention steps |
-| Phase ordering | HIGH | All 4 agents converge on same sequence |
-| brand_accent | MEDIUM | Technically clear either way; decision is product preference |
-| BrandedPage vs PublicShell | MEDIUM | Technically clear either way; decision is refactor appetite |
+| Constraint DDL | HIGH | Live-verified against production Postgres 17.6.1; all behavioral cases confirmed |
+| Group-booking coexistence | HIGH | PITFALLS.md and FEATURES.md agree; event_type_id WITH <> semantics verified |
+| Reschedule coexistence | HIGH | ARCHITECTURE.md confirmed UPDATE-in-place via direct code inspection |
+| Error mapping | HIGH | Error codes confirmed; exact line numbers in route.ts identified |
+| Migration apply path | HIGH | Established pattern from existing migrations |
+| BOOK-01/02 root cause | MEDIUM | Narrowed to event_types join; exact cause requires Vercel log inspection |
+| Phase 25 fix locations | HIGH | Exact file + line identified for all three items |
+| Test architecture | HIGH | race-guard.test.ts template established; pattern is copy-adapt |
 
 **Overall confidence: HIGH**
 
-**Gaps to address before planning:**
-1. Andrew must decide brand_accent (keep/drop) -- affects Phase 5 scope
-2. Andrew must decide BrandedPage vs PublicShell -- affects Phase 4 scope
-3. Confirm `nsi-mark.png` production timeline (currently 105-byte placeholder); web footer falls back to text-only until resolved
+**Gaps to address during execution (not blockers for planning):**
+
+1. Pre-flight diagnostic may reveal existing violations -- operational step, not a design uncertainty.
+2. BOOK-01/02 exact stack trace not yet read -- Phase 26 starts with Vercel log inspection.
+3. If table size warrants it, NOT VALID + VALIDATE CONSTRAINT two-step may be used (V14-CP-05) -- constraint definition is unchanged either way.
 
 ---
 
 ## Sources
 
 Research files synthesized:
-- `.planning/research/STACK.md`
-- `.planning/research/FEATURES.md`
-- `.planning/research/ARCHITECTURE.md`
-- `.planning/research/PITFALLS.md`
+- .planning/research/STACK.md -- live DDL verification, error codes, migration pattern
+- .planning/research/FEATURES.md -- behavioral invariants, coexistence requirements, fix locations
+- .planning/research/ARCHITECTURE.md -- component boundaries, reschedule mechanics, phase ordering
+- .planning/research/PITFALLS.md -- critical/moderate/minor pitfalls, acceptance checklist
 
-Reference implementation:
-- `lead-scoring-with-tools/website-analysis-tools/BackgroundGlow.tsx`
-- `lead-scoring-with-tools/website-analysis-tools/Header.tsx`
-- `lead-scoring-with-tools/website-analysis-tools/dashboard/layout.tsx`
-- `lead-scoring-with-tools/website-analysis-tools/globals.css`
-
-Project context:
-- `.planning/PROJECT.md`
-- `.planning/STATE.md`
+Codebase references (read during research):
+- app/api/bookings/route.ts:212-249 -- INSERT retry loop and error handling
+- lib/bookings/reschedule.ts -- UPDATE-in-place reschedule mechanism
+- lib/slots.ts:203-219 -- account-scoped slot conflict detection (display layer)
+- app/api/slots/route.ts:138-143 -- confirmed bookings query (account-scoped)
+- tests/race-guard.test.ts -- pg-driver test template and skip-guard pattern
+- supabase/migrations/20260428130002_phase11_*.sql -- CONCURRENTLY migration pattern
+- app/(shell)/app/_components/home-calendar.tsx -- DayButton className structure
+- app/(auth)/_components/auth-hero.tsx -- NSI pill element location
+- _lib/queries.ts:85-92 -- queryBookings join and normalization
