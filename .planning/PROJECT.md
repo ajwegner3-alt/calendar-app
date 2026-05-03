@@ -10,15 +10,26 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 
 (Validated in v1.0 — core value held; ship pivot reinforced widget-first distribution as the actual product wedge. v1.1 confirmed: opening signup did not change the core value statement; the booker experience is unchanged from v1.0 except for accent-color branding now reflecting the contractor's choice. v1.2 confirmed once more: the owner-facing visual lockdown to NSI did not affect the booker experience — public booking pages, embed widget, and transactional emails still render with the contractor's `brand_primary`. Owner-side identity now reads as an NSI product, not a generic calendar. v1.3 confirmed once more: surgical bug-fixes hardened the existing experience without changing core value; mobile booker centering + desktop layout-collision fix actually strengthened the wedge by removing friction at the moment of slot selection.)
 
-## Current Milestone: Next milestone TBD
+## Current Milestone: v1.5 Buffer Fix + Audience Rebrand + Booker Redesign
 
-v1.4 shipped 2026-05-03 (Slot Correctness + Polish — 11 requirements across 3 phases). Next milestone goals not yet defined. Live-use feedback during the v1.4 → v1.5 interval will likely drive headline scope, as it did for v1.3 → v1.4.
+**Goal:** Close the BUFFER-01 candidate from Phase 27 smoke (per-event-type post-buffer replacing account-wide buffer), reposition the product from "trade contractors" to "service-based businesses" across all owner-facing copy + internal identifiers, and redesign the public booker into a 3-column layout (calendar LEFT → time slots MIDDLE → form RIGHT, form-on-pick reveal).
+
+**Target features:**
+- Per-event-type post-event buffer (`event_types.post_buffer_minutes`); migration backfills from `accounts.buffer_minutes`; account-level column dropped via two-step deploy protocol
+- Owner-facing rebrand: copy + internal identifier rename (contractors → service-based businesses) across signup, onboarding, dashboard, settings, marketing emails, README, FUTURE_DIRECTIONS.md. NSI visual system unchanged.
+- Public booker 3-column desktop layout (calendar LEFT → time slots MIDDLE → form RIGHT). Form revealed in-place after slot selection with no layout shift. Mobile stacks vertically.
 
 ## Requirements
 
 ### Active
 
-(None — v1.4 closed; v1.5 requirements pending `/gsd:new-milestone`.)
+- [ ] Per-event-type post-event buffer with migration from account-level buffer
+- [ ] Drop `accounts.buffer_minutes` column via two-step deploy protocol (CP-03)
+- [ ] Rebrand owner-facing copy: contractors → service-based businesses
+- [ ] Rename internal identifiers (tradeContractor* / contractor* → serviceBusiness*)
+- [ ] Public booker 3-column horizontal layout (desktop)
+- [ ] Booker form revealed after slot pick with no layout shift
+- [ ] Mobile booker stacks vertically (calendar → times → form)
 
 ### Validated
 
@@ -292,4 +303,4 @@ v1.4 shipped 2026-05-03 (Slot Correctness + Polish — 11 requirements across 3 
 | v1.4 Buffer semantics intentionally NOT modified (account-scoped, pre-existing v1.0) | Phase 27 smoke surfaced that `accounts.buffer_minutes` (account-scoped, pre-existing v1.0) causes `lib/slots.ts:203 slotConflictsWithBookings` to pre-hide adjacent slots for ANY same-account booking. The DB constraint correctly allows `[)` adjacency (Test 3 pins this); the picker pre-hides slots earlier due to buffer. Andrew chose option (a) keep buffer behavior; surfaced BUFFER-01 candidate (event-type-scoped buffer) for v1.5. | ✓ Good — clarification documented in Phase 27 SUMMARY + this PROJECT.md. Future milestone (v1.5+) may revisit BUFFER-01 if Andrew prefers cross-event-type adjacency without losing buffer between same-event-type bookings. |
 
 ---
-*Last updated: 2026-05-03 after v1.4 milestone close (Slot Correctness + Polish — 11/11 requirements shipped; deploy-and-eyeball formally the operating model after 4th consecutive deferral; v1.5 milestone goals pending `/gsd:new-milestone`)*
+*Last updated: 2026-05-03 after v1.5 milestone start (Buffer Fix + Audience Rebrand + Booker Redesign — scope locked: 3 headline objectives + 7 active requirements; research phase next)*

@@ -1,27 +1,27 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-03 — **v1.4 milestone shipped.** Phases 25-27 archived; ROADMAP.md collapsed; REQUIREMENTS.md cleared (will be re-authored at next `/gsd:new-milestone`). Git tag `v1.4` created.
+**Last updated:** 2026-05-03 — **v1.5 milestone started.** Scope locked via questioning: 3 headline objectives (BUFFER-01 + audience rebrand + 3-column booker). Research phase spawning.
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.4 milestone close)
+See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 
-**Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
+**Core value:** A visitor lands on a service-based business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Between milestones — v1.4 shipped 2026-05-03; v1.5 goals not yet defined. Live-use feedback during the v1.4 → v1.5 interval will drive headline scope.
+**Current focus:** v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign. Defining requirements (research → requirements → roadmap).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** Between milestones (v1.4 shipped; v1.5 pending).
-**Phase:** N/A (no active phase).
-**Plan:** N/A.
-**Status:** Ready to plan v1.5 via `/gsd:new-milestone`.
-**Last activity:** 2026-05-03 — v1.4 archived. Tag `v1.4` created.
+**Milestone:** v1.5 (started 2026-05-03).
+**Phase:** Not started (defining requirements).
+**Plan:** —
+**Status:** Researching domain ecosystem for v1.5 features.
+**Last activity:** 2026-05-03 — Milestone v1.5 started; scope locked; research spawning.
 
 **Phase queue:**
-- v1.5: not yet defined. Live-use observation interval recommended before scoping.
+- Phases 28+ to be derived during roadmap creation.
 
 **Cumulative project progress:**
 
