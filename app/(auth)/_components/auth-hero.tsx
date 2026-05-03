@@ -24,10 +24,6 @@ export function AuthHero({
     <aside className="relative hidden overflow-hidden bg-gray-50 lg:flex lg:flex-col lg:items-start lg:justify-center lg:px-12 lg:py-20">
       <BackgroundGlow />
       <div className="relative z-10 max-w-md">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/80 px-3 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Powered by NSI
-        </div>
         <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
           {headline}
         </h1>
