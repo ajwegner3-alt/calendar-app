@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-03 — **Phase 26 in progress.** 26-01 diagnosis written; awaiting Andrew confirmation at Task 3 checkpoint.
+**Last updated:** 2026-05-03 — **Phase 26 in progress.** 26-01 complete (diagnosis confirmed by Andrew). Plan 02 (fix) next.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.4 Slot Correctness + Polish — Phase 26 diagnosis written (RSC boundary violation). Awaiting Andrew confirmation to proceed to Plan 02 fix.
+**Current focus:** v1.4 Slot Correctness + Polish — Phase 26 Plan 01 complete. RSC boundary violation diagnosed and confirmed. Plan 02 (fix: delete onClick at bookings-table.tsx:93) ready to execute.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,9 +16,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 
 **Milestone:** v1.4 Slot Correctness + Polish (active).
 **Phase:** 26 — in progress.
-**Plan:** 01 of 3 — at Task 3 checkpoint (diagnosis written, awaiting Andrew confirmation).
-**Status:** Gated at Andrew confirmation checkpoint.
-**Last activity:** 2026-05-03 — 26-01 diagnosis complete. RSC boundary violation confirmed at `bookings-table.tsx:93` (onClick on Server Component). Commit `ed7eb22`. Awaiting "diagnosis confirmed" to proceed to Plan 02.
+**Plan:** 01 of 3 — COMPLETE. Plan 02 next.
+**Status:** Plan 01 done. Ready for Plan 02 (fix).
+**Last activity:** 2026-05-03 — 26-01 complete. Andrew confirmed RSC boundary violation at `bookings-table.tsx:93`. Commits `ed7eb22`, `8cbfca9`.
 
 **Phase queue:**
 - Phase 25: Surgical Polish (AUTH-21, AUTH-22, OWNER-14, OWNER-15) — UI-only, no DB risk
@@ -56,7 +56,7 @@ v1.4 [ ] Slot Correctness + Polish    (Phases 25-27, TBD plans, active)
 
 ### Active blockers
 
-- **Phase 26 Plan 01 gated at Andrew confirmation** — diagnosis written at `26-DIAGNOSIS.md`. Andrew must type "diagnosis confirmed" before Plan 02 (fix) executes. This is an intentional gate, not a blocker.
+None. Phase 26 Plan 01 complete. Plan 02 (fix) is cleared to execute.
 
 ### Decisions from Phase 26 diagnosis
 
@@ -65,11 +65,11 @@ v1.4 [ ] Slot Correctness + Polish    (Phases 25-27, TBD plans, active)
 
 ## Session Continuity
 
-**Last session:** 2026-05-03 — Executed 26-01-PLAN.md Task 2. Diagnosed RSC boundary violation at `bookings-table.tsx:93`. Commit `ed7eb22`.
+**Last session:** 2026-05-03 — Completed 26-01-PLAN.md. Andrew confirmed diagnosis. Plan 02 ready to execute.
 
-**Stopped at:** Phase 26, Plan 01, Task 3 (checkpoint:human-verify — diagnosis confirmation).
+**Stopped at:** Phase 26, Plan 01 — COMPLETE.
 
-**Resume:** Andrew types "diagnosis confirmed" → continuation agent executes Plan 02 (fix: remove onClick from bookings-table.tsx:93).
+**Resume:** Execute 26-02-PLAN.md (fix: delete onClick at bookings-table.tsx:93).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02 after v1.4 milestone start)
