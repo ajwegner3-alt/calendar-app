@@ -6,7 +6,7 @@
 
 ## v1.5 Requirements
 
-13 requirements across 3 categories. All map to phases in ROADMAP.md.
+14 requirements across 3 categories. All map to phases in ROADMAP.md.
 
 ### Per-Event-Type Buffer (BUFFER)
 
@@ -89,30 +89,28 @@ These items remain in the carryover backlog. v1.5 does NOT execute them; they ar
 
 ## Traceability
 
-Empty — populated by gsd-roadmapper during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUFFER-01 | TBD | Pending |
-| BUFFER-02 | TBD | Pending |
-| BUFFER-03 | TBD | Pending |
-| BUFFER-04 | TBD | Pending |
-| BUFFER-05 | TBD | Pending |
-| BUFFER-06 | TBD | Pending |
-| BRAND-01 | TBD | Pending |
-| BRAND-02 | TBD | Pending |
-| BRAND-03 | TBD | Pending |
-| BOOKER-01 | TBD | Pending |
-| BOOKER-02 | TBD | Pending |
-| BOOKER-03 | TBD | Pending |
-| BOOKER-04 | TBD | Pending |
-| BOOKER-05 | TBD | Pending |
+| BUFFER-01 | Phase 28 | Pending |
+| BUFFER-02 | Phase 28 | Pending |
+| BUFFER-03 | Phase 28 | Pending |
+| BUFFER-04 | Phase 28 | Pending |
+| BUFFER-05 | Phase 28 | Pending |
+| BUFFER-06 | Phase 28 | Pending |
+| BRAND-01 | Phase 29 | Pending |
+| BRAND-02 | Phase 29 | Pending |
+| BRAND-03 | Phase 29 | Pending |
+| BOOKER-01 | Phase 30 | Pending |
+| BOOKER-02 | Phase 30 | Pending |
+| BOOKER-03 | Phase 30 | Pending |
+| BOOKER-04 | Phase 30 | Pending |
+| BOOKER-05 | Phase 30 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 14 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 14 ⚠️ (will resolve during roadmap creation)
+- Mapped to phases: 14 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-03*
-*Last updated: 2026-05-03 after v1.5 milestone scoping (initial definition)*
+*Last updated: 2026-05-03 — traceability table populated by gsd-roadmapper (Phases 28-30)*
