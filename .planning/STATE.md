@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-03 — **Phase 25 complete.** 25-01 done (AUTH-21 + AUTH-22). 25-02 done (OWNER-14 + OWNER-15). Phase 26 next.
+**Last updated:** 2026-05-03 — **Phase 26 in progress.** 26-01 diagnosis written; awaiting Andrew confirmation at Task 3 checkpoint.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.4 Slot Correctness + Polish — Phase 25 complete. Phase 26 (Bookings Crash) next.
+**Current focus:** v1.4 Slot Correctness + Polish — Phase 26 diagnosis written (RSC boundary violation). Awaiting Andrew confirmation to proceed to Plan 02 fix.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.4 Slot Correctness + Polish (active).
-**Phase:** 25 — complete. Phase 26 next.
-**Plan:** 02 of 2 complete.
-**Status:** Phase 25 complete — Phase 26 ready to execute.
-**Last activity:** 2026-05-03 — Phase 25 verified + Andrew-approved on live deploy. 4 phase commits + 1 bonus fix (`b49dc8e`: mirrored signup layout to match login + centered auth-hero panel content). All 4 phase-25 requirements complete.
+**Phase:** 26 — in progress.
+**Plan:** 01 of 3 — at Task 3 checkpoint (diagnosis written, awaiting Andrew confirmation).
+**Status:** Gated at Andrew confirmation checkpoint.
+**Last activity:** 2026-05-03 — 26-01 diagnosis complete. RSC boundary violation confirmed at `bookings-table.tsx:93` (onClick on Server Component). Commit `ed7eb22`. Awaiting "diagnosis confirmed" to proceed to Plan 02.
 
 **Phase queue:**
 - Phase 25: Surgical Polish (AUTH-21, AUTH-22, OWNER-14, OWNER-15) — UI-only, no DB risk
@@ -56,15 +56,20 @@ v1.4 [ ] Slot Correctness + Polish    (Phases 25-27, TBD plans, active)
 
 ### Active blockers
 
-None. All Phase 27 mechanism decisions are locked per SUMMARY.md. Phase 26 root cause requires Vercel log inspection at execution time (LOW risk, not a planning blocker).
+- **Phase 26 Plan 01 gated at Andrew confirmation** — diagnosis written at `26-DIAGNOSIS.md`. Andrew must type "diagnosis confirmed" before Plan 02 (fix) executes. This is an intentional gate, not a blocker.
+
+### Decisions from Phase 26 diagnosis
+
+- **RSC boundary violation confirmed as root cause** — `bookings-table.tsx:93` has `onClick` on a Server Component `<a>` element. Fix is 1-line deletion of the `onClick` prop. Not Candidates A-E (those were data-layer hypotheses).
+- **Deferred fragilities noted** — unguarded `TZDate` at `bookings-table.tsx:37` (Candidate C) and normalization undefined at `queries.ts:92-94` (Candidate B) are real but not the crash cause. Flag for Phase 27.
 
 ## Session Continuity
 
-**Last session:** 2026-05-03 — Executed 25-02-PLAN.md. NSI-blue selected state + mobile overflow fix on home-calendar DayButton (OWNER-14 + OWNER-15). Build green, commit 6a370e1 on main.
+**Last session:** 2026-05-03 — Executed 26-01-PLAN.md Task 2. Diagnosed RSC boundary violation at `bookings-table.tsx:93`. Commit `ed7eb22`.
 
-**Stopped at:** Phase 25 complete (both plans). Phase 26 ready.
+**Stopped at:** Phase 26, Plan 01, Task 3 (checkpoint:human-verify — diagnosis confirmation).
 
-**Resume:** Run `/gsd:execute-phase` on Phase 26 (Bookings Page Crash Debug + Fix).
+**Resume:** Andrew types "diagnosis confirmed" → continuation agent executes Plan 02 (fix: remove onClick from bookings-table.tsx:93).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02 after v1.4 milestone start)
