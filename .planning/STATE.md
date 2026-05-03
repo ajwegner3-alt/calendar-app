@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **Plan 24-01 COMPLETE (code-side).** OWNER-12 home calendar de-oranged via per-instance className overrides on `app/(shell)/app/_components/home-calendar.tsx`; selected/today/hover/has-bookings dot now grey-only (selected = gray-700, NOT NSI blue per CONTEXT lock). Shared `components/ui/calendar.tsx` and `globals.css --color-accent` token preserved (3 other consumers still use orange). Build + 222 tests pass. Live-deploy visual verification pending. Plan 24-02 (OWNER-13 copyable booking link) remains in Phase 24.
+**Last updated:** 2026-05-02 — **Phase 24 COMPLETE.** Both Plans 24-01 (home-calendar de-orange, `2397f4c`) and 24-02 (copyable booking-link field, `4d12d25` + `f10de12` + mid-checkpoint deviation `db7fb62`) shipped and APPROVED on live deploy by Andrew. SUMMARY.md files created for both plans. v1.3 ready to close once the Phase 24-completion commit and verifier pass land.
 
 ## Project Reference
 
@@ -17,11 +17,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 
 ## Current Position
 
-**Milestone:** v1.3 — Bug Fixes + Polish (IN PROGRESS).
-**Phase:** 24 of 3 (Owner UI Polish — IN PROGRESS).
-**Plan:** 01 of 2 in Phase 24 (CODE-COMPLETE; live-deploy verification pending).
-**Status:** Plan 24-01 (OWNER-12 home calendar de-orange) committed at `2397f4c`. Plan 24-02 (OWNER-13 copyable booking link) is next.
-**Last activity:** 2026-05-02 — Executed Plan 24-01: 3 className/style edits in `home-calendar.tsx`, build + 222 tests pass, atomic commit `2397f4c`.
+**Milestone:** v1.3 — Bug Fixes + Polish (PHASE 24 COMPLETE; awaiting verifier to close milestone).
+**Phase:** 24 of 3 (Owner UI Polish — COMPLETE).
+**Plan:** 02 of 2 in Phase 24 (COMPLETE; SUMMARY.md created).
+**Status:** Phase 24 fully complete. Plan 24-01 commit `2397f4c` + SUMMARY landed in `1d13baf`. Plan 24-02 commits `4d12d25` + `f10de12` + mid-checkpoint `db7fb62` + SUMMARY.md just created. Live-deploy approved by Andrew (verbal). Phase-completion commit pending from orchestrator → then phase-verifier sign-off → v1.3 ships.
+**Last activity:** 2026-05-02 — Completed Plan 24-02. Live-deploy human-verify approved by Andrew. Created `24-02-SUMMARY.md` documenting Tasks 1+2 + new/page.tsx Rule 3 deviation + mid-checkpoint deviation `db7fb62` (per-row copy-link button + blue dropdown focus). Plan-metadata commit pending.
 
 **Cumulative project progress:**
 
@@ -29,7 +29,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 for v1.3 scope lock)
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
 v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 135 commits, shipped 2026-04-30)
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
-v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, 3 phases scoped, 6 plans est., Phases 22+23 DONE)
+v1.3 [◆] Bug Fixes + Polish           (Phases 22-24, all 3 phases code-complete; Phase 24 awaiting verifier close-out)
 v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NSI mark image + tech debt)
 ```
 
@@ -89,6 +89,15 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 - Per-instance className override is the canonical pattern when one consumer needs to diverge from a shared design token. Confirmed Phase 23 invariant: shared `components/ui/calendar.tsx` stays untouched; per-`<Calendar>` instance className overrides handle local variation.
 - Booking-dot color is the lone hard-coded hex inside home-calendar.tsx (inline style, MP-04 compliant — no JIT dynamic Tailwind). If a future request requires runtime per-account theming of this dot, switch to inline style with a derived hex string, never `bg-[${color}]`.
 
+### Phase 24 owner-ui decisions (Plan 24-02)
+
+- `BookingLinkField` is presentational: takes `eventSlug` as a prop (NOT via context or its own `watch`). Parent `EventTypeForm` owns react-hook-form state and passes `watch("slug")` in. Keeps the component reusable (also used as the basis for the per-row `RowCopyLinkButton`) and testable.
+- Host derivation pattern (now used in TWO places — BookingLinkField + RowCopyLinkButton): `process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || (typeof window !== "undefined" ? window.location.origin : "")`. NEVER hard-code vercel hosts. Same env var that powers `slug-form.tsx` (Phase 9 origin pattern).
+- `accountSlug: string` is REQUIRED on EventTypeForm (no `?`). This forced the new/page.tsx server-component conversion at build time — TypeScript caught the missing prop. Use this pattern for any future required-prop addition: make required, let TS find consumers.
+- Copy-with-icon-flip canonical recipe: `useState<boolean> copied` + `setTimeout(setCopied(false), 1500)` + `navigator.clipboard.writeText` with `document.execCommand` textarea fallback + `toast.error` ONLY on total failure. NO success toast (CONTEXT "no toast pollution" lock). Mirrors `embed-tabs.tsx` from Phase 12.
+- Per-instance shadcn DropdownMenuItem focus override pattern (extension of the Phase 23 calendar invariant): When ONE dropdown menu's items need a different focus color, apply `focus:bg-primary focus:text-primary-foreground` directly on each `<DropdownMenuItem>` instance — DO NOT edit the shared `components/ui/dropdown-menu.tsx`. Keep destructive items' `focus:text-destructive` intact (semantic correctness for irreversible actions).
+- `UrlPreview` is permanently DELETED (`url-preview.tsx` removed in `f10de12`). The v1.0-era `yoursite.com/nsi/[slug]` placeholder is gone forever. Any future "show the URL on the edit page" request reuses BookingLinkField, never recreates UrlPreview.
+
 ### Active blockers / open items
 
 - **Marathon QA carryover (third deferral, now formally adopted as deploy-and-eyeball):** QA-09..QA-13 + ~21 per-phase manual checks accumulated through v1.1+v1.2 are DEFERRED to v1.4. v1.3 has NO marathon QA phase by Andrew's explicit choice at scoping.
@@ -98,9 +107,9 @@ v1.4 [ ] Carryover backlog            (TBD — Marathon QA + Resend + OAuth + NS
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — Executed Plan 24-01 (OWNER-12 home calendar de-orange). 3 className/style edits in `app/(shell)/app/_components/home-calendar.tsx`, atomic commit `2397f4c`. Build clean, 222 tests pass + 4 skipped.
-**Stopped at:** Plan 24-01 code-complete; live-deploy visual verification pending Andrew.
-**Resume:** Plan 24-02 (OWNER-13 copyable booking link on event-type edit page) — last plan in Phase 24, last phase in v1.3.
+**Last session:** 2026-05-02 — Andrew approved Phase 24 live-deploy. Mid-checkpoint user-driven deviation `db7fb62` (per-row `RowCopyLinkButton` + blue NSI focus highlight on row-actions dropdown items, archive item retains destructive red). Created `24-02-SUMMARY.md` documenting Tasks 1+2 + new/page.tsx Rule 3 deviation + db7fb62 mid-checkpoint deviation. STATE updated.
+**Stopped at:** Plan 24-02 finalized; plan-metadata commit pending (orchestrator will run `git add` for PLAN.md + SUMMARY.md and commit `docs(24-02): complete copyable-booking-link-field plan`). After that → phase-completion commit (orchestrator) → phase-verifier → v1.3 close.
+**Resume:** Phase 24 verifier sweep, then close v1.3 milestone. Carryover backlog (Marathon QA, Resend, Vercel Pro, OAuth, NSI mark image, DEBT-02, DEBT-07) deferred to v1.4.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02)

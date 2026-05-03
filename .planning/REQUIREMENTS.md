@@ -103,8 +103,8 @@ Explicit boundaries — documented to prevent scope creep INTO v1.3 (the carryov
 | PUB-13 | Phase 23 | Complete |
 | PUB-14 | Phase 23 | Complete |
 | PUB-15 | Phase 23 | Complete |
-| OWNER-12 | Phase 24 | Pending |
-| OWNER-13 | Phase 24 | Pending |
+| OWNER-12 | Phase 24 | Complete |
+| OWNER-13 | Phase 24 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 8 total

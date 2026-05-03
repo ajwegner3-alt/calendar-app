@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** — Phases 1-9 (52 plans) — shipped 2026-04-27. Full archive: [`milestones/v1.0-ROADMAP.md`](./milestones/v1.0-ROADMAP.md).
 - ✅ **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (34 plans, including decimal Phases 12.5 + 12.6) — shipped 2026-04-30. Full archive: [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md).
 - ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (22 plans across 8 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md).
-- 🔄 **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — IN PROGRESS
+- ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02
 
 ## Phases
 
@@ -125,8 +125,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 24-01-PLAN.md — OWNER-12 home calendar de-orange (Wave 1, autonomous, parallel with 24-02): replace bg-accent / bg-primary day-button states with grey-only treatment in app/(shell)/app/_components/home-calendar.tsx
-- [ ] 24-02-PLAN.md — OWNER-13 copyable booking-link field on event-type edit page (Wave 1, autonomous, parallel with 24-01): new BookingLinkField component, edit/page.tsx fetches account slug, replaces and deletes UrlPreview
+- [x] 24-01-PLAN.md — OWNER-12 home calendar de-orange (Wave 1, autonomous, parallel with 24-02): replaced bg-accent / bg-primary day-button states with grey-only treatment in app/(shell)/app/_components/home-calendar.tsx — completed 2026-05-02
+- [x] 24-02-PLAN.md — OWNER-13 copyable booking-link field on event-type edit page (Wave 1, autonomous, parallel with 24-01): new BookingLinkField component, edit/page.tsx + new/page.tsx fetch account slug, replaced and deleted UrlPreview; mid-checkpoint user-driven follow-up `db7fb62` added per-row RowCopyLinkButton on /app/event-types list + blue per-instance focus override on dropdown menu items — completed 2026-05-02 (Andrew live deploy approved)
 
 </details>
 
@@ -140,7 +140,7 @@ Plans:
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
 | 23 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
-| 24 | v1.3 | 0 / 2 (est.) | 🔄 In progress | — |
+| 24 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
 
 ## Cumulative Stats
 
@@ -153,4 +153,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-02 — Phase 23 (Public Booking Fixes) complete. PUB-13/14/15 verified via Andrew live deploy approval. 1 phase remaining (24).*
+*Roadmap last updated: 2026-05-02 — Phase 24 (Owner UI Polish) complete. OWNER-12/13 verified via Andrew live deploy approval. v1.3 milestone fully shipped (Phases 22-24, 6 plans).*
