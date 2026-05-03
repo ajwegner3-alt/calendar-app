@@ -18,7 +18,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 **Phase:** 25 — complete. Phase 26 next.
 **Plan:** 02 of 2 complete.
 **Status:** Phase 25 complete — Phase 26 ready to execute.
-**Last activity:** 2026-05-03 — Completed 25-02-PLAN.md (NSI blue selected-state + mobile cell-size fix on home-calendar; OWNER-14 + OWNER-15 satisfied; build green; commit 6a370e1).
+**Last activity:** 2026-05-03 — Phase 25 verified + Andrew-approved on live deploy. 4 phase commits + 1 bonus fix (`b49dc8e`: mirrored signup layout to match login + centered auth-hero panel content). All 4 phase-25 requirements complete.
 
 **Phase queue:**
 - Phase 25: Surgical Polish (AUTH-21, AUTH-22, OWNER-14, OWNER-15) — UI-only, no DB risk

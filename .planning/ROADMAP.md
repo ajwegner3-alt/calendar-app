@@ -97,8 +97,8 @@ See [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md) for full phase 
 **Plans:** 2 plans
 
 Plans:
-- [ ] 25-01-PLAN.md — Remove "Powered by NSI" pill from auth hero (AUTH-21, AUTH-22)
-- [ ] 25-02-PLAN.md — Flip home-calendar selected color to NSI blue + fix 390px mobile overflow (OWNER-14, OWNER-15)
+- [x] 25-01-PLAN.md — Remove "Powered by NSI" pill from auth hero (AUTH-21, AUTH-22) — completed 2026-05-03
+- [x] 25-02-PLAN.md — Flip home-calendar selected color to NSI blue + fix 390px mobile overflow (OWNER-14, OWNER-15) — completed 2026-05-03
 
 ---
 
@@ -184,7 +184,7 @@ Plans:
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
-| 25 | v1.4 | 0 / TBD | Not started | - |
+| 25 | v1.4 | 2 / 2 | ✅ Complete | 2026-05-03 |
 | 26 | v1.4 | 0 / TBD | Not started | - |
 | 27 | v1.4 | 0 / TBD | Not started | - |
 
@@ -199,4 +199,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-02 — v1.4 milestone roadmap created (Slot Correctness + Polish; Phases 25-27; 11/11 requirements mapped).*
+*Roadmap last updated: 2026-05-03 — Phase 25 complete (2/2 plans, AUTH-21/22 + OWNER-14/15 satisfied; bonus signup-layout-mirror + auth-hero-centering shipped same-phase).*

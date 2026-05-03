@@ -11,13 +11,13 @@
 
 ### Authentication
 
-- [ ] **AUTH-21**: `/login` page renders without "Powered by NSI" pill element. The pill in `app/(auth)/_components/auth-hero.tsx:27-31` is removed (or `AuthHero` is updated to omit it). The pill is a common AI-generation tell and should not appear on auth surfaces.
-- [ ] **AUTH-22**: `/signup` page renders without "Powered by NSI" pill element. Same fix as AUTH-21 since both pages share `AuthHero`.
+- [x] **AUTH-21**: `/login` page renders without "Powered by NSI" pill element. The pill in `app/(auth)/_components/auth-hero.tsx:27-31` is removed (or `AuthHero` is updated to omit it). The pill is a common AI-generation tell and should not appear on auth surfaces.
+- [x] **AUTH-22**: `/signup` page renders without "Powered by NSI" pill element. Same fix as AUTH-21 since both pages share `AuthHero`.
 
 ### Owner UI Polish
 
-- [ ] **OWNER-14**: Home calendar selected-date renders NSI blue (`bg-primary` token, currently `#3B82F6` post-v1.2 owner-side `--primary` lock). Hover state preserves `bg-gray-100`. Today-state preserves `bg-muted + ring-1 ring-gray-300`. Shared `components/ui/calendar.tsx` and `globals.css --color-accent` token UNTOUCHED — per-instance className override on `home-calendar.tsx:72` only (extends Phase 23/24 pattern).
-- [ ] **OWNER-15**: Home calendar grid does not overflow the parent Card on a 375px-width mobile viewport. The fix targets the `min-w-[var(--cell-size,theme(spacing.9))]` fallback at `home-calendar.tsx:72` (or equivalent width-strategy: `overflow-hidden`, `overflow-x-auto`, or reduced cell-size fallback). Shared `components/ui/calendar.tsx` UNTOUCHED.
+- [x] **OWNER-14**: Home calendar selected-date renders NSI blue (`bg-primary` token, currently `#3B82F6` post-v1.2 owner-side `--primary` lock). Hover state preserves `bg-gray-100`. Today-state preserves `bg-muted + ring-1 ring-gray-300`. Shared `components/ui/calendar.tsx` and `globals.css --color-accent` token UNTOUCHED — per-instance className override on `home-calendar.tsx:72` only (extends Phase 23/24 pattern).
+- [x] **OWNER-15**: Home calendar grid does not overflow the parent Card on a 375px-width mobile viewport. The fix targets the `min-w-[var(--cell-size,theme(spacing.9))]` fallback at `home-calendar.tsx:72` (or equivalent width-strategy: `overflow-hidden`, `overflow-x-auto`, or reduced cell-size fallback). Shared `components/ui/calendar.tsx` UNTOUCHED.
 
 ### Bookings Page Crash
 
@@ -90,10 +90,10 @@ Explicitly excluded from v1.4 to prevent scope creep. Each entry has a reason:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-21 | Phase 25 | Pending |
-| AUTH-22 | Phase 25 | Pending |
-| OWNER-14 | Phase 25 | Pending |
-| OWNER-15 | Phase 25 | Pending |
+| AUTH-21 | Phase 25 | Complete |
+| AUTH-22 | Phase 25 | Complete |
+| OWNER-14 | Phase 25 | Complete |
+| OWNER-15 | Phase 25 | Complete |
 | BOOK-01 | Phase 26 | Pending |
 | BOOK-02 | Phase 26 | Pending |
 | SLOT-01 | Phase 27 | Pending |
