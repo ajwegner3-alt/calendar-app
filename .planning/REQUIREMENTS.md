@@ -21,8 +21,8 @@
 
 ### Bookings Page Crash
 
-- [ ] **BOOK-01**: `/app/bookings` page renders without crashing for the seeded NSI account on production. Root cause must be identified and documented (server logs first; null guards on `row.event_types?.duration_minutes` access at `bookings-table.tsx:108` is the leading hypothesis per Architecture research).
-- [ ] **BOOK-02**: `/app/bookings` page renders without crashing across all 3 seeded test accounts (NSI + nsi-rls-test + nsi-rls-test-3) on production. Confirms the fix is account-agnostic.
+- [x] **BOOK-01**: `/app/bookings` page renders without crashing for the seeded NSI account on production. Root cause must be identified and documented (server logs first; null guards on `row.event_types?.duration_minutes` access at `bookings-table.tsx:108` is the leading hypothesis per Architecture research).
+- [x] **BOOK-02**: `/app/bookings` page renders without crashing across all 3 seeded test accounts (NSI + nsi-rls-test + nsi-rls-test-3) on production. Confirms the fix is account-agnostic.
 
 ### Slot Correctness (Headline)
 
@@ -94,8 +94,8 @@ Explicitly excluded from v1.4 to prevent scope creep. Each entry has a reason:
 | AUTH-22 | Phase 25 | Complete |
 | OWNER-14 | Phase 25 | Complete |
 | OWNER-15 | Phase 25 | Complete |
-| BOOK-01 | Phase 26 | Pending |
-| BOOK-02 | Phase 26 | Pending |
+| BOOK-01 | Phase 26 | Complete |
+| BOOK-02 | Phase 26 | Complete |
 | SLOT-01 | Phase 27 | Pending |
 | SLOT-02 | Phase 27 | Pending |
 | SLOT-03 | Phase 27 | Pending |
