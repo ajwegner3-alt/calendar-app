@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-03 — **Phase 25 in progress.** 25-01 complete (AUTH-21 + AUTH-22 satisfied). 25-02 next.
+**Last updated:** 2026-05-03 — **Phase 25 complete.** 25-01 done (AUTH-21 + AUTH-22). 25-02 done (OWNER-14 + OWNER-15). Phase 26 next.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.4 Slot Correctness + Polish — Phase 25 in progress (25-01 done, 25-02 next).
+**Current focus:** v1.4 Slot Correctness + Polish — Phase 25 complete. Phase 26 (Bookings Crash) next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.4 Slot Correctness + Polish (active).
-**Phase:** 25 — in progress.
-**Plan:** 01 of 2 complete.
-**Status:** In progress — 25-02 next.
-**Last activity:** 2026-05-03 — Completed 25-01-PLAN.md (removed NSI pill from AuthHero; AUTH-21 + AUTH-22 satisfied; build green; commit 3092b26).
+**Phase:** 25 — complete. Phase 26 next.
+**Plan:** 02 of 2 complete.
+**Status:** Phase 25 complete — Phase 26 ready to execute.
+**Last activity:** 2026-05-03 — Completed 25-02-PLAN.md (NSI blue selected-state + mobile cell-size fix on home-calendar; OWNER-14 + OWNER-15 satisfied; build green; commit 6a370e1).
 
 **Phase queue:**
 - Phase 25: Surgical Polish (AUTH-21, AUTH-22, OWNER-14, OWNER-15) — UI-only, no DB risk
@@ -60,11 +60,11 @@ None. All Phase 27 mechanism decisions are locked per SUMMARY.md. Phase 26 root 
 
 ## Session Continuity
 
-**Last session:** 2026-05-03 — Executed 25-01-PLAN.md. Removed NSI pill from AuthHero (AUTH-21 + AUTH-22). Build green, commit 3092b26 on main.
+**Last session:** 2026-05-03 — Executed 25-02-PLAN.md. NSI-blue selected state + mobile overflow fix on home-calendar DayButton (OWNER-14 + OWNER-15). Build green, commit 6a370e1 on main.
 
-**Stopped at:** 25-01 complete. 25-02 is next.
+**Stopped at:** Phase 25 complete (both plans). Phase 26 ready.
 
-**Resume:** Run `/gsd:execute-phase` on `25-02-PLAN.md` to continue Phase 25.
+**Resume:** Run `/gsd:execute-phase` on Phase 26 (Bookings Page Crash Debug + Fix).
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02 after v1.4 milestone start)
