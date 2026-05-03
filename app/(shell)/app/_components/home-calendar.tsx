@@ -69,11 +69,11 @@ export function HomeCalendar({ bookings, onDayClick }: HomeCalendarProps) {
               type="button"
               {...buttonProps}
               className={[
-                "relative isolate z-10 flex aspect-square w-full min-w-[var(--cell-size,theme(spacing.9))] flex-col items-center justify-center gap-0.5 rounded-[var(--cell-radius,var(--radius-md))] border-0 text-sm leading-none font-normal",
-                "hover:bg-gray-100 hover:text-gray-900",
+                "relative isolate z-10 flex aspect-square w-full min-w-[var(--cell-size,theme(spacing.8))] flex-col items-center justify-center gap-0.5 rounded-[var(--cell-radius,var(--radius-md))] border-0 text-sm leading-none font-normal",
+                !isSelected && "hover:bg-gray-100 hover:text-gray-900",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isSelected
-                  ? "bg-gray-700 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : modifiers.today
                     ? "bg-muted text-foreground font-semibold ring-1 ring-gray-300 rounded-[var(--cell-radius,var(--radius-md))]"
                     : "",
