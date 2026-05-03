@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **v1.4 ROADMAP DEFINED.** Phases 25-27 mapped. 11/11 requirements covered. Ready to plan Phase 25.
+**Last updated:** 2026-05-03 — **Phase 25 in progress.** 25-01 complete (AUTH-21 + AUTH-22 satisfied). 25-02 next.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.4 Slot Correctness + Polish — roadmap defined; Phase 25 ready to plan.
+**Current focus:** v1.4 Slot Correctness + Polish — Phase 25 in progress (25-01 done, 25-02 next).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.4 Slot Correctness + Polish (active).
-**Phase:** 25 — not started.
-**Plan:** —
-**Status:** Ready to plan Phase 25.
-**Last activity:** 2026-05-02 — v1.4 roadmap written; REQUIREMENTS.md traceability filled (11/11 mapped); STATE.md and ROADMAP.md updated.
+**Phase:** 25 — in progress.
+**Plan:** 01 of 2 complete.
+**Status:** In progress — 25-02 next.
+**Last activity:** 2026-05-03 — Completed 25-01-PLAN.md (removed NSI pill from AuthHero; AUTH-21 + AUTH-22 satisfied; build green; commit 3092b26).
 
 **Phase queue:**
 - Phase 25: Surgical Polish (AUTH-21, AUTH-22, OWNER-14, OWNER-15) — UI-only, no DB risk
@@ -60,11 +60,11 @@ None. All Phase 27 mechanism decisions are locked per SUMMARY.md. Phase 26 root 
 
 ## Session Continuity
 
-**Last session:** 2026-05-02 — Completed research stage (4 parallel agents: STACK, FEATURES, ARCHITECTURE, PITFALLS). SUMMARY.md synthesized. REQUIREMENTS.md defined (11 items). Roadmap created (Phases 25-27).
+**Last session:** 2026-05-03 — Executed 25-01-PLAN.md. Removed NSI pill from AuthHero (AUTH-21 + AUTH-22). Build green, commit 3092b26 on main.
 
-**Stopped at:** Roadmap creation complete. Ready to plan Phase 25.
+**Stopped at:** 25-01 complete. 25-02 is next.
 
-**Resume:** Run `/gsd:plan-phase 25` to generate the Phase 25 execution plan.
+**Resume:** Run `/gsd:execute-phase` on `25-02-PLAN.md` to continue Phase 25.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-02 after v1.4 milestone start)
