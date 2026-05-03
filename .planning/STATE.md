@@ -1,24 +1,24 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-02 — **v1.3 MILESTONE SHIPPED.** Same-day milestone (~10 hours scope-lock to ship). 8/8 requirements complete (AUTH-18/19/20, PUB-13/14/15, OWNER-12/13). Mid-checkpoint scope expansion absorbed into Plan 24-02 (per-row copy-link button + blue dropdown highlight). Marathon QA formally adopted as deploy-and-eyeball production gate (4th consecutive deferral, now permanent). Tagged `v1.3`.
+**Last updated:** 2026-05-02 — **v1.4 MILESTONE STARTED.** Slot Correctness + Polish. Scope locked to 5 live-use items (carryover backlog deferred to v1.5). Headline item is the cross-event-type DB-layer enforcement of the contractor-busy-time invariant; remaining items are surgical polish + 1 unrelated bookings-page crash to debug.
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.3 ship)
+See: `.planning/PROJECT.md` (updated 2026-05-02 after v1.4 milestone start)
 
 **Core value:** A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Planning next milestone (v1.4). Run `/gsd:new-milestone` to scope.
+**Current focus:** v1.4 Slot Correctness + Polish — defining requirements after research.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.3 SHIPPED 2026-05-02. **No active milestone.**
-**Phase:** N/A (between milestones).
-**Plan:** N/A.
-**Status:** Awaiting `/gsd:new-milestone` to scope v1.4.
-**Last activity:** 2026-05-02 — v1.3 milestone closure: archives written, ROADMAP collapsed, REQUIREMENTS.md deleted, MILESTONES.md prepended, PROJECT.md evolved, git tagged `v1.3`.
+**Milestone:** v1.4 Slot Correctness + Polish (active).
+**Phase:** Not started (research → requirements → roadmap pending).
+**Plan:** —
+**Status:** Defining requirements.
+**Last activity:** 2026-05-02 — Milestone v1.4 started; PROJECT.md evolved with Current Milestone section + 11 active requirements (AUTH-21/22, OWNER-14/15, BOOK-01/02, SLOT-01..05). Research stage spawning 4 parallel project-researcher agents next.
 
 **Cumulative project progress:**
 

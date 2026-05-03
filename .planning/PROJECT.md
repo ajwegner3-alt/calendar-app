@@ -10,7 +10,33 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 
 (Validated in v1.0 — core value held; ship pivot reinforced widget-first distribution as the actual product wedge. v1.1 confirmed: opening signup did not change the core value statement; the booker experience is unchanged from v1.0 except for accent-color branding now reflecting the contractor's choice. v1.2 confirmed once more: the owner-facing visual lockdown to NSI did not affect the booker experience — public booking pages, embed widget, and transactional emails still render with the contractor's `brand_primary`. Owner-side identity now reads as an NSI product, not a generic calendar. v1.3 confirmed once more: surgical bug-fixes hardened the existing experience without changing core value; mobile booker centering + desktop layout-collision fix actually strengthened the wedge by removing friction at the moment of slot selection.)
 
+## Current Milestone: v1.4 Slot Correctness + Polish
+
+**Goal:** Close the contractor-can't-be-in-two-places-at-once invariant at the DB layer (cross-event-type insert-path validation, plus same-event-type root-cause confirmation), fix the owner bookings page crash, and ship four surgical polish items from Andrew's first week of live use post-v1.3.
+
+**Target items (5, all from live-use feedback 2026-05-02; carryover backlog deferred to v1.5):**
+
+1. **AUTH polish** — Remove "Powered by NSI" pill from `/login` + `/signup` (looks like a common AI-generation tell).
+2. **OWNER polish** — Home calendar selected-date color flip from gray-700 to NSI blue (hover stays gray); per-instance className override on `home-calendar.tsx` DayButton.
+3. **BUGFIX** — Owner-side `/app/bookings` page errors/crashes; root-cause unknown post-Phase-21 audit (queries are column-clean per investigation 2026-05-02; downstream component or null-handling suspected). Debug-then-fix.
+4. **OWNER polish** — Mobile overflow on home calendar — DayButton dots row or `min-w-[var(--cell-size)]` × 7 columns exceeds Card on narrow viewports.
+5. **CORRECTNESS (headline)** — Double-booking still observed in production: cross-event-type AND same-event-type. Display layer correctly queries account-wide (`api/slots/route.ts:138`); INSERT layer's `bookings_capacity_slot_idx` is `event_type_id`-scoped only — DB does not enforce the contractor-busy-time invariant across event types. Architectural fix (e.g., `EXCLUDE USING gist` constraint with `btree_gist`, server-side conflict re-check at insert, or both) plus same-event-type RCA. Must coexist with v1.1 group-booking capacity (`max_bookings_per_slot > 1`) and reschedule semantics (`status='rescheduled'` rows freeing the original slot).
+
 ## Requirements
+
+### Active
+
+- [ ] **AUTH-21**: `/login` page does not render "Powered by NSI" pill
+- [ ] **AUTH-22**: `/signup` page does not render "Powered by NSI" pill
+- [ ] **OWNER-14**: Home calendar selected-date renders NSI blue (`#3B82F6`) background; hover state preserves gray-100
+- [ ] **OWNER-15**: Home calendar grid does not overflow Card on mobile (375px viewport tested)
+- [ ] **BOOK-01**: `/app/bookings` page renders without crashing for the seeded NSI account on production
+- [ ] **BOOK-02**: `/app/bookings` page renders without crashing across all 3 seeded test accounts (NSI + nsi-rls-test + nsi-rls-test-3)
+- [ ] **SLOT-01**: A booker cannot insert a confirmed booking that overlaps any other confirmed booking on the same `account_id`, regardless of `event_type_id`. DB-enforced.
+- [ ] **SLOT-02**: SLOT-01 must coexist with v1.1 group-booking capacity (`max_bookings_per_slot > 1` on a single event type allows N concurrent same-slot bookings).
+- [ ] **SLOT-03**: SLOT-01 must coexist with reschedule semantics — a booking moved to `status='rescheduled'` does NOT block its original slot from re-booking.
+- [ ] **SLOT-04**: Same-event-type double-booking RCA documented; if a regression vs. v1.1 race-safety, fix at the same layer (insert-time index/constraint), not application logic.
+- [ ] **SLOT-05**: Production smoke test confirms a cross-event-type collision attempt is rejected (e.g., manual POST to `/api/bookings` with overlapping interval returns 4xx, not 201).
 
 ### Validated
 
@@ -260,4 +286,4 @@ A visitor lands on a contractor's website, picks an available time slot in a bra
 | v1.3 per-instance className override pattern extended from Phase 23 to Phase 24 (calendar + dropdown) | Phase 23 established the invariant for shared `components/ui/calendar.tsx`. Phase 24 applied the same pattern to `components/ui/dropdown-menu.tsx` and `home-calendar.tsx` DayButton. When a CSS custom property is shared across multiple consumers and only ONE needs to change, override at the consumer site. | ✓ Good — pattern locked across 3 surfaces. `globals.css --color-accent` token preserved for 3 other consumers (bookings-table hover, cancel-confirm-form hover, public booker `.day-has-slots::after`). Reusable any time a per-surface theming change conflicts with a shared component or token. |
 
 ---
-*Last updated: 2026-05-02 after v1.3 milestone shipped (Bug Fixes + Polish — 8 of 8 requirements; same-day milestone; deploy-and-eyeball formally adopted as production gate; carryover backlog deferred to v1.4)*
+*Last updated: 2026-05-02 after v1.4 milestone start (Slot Correctness + Polish — 11 active requirements; live-use feedback drove scope, not carryover backlog; carryover deferred to v1.5)*
