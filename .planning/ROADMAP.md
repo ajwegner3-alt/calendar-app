@@ -94,10 +94,11 @@ See [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md) for full phase 
 - V14-mp-02: Auth pill removal targets `auth-hero.tsx:27-31` only — do NOT modify `header.tsx` shared `variant="auth"` branch or remove the header entirely.
 - V14-mp-03: Use `bg-primary` Tailwind token for the selected-date color (not a hardcoded hex) so it inherits the owner-shell `--primary` lock from v1.2.
 
-**Plans:** TBD (estimated 1-2 plans)
+**Plans:** 2 plans
 
 Plans:
-- [ ] 25-01: Remove NSI pill from auth-hero + flip calendar selected color + fix mobile overflow
+- [ ] 25-01-PLAN.md — Remove "Powered by NSI" pill from auth hero (AUTH-21, AUTH-22)
+- [ ] 25-02-PLAN.md — Flip home-calendar selected color to NSI blue + fix 390px mobile overflow (OWNER-14, OWNER-15)
 
 ---
 
