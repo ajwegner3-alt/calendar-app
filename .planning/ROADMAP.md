@@ -6,7 +6,7 @@
 - ✅ **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (34 plans, including decimal Phases 12.5 + 12.6) — shipped 2026-04-30. Full archive: [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md).
 - ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (22 plans across 8 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md).
 - ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
-- 🚧 **v1.4 Slot Correctness + Polish** — Phases 25-27 (in progress) — started 2026-05-02.
+- 🎯 **v1.4 Slot Correctness + Polish** — Phases 25-27 (3 phases, 8 plans) — code complete 2026-05-03; ready for `/gsd:audit-milestone`.
 
 ## Phases
 
@@ -173,9 +173,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 27-01-PLAN.md — Pre-flight diagnostic (HARD GATE) + EXCLUDE constraint migration (btree_gist + during generated column + constraint, with rollback SQL)
-- [ ] 27-02-PLAN.md — Application-layer 23P01 error mapping (route.ts + reschedule.ts) + booker UI 409 handler (CROSS_EVENT_CONFLICT, generic copy)
-- [ ] 27-03-PLAN.md — 6 mandatory tests (cross-event block, group-booking regression, adjacent non-collision, cancelled-doesn't-block, reschedule cross-event, retry-loop-break) + Andrew production smoke runbook
+- [x] 27-01-PLAN.md — Pre-flight diagnostic (HARD GATE) + EXCLUDE constraint migration (btree_gist + during generated column + constraint, with rollback SQL) — completed 2026-05-03
+- [x] 27-02-PLAN.md — Application-layer 23P01 error mapping (route.ts + reschedule.ts) + booker UI 409 handler (CROSS_EVENT_CONFLICT, generic copy) — completed 2026-05-03
+- [x] 27-03-PLAN.md — 6 mandatory tests (cross-event block, group-booking regression, adjacent non-collision, cancelled-doesn't-block, reschedule cross-event, retry-loop-break) + Andrew production smoke runbook — completed 2026-05-03
 
 </details>
 
@@ -189,17 +189,17 @@ Plans:
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 | 25 | v1.4 | 2 / 2 | ✅ Complete | 2026-05-03 |
 | 26 | v1.4 | 3 / 3 | ✅ Complete | 2026-05-03 |
-| 27 | v1.4 | 0 / 3 | Plans created | - |
+| 27 | v1.4 | 3 / 3 | ✅ Complete | 2026-05-03 |
 
 ## Cumulative Stats
 
-- **Total phases shipped:** 28 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25 + 26)
-- **Total plans shipped:** 119 (52 + 34 + 22 + 6 + 2 + 3)
-- **Total commits:** 490 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + ~8 v1.4 Phases 25-26)
+- **Total phases shipped:** 29 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25 + 26 + 27)
+- **Total plans shipped:** 122 (52 + 34 + 22 + 6 + 2 + 3 + 3)
+- **Total commits:** 499 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + ~17 v1.4 Phases 25-27)
 - **Lines of code at v1.3 ship:** 22,071 LOC TS/TSX in runtime tree (NET +200 from v1.2 close — surgical milestone)
-- **Test suite at Phase 26 close:** 224 passing + 4 skipped (net +2 tests: bookings-table-rsc-boundary.test.ts)
-- **v1.4 status:** Active — 3 phases (25-27), 11 requirements. Phases 25 + 26 complete. Phase 27 (Slot Correctness) next.
+- **Test suite at Phase 27 close:** 225 passing + 9 skipped without `SUPABASE_DIRECT_URL` (≥230 + 4 with DIRECT_URL set; +1 ran + 5 skipped from 6 new pg-driver tests in `cross-event-overlap.test.ts`)
+- **v1.4 status:** All 3 phases complete (25, 26, 27). Milestone ready for `/gsd:audit-milestone`.
 
 ---
 
-*Roadmap last updated: 2026-05-03 — Phase 26 complete; Phase 27 plans created (3 plans across 3 waves: pre-flight + migration → error mapping → tests + production smoke).*
+*Roadmap last updated: 2026-05-03 — Phase 27 complete. v1.4 milestone ready to audit and ship.*

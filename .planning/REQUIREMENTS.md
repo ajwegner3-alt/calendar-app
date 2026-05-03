@@ -26,11 +26,11 @@
 
 ### Slot Correctness (Headline)
 
-- [ ] **SLOT-01**: A booker cannot insert a confirmed booking that overlaps any other confirmed booking on the same `account_id`, regardless of `event_type_id`. DB-enforced via `EXCLUDE USING gist (account_id WITH =, event_type_id WITH <>, during WITH &&) WHERE (status='confirmed')` constraint on `bookings` table. Verified by unit test asserting `error.code === '23P01'` on second INSERT.
-- [ ] **SLOT-02**: SLOT-01 must coexist with v1.1 group-booking capacity. A single event type with `max_bookings_per_slot > 1` allows N concurrent same-slot bookings on that event type. The `event_type_id WITH <>` clause in the EXCLUDE constraint is what makes this coexist (constraint only fires when event_type_ids differ). Verified by test: insert 3 bookings on a `max_bookings_per_slot=3` event type at same `start_at` → all 3 succeed.
-- [ ] **SLOT-03**: SLOT-01 must coexist with reschedule semantics. A booking moved via `lib/bookings/reschedule.ts` UPDATE-in-place (status stays `'confirmed'`, time range moves) does NOT block its own new slot. Verified by test: insert booking at 9:00, reschedule to 10:00, no constraint error; new INSERT at 9:00 on same event type succeeds.
-- [ ] **SLOT-04**: Same-event-type double-booking root-cause analysis documented in Phase 27 SUMMARY. If a regression vs. v1.1 race-safety exists, the fix lives at the same DB layer (insert-time index/constraint), not application logic. The existing `bookings_capacity_slot_idx` partial unique index continues to handle this; if RCA reveals a defect in the index or status filter, the migration may be amended.
-- [ ] **SLOT-05**: Production smoke test confirms a cross-event-type collision attempt is rejected. Manual test: book a 60-min appointment at 9:00 on Event A; attempt to book 9:30 on Event B (different event type, same account); expect 4xx with `code: 'CROSS_EVENT_CONFLICT'`. Andrew live-verifies on production deploy.
+- [x] **SLOT-01**: A booker cannot insert a confirmed booking that overlaps any other confirmed booking on the same `account_id`, regardless of `event_type_id`. DB-enforced via `EXCLUDE USING gist (account_id WITH =, event_type_id WITH <>, during WITH &&) WHERE (status='confirmed')` constraint on `bookings` table. Verified by unit test asserting `error.code === '23P01'` on second INSERT.
+- [x] **SLOT-02**: SLOT-01 must coexist with v1.1 group-booking capacity. A single event type with `max_bookings_per_slot > 1` allows N concurrent same-slot bookings on that event type. The `event_type_id WITH <>` clause in the EXCLUDE constraint is what makes this coexist (constraint only fires when event_type_ids differ). Verified by test: insert 3 bookings on a `max_bookings_per_slot=3` event type at same `start_at` → all 3 succeed.
+- [x] **SLOT-03**: SLOT-01 must coexist with reschedule semantics. A booking moved via `lib/bookings/reschedule.ts` UPDATE-in-place (status stays `'confirmed'`, time range moves) does NOT block its own new slot. Verified by test: insert booking at 9:00, reschedule to 10:00, no constraint error; new INSERT at 9:00 on same event type succeeds.
+- [x] **SLOT-04**: Same-event-type double-booking root-cause analysis documented in Phase 27 SUMMARY. If a regression vs. v1.1 race-safety exists, the fix lives at the same DB layer (insert-time index/constraint), not application logic. The existing `bookings_capacity_slot_idx` partial unique index continues to handle this; if RCA reveals a defect in the index or status filter, the migration may be amended.
+- [x] **SLOT-05**: Production smoke test confirms a cross-event-type collision attempt is rejected. Manual test: book a 60-min appointment at 9:00 on Event A; attempt to book 9:30 on Event B (different event type, same account); expect 4xx with `code: 'CROSS_EVENT_CONFLICT'`. Andrew live-verifies on production deploy.
 
 ## Future Requirements (deferred to v1.5+)
 
@@ -96,11 +96,11 @@ Explicitly excluded from v1.4 to prevent scope creep. Each entry has a reason:
 | OWNER-15 | Phase 25 | Complete |
 | BOOK-01 | Phase 26 | Complete |
 | BOOK-02 | Phase 26 | Complete |
-| SLOT-01 | Phase 27 | Pending |
-| SLOT-02 | Phase 27 | Pending |
-| SLOT-03 | Phase 27 | Pending |
-| SLOT-04 | Phase 27 | Pending |
-| SLOT-05 | Phase 27 | Pending |
+| SLOT-01 | Phase 27 | Complete |
+| SLOT-02 | Phase 27 | Complete |
+| SLOT-03 | Phase 27 | Complete |
+| SLOT-04 | Phase 27 | Complete |
+| SLOT-05 | Phase 27 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 11 total
