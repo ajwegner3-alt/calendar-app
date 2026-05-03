@@ -170,11 +170,12 @@ Plans:
 - V14-MP-02: Add `23P01` → `slot_taken` branch in `reschedule.ts:149`.
 - V14-MP-05: New pg-driver tests must use `describe.skipIf(skipIfNoDirectUrl)` guard pattern from `race-guard.test.ts`.
 
-**Plans:** TBD (estimated 2-3 plans)
+**Plans:** 3 plans
 
 Plans:
-- [ ] 27-01: Pre-flight diagnostic + migration (btree_gist + during column + EXCLUDE constraint)
-- [ ] 27-02: Error mapping (route.ts + reschedule.ts + client 409 handler) + tests + production smoke
+- [ ] 27-01-PLAN.md — Pre-flight diagnostic (HARD GATE) + EXCLUDE constraint migration (btree_gist + during generated column + constraint, with rollback SQL)
+- [ ] 27-02-PLAN.md — Application-layer 23P01 error mapping (route.ts + reschedule.ts) + booker UI 409 handler (CROSS_EVENT_CONFLICT, generic copy)
+- [ ] 27-03-PLAN.md — 6 mandatory tests (cross-event block, group-booking regression, adjacent non-collision, cancelled-doesn't-block, reschedule cross-event, retry-loop-break) + Andrew production smoke runbook
 
 </details>
 
@@ -188,7 +189,7 @@ Plans:
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 | 25 | v1.4 | 2 / 2 | ✅ Complete | 2026-05-03 |
 | 26 | v1.4 | 3 / 3 | ✅ Complete | 2026-05-03 |
-| 27 | v1.4 | 0 / TBD | Not started | - |
+| 27 | v1.4 | 0 / 3 | Plans created | - |
 
 ## Cumulative Stats
 
@@ -201,4 +202,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-03 — Phase 26 complete (3 plans: diagnose → fix → verify; Andrew sign-off received). Phase 27 (Slot Correctness DB-Layer Enforcement) next.*
+*Roadmap last updated: 2026-05-03 — Phase 26 complete; Phase 27 plans created (3 plans across 3 waves: pre-flight + migration → error mapping → tests + production smoke).*
