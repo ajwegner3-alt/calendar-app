@@ -90,7 +90,6 @@ export function BookingsTable({ rows }: { rows: BookingRow[] }) {
                       <a
                         href={`tel:${row.booker_phone}`}
                         className="hover:underline"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         {row.booker_phone}
                       </a>
