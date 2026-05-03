@@ -50,6 +50,7 @@
  *   404 → { error: string; code: "NOT_FOUND" }
  *   409 → { error: string; code: "SLOT_TAKEN" }            ← capacity=1 race-loser (CAP-07)
  *   409 → { error: string; code: "SLOT_CAPACITY_REACHED" } ← capacity>1 fully booked (CAP-07)
+ *   409 → { error: string; code: "CROSS_EVENT_CONFLICT" } ← cross-event-type overlap (V14-MP-01)
  *   429 → { error: string; code: "RATE_LIMITED" } ← rate-limit path (Retry-After header)
  *   500 → { error: string; code: "INTERNAL" }
  */
@@ -240,6 +241,23 @@ export async function POST(req: NextRequest) {
 
     insertError = result.error;
 
+    // V14-MP-01 (Phase 27): 23P01 is the EXCLUDE constraint
+    // bookings_no_account_cross_event_overlap firing — the booker is trying to
+    // claim a slot already held by a DIFFERENT event type on the same account.
+    // This is NOT a same-event-type capacity race, so retrying with another
+    // slot_index would be infinite (the cross-event collision is independent
+    // of slot_index). BREAK immediately. Loop must NOT increment slot_index.
+    if (result.error.code === "23P01") {
+      // Observability: distinct log signal so we can monitor cross-event
+      // collisions in prod. No PII — only structural identifiers.
+      console.error("[/api/bookings] 23P01 cross-event overlap", {
+        code: "CROSS_EVENT_CONFLICT",
+        account_id: account.id,
+        event_type_id: eventType.id,
+      });
+      break;
+    }
+
     if (result.error.code !== "23505") {
       // Non-capacity error: do not retry. Propagate immediately.
       break;
@@ -249,6 +267,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (!booking) {
+    // V14-MP-01 (Phase 27): map 23P01 to 409 CROSS_EVENT_CONFLICT.
+    // Generic wording — no event-type leak (booker has no concept of event types).
+    if (insertError?.code === "23P01") {
+      return NextResponse.json(
+        {
+          error: "That time is no longer available. Please choose a different time.",
+          code: "CROSS_EVENT_CONFLICT",
+        },
+        { status: 409, headers: NO_STORE },
+      );
+    }
+
     if (insertError?.code === "23505") {
       // All slot_index values 1..maxBookingsPerSlot were taken — capacity
       // fully exhausted for this (event_type_id, start_at) pair.
