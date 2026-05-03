@@ -1,5 +1,37 @@
 # Project Milestones: Calendar App (NSI Booking Tool)
 
+## v1.3 Bug Fixes + Polish (Shipped: 2026-05-02)
+
+**Delivered:** Surgical bug-fix and polish milestone closing 8 items from Andrew's post-v1.2 live use — auth signup-link fix + login layout flip + 30-day session TTL verification, public booking mobile centering + desktop layout-collision fix + account-index browser title, and owner-side home calendar de-orange + copyable per-event booking-link field. Mid-checkpoint scope expansion added a per-row copy-link button on the event-types list page and flipped the dropdown menu focus highlight from orange to NSI blue. Same-day milestone (~10 hours scope-lock to ship) on the strength of surgical scope and parallel wave execution. Marathon QA formally adopted as deploy-and-eyeball (third consecutive deferral; carryover backlog deferred to v1.4 in entirety).
+
+**Phases completed:** 22-24 — 3 phases, 6 plans total.
+
+**Key accomplishments:**
+
+- **Auth fixes shipped (AUTH-18, AUTH-19, AUTH-20)** — `publicAuthPaths.includes()` exact-match in `lib/supabase/proxy.ts` closes the broken signup-link from `/login` (root cause was `pathname.startsWith()` missing exempt paths). Login page columns swapped (`AuthHero` LEFT, form RIGHT) preserving the v1.2 `lg:` breakpoint to avoid regression. Session TTL verified via `@supabase/ssr@0.10.2` 400-day cookie default + Supabase hosted dashboard zero timebox/inactivity; `proxy.ts setAll` patched to forward cache-control headers via `Object.entries(headers ?? {})` defensively against CDN cache poisoning during token rotation. ROADMAP success criterion #3 (close-browser-reopen-next-day) tracked observationally.
+- **Public booking layout fixes shipped (PUB-13, PUB-14, PUB-15)** — mobile slot picker calendar centered via `justify-self-center` (canonical grid-item alignment property; first attempt with `mx-auto` failed Andrew's live mobile test, corrected mid-verify in commit `23973c9`). Desktop timezone hint hoisted above `grid lg:grid-cols-2` wrapper as full-width sibling via React fragment root, eliminating the layout collision with the calendar. Public account-index page browser title locked to `Book with ${data.account.name}` via `generateMetadata()`; the event-type cards listing UI was already in place from a prior phase, so PUB-15 reduced to a metadata-only fix.
+- **Owner UI polish shipped (OWNER-12, OWNER-13) + mid-checkpoint scope expansion** — `home-calendar.tsx` DayButton de-oranged: hover = `bg-gray-100 + text-gray-900`, selected = `bg-gray-700 + text-white`, today = `bg-muted + font-semibold + ring-1 ring-gray-300`, has-bookings dot = `#9CA3AF` (inline). Shared `components/ui/calendar.tsx` and `globals.css --color-accent` token UNTOUCHED (3 other consumers preserved: bookings-table hover, cancel-confirm-form hover, public booker `.day-has-slots::after`). New `BookingLinkField` client component renders as first form section in `event-type-form.tsx`, live-updates from `watch("slug")`, copies on click with Copy → Check icon flip ~1.5s. Required-prop typing on `EventTypeForm.accountSlug` forced `new/page.tsx` conversion to async server component. Old `UrlPreview` deleted. Mid-checkpoint feedback absorbed into commit `db7fb62`: per-row `RowCopyLinkButton` on event-types list page (single-click copy, hidden on archived rows) + per-instance `focus:bg-primary focus:text-primary-foreground` overrides on `DropdownMenuItem`s (Edit / Make active|inactive / Get embed code / Restore — Archive retains destructive red). Shared `components/ui/dropdown-menu.tsx` UNTOUCHED.
+- **Pattern locked: per-instance className overrides for shared shadcn components** — extends Phase 23's calendar invariant. Phase 24 used the same pattern on `DropdownMenuItem` and `home-calendar.tsx` DayButton. When a CSS custom property is shared across multiple consumers and only ONE needs to change, override at the consumer site (per-instance className or inline style) instead of redefining the token globally.
+- **Pattern locked: same-day milestone is viable for surgical scope** — scope lock → REQUIREMENTS.md → ROADMAP.md → 3 phases planned → 3 phases executed via parallel waves → verifier passes → milestone close, all in ~10 hours. Wall-clock from `7f66c33` (v1.2 archive) to `440fdf6` (Phase 24 completion) = 2026-05-02 11:35 → 21:36. Reproducible when scope is < 10 plans and all touch existing surfaces.
+- **Marathon QA pattern formalized as deploy-and-eyeball** — third consecutive deferral; v1.0 → v1.1 → v1.2 → v1.3 all chose the same path. Andrew's live deploy approval is now the canonical production gate. QA-09..QA-34 + per-phase manual checks officially deferred to v1.4 with no commitment to execute (formerly tracked as "deferred" with implicit return-soon expectation).
+
+**Stats:**
+
+- 13 files changed across the v1.3 phase span (excluding `.planning/`)
+- 326 lines inserted; 126 lines deleted (NET +200 LOC runtime; surgical milestone, not deletion-heavy)
+- 22,071 LOC TypeScript/TSX in the runtime tree at sign-off (up from 21,871 at v1.2 close)
+- 3 phases, 6 plans, ~9 tasks, 34 commits (including planning + execution + plan-metadata + phase-completion + milestone-close)
+- ~10 hours from v1.2 archive (`7f66c33` 2026-05-02 11:35) to last phase commit (`440fdf6` 2026-05-02 21:36) — same-day milestone
+- 222 passing + 4 skipped automated tests (26 test files) at sign-off — baseline preserved exactly from v1.2
+
+**Git range:** `7f66c33` (`chore: archive v1.2 milestone`) → `440fdf6` (`docs(24): complete owner-ui-polish phase`)
+
+**Sign-off:** Andrew live-deploy approved each phase as it shipped — Phase 22 (AUTH-18/19 immediately, AUTH-20 observational), Phase 23 (PUB-13/14/15 after `justify-self-center` follow-up), Phase 24 (OWNER-12/13 + mid-checkpoint expansion). Verbatim 2026-05-02 21:35 — *"approved"* on the Phase 24 live deploy verification. No marathon QA executed; deploy-and-eyeball is the production gate (third consecutive deferral, now formally adopted).
+
+**What's next:** v1.4 — execute the third-deferral marathon QA + Resend migration + Vercel Pro upgrade + OAuth/magic-link + final NSI mark image swap + carryover tech debt (DEBT-01..07). See `FUTURE_DIRECTIONS.md` §8 for canonical v1.4 backlog.
+
+---
+
 ## v1.2 NSI Brand Lock-Down + UI Overhaul (Shipped: 2026-05-02)
 
 **Delivered:** Unified North Star Integrations visual language across the entire owner-facing app — `bg-gray-50` + blue-blot `BackgroundGlow` + glass "NorthStar" header pill + Inter weights 400-800 — while preserving each contractor's `brand_primary` on public booking surfaces and the 6 transactional emails. Per-account chrome theming stripped from the owner shell. Branding editor collapsed from 5 controls to 2 (logo + `brand_primary`). 4 deprecated `accounts` columns and 2 ENUM types permanently dropped from production Postgres via two-step deploy protocol. First net-deletion milestone (NET -792 lines).

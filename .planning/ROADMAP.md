@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** — Phases 1-9 (52 plans) — shipped 2026-04-27. Full archive: [`milestones/v1.0-ROADMAP.md`](./milestones/v1.0-ROADMAP.md).
 - ✅ **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (34 plans, including decimal Phases 12.5 + 12.6) — shipped 2026-04-30. Full archive: [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md).
 - ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (22 plans across 8 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md).
-- ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02
+- ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
 
 ## Phases
 
@@ -56,80 +56,16 @@ See [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md) for full phase 
 
 </details>
 
-<details open>
-<summary>🔄 v1.3 Bug Fixes + Polish (Phases 22-24) — IN PROGRESS</summary>
+<details>
+<summary>✅ v1.3 Bug Fixes + Polish (Phases 22-24) — SHIPPED 2026-05-02</summary>
 
-Surgical bug-fix and polish milestone surfaced from Andrew's post-v1.2 live use. No new architecture, no new packages, no new domain capabilities. All 8 requirements target existing surfaces. Marathon QA explicitly NOT scheduled — Andrew has formally adopted deploy-and-eyeball as the de-facto production gate (third consecutive marathon deferral; v1.2 ship-record documents this pattern).
+See [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md) for full phase details.
 
-### Phase 22: Auth Fixes
-
-**Goal:** Owner authentication surfaces work as intended — signup is reachable from login, the split-panel layout matches the intended Cruip direction, and authenticated sessions persist long enough that Andrew isn't re-prompted to log in during a normal week of use.
-
-**Dependencies:** None (touches `/login` page + Supabase Auth client config; no schema changes).
-
-**Requirements covered:** AUTH-18, AUTH-19, AUTH-20 (3 requirements).
-
-**Success criteria:**
-
-1. From `/login`, clicking the "Sign up" link navigates the browser to `/signup` (no broken click; correct Next.js Link routing).
-2. The `/login` page renders the informational pane on the LEFT side of the viewport and the email/password form on the RIGHT side at desktop widths (≥ 768px).
-3. After a successful login, the owner can close the browser, reopen it the next day, navigate back to `/app`, and remain authenticated without being redirected to `/login` (sliding 30-day refresh window).
-4. The 30-day session TTL applies on next login or refresh-token rotation; existing sessions are not retroactively extended (acceptable trade-off — Andrew will log in once and the longer TTL kicks in from there).
-
-**Plans:** 2 plans
-
-Plans:
-- [x] 22-01-PLAN.md — AUTH-18 middleware allow-list fix + AUTH-19 login page column swap (Wave 1, autonomous) — completed 2026-05-02
-- [x] 22-02-PLAN.md — AUTH-20 proxy.ts setAll headers patch + manual session-persistence verification (Wave 2, has human-verify checkpoint) — completed 2026-05-02
-
----
-
-### Phase 23: Public Booking Fixes
-
-**Goal:** The public-facing booker experience renders correctly across viewports and provides a discoverable entry point at the account root — no off-center calendars, no overlapping helper text, and no dead-end landing page when a booker hits `/[account]` without knowing the event slug.
-
-**Dependencies:** None (touches `/[account]` + `/[account]/[event-slug]` only; uses existing `PublicShell` + slot picker components).
-
-**Requirements covered:** PUB-13, PUB-14, PUB-15 (3 requirements).
-
-**Success criteria:**
-
-1. On a mobile viewport (< 768px wide), the slot picker calendar widget on `/[account]/[event-slug]` is horizontally centered within the public booking card (no left- or right-bias visible to the booker).
-2. On a desktop viewport (≥ 1024px wide), the timezone hint ("Times shown in America/Chicago") and the "Pick a date to see available times:" instruction render in their own visual lanes — neither overlaps the calendar widget grid.
-3. Visiting `/[account]` (e.g., `/nsi`) renders a landing page listing every public event type for that account as a selectable card, each showing the account logo, event name, duration, and a CTA that routes to `/[account]/[event-slug]` for booking.
-4. From the `/[account]` index, clicking any event-type card lands the booker on the existing slot-picker page in the booker's local timezone with no regression to the v1.2 booking flow.
-
-**Plans:** 2 plans
-
-Plans:
-- [x] 23-01-PLAN.md — PUB-15 metadata title fix on `/[account]/page.tsx` (Wave 1, autonomous, parallel with 23-02) — completed 2026-05-02
-- [x] 23-02-PLAN.md — PUB-13 mobile calendar centering + PUB-14 timezone hint hoist on `slot-picker.tsx` (Wave 1, autonomous, parallel with 23-01) — completed 2026-05-02 (mid-verify follow-up: `mx-auto` swapped to `justify-self-center` for grid-native centering after live mobile check)
-
----
-
-### Phase 24: Owner UI Polish
-
-**Goal:** Two owner-side dashboard touch-ups that close visible gaps from Andrew's live use — the orange-accent leak in the Home tab calendar disappears, and the event-type edit page exposes a copyable per-event booking URL so Andrew can grab a sendable link without manual URL construction.
-
-**Dependencies:** None (touches `/app/home` calendar component + `/app/event-types/[id]` edit form; no schema changes).
-
-**Requirements covered:** OWNER-12, OWNER-13 (2 requirements).
-
-**Success criteria:**
-
-1. On `/app/home`, the monthly calendar day-grid renders day buttons with no orange (`#F97316`) coloring in any state (default / hover / today / selected / has-bookings) — the surviving `--color-accent` orange from `globals.css` is replaced with grey or NSI blue across all day-button variants.
-2. On `/app/event-types/[id]`, the form renders a copyable booking-link field at the top showing the full public per-event URL in the format `https://<host>/<account-slug>/<event-slug>`.
-3. Clicking the copy button next to that field copies the URL to the clipboard and shows brief visual confirmation (toast / icon-flip / "Copied!" text).
-4. The booking-link URL is correctly constructed from the current account slug and event slug — verified by pasting into a new browser tab and landing on the working public booking page for that event type.
-
-**Plans:** 2 plans
-
-Plans:
-- [x] 24-01-PLAN.md — OWNER-12 home calendar de-orange (Wave 1, autonomous, parallel with 24-02): replaced bg-accent / bg-primary day-button states with grey-only treatment in app/(shell)/app/_components/home-calendar.tsx — completed 2026-05-02
-- [x] 24-02-PLAN.md — OWNER-13 copyable booking-link field on event-type edit page (Wave 1, autonomous, parallel with 24-01): new BookingLinkField component, edit/page.tsx + new/page.tsx fetch account slug, replaced and deleted UrlPreview; mid-checkpoint user-driven follow-up `db7fb62` added per-row RowCopyLinkButton on /app/event-types list + blue per-instance focus override on dropdown menu items — completed 2026-05-02 (Andrew live deploy approved)
+- [x] Phase 22: Auth Fixes (2 plans) — completed 2026-05-02
+- [x] Phase 23: Public Booking Fixes (2 plans) — completed 2026-05-02
+- [x] Phase 24: Owner UI Polish (2 plans) — completed 2026-05-02 (Andrew live deploy approved)
 
 </details>
-
 
 ## Progress
 
@@ -138,19 +74,17 @@ Plans:
 | 1-9 | v1.0 | 52 / 52 | ✅ Shipped | 2026-04-27 |
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
-| 22 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
-| 23 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
-| 24 | v1.3 | 2 / 2 | ✅ Complete | 2026-05-02 |
+| 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 
 ## Cumulative Stats
 
-- **Total phases shipped:** 23 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21)
-- **Total plans shipped:** 108 (52 + 34 + 22)
-- **Total commits:** 448 (222 v1.0 + 135 v1.1 + 91 v1.2)
-- **Lines of code at v1.2 ship:** 21,871 LOC TS/TSX in runtime tree (down from 29,450 at v1.1 close — first net-deletion milestone)
-- **Test suite at v1.2 ship:** 222 passing + 4 skipped (24 test files; -3 deleted in Phase 20)
-- **v1.3 projected scope:** 3 phases / 6 plans / 8 requirements (small surgical milestone; no schema changes; no new packages)
+- **Total phases shipped:** 26 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24)
+- **Total plans shipped:** 114 (52 + 34 + 22 + 6)
+- **Total commits:** 482 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3)
+- **Lines of code at v1.3 ship:** 22,071 LOC TS/TSX in runtime tree (NET +200 from v1.2 close — surgical milestone)
+- **Test suite at v1.3 ship:** 222 passing + 4 skipped (26 test files — baseline preserved exactly from v1.2)
+- **v1.4 status:** Not yet scoped. Carryover backlog (Marathon QA / Infrastructure / Auth additions / Brand asset / Tech debt) tracked in `FUTURE_DIRECTIONS.md` §8.
 
 ---
 
-*Roadmap last updated: 2026-05-02 — Phase 24 (Owner UI Polish) complete. OWNER-12/13 verified via Andrew live deploy approval. v1.3 milestone fully shipped (Phases 22-24, 6 plans).*
+*Roadmap last updated: 2026-05-02 — v1.3 milestone shipped (same-day, ~10 hours scope-lock to ship). Marathon QA formally adopted as deploy-and-eyeball production gate.*
