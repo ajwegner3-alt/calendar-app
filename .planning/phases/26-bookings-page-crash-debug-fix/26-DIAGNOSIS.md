@@ -77,4 +77,4 @@ These fragility sites were observed during the prior pre-read. They are not the 
 
 ## Andrew Confirmation
 
-_(empty — fill after Task 3 checkpoint)_
+Confirmed by Andrew on 2026-05-03. Diagnosis matches observed behavior (digest 2914592434, prop-shape match verified against bookings-table.tsx:85-99). Plan 02 cleared to delete the onClick at line 93.
