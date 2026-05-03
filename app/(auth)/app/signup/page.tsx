@@ -25,7 +25,12 @@ export default function SignupPage() {
         <BackgroundGlow />
       </div>
       <div className="relative grid min-h-screen lg:grid-cols-2">
-        {/* Left: form column */}
+        {/* Left: NSI hero (lg+ only) — matches login layout */}
+        <AuthHero
+          headline="Start scheduling in minutes"
+          subtext="Create your free account, pick a slug, and you'll have a live booking page before your first coffee."
+        />
+        {/* Right: form column */}
         <main className="flex flex-col items-center justify-center bg-white/0 px-6 pt-20 pb-12 md:pt-24 md:pb-20 lg:bg-white lg:px-12">
           <div className="w-full max-w-sm">
             <header className="mb-8">
@@ -39,11 +44,6 @@ export default function SignupPage() {
             <SignupForm />
           </div>
         </main>
-        {/* Right: NSI hero (lg+ only) */}
-        <AuthHero
-          headline="Start scheduling in minutes"
-          subtext="Create your free account, pick a slug, and you'll have a live booking page before your first coffee."
-        />
       </div>
     </div>
   );

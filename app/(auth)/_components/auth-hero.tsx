@@ -21,7 +21,7 @@ export function AuthHero({
   subtext = "A multi-tenant scheduling tool built for trade contractors. Branded booking pages, capacity-aware slots, and email confirmations — done.",
 }: AuthHeroProps) {
   return (
-    <aside className="relative hidden overflow-hidden bg-gray-50 lg:flex lg:flex-col lg:items-start lg:justify-center lg:px-12 lg:py-20">
+    <aside className="relative hidden overflow-hidden bg-gray-50 lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-12 lg:py-20">
       <BackgroundGlow />
       <div className="relative z-10 max-w-md">
         <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
