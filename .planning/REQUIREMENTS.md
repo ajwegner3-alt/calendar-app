@@ -88,28 +88,28 @@ Explicitly excluded from v1.4 to prevent scope creep. Each entry has a reason:
 
 ## Traceability
 
-Empty initially. Will be populated by gsd-roadmapper during Phase 9 of `/gsd:new-milestone`.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-21 | TBD | Pending |
-| AUTH-22 | TBD | Pending |
-| OWNER-14 | TBD | Pending |
-| OWNER-15 | TBD | Pending |
-| BOOK-01 | TBD | Pending |
-| BOOK-02 | TBD | Pending |
-| SLOT-01 | TBD | Pending |
-| SLOT-02 | TBD | Pending |
-| SLOT-03 | TBD | Pending |
-| SLOT-04 | TBD | Pending |
-| SLOT-05 | TBD | Pending |
+| AUTH-21 | Phase 25 | Pending |
+| AUTH-22 | Phase 25 | Pending |
+| OWNER-14 | Phase 25 | Pending |
+| OWNER-15 | Phase 25 | Pending |
+| BOOK-01 | Phase 26 | Pending |
+| BOOK-02 | Phase 26 | Pending |
+| SLOT-01 | Phase 27 | Pending |
+| SLOT-02 | Phase 27 | Pending |
+| SLOT-03 | Phase 27 | Pending |
+| SLOT-04 | Phase 27 | Pending |
+| SLOT-05 | Phase 27 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 11 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11 mapped, 0 unmapped ✓
+- Phase 25: AUTH-21, AUTH-22, OWNER-14, OWNER-15 (4 requirements)
+- Phase 26: BOOK-01, BOOK-02 (2 requirements)
+- Phase 27: SLOT-01, SLOT-02, SLOT-03, SLOT-04, SLOT-05 (5 requirements)
 
 ---
 
 *Requirements defined: 2026-05-02*
-*Last updated: 2026-05-02 after initial v1.4 definition*
+*Last updated: 2026-05-02 — traceability filled by gsd-roadmapper (11/11 mapped)*
