@@ -122,10 +122,12 @@ Plans:
 **Pitfalls to avoid:**
 - V14-MP-04: Diagnostic-first protocol — read Vercel server logs and reproduce in Supabase SQL Editor before writing any fix. Do NOT add speculative null guards before confirming the root cause.
 
-**Plans:** TBD (estimated 1-2 plans)
+**Plans:** 3 plans
 
 Plans:
-- [ ] 26-01: Diagnose crash via server logs + SQL Editor; implement confirmed fix; verify across 3 accounts
+- [ ] 26-01-PLAN.md — Diagnose /app/bookings crash via Vercel logs + SQL Editor; produce DIAGNOSIS.md (BOOK-01)
+- [ ] 26-02-PLAN.md — Implement surgical fix at confirmed site + ONE regression test + push to main (BOOK-01)
+- [ ] 26-03-PLAN.md — Live-verify on production across 3 seeded accounts + 4 shape coverage scenarios; consolidate phase SUMMARY (BOOK-02)
 
 ---
 
@@ -185,7 +187,7 @@ Plans:
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 | 25 | v1.4 | 2 / 2 | ✅ Complete | 2026-05-03 |
-| 26 | v1.4 | 0 / TBD | Not started | - |
+| 26 | v1.4 | 0 / 3 | Planned | - |
 | 27 | v1.4 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
@@ -199,4 +201,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-03 — Phase 25 complete (2/2 plans, AUTH-21/22 + OWNER-14/15 satisfied; bonus signup-layout-mirror + auth-hero-centering shipped same-phase).*
+*Roadmap last updated: 2026-05-03 — Phase 25 complete; Phase 26 planned (3 plans: diagnose → fix → verify; gated by Vercel log retrieval and Andrew confirmation).*
