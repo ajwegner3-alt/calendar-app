@@ -6,7 +6,7 @@
 - ✅ **v1.1 Multi-User + Capacity + Branded UI** — Phases 10-13 (34 plans, including decimal Phases 12.5 + 12.6) — shipped 2026-04-30. Full archive: [`milestones/v1.1-ROADMAP.md`](./milestones/v1.1-ROADMAP.md).
 - ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (22 plans across 8 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md).
 - ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
-- 🎯 **v1.4 Slot Correctness + Polish** — Phases 25-27 (3 phases, 8 plans) — code complete 2026-05-03; ready for `/gsd:audit-milestone`.
+- ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 
 ## Phases
 
@@ -69,113 +69,13 @@ See [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md) for full phase 
 </details>
 
 <details>
-<summary>🚧 v1.4 Slot Correctness + Polish (Phases 25-27) — IN PROGRESS</summary>
+<summary>✅ v1.4 Slot Correctness + Polish (Phases 25-27) — SHIPPED 2026-05-03</summary>
 
-### Phase 25: Surgical Polish
+See [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md) for full phase details.
 
-**Goal:** Ship four UI-only fixes that improve auth and owner-home surfaces without touching shared components or the database.
-
-**Requirements:** AUTH-21, AUTH-22, OWNER-14, OWNER-15
-
-**Dependencies:** None. Parallel-safe with Phase 26 and Phase 27.
-
-**Parallelization:** Can execute in any order relative to Phases 26 and 27; all four items are independent single-file className changes.
-
-**Research flag:** NONE — all fix locations precisely identified by research.
-
-**Success Criteria** (what must be TRUE when this phase completes):
-1. Visiting `/login` or `/signup` shows no "Powered by NSI" pill element anywhere on the page; the public `PoweredByNsi` footer on booking pages is unchanged.
-2. Clicking a selected date on the owner home calendar shows the day cell with NSI blue (`bg-primary`) background; hovering an unselected date shows `bg-gray-100`.
-3. The home calendar grid fits inside its Card container on a 375px-wide mobile viewport with no horizontal overflow or scrollbar.
-4. Shared `components/ui/calendar.tsx`, `globals.css --color-accent`, `Header` component, and `powered-by-nsi.tsx` are untouched (v1.3 invariant preserved).
-
-**Pitfalls to avoid:**
-- V14-mp-01: Do NOT add `overflow-x-auto` to the Calendar root for OWNER-15 — override `--cell-size` on the instance instead.
-- V14-mp-02: Auth pill removal targets `auth-hero.tsx:27-31` only — do NOT modify `header.tsx` shared `variant="auth"` branch or remove the header entirely.
-- V14-mp-03: Use `bg-primary` Tailwind token for the selected-date color (not a hardcoded hex) so it inherits the owner-shell `--primary` lock from v1.2.
-
-**Plans:** 2 plans
-
-Plans:
-- [x] 25-01-PLAN.md — Remove "Powered by NSI" pill from auth hero (AUTH-21, AUTH-22) — completed 2026-05-03
-- [x] 25-02-PLAN.md — Flip home-calendar selected color to NSI blue + fix 390px mobile overflow (OWNER-14, OWNER-15) — completed 2026-05-03
-
----
-
-### Phase 26: Bookings Page Crash Debug + Fix
-
-**Goal:** Identify and fix the root cause of the `/app/bookings` page crash so the page renders for all seeded production accounts.
-
-**Requirements:** BOOK-01, BOOK-02
-
-**Dependencies:** None. Independent of Phases 25 and 27. If root cause turns out to be schema-related, re-evaluate before running Phase 27 migration (unlikely per research).
-
-**Parallelization:** Can execute in any order relative to Phases 25 and 27.
-
-**Research flag:** LOW — debug path well-defined; root cause narrowed to `event_types!inner` join normalization or RLS artifact in `_lib/queries.ts:85-92`; exact stack trace requires Vercel server log inspection.
-
-**Success Criteria** (what must be TRUE when this phase completes):
-1. `/app/bookings` loads without a server error or client crash for the seeded NSI account (`slug=nsi`) on production.
-2. `/app/bookings` loads without errors for all three seeded test accounts (NSI, nsi-rls-test, nsi-rls-test-3) — confirming the fix is account-agnostic.
-3. Root cause is documented in the phase SUMMARY (Vercel log stack frame confirmed; not speculative).
-
-**Pitfalls to avoid:**
-- V14-MP-04: Diagnostic-first protocol — read Vercel server logs and reproduce in Supabase SQL Editor before writing any fix. Do NOT add speculative null guards before confirming the root cause.
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 26-01-PLAN.md — Diagnose /app/bookings crash via Vercel logs + SQL Editor; produce DIAGNOSIS.md (BOOK-01) — completed 2026-05-03
-- [x] 26-02-PLAN.md — Implement surgical fix at confirmed site + ONE regression test + push to main (BOOK-01) — completed 2026-05-03
-- [x] 26-03-PLAN.md — Live-verify on production across 3 seeded accounts + 4 shape coverage scenarios; consolidate phase SUMMARY (BOOK-02) — completed 2026-05-03
-
----
-
-### Phase 27: Slot Correctness (DB-Layer Enforcement)
-
-**Goal:** Close the contractor-can't-be-in-two-places-at-once invariant at the database layer by adding an account-scoped EXCLUDE constraint that rejects overlapping bookings across different event types.
-
-**Requirements:** SLOT-01, SLOT-02, SLOT-03, SLOT-04, SLOT-05
-
-**Dependencies:** None. Independent of Phases 25 and 26. Pre-flight diagnostic must return zero rows before any migration SQL runs (hard gate, not optional).
-
-**Parallelization:** No dependency on Phase 25 or 26; can run in any order. However, the internal Phase 27 task sequence is fixed (see below).
-
-**Research flag:** NONE — DDL live-verified against production Postgres 17.6.1; all behavioral edge cases confirmed; error code 23P01 confirmed; migration apply path established.
-
-**Internal task sequence (hard order — do not reorder):**
-1. Run pre-flight diagnostic SQL (V14-CP-06) — must return zero rows before proceeding
-2. Apply single migration file: `CREATE EXTENSION IF NOT EXISTS btree_gist` → `ADD COLUMN during tstzrange GENERATED ALWAYS AS (tstzrange(start_at, end_at, '[)')) STORED` → `ADD CONSTRAINT bookings_no_account_cross_event_overlap EXCLUDE USING gist (account_id WITH =, event_type_id WITH <>, during WITH &&) WHERE (status = 'confirmed')`
-3. Add `23P01` branch in `app/api/bookings/route.ts` before the `23505` branch; break retry loop; return 409 `CROSS_EVENT_CONFLICT`
-4. Add `23P01` → `slot_taken` branch in `lib/bookings/reschedule.ts`
-5. Write `tests/cross-event-overlap.test.ts`: basic cross-event block, group-booking regression (same-event-type capacity coexistence), adjacent-slot non-collision
-6. Production smoke test: Andrew live-verifies cross-event collision attempt returns 4xx
-
-**Success Criteria** (what must be TRUE when this phase completes):
-1. A booker who attempts to book Event B at a time already occupied by a confirmed Event A booking on the same account receives a 409 response with `code: "CROSS_EVENT_CONFLICT"` — not a 201 or 500.
-2. A single event type with `max_bookings_per_slot=3` still accepts 3 concurrent confirmed bookings at the same time (group-booking capacity coexistence verified; v1.1 regression absent).
-3. A booking rescheduled via `/api/reschedule` to a time blocked by a different event type returns 409 (not 500); rescheduling to a free time still succeeds.
-4. Andrew manually verifies on production: POST to `/api/bookings` with an overlapping interval for a different event type on the same account returns 4xx with `CROSS_EVENT_CONFLICT` code.
-5. All new pg-driver tests pass with `SUPABASE_DIRECT_URL` set; CI passes (tests skip cleanly) without it.
-
-**Pitfalls to avoid:**
-- V14-CP-01: `CREATE EXTENSION IF NOT EXISTS btree_gist` must be the first statement in the migration — without it the EXCLUDE USING gist on UUID raises an error and the deploy fails.
-- V14-CP-02: Use `tstzrange(start_at, end_at, '[)')` (half-open, inclusive start, exclusive end) — fully-closed `[]` causes adjacent slots to falsely collide.
-- V14-CP-03: Include `WHERE (status = 'confirmed')` partial predicate — without it, cancelled bookings permanently block their original slots.
-- V14-CP-04: `event_type_id WITH <>` operator is mandatory — without it, same-event-type group bookings are blocked, destroying v1.1 capacity feature.
-- V14-CP-05: EXCLUDE constraints cannot be added `CONCURRENTLY`; evaluate table row count first; use `NOT VALID` + `VALIDATE CONSTRAINT` two-step if warranted.
-- V14-CP-06: Pre-flight diagnostic SQL is a hard gate — existing cross-event overlapping confirmed bookings abort `VALIDATE CONSTRAINT`. Run and confirm zero rows before ANY migration SQL.
-- V14-CP-07: Reschedule UPDATE-in-place is constraint-safe; document JSDoc invariant about INSERT+UPDATE ordering for any future admin-reschedule code.
-- V14-MP-01: Add explicit `23P01` branch in `route.ts` before the `23505` branch; break the retry loop immediately on `23P01` (do not increment `slot_index`).
-- V14-MP-02: Add `23P01` → `slot_taken` branch in `reschedule.ts:149`.
-- V14-MP-05: New pg-driver tests must use `describe.skipIf(skipIfNoDirectUrl)` guard pattern from `race-guard.test.ts`.
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 27-01-PLAN.md — Pre-flight diagnostic (HARD GATE) + EXCLUDE constraint migration (btree_gist + during generated column + constraint, with rollback SQL) — completed 2026-05-03
-- [x] 27-02-PLAN.md — Application-layer 23P01 error mapping (route.ts + reschedule.ts) + booker UI 409 handler (CROSS_EVENT_CONFLICT, generic copy) — completed 2026-05-03
-- [x] 27-03-PLAN.md — 6 mandatory tests (cross-event block, group-booking regression, adjacent non-collision, cancelled-doesn't-block, reschedule cross-event, retry-loop-break) + Andrew production smoke runbook — completed 2026-05-03
+- [x] Phase 25: Surgical Polish (2 plans) — completed 2026-05-03 (AUTH-21, AUTH-22, OWNER-14, OWNER-15)
+- [x] Phase 26: Bookings Page Crash Debug + Fix (3 plans) — completed 2026-05-03 (BOOK-01, BOOK-02; root cause RSC boundary violation)
+- [x] Phase 27: Slot Correctness DB-Layer Enforcement (3 plans) — completed 2026-05-03 (SLOT-01..05; EXCLUDE constraint live; Andrew smoke approved)
 
 </details>
 
@@ -187,19 +87,16 @@ Plans:
 | 10-13 | v1.1 | 34 / 34 | ✅ Shipped | 2026-04-30 |
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
-| 25 | v1.4 | 2 / 2 | ✅ Complete | 2026-05-03 |
-| 26 | v1.4 | 3 / 3 | ✅ Complete | 2026-05-03 |
-| 27 | v1.4 | 3 / 3 | ✅ Complete | 2026-05-03 |
+| 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 
 ## Cumulative Stats
 
-- **Total phases shipped:** 29 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25 + 26 + 27)
-- **Total plans shipped:** 122 (52 + 34 + 22 + 6 + 2 + 3 + 3)
-- **Total commits:** 499 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + ~17 v1.4 Phases 25-27)
-- **Lines of code at v1.3 ship:** 22,071 LOC TS/TSX in runtime tree (NET +200 from v1.2 close — surgical milestone)
-- **Test suite at Phase 27 close:** 225 passing + 9 skipped without `SUPABASE_DIRECT_URL` (≥230 + 4 with DIRECT_URL set; +1 ran + 5 skipped from 6 new pg-driver tests in `cross-event-overlap.test.ts`)
-- **v1.4 status:** All 3 phases complete (25, 26, 27). Milestone ready for `/gsd:audit-milestone`.
+- **Total phases shipped:** 29 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27)
+- **Total plans shipped:** 122 (52 + 34 + 22 + 6 + 8)
+- **Total commits:** 499 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4)
+- **Test suite at v1.4 ship:** 225 passing + 9 skipped without `SUPABASE_DIRECT_URL` (≥230 + 4 with DIRECT_URL set)
+- **Status:** v1.4 shipped 2026-05-03; v1.5 milestone goals pending `/gsd:new-milestone`.
 
 ---
 
-*Roadmap last updated: 2026-05-03 — Phase 27 complete. v1.4 milestone ready to audit and ship.*
+*Roadmap last updated: 2026-05-03 — v1.4 archived. Run `/gsd:new-milestone` to start v1.5.*
