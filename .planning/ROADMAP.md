@@ -125,9 +125,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 26-01-PLAN.md — Diagnose /app/bookings crash via Vercel logs + SQL Editor; produce DIAGNOSIS.md (BOOK-01)
-- [ ] 26-02-PLAN.md — Implement surgical fix at confirmed site + ONE regression test + push to main (BOOK-01)
-- [ ] 26-03-PLAN.md — Live-verify on production across 3 seeded accounts + 4 shape coverage scenarios; consolidate phase SUMMARY (BOOK-02)
+- [x] 26-01-PLAN.md — Diagnose /app/bookings crash via Vercel logs + SQL Editor; produce DIAGNOSIS.md (BOOK-01) — completed 2026-05-03
+- [x] 26-02-PLAN.md — Implement surgical fix at confirmed site + ONE regression test + push to main (BOOK-01) — completed 2026-05-03
+- [x] 26-03-PLAN.md — Live-verify on production across 3 seeded accounts + 4 shape coverage scenarios; consolidate phase SUMMARY (BOOK-02) — completed 2026-05-03
 
 ---
 
@@ -187,18 +187,18 @@ Plans:
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 | 25 | v1.4 | 2 / 2 | ✅ Complete | 2026-05-03 |
-| 26 | v1.4 | 0 / 3 | Planned | - |
+| 26 | v1.4 | 3 / 3 | ✅ Complete | 2026-05-03 |
 | 27 | v1.4 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
 
-- **Total phases shipped:** 26 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24)
-- **Total plans shipped:** 114 (52 + 34 + 22 + 6)
-- **Total commits:** 482 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3)
+- **Total phases shipped:** 28 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25 + 26)
+- **Total plans shipped:** 119 (52 + 34 + 22 + 6 + 2 + 3)
+- **Total commits:** 490 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + ~8 v1.4 Phases 25-26)
 - **Lines of code at v1.3 ship:** 22,071 LOC TS/TSX in runtime tree (NET +200 from v1.2 close — surgical milestone)
-- **Test suite at v1.3 ship:** 222 passing + 4 skipped (26 test files — baseline preserved exactly from v1.2)
-- **v1.4 status:** Active — 3 phases (25-27), 11 requirements, roadmap defined 2026-05-02.
+- **Test suite at Phase 26 close:** 224 passing + 4 skipped (net +2 tests: bookings-table-rsc-boundary.test.ts)
+- **v1.4 status:** Active — 3 phases (25-27), 11 requirements. Phases 25 + 26 complete. Phase 27 (Slot Correctness) next.
 
 ---
 
-*Roadmap last updated: 2026-05-03 — Phase 25 complete; Phase 26 planned (3 plans: diagnose → fix → verify; gated by Vercel log retrieval and Andrew confirmation).*
+*Roadmap last updated: 2026-05-03 — Phase 26 complete (3 plans: diagnose → fix → verify; Andrew sign-off received). Phase 27 (Slot Correctness DB-Layer Enforcement) next.*
