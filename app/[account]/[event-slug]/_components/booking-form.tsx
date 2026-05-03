@@ -132,6 +132,11 @@ export function BookingForm(props: BookingFormProps) {
       } else if (body409?.code === "SLOT_TAKEN") {
         // CAP-07: capacity=1 race (or any single-seat taken path)
         raceMessage = "That time was just taken by another booker. Please choose a different time.";
+      } else if (body409?.code === "CROSS_EVENT_CONFLICT") {
+        // V14-MP-01 (Phase 27): cross-event-type overlap (DB EXCLUDE constraint).
+        // Generic wording — booker has no concept of event types and we do NOT
+        // leak that the contractor has another appointment.
+        raceMessage = "That time is no longer available. Please choose a different time.";
       } else {
         // Defensive fallback — unknown code or missing body
         raceMessage = body409?.error ?? "That time is no longer available. Please choose a different time.";
