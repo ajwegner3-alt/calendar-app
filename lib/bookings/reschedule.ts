@@ -150,6 +150,20 @@ export async function rescheduleBooking(
       // bookings_no_double_book fired — target slot is taken (RESEARCH Pitfall 5)
       return { ok: false, reason: "slot_taken" };
     }
+    // V14-MP-02 (Phase 27): 23P01 is the EXCLUDE constraint
+    // bookings_no_account_cross_event_overlap firing on the in-place UPDATE.
+    // The booker is trying to reschedule into a time held by a DIFFERENT
+    // event type on the same account. Map to 'slot_taken' so the upstream
+    // /api/reschedule handler returns its existing 409 SLOT_TAKEN response —
+    // generic copy, no event-type leak (CONTEXT-locked).
+    if (updateError.code === "23P01") {
+      // Observability: distinct log signal for prod monitoring. No PII.
+      console.error("[reschedule] 23P01 cross-event overlap", {
+        code: "CROSS_EVENT_CONFLICT",
+        booking_id: bookingId,
+      });
+      return { ok: false, reason: "slot_taken" };
+    }
     if (updateError.code === "PGRST116") {
       // 0 rows matched — CAS failed (token already rotated, booking already
       // cancelled, or start_at passed during the call)
