@@ -88,10 +88,16 @@ export function RowActionsMenu({
         <DropdownMenuContent align="end">
           {!isArchived && (
             <>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem
+                asChild
+                className="focus:bg-primary focus:text-primary-foreground"
+              >
                 <Link href={`/app/event-types/${id}/edit`}>Edit</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleToggle}>
+              <DropdownMenuItem
+                onSelect={handleToggle}
+                className="focus:bg-primary focus:text-primary-foreground"
+              >
                 {isActive ? "Make inactive" : "Make active"}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -99,6 +105,7 @@ export function RowActionsMenu({
                   e.preventDefault();
                   setEmbedOpen(true);
                 }}
+                className="focus:bg-primary focus:text-primary-foreground"
               >
                 Get embed code
               </DropdownMenuItem>
@@ -115,7 +122,12 @@ export function RowActionsMenu({
             </>
           )}
           {isArchived && (
-            <DropdownMenuItem onSelect={handleRestore}>Restore</DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={handleRestore}
+              className="focus:bg-primary focus:text-primary-foreground"
+            >
+              Restore
+            </DropdownMenuItem>
           )}
         </DropdownMenuContent>
       </DropdownMenu>

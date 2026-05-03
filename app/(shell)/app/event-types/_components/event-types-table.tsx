@@ -11,6 +11,7 @@ import {
 import type { EventTypeListItem } from "../_lib/types";
 import { StatusBadge } from "./status-badge";
 import { RowActionsMenu } from "./row-actions-menu";
+import { RowCopyLinkButton } from "./row-copy-link-button";
 
 export function EventTypesTable({
   eventTypes,
@@ -35,7 +36,7 @@ export function EventTypesTable({
             <TableHead className="w-28">Duration</TableHead>
             <TableHead>Slug</TableHead>
             <TableHead className="w-28">Status</TableHead>
-            <TableHead className="w-12 text-right">
+            <TableHead className="w-24 text-right">
               <span className="sr-only">Actions</span>
             </TableHead>
           </TableRow>
@@ -61,15 +62,25 @@ export function EventTypesTable({
                   />
                 </TableCell>
                 <TableCell className="text-right">
-                  <RowActionsMenu
-                    id={et.id}
-                    name={et.name}
-                    slug={et.slug}
-                    isActive={et.is_active}
-                    isArchived={!!et.deleted_at}
-                    accountSlug={accountSlug}
-                    appUrl={appUrl}
-                  />
+                  <div className="flex items-center justify-end gap-1">
+                    {!et.deleted_at && (
+                      <RowCopyLinkButton
+                        accountSlug={accountSlug}
+                        eventSlug={et.slug}
+                        eventName={et.name}
+                        appUrl={appUrl}
+                      />
+                    )}
+                    <RowActionsMenu
+                      id={et.id}
+                      name={et.name}
+                      slug={et.slug}
+                      isActive={et.is_active}
+                      isArchived={!!et.deleted_at}
+                      accountSlug={accountSlug}
+                      appUrl={appUrl}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             );
