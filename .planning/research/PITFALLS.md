@@ -1,304 +1,462 @@
-# Domain Pitfalls — v1.4: Cross-Event-Type Slot Correctness + Surgical Polish
+# Domain Pitfalls — v1.5: Buffer Fix + Audience Rebrand + Booker Redesign
 
-**Domain:** Booking system — DB-layer cross-event-type exclusion constraint + 4 surgical items
-**Researched:** 2026-05-02
-**Covers:** Phases 25 (surgical), 26 (debug), 27 (architectural DB constraint)
+**Domain:** Booking system — per-event-type buffer migration + copy rebrand + booker layout refactor
+**Researched:** 2026-05-03
+**Covers:** Three parallel feature tracks: BUFFER-01 migration, audience rebrand, 3-column booker
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, or silent correctness failures.
+Mistakes that cause rewrites, data loss, silent correctness failures, or 500 errors in production.
 
 ---
 
-### V14-CP-01: EXCLUDE constraint requires `btree_gist`; missing extension silently fails
+### V15-CP-01: Schema mismatch — `event_types` already has `buffer_before_minutes` / `buffer_after_minutes`; new column naming must reconcile
 
-**What goes wrong:** `CREATE EXTENSION IF NOT EXISTS btree_gist` is omitted from the migration. The `EXCLUDE USING gist` clause on a UUID equality operand (`account_id WITH =`) requires `btree_gist` because UUID is a btree type and gist cannot natively handle it. Without the extension, `CREATE TABLE ... EXCLUDE` raises `ERROR: data type uuid has no default operator class for access method "gist"`, blocking constraint creation entirely.
+**What goes wrong:** The v1.0 initial schema (`20260419120000_initial_schema.sql` lines 35-36) already created `event_types.buffer_before_minutes` and `event_types.buffer_after_minutes` as `int not null default 0`. Both columns exist in production RIGHT NOW. They were stubbed in v1.0 but never wired into the slot engine (Phase 4 lock: "account-wide settings win in v1, event_types columns ignored"). The PROJECT.md v1.5 scope names the new column `event_types.post_buffer_minutes` — a THIRD column name that does not match either existing column.
 
-**Detection:** `grep -r "btree_gist" supabase/migrations/` — if absent from the migration that introduces the EXCLUDE constraint, the deploy will fail. Also check `SELECT * FROM pg_extension WHERE extname = 'btree_gist';` in Supabase SQL Editor before running the migration.
+If the migration adds `event_types.post_buffer_minutes` without first deciding what to do with the existing `buffer_after_minutes` column, the codebase has two semantically overlapping columns for the same concept. The slot engine will read one; the UI form reads the other; silent divergence.
 
-**Prevention (Phase 27):** Add `CREATE EXTENSION IF NOT EXISTS btree_gist;` as the first statement in the migration file, before the `ALTER TABLE ... ADD CONSTRAINT ... EXCLUDE` statement. Supabase enables most extensions via the dashboard or SQL Editor; this one is not enabled by default on new projects.
+**Detection:** Run `SELECT column_name FROM information_schema.columns WHERE table_name = 'event_types' AND column_name LIKE '%buffer%';` in Supabase SQL Editor. Verify which buffer columns currently exist. Read `app/(shell)/app/event-types/_lib/types.ts:43-44` — both `buffer_before_minutes` and `buffer_after_minutes` are in the TypeScript type and are selected by `app/(shell)/app/event-types/[id]/edit/page.tsx:18`.
 
-**Owner:** Phase 27
+**Prevention (Buffer migration phase):** Make an explicit naming decision BEFORE writing any migration SQL:
 
----
+- **Option A (recommended):** Repurpose `buffer_after_minutes` as the authoritative post-buffer. Migration backfills from `accounts.buffer_minutes`. DROP the duplicate concept `post_buffer_minutes` — avoid adding a third column. Rename the UI label to "Post-booking buffer (minutes)". This is zero new columns, one column repurposed, one column eventually dropped (`accounts.buffer_minutes`).
+- **Option B:** Add `event_types.post_buffer_minutes` explicitly, then DROP `buffer_after_minutes` to remove the redundant column. Two-migration sequence; more churn.
 
-### V14-CP-02: Wrong range bound turns adjacent slots into false conflicts
+Either way: the pre-flight plan must explicitly audit all three buffer column names and decide which one the engine will read before any migration runs.
 
-**What goes wrong:** An EXCLUDE constraint using `tstzrange` for time overlap uses `&&` (overlap operator). If bounds are `[)` (inclusive start, exclusive end) this is correct: 9:00-9:30 and 9:30-10:00 have no overlap because `[09:00,09:30)` and `[09:30,10:00)` do not share a point. But if anyone writes bounds as `[]` (both inclusive) or uses `tstzrange(start_at, end_at, '[]')`, then 9:00-9:30 and 9:30-10:00 DO overlap at 9:30 — adjacent slots falsely collide and back-to-back appointments become impossible.
-
-**Detection:** Grep the migration for `tstzrange`. Verify the third argument is `'[)'`. Test: insert two confirmed bookings in adjacent slots (09:00-09:30 and 09:30-10:00) for the same `account_id` but different `event_type_id`. Both must succeed. If the second raises `23P01`, the bounds are wrong.
-
-**Prevention (Phase 27):** Always use `tstzrange(start_at, end_at, '[)')`. This is the standard half-open interval; all calendar systems use it for this reason. Write it explicitly — do not rely on the default (which is also `[)` in Postgres but is better made explicit in code review).
-
-**Owner:** Phase 27
+**Owner:** Buffer migration phase
 
 ---
 
-### V14-CP-03: Missing `WHERE status = 'confirmed'` predicate blocks cancelled rows permanently
+### V15-CP-02: Nullable column + NOT NULL DEFAULT race window — buffer column must be `NOT NULL DEFAULT 0`
 
-**What goes wrong:** An EXCLUDE constraint without a `WHERE` predicate applies to all rows regardless of status. A cancelled booking at 10:00 then permanently blocks that slot for the same account — no new booking can ever land there, even after cancellation. This is the same category of bug that the existing `bookings_capacity_slot_idx` partial index avoids (it scopes to `status = 'confirmed'`).
+**What goes wrong:** If the new/repurposed buffer column is added without `NOT NULL DEFAULT 0` (or if an existing column is altered to nullable), `lib/slots.ts` receives `null` where it expects `number`. The `slotConflictsWithBookings` call at `slots.ts:277` passes `account.buffer_minutes` (type `number` per `AccountSettings.buffer_minutes`). Switching to per-event-type means the route handler at `api/slots/route.ts:89` must now also SELECT the buffer column from `event_types`. If that column is nullable, TypeScript requires an explicit null-coalesce (`?? 0`) everywhere. Forgetting even one results in `NaN` buffer math — slots computed with `addMinutes(slotStart, NaN)` return `Invalid Date`, silently dropping all slots for that event type.
 
-**Detection:** After adding the constraint, cancel a booking and attempt to re-book the same slot for a different event type on the same account. If the re-book is rejected with `23P01`, the predicate is missing.
+**Detection:** After any column addition/alteration: `SELECT id, post_buffer_minutes FROM event_types WHERE post_buffer_minutes IS NULL;` — zero rows expected. Also: `tsc --noEmit` with strict null checks must compile without `Object is possibly 'null'` on any buffer path.
 
-**Prevention (Phase 27):** The EXCLUDE constraint must be declared as a partial constraint: `EXCLUDE USING gist (...) WHERE (status = 'confirmed')`. Postgres supports partial exclusion constraints via the `WHERE` clause, identical to partial indexes.
+**Prevention (Buffer migration phase):**
+1. Migration must use `NOT NULL DEFAULT 0` for the buffer column (matching the existing constraint on `buffer_after_minutes`).
+2. Backfill step: `UPDATE event_types SET buffer_after_minutes = (SELECT buffer_minutes FROM accounts WHERE accounts.id = event_types.account_id)` — runs BEFORE any code reads the new column, inside the same migration transaction.
+3. `AccountSettings` interface in `lib/slots.types.ts` must change `buffer_minutes: number` to whatever new field name is chosen. TypeScript build catches any caller that forgets the rename.
 
-**Owner:** Phase 27
+**Owner:** Buffer migration phase
 
 ---
 
-### V14-CP-04: Group-booking event types — EXCLUDE predicate must allow same-event-type capacity stacking
+### V15-CP-03: CP-03 two-step deploy required for `accounts.buffer_minutes` DROP — same protocol as v1.2 Phase 21
 
-**What goes wrong:** A naive EXCLUDE constraint on `(account_id, tstzrange(start_at, end_at, '[)'))` with `&&` blocks ALL overlapping rows for the same account — including same-event-type group bookings where `slot_index` 1, 2, 3 are intentionally all at the same time. This destroys the v1.1 capacity feature entirely.
+**What goes wrong:** `accounts.buffer_minutes` is currently read by deployed Vercel function instances in three places:
+1. `app/api/slots/route.ts:122` — SELECT from `accounts` includes `buffer_minutes`
+2. `app/(shell)/app/availability/_components/settings-panel.tsx` — renders the buffer input
+3. `app/(shell)/app/availability/_lib/actions.ts` — saves `buffer_minutes` via Server Action
 
-**The mechanism:** EXCLUDE constraints fire on any two rows that satisfy the predicate and whose excluded columns overlap. Two rows with the same `account_id` and overlapping time ranges will violate the constraint regardless of `event_type_id` or `slot_index`.
+Dropping the column the same deploy that stops reading it is safe ONLY if Vercel has drained ALL old function instances. Vercel can take up to 30 minutes to retire stale warm function containers after a deploy. If the DROP runs immediately after the code deploy, in-flight requests from stale instances that still SELECT `buffer_minutes` will receive a Postgres column-not-found error → 500 on ALL `/api/slots` calls during the drain window.
 
-**Correct approach:** The EXCLUDE predicate must include `event_type_id WITH <>` (using the `<>` operator, requiring `btree_gist`). The constraint reads: "for this `account_id`, no two rows with DIFFERENT `event_type_id` values may have overlapping time ranges." Two rows with the SAME `event_type_id` are allowed to overlap (they are group-booking slots, distinguished by `slot_index`). The exact form is:
+**Precedent:** v1.2 Phase 21 (PROJECT.md line 198) applied this exact protocol for 4 deprecated `accounts` columns. The drain was satisfied by 772 minutes (overnight). The protocol:
+1. Deploy code that stops reading `accounts.buffer_minutes` (while the column still exists).
+2. Wait minimum 30 minutes.
+3. Apply DROP migration via `supabase db query --linked -f`.
 
-```sql
-CONSTRAINT bookings_cross_event_no_overlap
-EXCLUDE USING gist (
-  account_id    WITH =,
-  event_type_id WITH <>,
-  tstzrange(start_at, end_at, '[)') WITH &&
-)
-WHERE (status = 'confirmed')
+**Detection:** Before the DROP migration, grep ALL callers of `buffer_minutes` from `accounts`:
+`grep -rn "buffer_minutes" app/ lib/` — every match must be dead code or already repointed to the new event-type column. Zero live reads from `accounts.buffer_minutes` = drain phase cleared.
+
+**Prevention (Buffer migration phase):** Plan the buffer work as THREE tasks, not two:
+- Task 1: ADD column to `event_types` + backfill (migration only, no code reads it yet)
+- Task 2: Code deploy — stop reading `accounts.buffer_minutes`, start reading `event_types.post_buffer_minutes` (or whichever column)
+- Task 3 (separate deploy, ≥30 min later): DROP `accounts.buffer_minutes`
+
+**Owner:** Buffer migration phase (schema drop sub-task)
+
+---
+
+### V15-CP-04: `slots.ts` / `slots.types.ts` caller contract change — every caller of `computeSlots` must update synchronously
+
+**What goes wrong:** `computeSlots` receives `SlotInput` which includes `account: AccountSettings`. `AccountSettings.buffer_minutes` (in `lib/slots.types.ts:15`) is what `slotConflictsWithBookings` reads at `slots.ts:277`. If the per-event-type buffer migrates into `SlotInput` as a top-level field (e.g., `postBufferMinutes: number`) rather than inside `account`, then:
+
+1. `lib/slots.types.ts` must add the new field AND remove `buffer_minutes` from `AccountSettings` (or keep it as a deprecated 0-value for the drop window).
+2. `computeSlots` in `lib/slots.ts` must pass the new field to `slotConflictsWithBookings`.
+3. `app/api/slots/route.ts` must pass the new field when constructing `SlotInput`.
+4. All tests in `tests/slot-generation.test.ts` construct `SlotInput` directly — `baseAccount.buffer_minutes: 0` at line 32 and the buffer test at line 216 (`buffer_minutes: 15`) must be updated.
+
+If ANY caller is missed and `buffer_minutes` is removed from `AccountSettings`, TypeScript `tsc --noEmit` will catch it. But if the interface keeps `buffer_minutes` as a type-compatible alias during the transition, test values that construct `baseAccount` with `buffer_minutes: 15` will silently pass the wrong value if the engine has already stopped reading that field.
+
+**Detection:** After the types change: `tsc --noEmit` — all callers must compile. Additionally, run the buffer-specific test (`account: { ...baseAccount, buffer_minutes: 15 }` at `tests/slot-generation.test.ts:216`) — if the engine stopped reading `buffer_minutes`, this test will pass but the buffer will not actually be applied, hiding the regression.
+
+**Prevention (Buffer migration phase):** When the slot engine switches from `account.buffer_minutes` to the new per-event-type field, immediately update BOTH the test at line 216 AND `baseAccount` at line 32 to use the new field name. Never leave a stale field in test fixtures even if TypeScript accepts it.
+
+**Owner:** Buffer migration phase
+
+---
+
+### V15-CP-05: New buffer tests required — per-event divergence is an untested case
+
+**What goes wrong:** Current slot-generation tests at `tests/slot-generation.test.ts` use a single fixed `buffer_minutes` value on `baseAccount` for all event types in a test. After the per-event-type migration, two event types on the same account can have different buffer values. The existing test at line 216 (`buffer_minutes: 15`) only tests the buffer-applied case for one event type. No current test asserts:
+
+- Event type A has `buffer=0`, event type B has `buffer=15`, same account. A slot adjacent to an event-B booking should appear available to event-A bookings.
+- Two bookings from different event types with different buffers on the same day — the slot picker should show different availability for each.
+
+Without these tests, silent regressions in cross-event-type buffer interactions can slip to production.
+
+**Detection (before shipping):** `grep -n "buffer" tests/slot-generation.test.ts` — count test cases that vary buffer per-event-type. If zero, write them before shipping the buffer migration.
+
+**Prevention (Buffer migration phase):** Add two test cases to `slot-generation.test.ts`:
+1. Event-type buffer=0 — adjacent slot after a confirmed booking IS available.
+2. Event-type buffer=15 — adjacent slot IS hidden (matches current behavior for `nsi` account).
+
+Additionally: add a test for the divergence case (two event types, different buffers, same account, same confirmed booking on the timeline — verify each event type sees the correct availability independently).
+
+**Owner:** Buffer migration phase
+
+---
+
+### V15-CP-06: Reschedule lib reads `accounts` join — verify no `buffer_minutes` reference is added during buffer refactor
+
+**What goes wrong:** `lib/bookings/reschedule.ts:110-113` joins `accounts` but currently does NOT select `buffer_minutes` (it only needs `name, slug, timezone, owner_email, logo_url, brand_primary` for email sending). The reschedule operation is an in-place UPDATE on `start_at`/`end_at` — it does not recompute slot availability and does not apply buffer. This is correct by design (buffer enforcement is the picker's job, not the reschedule path's job).
+
+Risk: during the buffer refactor, a developer may be tempted to add buffer validation to the reschedule path ("does the new slot clear the buffer for other bookings?"). If so, the reschedule lib would need to read `event_types.buffer_after_minutes`, and the existing SELECT would need updating. More dangerously, if the wrong field is added (`accounts.buffer_minutes` during the drain window), the reschedule path would fail after the DROP.
+
+**Detection:** After the buffer migration phase is complete: `grep -n "buffer" lib/bookings/reschedule.ts` — should return ZERO matches. Any match is an unplanned addition.
+
+**Prevention (Buffer migration phase):** The v1.5 scope defines buffer enforcement as a slot-picker (display layer) concern only — the DB EXCLUDE constraint enforces hard adjacency, buffer is cosmetic "extra breathing room" shown to the booker. Reschedule does not re-run `computeSlots`. Do NOT add buffer validation to `reschedule.ts`.
+
+**Owner:** Buffer migration phase
+
+---
+
+### V15-CP-07: Rebrand grep misses JSX text nodes split across lines and template literals with expressions
+
+**What goes wrong:** Running `grep -rn "contractor"` catches:
+- `"trade contractors"` in a string literal
+- `contractor's` in template literal
+
+But does NOT catch:
+```tsx
+Built for trade {" "}
+contractors, by NSI.
+```
+Or:
+```tsx
+const copy = `Book an appointment with your ${
+  entityType  // renders as "contractor" at runtime
+}`;
 ```
 
-Note: `WITH <>` on an exclusion constraint means "exclude pairs where this column is DIFFERENT" — which is the opposite of the usual `WITH =`. This is the correct semantics for cross-event-type conflict detection while permitting same-event-type overlap.
+JSX text split across a line break is one text node in the DOM but two lines in the file. A grep for "contractor" on the first line finds nothing on the second line. Template literals with interpolations may compute "contractor" from a variable that holds the string — grep on the variable name won't surface the rendered word.
 
-**Detection:** After adding the constraint, attempt to insert two confirmed bookings at the same time, same account, same `event_type_id` but different `slot_index` (simulating capacity=2 group booking). Both must succeed. If the second fails with `23P01`, the predicate is wrong.
+**Detection:** Use VSCode global search (not terminal grep) with the "Match case" ON and "Match whole word" OFF for "contractor" AND "Contractor" AND "trade". Review context manually — a hit on line N may be the continuation of a string that starts on line N-1.
 
-**Prevention (Phase 27):** Use the exact SQL above. Verify with a group-booking regression test that mirrors `race-guard.test.ts` CAP-06 structure.
+Additionally, verify the `.ics` summary fields in email templates. The `.ics` `SUMMARY:` and `DESCRIPTION:` lines in `lib/email/` are TypeScript template literals that compose event copy from account data. If any template hard-codes "contractor" in the fallback or label text, it will appear in calendar invites.
 
-**Owner:** Phase 27
+**Prevention (Rebrand phase):**
+1. Run multi-line search: VSCode global search > Use regular expression > `contractor` (case-insensitive)
+2. Audit results by file type: `.tsx` (JSX text nodes), `.ts` (template literals), `.md` (docs)
+3. Separately audit any `.ics` builder files (`lib/email/`) for hard-coded "contractor" in SUMMARY/DESCRIPTION fallbacks
+
+**Owner:** Rebrand phase
 
 ---
 
-### V14-CP-05: EXCLUDE constraint creation locks the table and CANNOT be added concurrently
+### V15-CP-08: Booker copy must NOT be rebranded — booker sees generic language; rebrand is owner-facing only
 
-**What goes wrong:** Unlike `CREATE INDEX CONCURRENTLY`, there is no `ADD CONSTRAINT ... EXCLUDE ... CONCURRENTLY` in any Postgres version including 17.6.1. `ALTER TABLE ... ADD CONSTRAINT ... EXCLUDE` takes a full `ACCESS EXCLUSIVE` lock for the duration of constraint creation and validation. On a table with many rows, this blocks all reads and writes.
+**What goes wrong:** The rebrand scope in PROJECT.md line 19 says "owner-facing copy + internal identifiers." The public booker already uses generic language ("Pick a time", "Book this time", "Name", "Email", etc.) that has nothing to do with the "trade contractors" framing. There is NO "contractor" copy in the booking form, the slot picker, the public shell, or the confirmed/cancelled/rescheduled pages — these surfaces are customer-facing and were always generic.
 
-**Detection:** Verify by checking Postgres 17 docs: `CREATE INDEX CONCURRENTLY` exists; `ADD CONSTRAINT EXCLUDE CONCURRENTLY` does not. Check `SELECT count(*) FROM bookings;` in prod before applying — if large, schedule during low-traffic window.
+Risk: a developer doing a global "contractor" replace hits the single JSX comment in `booking-form.tsx:138` (`// leak that the contractor has another appointment.`) and either removes the comment or rewrites it. This is a developer-facing comment explaining the CROSS_EVENT_CONFLICT error message rationale. Rewriting it doesn't change behavior, but it's a code churn risk that can introduce mistakes.
 
-**Prevention (Phase 27):** Use the two-step `NOT VALID` + `VALIDATE CONSTRAINT` approach:
+Separately, `booking-form.tsx:138` uses the word "contractor" as part of an internal comment about data privacy reasoning, not as user-visible copy. This does NOT need rebranding — it's documenting why we use the generic copy "That time is no longer available."
 
-```sql
--- Step 1: add WITHOUT validating existing rows (does not scan table; minimal lock)
-ALTER TABLE bookings ADD CONSTRAINT bookings_cross_event_no_overlap
-  EXCLUDE USING gist (
-    account_id    WITH =,
-    event_type_id WITH <>,
-    tstzrange(start_at, end_at, '[)') WITH &&
-  ) WHERE (status = 'confirmed') NOT VALID;
+**Detection:** Before running any rebrand replacement, audit EVERY grep hit for "contractor" in its full file context. The `booking-form.tsx` hit is a comment; do not change it. The `auth-hero.tsx` hits are user-visible marketing copy and MUST be changed.
 
--- Step 2: validate (scans table; only takes ShareUpdateExclusiveLock — reads allowed, writes proceed)
-ALTER TABLE bookings VALIDATE CONSTRAINT bookings_cross_event_no_overlap;
+**Prevention (Rebrand phase):** Apply rebrand replacements file-by-file with manual review, NOT a bulk find-replace across the entire repo. Comments that use "contractor" as a conceptual term (not user-facing copy) should be left alone or updated to reflect the new internal mental model, not blindly text-replaced.
+
+**Owner:** Rebrand phase
+
+---
+
+### V15-CP-09: `.planning/` archived milestone files reference "contractor" — decide whether to rewrite history
+
+**What goes wrong:** Archived `.planning/` files from v1.0–v1.4 (MILESTONES.md, v1.x-ROADMAP.md, phase SUMMARY files, v1.x-REQUIREMENTS.md) contain "trade contractors" throughout. Commits in git history also contain the old copy in commit messages and code comments.
+
+Options:
+1. **Leave history alone (recommended):** v1.5 rebrand applies to the live codebase and live documentation (README.md, FUTURE_DIRECTIONS.md, active `.planning/PROJECT.md`, `.planning/MILESTONES.md`). Archived phase files are historical records, not live copy — future milestone docs will use the new language naturally.
+2. **Rewrite history via `git filter-repo`:** Invasive, destroys commit hashes, invalidates GitHub PRs/issues. Not justified for a copy change.
+
+The risk of Option 2 is high: `git filter-repo` requires force-push to `main`, disrupts any collaborator's working trees, and creates a confusing "history doesn't match" situation in GitHub's file-change view.
+
+**Prevention (Rebrand phase):** Explicitly decide at planning time: scope the rebrand to `README.md`, `FUTURE_DIRECTIONS.md`, `app/**`, `lib/**`, and the ACTIVE `.planning/` files (PROJECT.md, MILESTONES.md) only. Document this decision in the phase plan so the verifier knows not to fail on archive files.
+
+**Owner:** Rebrand phase (planning task, day 1)
+
+---
+
+### V15-CP-10: 3-column booker — Tailwind v4 CSS grid with 3 `auto` columns produces unexpected widths; reserve form column before pick
+
+**What goes wrong:** The current 2-column booker uses `grid lg:grid-cols-[1fr_320px]` (explicit 320px right column). In the new 3-column layout (calendar LEFT, times MIDDLE, form RIGHT), naively writing `grid lg:grid-cols-3` gives three equal-width columns. The calendar component has a minimum width of ~280px (determined by the shadcn Calendar's internal cell size and padding); the times list is variable-width (short labels like "9:00 AM"); the form is tall and has fixed-width inputs.
+
+Two failure modes:
+1. **Auto-size failure:** `grid lg:grid-cols-[auto_auto_1fr]` gives the form column all remaining space, which is correct semantically, but the calendar and times columns collapse to their content width, which may be very narrow if Tailwind calculates "auto" as `min-content`.
+2. **Form-reveal layout shift:** If the form column has width `0` or `display: none` before slot pick and then appears, the layout reflows and the calendar/times columns shift left. This is jarring and violates the "no layout shift" requirement.
+
+**Detection:** Test at the exact 1024px (`lg:`) breakpoint where the grid activates. Check at 1024px, 1280px, and 1440px. Inspect column widths with browser DevTools grid overlay. On reveal of the form column, record any layout shift via PerformanceObserver CLS metric or visual inspection.
+
+**Prevention (Booker redesign phase):** Use a 3-column template that reserves the form column width regardless of reveal state:
+```css
+grid-template-columns: minmax(280px, auto) minmax(160px, auto) 320px
 ```
+Or in Tailwind v4: `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]`
 
-New INSERTs are enforced immediately after Step 1. Step 2 can run in a separate migration or maintenance window and does not block writes.
+The form column (320px fixed) is ALWAYS in the grid. When `selectedSlot` is null, render the form column as a placeholder (`<div aria-hidden="true" />` or a "Pick a time" hint) — this prevents layout shift on reveal. The form is revealed IN PLACE by swapping the placeholder for `<BookingForm />`, not by changing grid structure.
 
-**Owner:** Phase 27
-
----
-
-### V14-CP-06: Existing cross-event overlapping bookings reject constraint validation — pre-flight required
-
-**What goes wrong:** Andrew's reported duplicate booking is exactly the class of row that will cause `VALIDATE CONSTRAINT` to fail. If two confirmed bookings for different event types overlap on the same account, Postgres aborts with `ERROR: conflicting key value violates exclusion constraint`. The migration cannot complete until existing violations are resolved.
-
-**Required pre-flight diagnostic (run in Supabase SQL Editor before any migration):**
-
-```sql
-SELECT
-  a.id AS booking_a,
-  b.id AS booking_b,
-  a.account_id,
-  a.event_type_id AS et_a,
-  b.event_type_id AS et_b,
-  a.start_at AS start_a,
-  b.start_at AS start_b
-FROM bookings a
-JOIN bookings b ON
-  a.account_id = b.account_id
-  AND a.event_type_id <> b.event_type_id
-  AND a.id < b.id
-  AND tstzrange(a.start_at, a.end_at, '[)') &&
-      tstzrange(b.start_at, b.end_at, '[)')
-WHERE a.status = 'confirmed'
-  AND b.status = 'confirmed';
-```
-
-If this returns rows, resolve each pair (cancel the duplicate, determine which booking is authoritative) before applying any migration. Do not skip this step.
-
-**Detection:** Run the query above. Zero rows = proceed. Any rows = stop, resolve, re-run.
-
-**Prevention (Phase 27):** Pre-flight diagnostic is a hard gate — treat it as Phase 27 Step 0. The migration plan must list it before any SQL execution. This also serves as the root-cause confirmation for the reported double-booking.
-
-**Owner:** Phase 27
+**Owner:** Booker redesign phase
 
 ---
 
-### V14-CP-07: Reschedule path — INSERT-before-UPDATE transaction order fires constraint on transient overlap
+### V15-CP-11: Embed widget at narrow iframe widths — 3-column layout would scroll horizontally or break
 
-**What goes wrong:** The current `lib/bookings/reschedule.ts` does a single in-place `UPDATE` — it moves `start_at`/`end_at`, keeps `status = 'confirmed'`, rotates tokens. The EXCLUDE constraint handles this correctly because Postgres evaluates the constraint after the row is modified; there is no transient state where the old and new rows both exist.
+**What goes wrong:** The embed widget renders the booker at `/embed/[account]/[event-slug]` inside a parent site's iframe. The `widget.js` script resizes the iframe to fit content height via `nsi-booking:height` postMessage, but iframe WIDTH is controlled by the parent site's CSS. Many embed implementations set `width: 100%` on the iframe, which may produce widths as narrow as 320px on mobile or 480px on a narrow sidebar widget.
 
-The risk materializes if any future code path (admin reschedule, owner-initiated reschedule, import) uses an INSERT + UPDATE pattern (new row inserted, old row cancelled). If the NEW row is inserted as `status = 'confirmed'` while the OLD row is still `status = 'confirmed'` at the same time, both rows are briefly in scope for the constraint and it may fire incorrectly depending on time ranges.
+At 480px, a 3-column grid with `minmax(280px,auto) + minmax(160px,auto) + 320px` = minimum 760px total — the iframe would overflow its container horizontally, creating a horizontal scrollbar on the parent site. The embed widget would be broken.
 
-**Safe order for INSERT + UPDATE pattern (if ever introduced):** Always `UPDATE ... SET status = 'rescheduled' WHERE id = old_id` BEFORE the `INSERT` of the new row — inside a single transaction. The old row exits the constraint's scope before the new row enters.
+**Detection:** Load the embed widget page at widths 320px, 480px, 768px, 1024px. Check for horizontal scroll or column overflow at each breakpoint. The embed widget uses `EmbedShell` in `app/embed/[account]/[event-slug]/` — verify it receives the same grid changes as the public booker or is explicitly excluded.
 
-**Detection:** `grep -rn "INSERT.*bookings\|bookings.*INSERT" app/ lib/` — audit any INSERT that is not the main `/api/bookings` handler. The current `reschedule.ts` is UPDATE-only (safe). Audit if this pattern changes.
+**Prevention (Booker redesign phase):** The 3-column layout must apply ONLY to the public hosted page (`/[account]/[event-slug]`), not the embed widget. The embed widget must remain responsive (stack vertically). Implement via:
+1. Keep `BookingShell` as the shared logic component.
+2. Pass a `variant="embed"` prop OR use a separate component for the embed path.
+3. The `lg:` breakpoint guard on the grid is appropriate for the hosted page (users on desktops); the embed must always stack.
 
-**Prevention (Phase 27 + ongoing):** Add a JSDoc invariant to `reschedule.ts` and any future admin-reschedule function: "If using INSERT + UPDATE, UPDATE the old row's status to 'rescheduled' before inserting the replacement. Constraint fires on INSERT; old row must be out of scope first."
+Document this decision explicitly in the phase plan. If the same `BookingShell` component is used for both paths, the `lg:grid-cols-3` class must be absent on the embed render path.
 
-**Owner:** Phase 27 (document); ongoing for any future admin-reschedule feature
+**Owner:** Booker redesign phase
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause wrong behavior, 500 errors, or confusing UX — fixable without schema changes.
+Mistakes that cause wrong behavior, UX regressions, or tech debt — fixable without schema changes or rewrites.
 
 ---
 
-### V14-MP-01: Error code `23P01` falls into the generic 500 branch in `route.ts`
+### V15-MP-01: `AccountSettings` type narrowing — removing `buffer_minutes` field breaks compile for `settings-panel` action
 
-**What goes wrong:** The booking INSERT loop in `app/api/bookings/route.ts:243` only branches on `code === "23505"`. The new EXCLUDE constraint raises Postgres error `23P01` (exclusion_violation), not `23505`. Code `23P01` hits the `else` branch at line 267-272, logs the error, and returns `500 INTERNAL` with `code: "INTERNAL"`. The booker sees "Booking failed. Please try again." with no actionable guidance.
+**What goes wrong:** `app/(shell)/app/availability/_lib/actions.ts` calls `saveAccountSettingsAction` with a `buffer_minutes` field (confirmed by `settings-panel.tsx:24`). If `AccountSettings` in `lib/slots.types.ts` is modified to remove `buffer_minutes` during the buffer refactor, and the availability settings action was not simultaneously updated to remove the buffer input from the form, TypeScript will produce a type error in the action file. This is caught at build time — not a runtime issue — but it can block deployment if not addressed synchronously.
 
-**Detection:** `grep -n "23505\|23P01" app/api/bookings/route.ts` — if `23P01` is absent, the handler is incomplete.
+**Detection:** After removing `buffer_minutes` from `AccountSettings`: `tsc --noEmit` will surface the mismatch. Also manually check `app/(shell)/app/availability/_lib/actions.ts` and `settings-panel.tsx` for any `buffer_minutes` field in the form state or save payload.
 
-**Prevention (Phase 27):** Add an explicit branch in the INSERT loop for `23P01`. Because this is NOT a capacity-slot retry case (cross-event conflict is not resolved by trying a different `slot_index`), break out of the retry loop immediately and return 409:
+**Prevention (Buffer migration phase):** The settings panel UI for buffer must be removed (or moved to the event-type form) as part of the same code deploy that stops reading `accounts.buffer_minutes`. Do not leave a buffer input in the availability settings form that now saves a column the code no longer reads.
 
-```typescript
-if (result.error.code === "23P01") {
-  return NextResponse.json(
-    {
-      error: "That time conflicts with another appointment. Pick a new time.",
-      code: "CROSS_EVENT_CONFLICT",
-    },
-    { status: 409, headers: NO_STORE },
-  );
-}
-```
-
-This branch must appear before the `23505` retry logic in the loop body.
-
-**Owner:** Phase 27
+**Owner:** Buffer migration phase
 
 ---
 
-### V14-MP-02: Reschedule route also needs `23P01` handling in `reschedule.ts`
+### V15-MP-02: Backfill ordering — migrate must ADD column + backfill in same transaction BEFORE code reads new column
 
-**What goes wrong:** `lib/bookings/reschedule.ts:149` catches `updateError.code === "23505"` and maps it to `slot_taken`. The EXCLUDE constraint also fires `23P01` on UPDATE when a reschedule moves a booking to a time occupied by a different event type. `23P01` falls through to the `db_error` branch, which returns a generic 500 from `/api/reschedule`.
+**What goes wrong:** A common migration ordering mistake:
+1. Deploy code that reads `event_types.post_buffer_minutes` (new column).
+2. Apply migration that adds the column (with backfill).
 
-**Detection:** `grep -n "23505\|23P01" lib/bookings/reschedule.ts` — `23P01` should be present.
+If step 1 runs first, the new code hits a deployed Postgres schema that doesn't have the column yet → `column "post_buffer_minutes" does not exist` → 500 on ALL `/api/slots` requests until the migration runs. This is a production outage window.
 
-**Prevention (Phase 27):** Add a `23P01` branch in `reschedule.ts` that returns `{ ok: false, reason: "slot_taken" }` (reuse the existing reason variant — from the booker's perspective, the new time is unavailable regardless of which constraint fired). The route handler already maps `slot_taken` to a 409 with a friendly message.
+**Detection:** The correct order is: migration first (column added, data backfilled), THEN code deploy. Verify the git commit sequence: the migration SQL file must be committed and applied BEFORE the code change that reads the new field.
 
-**Owner:** Phase 27
+**Prevention (Buffer migration phase):** Task ordering is:
+1. Write + apply the ADD COLUMN + backfill migration (database first)
+2. Verify the new column contains the correct backfilled values (`SELECT COUNT(*) FROM event_types WHERE post_buffer_minutes IS NULL;` → 0)
+3. Then deploy code that reads the new column
+4. Then (≥30 min later) apply the DROP COLUMN migration for `accounts.buffer_minutes`
 
----
+This matches the v1.2 CP-03 pattern exactly.
 
-### V14-MP-03: Stale browser slot cache — `CROSS_EVENT_CONFLICT` must be a user-recoverable 409
-
-**What goes wrong:** Booker fetches available slots at T=0. A different event type books the same time at T=0+N seconds. Booker submits. Without V14-MP-01, this is a 500. With V14-MP-01, it is a 409 `CROSS_EVENT_CONFLICT`. But if the booking form's 409 handler only branches on `code === "SLOT_TAKEN"`, the new code is silently treated as an unhandled error — form may reset or show a generic failure state, losing the booker's entered data.
-
-**Detection:** Audit the booking form submission handler for 409 response processing. Verify `CROSS_EVENT_CONFLICT` is handled identically to `SLOT_TAKEN` — inline banner, preserved form values, prompt to pick a new time.
-
-**Prevention (Phase 27):** Extend the client-side 409 handler to match `CROSS_EVENT_CONFLICT` with copy: "That time is no longer available — please select a different time." The form values (name, email, phone, answers) must be preserved. This is the v1.0/v1.1 inline-banner pattern applied to the new error code.
-
-**Owner:** Phase 27
+**Owner:** Buffer migration phase
 
 ---
 
-### V14-MP-04: Bookings page crash (BOOK-01/02) — diagnostic-first, not assumption-first
+### V15-MP-03: Rebrand identifier rename — `tradeContractor*` / `contractor*` JS identifiers may not exist
 
-**What goes wrong:** Jumping to a fix before identifying the crash source wastes a phase. The `queryBookings` function in `_lib/queries.ts` uses `createClient()` (RLS-scoped session client), joins `event_types!inner`, and `BookingRow.booker_phone` is `string | null` with conditional rendering already guarded in `bookings-table.tsx:89` and `[id]/page.tsx:205`. The null-phone path is already safe.
+**What goes wrong:** PROJECT.md line 29 specifies "Rename internal identifiers (tradeContractor* / contractor* → serviceBusiness*)". A grep for these specific identifier patterns in the codebase (`grep -rn "tradeContractor\|contractorType"`) will likely return zero matches — the current codebase was built with generic names (`account`, `AccountSummary`, `AccountSettings`, `eventType`, etc.). There are no `tradeContractor` TypeScript identifiers in the production code.
 
-**Most likely root cause based on code reading:** The `event_types!inner` normalization at `queries.ts:92` (`Array.isArray(row.event_types) ? row.event_types[0] : row.event_types`) returns `undefined` if PostgREST returns an empty array (which happens when the join produces no match — e.g., soft-deleted event type where RLS or the join condition excludes the row). Accessing `et.name` on `undefined` crashes. Secondary candidate: RLS policy blocking the join for a specific account state.
+The "contractor" pattern in the codebase appears only as:
+- **String copy** in `auth-hero.tsx` (user-facing)
+- **Developer comments** in `booking-form.tsx` and planning files (not identifiers)
+- **Column names** in archived SQL migrations (not runtime code)
 
-**Detection (Phase 26):** Check Vercel function logs for the exact stack frame. Run the bookings query directly in Supabase SQL Editor substituting the owner's `auth.uid()`. If zero rows return but bookings exist, RLS is the culprit. If rows return but `event_types` is null/empty on some rows, the join normalization needs a null guard.
+Spending time searching for TypeScript identifiers that don't exist delays the actual work (copy changes).
 
-**Prevention (Phase 26):** Diagnostic-first protocol: (1) read server logs, (2) reproduce in SQL Editor, (3) fix the confirmed root cause only. Do not add speculative null guards before confirming root cause — they hide bugs instead of fixing them.
+**Detection:** Run `grep -rn "tradeContractor\|contractorType\|contractorAccount" app/ lib/` before planning any identifier rename tasks. Confirm whether any such identifiers exist.
 
-**Owner:** Phase 26
+**Prevention (Rebrand phase):** Scope the rebrand correctly from the start:
+- Copy changes (string literals, JSX text): `auth-hero.tsx`, `README.md`, `FUTURE_DIRECTIONS.md`
+- No TypeScript identifier renames needed (identifiers are already generic)
+- No SQL column renames needed (no `contractor_*` column names in schema)
 
----
+If the identifier rename scope is empty, remove it from the plan rather than spending a task searching for patterns that don't exist.
 
-### V14-MP-05: New pg-driver tests must use the `SUPABASE_DIRECT_URL` skip-guard pattern
-
-**What goes wrong:** A new test file for the EXCLUDE constraint that calls `pgDirectClient()` directly will fail in Vercel CI with `SUPABASE_DIRECT_URL missing from .env.local`, causing an uncaught error rather than a clean skip. The existing `race-guard.test.ts` avoids this with `describe.skipIf(skipIfNoDirectUrl)` at lines 89-91.
-
-**Detection:** `grep -n "hasDirectUrl\|skipIfNoDirectUrl" tests/race-guard.test.ts` — the pattern is established. Any new pg-driver test must replicate it verbatim.
-
-**Prevention (Phase 27):** New test describe blocks using `pgDirectClient()` must begin with:
-
-```typescript
-const skipIfNoDirectUrl = !hasDirectUrl();
-describe.skipIf(skipIfNoDirectUrl)("...", () => { ... });
-```
-
-Import `{ pgDirectClient, hasDirectUrl }` from `./helpers/pg-direct`. Never call `pgDirectClient()` outside a `skipIf`-guarded describe block.
-
-**Owner:** Phase 27
+**Owner:** Rebrand phase (scoping task)
 
 ---
 
-### V14-MP-06: `rate_limit_events` cleanup gap — pg-driver tests may exacerbate carryover DEBT-01
+### V15-MP-04: Timezone hint placement in 3-column layout — currently rendered INSIDE `SlotPicker` at the top of the left panel
 
-**What goes wrong:** Carryover debt DEBT-01 from v1.3 is an incomplete `rate_limit_events` table cleanup in the test suite. Adding more pg-driver tests that create bookings may compound isolation failures if any test path touches rate-limit records. The existing `race-guard.test.ts` cleanup only deletes `bookings` and `event_types`.
+**What goes wrong:** In the current 2-column layout (`booking-shell.tsx:77`), the `SlotPicker` component renders the timezone hint `"Times shown in {bookerTimezone}"` at line 122 of `slot-picker.tsx` as the first element in the slot picker JSX, above the `grid lg:grid-cols-2` calendar/times grid. This places the timezone hint at the top-left of the slot picker panel.
 
-**Detection:** New Phase 27 tests that use direct pg-driver INSERTs bypass the application layer entirely and do NOT trigger rate-limit middleware — this path is safe for now. Risk materializes only if application-layer HTTP calls are added to Phase 27 tests.
+In the new 3-column layout, the timezone hint's position becomes ambiguous:
+- If left at the top of the calendar column (leftmost column), it's logically associated with the calendar but visually at the far left — users may not see it before picking a time in the middle column.
+- If moved above the entire 3-column grid (as a full-width banner), it applies to all three columns which is semantically correct (times in all columns are in the booker's timezone).
+- If moved into the times column header, it's close to the times list but may conflict with the times column heading.
 
-**Prevention (Phase 27):** New tests must use direct pg-driver INSERTs (not HTTP calls to `/api/bookings`) to avoid touching rate-limit records. This is a known risk, not a v1.4 fix item.
+Forgetting to address this means the timezone hint renders in an unintuitive position in the redesigned layout.
 
-**Owner:** Phase 27 (awareness only; fix is out of scope)
+**Detection:** After implementing the 3-column layout, check the timezone hint at desktop widths. It should be clearly visible BEFORE the user starts picking dates, not tucked above only one column.
+
+**Prevention (Booker redesign phase):** Move the timezone hint OUT of `SlotPicker` and into `BookingShell` as a full-width element ABOVE the 3-column grid. This mirrors the v1.3 PUB-14 fix where the timezone hint was hoisted above the `grid lg:grid-cols-2` wrapper as a full-width sibling.
+
+**Owner:** Booker redesign phase
+
+---
+
+### V15-MP-05: Turnstile widget inside the form column — verify it mounts correctly on dynamic reveal
+
+**What goes wrong:** The `Turnstile` widget (Cloudflare) in `booking-form.tsx:242` uses `@marsidev/react-turnstile`. This widget initializes when its host element mounts in the DOM. In the current 2-column layout, the form is conditionally rendered: `{selectedSlot ? <BookingForm ... /> : <p>Pick a time...</p>}`. When `selectedSlot` becomes non-null, `<BookingForm>` mounts and Turnstile initializes.
+
+In the new 3-column layout with a reserved form column, there are two possible implementation patterns:
+1. **Conditional render (same as today):** `<BookingForm>` mounts on slot pick → Turnstile mounts fresh → no issue.
+2. **Always-mounted form, hidden via CSS:** `<BookingForm>` always in DOM, visibility toggled via CSS class → Turnstile renders immediately on page load, before the user has picked a slot. The user's Turnstile token may expire (2-minute validity by default) during slot selection, causing the form submission to fail with `TURNSTILE_VALIDATION_FAILED`.
+
+**Detection:** Check the form implementation strategy. If `<BookingForm>` is always mounted, check Turnstile token expiry behavior. The `Turnstile` component's `ref.current?.getResponse()` returns an empty string after token expiry.
+
+**Prevention (Booker redesign phase):** Keep the conditional mount pattern from the current implementation. The form column placeholder (rendered when `selectedSlot` is null) is a `<div>` with a "Pick a time to continue" hint, NOT a mounted `<BookingForm>`. The `<BookingForm>` mounts only when `selectedSlot` is set — this preserves the correct Turnstile lifecycle and avoids token-expiry issues.
+
+**Owner:** Booker redesign phase
+
+---
+
+### V15-MP-06: Mobile stack ordering — 3-column desktop must stack as calendar → times → form on mobile, not form → calendar → times
+
+**What goes wrong:** CSS grid on mobile (`flex-col` or single-column fallback) stacks DOM order top-to-bottom. If the 3-column DOM order is `[calendar] [times] [form]` (left-to-right on desktop), the mobile stack is naturally correct (calendar top, times middle, form bottom — user must pick date, then time, then fill form, which is the correct UX flow).
+
+But if any CSS reordering (`order:` property or `flex-direction: column-reverse`) is applied to achieve a visual effect on desktop, the mobile order may be scrambled.
+
+**Detection:** At 375px viewport width, verify the rendered order is: calendar component first, time slot list second, booking form third. Use browser DevTools to check `order` CSS property on each grid child.
+
+**Prevention (Booker redesign phase):** Use natural DOM order (calendar → times → form) and let the CSS grid handle column placement on desktop via `grid-column` assignment if needed. Do NOT use CSS `order:` property to reorder visually — it creates an accessibility issue (keyboard tab order follows DOM order, not visual order).
+
+**Owner:** Booker redesign phase
+
+---
+
+### V15-MP-07: Form column scroll-into-view behavior — current 2-column triggers scroll on slot pick; 3-column must not
+
+**What goes wrong:** In the current `booking-shell.tsx`, there is no explicit `scrollIntoView` call when a slot is picked. However, on mobile the 2-column layout means the form appears BELOW the slot picker — users must scroll down to see the form after picking a time. In the 3-column layout, the form is always in the right column and already visible without scrolling.
+
+If any scroll-into-view behavior was added (either in the current codebase or as a planned v1.5 enhancement), it should NOT be applied in the 3-column layout — the form is already visible. Triggering scroll-to-form in the 3-column layout would cause a disorienting jump to the bottom of the page.
+
+**Detection:** Search `grep -rn "scrollIntoView\|scroll" app/\[account\]/` — verify no scroll-to-form calls exist. If any scroll behavior is added as part of the mobile stack, add a breakpoint guard (`window.innerWidth < 1024 && formRef.current?.scrollIntoView()`).
+
+**Prevention (Booker redesign phase):** Do not add scroll-into-view for the 3-column desktop layout. For mobile (stacked), a scroll into view after slot pick is acceptable UX; guard it behind `window.innerWidth < 1024` or a responsive CSS scroll-margin.
+
+**Owner:** Booker redesign phase
 
 ---
 
 ## Minor Pitfalls
 
-Mistakes that are visually wrong but cause no data loss.
+Mistakes that are cosmetic or trivially fixable.
 
 ---
 
-### V14-mp-01: Mobile calendar overflow — do NOT add `overflow-x-auto` to the Calendar root
+### V15-mp-01: `README.md` and `FUTURE_DIRECTIONS.md` rebrand — these files are committed but not deployed; don't forget them
 
-**What goes wrong:** Wrapping the `Calendar` component in `overflow-x-auto` creates a horizontally scrollable box inside the card. Users rarely expect horizontal scroll inside a calendar widget — the result is a broken-feeling UX on mobile where only part of the calendar is visible and the user must scroll sideways to see weekend columns.
+**What goes wrong:** The rebrand primarily touches `app/` files but PROJECT.md explicitly calls out `README.md` and `FUTURE_DIRECTIONS.md`. These files are in the repo root and deployed as documentation. They contain "trade contractors" in the opening description. If the rebrand phase only touches `app/` and `lib/`, the repository's primary documentation still describes the product for "plumbers, HVAC, roofers, electricians" — confusing to new viewers who encounter the broader "service-based businesses" positioning everywhere else.
 
-**Detection:** Inspect `home-calendar.tsx` — if `overflow-x-auto` appears anywhere in the className chain, it is wrong. The shared `components/ui/calendar.tsx` exposes `--cell-size` as a CSS custom property (`[--cell-size:--spacing(7)]` = 28px). The correct fix is overriding this property to a smaller value on the instance.
+**Detection:** After the rebrand phase: `grep -n "trade contractor\|plumber\|HVAC\|roofer\|electrician" README.md FUTURE_DIRECTIONS.md` — results should be zero or explicitly retained as historical examples.
 
-**Prevention (Phase 25):** Apply a `style` override on the `<Calendar>` instance in `home-calendar.tsx` to reduce cell size at mobile breakpoints, or use a smaller container padding via `className`. Do not modify `components/ui/calendar.tsx` (v1.3 invariant: shared shadcn component is untouchable). Example: `style={{ "--cell-size": "var(--spacing-6)" } as React.CSSProperties}` as a starting point.
+**Prevention (Rebrand phase):** Add `README.md` and `FUTURE_DIRECTIONS.md` to the explicit file list for the rebrand phase plan. Update the opening description and any audience-specific language.
 
-**Owner:** Phase 25
-
----
-
-### V14-mp-02: Auth pill removal — `Header variant="auth"` IS the pill; no dedicated component exists
-
-**What goes wrong:** Searching for `AuthPill` or `auth-pill` finds nothing — the auth header is `<Header variant="auth" />` from `app/_components/header.tsx`. The NSI wordmark renders for both `variant="owner"` and `variant="auth"` (lines 88-106 of `header.tsx`, shared `else` branch). Deleting a nonexistent component or patching the wrong variant removes the owner dashboard header.
-
-**Scope boundary confirmed by code reading:**
-- Auth pages using `<Header variant="auth" />`: `login/page.tsx`, `signup/page.tsx`, `forgot-password/page.tsx`, `reset-password/page.tsx`, `verify-email/page.tsx`, `auth-error/page.tsx`, `account-deleted/page.tsx`, `onboarding/layout.tsx`
-- `PoweredByNsi` is in `PublicShell` and `EmbedShell` only — NOT on auth pages, must remain untouched
-
-**Detection (before touching):** Read each auth page file listed above to confirm `<Header variant="auth" />` usage. Do NOT assume a layout file handles it centrally without verifying.
-
-**Prevention (Phase 25):** Remove `<Header variant="auth" />` from each auth page (or add `variant="none"` that renders `null`). Do not modify the owner variant. Do not touch `powered-by-nsi.tsx` or any public-surface layout.
-
-**Owner:** Phase 25
+**Owner:** Rebrand phase
 
 ---
 
-### V14-mp-03: Calendar selected color — do NOT use a hardcoded hex; use `bg-primary`
+### V15-mp-02: Slot-picker `lg:grid-cols-2` nested inside the 3-column grid — two grid levels must not conflict
 
-**What goes wrong:** The current `home-calendar.tsx` uses `"bg-gray-700"` for the selected DayButton. If changed to a hardcoded hex (e.g., `"#1E40AF"`) to reach NSI blue, this violates the spirit of MP-04 for static values and orphans the color from the theme token system. If the brand color changes post-v1.2, the calendar cell is missed.
+**What goes wrong:** `slot-picker.tsx:125` contains `<div className="grid gap-6 lg:grid-cols-2">` — the calendar+times sub-grid inside the slot picker. In the new 3-column layout, the slot picker occupies TWO columns (calendar LEFT, times MIDDLE). If `SlotPicker` is restructured to NOT use its internal `lg:grid-cols-2` (because the parent grid handles column placement), the calendar and times list render as a single-column vertical stack inside both the calendar column and the times column — they'd both be full-width blocks in wrong columns.
 
-**Detection:** `grep -n "isSelected\|bg-gray-700\|bg-blue\|#[0-9A-Fa-f]" app/**/home-calendar.tsx` — any static hex in a className string is wrong. Inline styles are correct for runtime-computed values (MP-04); for static brand colors, a Tailwind token is correct.
+The correct approach depends on the architecture decision:
+- **Option A (children of parent grid):** `SlotPicker` renders `<Calendar>` and the times `<ul>` as direct children of the 3-column parent grid. The parent grid places them in column 1 and column 2. `SlotPicker` no longer manages its own 2-column internal grid.
+- **Option B (slot picker unchanged):** `SlotPicker` keeps its internal `lg:grid-cols-2` and spans columns 1+2 of the parent grid via `col-span-2`. The form is column 3. This keeps `SlotPicker` as a self-contained component.
 
-**Prevention (Phase 25):** Change `"bg-gray-700"` to `"bg-primary"` in the `isSelected` className branch of `home-calendar.tsx`. `--primary` is already NSI blue post-v1.2 CSS token. Zero new variables, zero new files, zero touches to `globals.css` or `components/ui/calendar.tsx`.
+**Detection:** After implementing the 3-column layout, inspect at 1024px width. Check that the calendar is visually in column 1, the times list in column 2, and the form in column 3 — not stacked.
 
-**Owner:** Phase 25
+**Prevention (Booker redesign phase):** Choose Option B (simpler) unless the internal `lg:grid-cols-2` in `SlotPicker` causes issues. Update `BookingShell` to use `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]` with `SlotPicker` spanning `col-span-2` via a wrapper div, and the form in column 3.
+
+**Owner:** Booker redesign phase
+
+---
+
+### V15-mp-03: `PublicShell` glass pill extends full-width; the 3-column grid is content-area only — verify no bleed outside Card
+
+**What goes wrong:** `PublicShell` renders the glass header pill shell-wide (not inside the booking card). The booking content area is `<section className="mx-auto max-w-3xl px-6 pb-12 md:pb-20">`. If the 3-column grid exceeds `max-w-3xl` (e.g., at 1440px with a 320px form column + 280px calendar + 160px times = 760px minimum, which fits inside 3xl=768px), there's no bleed. But if the new layout needs `max-w-4xl` or `max-w-5xl` to give all 3 columns comfortable space, the `max-w` constraint must be updated consistently in `BookingShell` — not in `PublicShell`.
+
+**Detection:** At 1280px desktop width, verify the 3-column grid fits within the content card without horizontal overflow. Check `max-w-3xl` (768px) is sufficient or identify what the minimum comfortable width is for all three columns.
+
+**Prevention (Booker redesign phase):** If 3 columns need more than 768px, increase `max-w` in `BookingShell` only (`max-w-4xl` = 896px, `max-w-5xl` = 1024px). Do NOT touch `PublicShell` — it is used by all public surfaces (`/[account]` index page, `/[account]/[event-slug]`). A wider card on the booking page should be a `BookingShell`-specific class change.
+
+**Owner:** Booker redesign phase
+
+---
+
+## Cross-Feature Pitfalls
+
+Risks that span two or more of the three v1.5 feature tracks.
+
+---
+
+### V15-XF-01: Rebrand and buffer refactor touch the same files — consolidate or sequence to avoid merge conflicts
+
+**What goes wrong:** The buffer refactor modifies:
+- `lib/slots.ts` (reads `account.buffer_minutes` → new field)
+- `lib/slots.types.ts` (`AccountSettings.buffer_minutes` field)
+- `app/api/slots/route.ts` (SELECT columns from accounts and event_types)
+- `tests/slot-generation.test.ts` (buffer test values)
+- `app/(shell)/app/availability/_components/settings-panel.tsx` (remove buffer input)
+- `app/(shell)/app/availability/_lib/actions.ts` (remove buffer from save action)
+
+The rebrand also touches `app/(shell)/` files for owner-facing copy. If these two tracks are worked in parallel by the same developer switching between tasks, uncommitted changes in `slots.ts` or `api/slots/route.ts` can collide with rebrand search-and-replace operations (especially if the rebrand uses global replace tools that sweep all files).
+
+**Detection:** Verify before starting any task: `git status` shows a clean working tree. Never start a rebrand search-and-replace with uncommitted buffer changes in the working tree.
+
+**Prevention:** Execute the three tracks in sequence, not in parallel: Buffer migration → Rebrand → Booker redesign. Commit and deploy each track before starting the next. If parallel work is unavoidable, use separate git branches and merge after each track.
+
+**Owner:** Phase planning (sequencing decision)
+
+---
+
+### V15-XF-02: Booker redesign ships AFTER rebrand — avoids rewriting booker copy twice
+
+**What goes wrong:** If the booker redesign ships BEFORE the rebrand, the new 3-column layout is designed around the current generic copy ("Pick a time to continue", "Book this time", etc.). The rebrand then audits all owner-facing copy — the booker's copy is already generic and needs no change. No double-touch of booker copy.
+
+But if the rebrand ships before the booker redesign and someone mistakenly "rebrands" the booker (adding "service-based businesses" copy to the public form), the booker redesign then must revert those changes. Confusion risk.
+
+**Detection (non-issue if sequenced correctly):** The booker copy is already generic. A correctly-scoped rebrand will not touch it. The risk is human error in the rebrand phase.
+
+**Prevention:** Explicitly document in the rebrand phase plan: "The public booker, embed widget, confirmation/cancellation pages, and all customer-facing email copy are OUT OF SCOPE for the rebrand. These surfaces use generic language that is already audience-agnostic."
+
+**Owner:** Rebrand phase (scope guard in phase plan)
+
+---
+
+### V15-XF-03: Buffer migration pre-flight uses V14-CP-06 pattern — add it as a hard gate before any schema change
+
+**What goes wrong:** The v1.4 CP-03 30-min drain protocol and the V14-CP-06 pre-flight diagnostic pattern are both required for the `accounts.buffer_minutes` DROP. The v1.4 PITFALLS.md established these as reusable patterns. v1.5 must apply them again for this DROP:
+
+- **Pre-flight gate:** Before the ADD COLUMN + backfill migration, verify the `event_types` table's existing `buffer_before_minutes` / `buffer_after_minutes` columns don't contain non-zero values that should influence the backfill. If any event type had a custom `buffer_after_minutes` value set (unlikely but possible via direct DB edit), blindly backfilling from `accounts.buffer_minutes` would overwrite it.
+- **Drain gate:** Before the DROP `accounts.buffer_minutes` migration, all deployed code must be confirmed to NOT reference the column. 30-minute minimum drain.
+
+**Detection:** Pre-flight: `SELECT id, slug, buffer_after_minutes FROM event_types WHERE buffer_after_minutes <> 0;` — if any rows return, they were manually customized; decide whether to preserve or overwrite.
+
+**Prevention (Buffer migration phase):** Add both gates as mandatory checkpoints in the buffer phase plan, explicitly labeled as CP-06 (pre-flight diagnostic) and CP-03 (30-min drain). The plan must block on human verification at each gate.
+
+**Owner:** Buffer migration phase
 
 ---
 
@@ -306,24 +464,26 @@ Mistakes that are visually wrong but cause no data loss.
 
 | Phase | Pitfall IDs | Risk Level | Notes |
 |-------|-------------|------------|-------|
-| 25 (surgical) | V14-mp-01, V14-mp-02, V14-mp-03 | Low | Visual fixes only; follow invariants strictly |
-| 26 (debug) | V14-MP-04 | Medium | Server logs first; resist premature fix |
-| 27 (architectural) | V14-CP-01 through V14-CP-07, V14-MP-01 through V14-MP-06 | High | Pre-flight diagnostic is a hard gate before any migration SQL |
+| Buffer migration (DB) | V15-CP-01, V15-CP-02, V15-CP-03, V15-MP-02, V15-XF-01, V15-XF-03 | CRITICAL | Pre-flight + drain gates are hard blockers; CP-01 naming decision must be made first |
+| Buffer migration (code) | V15-CP-04, V15-CP-05, V15-CP-06, V15-MP-01 | HIGH | Types-first pattern; update tests synchronously |
+| Rebrand | V15-CP-07, V15-CP-08, V15-CP-09, V15-MP-03, V15-XF-02 | MODERATE | Audit each hit manually; scope guard required |
+| Rebrand (identifiers) | V15-MP-03 | LOW | Identifier rename is likely a no-op; verify first |
+| Booker redesign | V15-CP-10, V15-CP-11, V15-MP-04, V15-MP-05, V15-MP-06, V15-MP-07 | HIGH | Embed isolation is critical; Turnstile mount pattern must be preserved |
+| Booker redesign (layout) | V15-mp-02, V15-mp-03 | LOW | Nested grid + max-w decisions; cosmetic impact only |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-Run this checklist before marking Phase 27 complete:
+Run this checklist before marking v1.5 complete:
 
-- [ ] **Extension present:** `SELECT extname FROM pg_extension WHERE extname = 'btree_gist'` returns a row
-- [ ] **Constraint exists and is valid:** `SELECT conname, convalidated FROM pg_constraint WHERE conname = 'bookings_cross_event_no_overlap'` returns one row with `convalidated = true`
-- [ ] **Adjacent-slot test passes:** Two confirmed bookings for DIFFERENT event types at 09:00-09:30 and 09:30-10:00 on the same account both succeed (no false collision on touching bounds)
-- [ ] **Same-event-type group booking still works:** Two confirmed bookings for the SAME event type at the same time on the same account (different `slot_index`) both succeed (capacity feature not broken)
-- [ ] **Cross-event conflict is rejected:** Two confirmed bookings for DIFFERENT event types at an overlapping time on the same account: second INSERT raises `23P01` (constraint fires correctly)
-- [ ] **Cancelled rows are ignored:** Cancel one booking from the cross-event overlap; attempt to book the same slot with a different event type — must succeed (`WHERE status = 'confirmed'` predicate working)
-- [ ] **`23P01` returns 409, not 500:** Submit a booking via the public form for a slot blocked by a different event type — API returns `{"code":"CROSS_EVENT_CONFLICT"}` at HTTP 409, NOT 500
-- [ ] **Reschedule to a blocked slot returns 409:** Reschedule a booking to a time occupied by a different event type — `/api/reschedule` returns 409 (not 500)
-- [ ] **Pre-flight query ran and returned zero rows** before the migration was applied (V14-CP-06)
-- [ ] **New pg-driver tests use `skipIfNoDirectUrl` guard** and CI passes without `SUPABASE_DIRECT_URL` set
-- [ ] **Phase 25 visual items:** `bg-primary` on selected day (not `bg-gray-700`, not hardcoded hex), no `overflow-x-auto` on calendar, auth pill removed from auth pages only, public `PoweredByNsi` footer unchanged
+- [ ] **Buffer column naming resolved:** Confirm exactly ONE buffer column exists on `event_types` (not both `buffer_after_minutes` AND a new `post_buffer_minutes`). `SELECT column_name FROM information_schema.columns WHERE table_name = 'event_types' AND column_name LIKE '%buffer%'` should return exactly the expected columns.
+- [ ] **`accounts.buffer_minutes` column DROPPED:** `SELECT column_name FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'buffer_minutes'` returns zero rows. CP-03 30-min drain verified before DROP was applied.
+- [ ] **Slot engine reads event-type buffer, NOT account buffer:** `grep -n "account.buffer_minutes" lib/slots.ts` returns zero matches. `grep -n "buffer" app/api/slots/route.ts` shows the new event-type column in the SELECT, not `accounts.buffer_minutes`.
+- [ ] **Per-event divergence test passes:** A test with event-type A buffer=0 and event-type B buffer=15 on the same account correctly shows different slot availability for each event type. `vitest run tests/slot-generation.test.ts` passes all buffer tests.
+- [ ] **Rebrand coverage confirmed:** `grep -rn "trade contractor\|Built for trade\|for trade contractors" app/ lib/ README.md FUTURE_DIRECTIONS.md` returns zero matches. `grep -rn "contractor" app/ lib/` returns only the `booking-form.tsx:138` developer comment (intentionally left) and zero user-facing copy.
+- [ ] **No booker copy rebranded:** The public booker form (`app/[account]/[event-slug]/`), confirmation page, and cancellation page use only generic copy. No "service-based businesses" language appears on customer-facing surfaces.
+- [ ] **3-column desktop layout renders without horizontal overflow:** At 1024px, 1280px, and 1440px viewport widths, the booking card does not overflow its container. No horizontal scrollbar. Calendar, times, and form columns are all visible without scrolling.
+- [ ] **Embed widget is NOT 3-column:** Load `calendar-app-xi-smoky.vercel.app/embed/nsi/[any-event-slug]` — the embed renders in the stacked (single-column) layout at all tested widths (320px, 480px, 768px). No horizontal overflow.
+- [ ] **Turnstile mounts correctly after slot pick:** In the 3-column layout, select a date and time. The form column reveals with a valid Turnstile widget (not expired). Submit the form — the Turnstile token is accepted (HTTP 201 or 409 race, not 403 Turnstile-failed).
+- [ ] **No layout shift on form reveal:** In the 3-column layout, select a time slot. The calendar and times columns do NOT move horizontally during the form reveal. The CLS (Cumulative Layout Shift) during slot pick is zero or near-zero — visually confirmed by watching the calendar position while clicking a time.

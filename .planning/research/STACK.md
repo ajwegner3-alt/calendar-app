@@ -1,278 +1,391 @@
-# Stack Research: v1.4 Slot Correctness + Polish
+# Stack Research — v1.5 Buffer Fix + Audience Rebrand + Booker Redesign
 
-**Scope:** DB-layer cross-event-type overlap enforcement (item 5 of v1.4).
-**Researched:** 2026-05-02
-**Confidence:** HIGH — all DDL syntax verified by live execution against production Postgres
-(project ref `mogfnutxrrbtvnaupoun`, Postgres 17.6.1, West US 2).
-The four polish items (auth pill removal, home calendar color, mobile overflow, bookings crash)
-require zero stack additions and are excluded from this research.
+**Domain:** Multi-tenant Calendly-style booking tool for service-based businesses
+**Researched:** 2026-05-03
+**Confidence:** HIGH (all findings verified against live source files; no training-data assertions)
 
 ---
 
-## Scope Constraint
+## Verdict: Zero New npm Packages Required
 
-The v1.1/v1.2/v1.3 stack is locked. This document covers only what v1.4 adds to enforce the
-contractor-can't-be-in-two-places-at-once invariant at the Postgres layer. All changes are
-DDL-only. Zero new npm packages are required.
+All three v1.5 features are implementable with the existing installed stack. No new
+dependencies needed. This is confirmed by reading every touch file listed below.
 
 ---
 
-## 1. Postgres Extension: `btree_gist`
+## Feature 1: Per-Event-Type Post-Event Buffer (BUFFER-01)
 
-**Decision: `CREATE EXTENSION IF NOT EXISTS btree_gist;`**
+### Schema Situation — Critical Discovery
 
-**Verified against production:**
+The initial migration (`supabase/migrations/20260419120000_initial_schema.sql`, lines 35-36)
+created two columns on `event_types` that have **never been wired to the slot engine**:
 
 ```sql
-SELECT name, default_version, installed_version
-FROM pg_available_extensions WHERE name = 'btree_gist';
--- Result before migration: { name: "btree_gist", default_version: "1.7", installed_version: null }
--- After CREATE EXTENSION: installed_version becomes "1.7"
+buffer_before_minutes  int not null default 0 check (buffer_before_minutes >= 0),
+buffer_after_minutes   int not null default 0 check (buffer_after_minutes >= 0),
 ```
 
-`btree_gist` is a standard PostgreSQL contrib module. It extends the GiST index access method to
-support non-geometric scalar types — specifically `uuid`, `int`, `text`, and others — via a GiST
-wrapper. This is required for `EXCLUDE USING gist (account_id WITH =, during WITH &&)` because
-the `=` operator on `uuid` is not natively supported in GiST without it.
+The Phase 4 availability-settings migration (`20260425120000_account_availability_settings.sql`)
+added `accounts.buffer_minutes` as an account-scoped overlay and that is what the engine reads
+today (`lib/slots.ts:277` passes `account.buffer_minutes` to `slotConflictsWithBookings`).
 
-**Migration command (locked apply path):**
+**Implication for v1.5:** `event_types.buffer_after_minutes` already exists in production with
+the correct semantics (post-event buffer). Two paths exist for the migration:
+
+**Path A — Wire `buffer_after_minutes` (existing column, no ADD COLUMN needed):**
+- Skip the ADD COLUMN migration entirely.
+- Migration scope: `UPDATE event_types SET buffer_after_minutes = (SELECT buffer_minutes FROM accounts WHERE accounts.id = event_types.account_id)` to backfill from account values, then DROP `accounts.buffer_minutes`.
+- The dead `buffer_before_minutes` column can remain (DEFAULT 0, no code reads it) or be dropped alongside `buffer_minutes` in the same DROP migration.
+
+**Path B — Add `post_buffer_minutes` per spec name (new column):**
+- Adds an ADD COLUMN migration before backfill + DROP.
+- Cleaner semantic name; avoids adjacency confusion with the dead `buffer_before_minutes` column.
+- `ALTER TABLE event_types ADD COLUMN IF NOT EXISTS post_buffer_minutes integer NOT NULL DEFAULT 0 CHECK (post_buffer_minutes >= 0);` is a single idempotent statement.
+
+**Recommendation: Path A.** `buffer_after_minutes` is semantically correct for post-only buffer
+semantics, already present in production (no ADD COLUMN risk), and already declared in the
+`EventTypeRow` TypeScript type (`app/(shell)/app/event-types/_lib/types.ts:43-44`). This reduces
+v1.5 migration surface to one migration file instead of two.
+
+### Migration Apply Path (LOCKED FOR THIS REPO)
+
+Per `PROJECT.md §200` and the v1.2 Phase 21 precedent: `supabase db push --linked` is broken in
+this repo (orphan timestamps in remote migration tracking table). The canonical apply command for
+every migration:
 
 ```bash
-echo | npx supabase db query --linked -f <migration-file>.sql
+echo | npx supabase db query --linked -f supabase/migrations/<TIMESTAMP>_<name>.sql
 ```
 
-`CREATE EXTENSION IF NOT EXISTS btree_gist;` runs fine within an explicit-transaction migration
-file. It does NOT require running outside a transaction block (unlike `CREATE INDEX CONCURRENTLY`).
-The `IF NOT EXISTS` guard makes the statement idempotent.
+The `echo |` pipe satisfies the interactive stdin prompt the CLI issues without it. The `-f` flag
+runs the file; wrap multi-statement migrations in `BEGIN/COMMIT` for atomicity (the CLI does not
+wrap automatically). This path was used successfully for every migration from v1.1 through v1.4
+including the Phase 21 DROP.
 
----
+### Two-Step DROP Deploy Protocol (CP-03)
 
-## 2. Time Interval Modeling: Stored Generated Column
+Established in v1.2 Phase 21 for dropping `accounts.sidebar_color`, `background_color`,
+`background_shade`, `chrome_tint_intensity`. The same protocol applies to `accounts.buffer_minutes`.
 
-**Decision: `tstzrange GENERATED ALWAYS AS (tstzrange(start_at, end_at, '[)')) STORED`**
+**Step 1 — Code stop-reading commit:**
+Remove all reads of `accounts.buffer_minutes` from TypeScript. Wire the slot engine to
+`event_types.buffer_after_minutes`. Run `tsc --noEmit` and `grep -r buffer_minutes app/ lib/`
+to confirm zero remaining references. Deploy to Vercel. Do NOT drop the column yet.
 
-**Verified: this exact DDL compiles and functions correctly on Postgres 17.6.1.**
+**Drain window — minimum 30 minutes:**
+Stale Vercel function instances can hold in-flight requests against old code. Dropping the column
+while old instances are alive causes 500s. In v1.2, the drain ran 772 minutes (overnight); 30
+minutes is the enforced minimum. Hold the DROP migration file local (do not push) during this window.
 
-Three options were considered:
+**Step 2 — DROP migration:**
+After drain, apply:
 
-| Option | Verdict | Reason |
-|--------|---------|--------|
-| Stored generated column (`GENERATED ALWAYS AS ... STORED`) | **USE THIS** | Maintained by Postgres automatically; `EXCLUDE` constraint can reference it directly; no application touch required |
-| Function-based index expression | Rejected | `EXCLUDE USING gist` requires the column to exist on the table, not just in an expression index; you cannot write `EXCLUDE USING gist (tstzrange(start_at, end_at, '[)') WITH &&)` as a table constraint |
-| Application-maintained column | Rejected | Introduces a write path (all INSERTs + UPDATEs must set it); adds application complexity; can drift on backfill edge cases |
+```bash
+echo | npx supabase db query --linked -f supabase/migrations/<TIMESTAMP>_drop_accounts_buffer_minutes.sql
+```
 
-The `'[)'` bound means: start inclusive, end exclusive. This is the correct booking semantics —
-a 9:00–10:00 booking and a 10:00–11:00 booking are adjacent, NOT overlapping. The `&&` range
-overlap operator respects bounds correctly.
-
-**The generated column is named `during` by convention** (standard in Postgres range-exclusion
-literature) but any name works. The EXCLUDE constraint references it by name.
-
----
-
-## 3. Exact EXCLUDE Constraint DDL
-
-**Verified: this exact DDL was executed against production and produced the expected constraint.**
+Migration template (matches Phase 21 pattern — atomic, IF EXISTS guarded, RAISE NOTICE header):
 
 ```sql
--- Migration file structure (NO BEGIN/COMMIT for CONCURRENTLY; not needed here since
--- EXCLUDE does not use CONCURRENTLY — it's a table-level constraint, not a standalone index)
-
-CREATE EXTENSION IF NOT EXISTS btree_gist;
-
-ALTER TABLE bookings
-  ADD COLUMN IF NOT EXISTS during tstzrange
-    GENERATED ALWAYS AS (tstzrange(start_at, end_at, '[)')) STORED;
-
-ALTER TABLE bookings
-  ADD CONSTRAINT bookings_no_account_overlap
-  EXCLUDE USING gist (
-    account_id WITH =,
-    during     WITH &&
-  )
-  WHERE (status = 'confirmed');
+BEGIN;
+  DO $$ BEGIN RAISE NOTICE 'v1.5 DROP migration: accounts.buffer_minutes'; END $$;
+  ALTER TABLE accounts DROP COLUMN IF EXISTS buffer_minutes;
+COMMIT;
 ```
 
-**What `pg_get_constraintdef` returns for this constraint (verified):**
-```
-EXCLUDE USING gist (account_id WITH =, during WITH &&) WHERE ((status = 'confirmed'::booking_status))
-```
+**Author a `.SKIP` rollback artifact** per CP-03 convention:
+`<TIMESTAMP+1>_readd_accounts_buffer_minutes.sql.SKIP`
 
-Note: the actual production `status` column is `booking_status` enum, not `text`. The partial
-`WHERE (status = 'confirmed')` clause uses the enum literal — this is valid and verified.
+**Pre-flight gate before Step 2:** run
+`grep -rn "buffer_minutes" app/ lib/ --include="*.ts" --include="*.tsx"`
+and confirm zero matches (excluding migration files and test files that only reference the name in
+comments). Zero live references is the required gate condition.
+
+### Engine Touch Sites — Complete Map
+
+Every file that reads `accounts.buffer_minutes` today and must be updated:
+
+| File | Line(s) | Change Required |
+|------|---------|----------------|
+| `app/api/slots/route.ts:89` | `event_types` SELECT | Add `buffer_after_minutes` to the column list |
+| `app/api/slots/route.ts:121` | `accounts` SELECT | Remove `buffer_minutes` from the column string |
+| `app/api/slots/route.ts:160` | `AccountSettings` construction | Replace `buffer_minutes: accountRes.data.buffer_minutes` with value from `eventType.buffer_after_minutes` |
+| `lib/slots.types.ts:15` | `AccountSettings.buffer_minutes` field | Move the field out of `AccountSettings` or rename it; see note below |
+| `lib/slots.ts:277` | `account.buffer_minutes` passed to `slotConflictsWithBookings` | Read from the event-type value instead |
+| `app/(shell)/app/availability/_components/settings-panel.tsx:15,25,48,75,84` | `buffer_minutes` field | Remove the buffer control from the availability panel (it no longer applies account-wide) |
+| `app/(shell)/app/availability/_lib/actions.ts:64` | Server Action upsert payload | Remove `buffer_minutes` from the UPDATE payload |
+| `app/(shell)/app/availability/_lib/queries.ts:53` | SELECT string | Remove `buffer_minutes` from the accounts query |
+| `app/(shell)/app/availability/_lib/schema.ts:135` | Zod schema | Remove `buffer_minutes` field |
+| `app/(shell)/app/availability/_lib/types.ts:24` | TypeScript type | Remove `buffer_minutes` field |
+| `app/(shell)/app/availability/page.tsx:50` | Page state construction | Remove `buffer_minutes` from initial state |
+
+**Note on `AccountSettings` interface:** `buffer_minutes` is currently declared on
+`AccountSettings` (the account row shape in `lib/slots.types.ts`). After the migration, the
+buffer belongs to the event type, not the account. The cleanest approach: add a new field
+`postBufferMinutes: number` to `SlotInput` directly and pass it from the route handler
+(`eventType.buffer_after_minutes`). This keeps `AccountSettings` as a pure account-row shape.
+Alternatively, rename `AccountSettings.buffer_minutes` to `buffer_minutes: 0` as a dead zero
+while the engine reads from the new `SlotInput` field. Either way, `slotConflictsWithBookings`
+signature at `lib/slots.ts:203` receives the value as its `bufferMinutes` parameter unchanged.
+
+**Owner-facing UI addition:** Add a `buffer_after_minutes` (or `post_buffer_minutes`) number
+input to the event-type form (`app/(shell)/app/event-types/_components/event-type-form.tsx`).
+The `EventTypeRow` type (`app/(shell)/app/event-types/_lib/types.ts:43-44`) already declares
+`buffer_after_minutes: number` — the form simply never rendered a control for it. The actions
+and queries for the event-type edit page (`app/(shell)/app/event-types/[id]/edit/`) already
+SELECT `buffer_after_minutes` (confirmed at line 18 of edit `page.tsx`).
+
+**Test touch sites:** Existing slot tests pass `buffer_minutes` on the `account` object in
+`SlotInput`. Search `tests/slots*.test.ts` for `buffer_minutes` and update to the new field
+location after the type change.
+
+### Migration Timestamps
+
+| Migration | Suggested Timestamp |
+|-----------|-------------------|
+| Backfill update (Path A) — can be inline in the DROP file or separate | `20260503130000` |
+| DROP `accounts.buffer_minutes` (held local during drain) | `20260503130001` |
+| Rollback `.SKIP` artifact | `20260503130002_readd_accounts_buffer_minutes.sql.SKIP` |
+| ADD COLUMN `post_buffer_minutes` (Path B only, runs before backfill) | `20260503125900` |
 
 ---
 
-## 4. Constraint Scope and Behavioral Verification
+## Feature 2: Audience Rebrand (Contractors → Service-Based Businesses)
 
-All four behavioral cases were tested against production:
+### Identifier Rename Scope — Smaller Than Expected
 
-| Test | Expected | Verified |
-|------|----------|----------|
-| Same account, overlapping times, both `confirmed` | BLOCKED (23P01) | PASS — overlap INSERT failed |
-| Same account, adjacent non-overlapping (`[9,10)` + `[10,11)`) | ALLOWED | PASS — adjacent INSERT succeeded |
-| Different account, same time window, both `confirmed` | ALLOWED | PASS — different `account_id` is not excluded |
-| Same account, overlapping times, one `rescheduled` | ALLOWED | PASS — partial `WHERE (status='confirmed')` excludes non-confirmed rows |
+A grep of all `.ts` and `.tsx` files for `tradeContractor`, `TradeContractor`, `serviceBusiness`,
+and `ServiceBusiness` returns **zero matches**. No camelCase or PascalCase internal identifiers
+using these terms exist in the TypeScript codebase. The PROJECT.md requirement to rename
+`tradeContractor*` / `contractor*` → `serviceBusiness*` applies to identifiers that may be
+introduced during v1.5 (e.g. for the buffer form field or new event-type schema constants), not
+to existing ones.
 
-**The rescheduled-row case is the critical pitfall.** When a booking is rescheduled, the old row
-is marked `status='rescheduled'`. The partial `WHERE (status='confirmed')` clause means rescheduled
-rows are invisible to the constraint and do NOT block new confirmed bookings for the same time
-window. This is the correct behavior.
+**Runtime copy touch sites (`.ts`/`.tsx` files):**
 
-**Relationship to the existing `bookings_capacity_slot_idx`:**
+| File | Line | Content | Scope |
+|------|------|---------|-------|
+| `app/(auth)/_components/auth-hero.tsx:21` | Default `subtext` prop | `"A multi-tenant scheduling tool built for trade contractors..."` | Owner-facing (login/signup page) |
+| `app/(auth)/_components/auth-hero.tsx:42` | Static copy | `"Built for trade contractors, by NSI in Omaha."` | Owner-facing (login/signup page) |
+| `app/[account]/[event-slug]/_components/booking-form.tsx:138` | Comment only | `// leak that the contractor has another appointment` | Code comment, not user-visible |
 
-The existing partial unique index `bookings_capacity_slot_idx ON (event_type_id, start_at,
-slot_index) WHERE status='confirmed'` is NOT replaced. The two constraints are complementary:
+**Public booking surfaces:** The only `.ts`/`.tsx` match in the public booking path is the code
+comment at `booking-form.tsx:138`. No user-visible copy on any public surface uses "contractor."
+The booker-facing 409 error message at line 139 already reads "That time is no longer available"
+— generic and correct, no change needed.
 
-| Constraint | Guards Against |
-|------------|---------------|
-| `bookings_capacity_slot_idx` (unique index) | Same-event-type, same-slot races (capacity enforcement) |
-| `bookings_no_account_overlap` (EXCLUDE) | Cross-event-type, account-scoped time overlaps |
+**Transactional email templates:** A grep of `lib/email/` for `contractor` returns zero matches.
+All 6 email templates are contractor-copy-free.
 
-The capacity retry loop in `route.ts` (slot_index 1..N) continues to operate against
-`bookings_capacity_slot_idx`. The new EXCLUDE constraint fires independently at the INSERT level.
+**Documentation touch sites:**
 
-**Important:** A booking for Event A (60 min, 9:00–10:00) blocks a booking for Event B
-(30 min, 9:30–10:00) on the same account. The EXCLUDE constraint checks `account_id` equality
-and `during` overlap, not `event_type_id`. This is intentional — it enforces the physical
-constraint that one contractor cannot be at two jobs simultaneously.
+| File | Lines | Content |
+|------|-------|---------|
+| `README.md:3` | 1 line | `"for trade contractors (plumbers, HVAC, roofers, electricians)"` |
+| `FUTURE_DIRECTIONS.md:62` | 1 line | Incidental mention in SMTP description |
+| `FUTURE_DIRECTIONS.md:226` | 1 line | Incidental mention in slug-redirect context |
+| `FUTURE_DIRECTIONS.md:232` | 1 line | Incidental mention in onboarding template context |
 
----
+**Rename strategy:** IDE find-and-replace across the `app/` tree is sufficient. No AST tooling
+(ts-morph, jscodeshift) is needed because:
+1. Zero camelCase/PascalCase `contractor*` identifiers exist to rename.
+2. All touch sites are string literals or prose comments.
+3. The total is 6 touch sites across 5 files.
 
-## 5. Error Code: `23P01` (exclusion_violation)
+**Any new identifiers added in v1.5** (e.g. a constant for the buffer field label, a new schema
+type) should use `serviceBusiness*` naming convention from the start.
 
-**Verified: PostgREST passes Postgres SQLSTATE directly as the `.code` field on the Supabase JS
-client error object.** This is the same mechanism by which `23505` (unique_violation) is currently
-caught in `route.ts`.
+**Touch-site count summary:**
 
-**Current error handling in `app/api/bookings/route.ts` (lines 242–248):**
-
-```typescript
-if (result.error.code !== "23505") {
-  // Non-capacity error: do not retry. Propagate immediately.
-  break;
-}
-// 23505 = that (event_type_id, start_at, slot_index) triplet is already taken.
-// Try next slot_index value in next iteration.
-```
-
-**Required change:** The `23P01` code path must be handled as a hard failure — no retry makes
-sense (the account is genuinely double-booked; incrementing `slot_index` will not help).
-The capacity retry loop should break immediately on `23P01` and return `409 CONTRACTOR_BUSY`.
-
-```typescript
-// In the slot_index retry loop:
-if (result.error.code === "23P01") {
-  // Exclusion violation: cross-event-type overlap for this account.
-  // Retrying with a different slot_index will not resolve this.
-  insertError = result.error;
-  break;
-}
-if (result.error.code !== "23505") {
-  // Non-capacity, non-overlap error: propagate immediately.
-  break;
-}
-```
-
-**After the loop, add a `23P01` branch before the existing `23505` branch:**
-
-```typescript
-if (insertError?.code === "23P01") {
-  return NextResponse.json(
-    { error: "That time conflicts with another booking. Please choose a different time.", code: "CONTRACTOR_BUSY" },
-    { status: 409, headers: NO_STORE },
-  );
-}
-```
-
-**Why a new `code` value (`CONTRACTOR_BUSY`) rather than reusing `SLOT_TAKEN`:** The UI copy and
-recovery path differ. `SLOT_TAKEN` means "someone else grabbed the same event type at the same
-time — pick a new slot." `CONTRACTOR_BUSY` means "the contractor is already booked for a
-different service at this time — pick a different time entirely." The client can render more
-accurate guidance with a distinct code.
-
-**`ON CONFLICT DO NOTHING` does NOT suppress `23P01`.** Exclusion violations are not unique
-violations and are not caught by `ON CONFLICT` clauses. The Supabase JS `.insert()` will surface
-a non-null `.error` with `code: "23P01"`.
+| Category | Count | Files |
+|----------|-------|-------|
+| User-visible runtime copy | 2 | `auth-hero.tsx` |
+| Code comments | 1 | `booking-form.tsx` |
+| Documentation prose | 3 | `README.md`, `FUTURE_DIRECTIONS.md` |
+| **Total** | **6** | **5 files** |
 
 ---
 
-## 6. Migration Apply Path
+## Feature 3: Public Booker 3-Column Desktop Layout
 
-**The locked workaround (`echo | npx supabase db query --linked -f <file>`) handles this DDL
-correctly.** No special path is needed.
+### Current Layout Architecture
 
-Specific notes per DDL statement:
+The booker is two client components with nested grids:
 
-| Statement | Needs CONCURRENTLY workaround? | Reason |
-|-----------|-------------------------------|--------|
-| `CREATE EXTENSION IF NOT EXISTS btree_gist` | NO | Extension creation has no lock contention concern; runs inside transaction |
-| `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS during ...` | NO | `ADD COLUMN` with a generated expression takes an `ACCESS EXCLUSIVE` lock briefly; acceptable for a migration |
-| `ALTER TABLE bookings ADD CONSTRAINT ... EXCLUDE USING gist ...` | NO | Table-level constraint, not `CREATE INDEX CONCURRENTLY`; takes `ACCESS EXCLUSIVE` lock but does not require running outside a transaction |
-
-**Single migration file is acceptable.** All three statements can live in one `.sql` file. The
-`CREATE UNIQUE INDEX CONCURRENTLY` pattern used in the Phase 11 migration was necessary because
-`CONCURRENTLY` explicitly cannot run inside a transaction block. The new DDL does not use
-`CONCURRENTLY`, so a normal `BEGIN/COMMIT`-wrapped migration file works. The `echo |` prefix
-in the apply command is still needed (per the existing workaround), but has no special meaning
-here — it just satisfies the CLI's stdin requirement.
-
----
-
-## 7. Test Coverage: No New npm Packages Required
-
-The existing `postgres.js` direct-connection helper (`tests/helpers/pg-direct.ts`) is already set
-up to catch `code` values from raw Postgres errors (see `race-guard.test.ts` lines 155–157):
-
-```typescript
-const code = (err as { code?: string })?.code;
-if (code !== "23505") throw err;
+**`booking-shell.tsx`** is the outer container. It holds all interaction state and renders:
+```html
+<div class="grid gap-8 p-6 lg:grid-cols-[1fr_320px]">
+  <!-- Left: SlotPicker (has its own internal 2-col grid) -->
+  <!-- Right: BookingForm (320px fixed) -->
+</div>
 ```
 
-A new test for `23P01` follows the identical pattern. `pgDirectClient()` connects to Postgres
-directly (bypassing Supavisor), so the exclusion violation bubbles up as a raw `postgres.js`
-error with `.code = "23P01"`. No new driver, ORM, or test helper is needed.
+**`slot-picker.tsx`** renders its own internal grid:
+```html
+<div class="grid gap-6 lg:grid-cols-2">
+  <!-- Left: Calendar -->
+  <!-- Right: slot time buttons -->
+</div>
+```
 
-**New test file recommended:** `tests/cross-event-overlap.test.ts`
-- Uses `pgDirectClient` + `adminClient` (both already in `tests/helpers/`)
-- Tests: two parallel INSERTs for different `event_type_id` values (same account) with
-  overlapping time windows → exactly 1 succeeds, 1 fails with `code === "23P01"`
-- Tests: same scenario with `status='rescheduled'` row in place → confirmed INSERT succeeds
-- Skip-guarded on missing `SUPABASE_DIRECT_URL` (same pattern as `race-guard.test.ts` line 89)
+On desktop, the effective layout is `[[calendar | slot-times] | form]` — two nested grid contexts,
+with the calendar and slot-time list sharing a 2-col grid inside the left panel of an outer 2-col
+grid. The symptom ("calendar far-right, text chaotic") is a consequence of this nesting and the
+`1fr_320px` split leaving a wide left panel where the inner 2-col grid distributes unevenly.
+
+### Target Layout
+
+Three flat columns at `lg:` breakpoint: **Calendar LEFT — Slot times MIDDLE — Form RIGHT.**
+Form hidden (but layout-present) until slot selected; revealed in-place with no layout shift.
+Mobile: single column stack (Calendar → Times → Form).
+
+### Recommended Approach: Flatten to One Grid Context in `booking-shell.tsx`
+
+**Flatten the nested grid.** The `booking-shell.tsx` outer `div` becomes the single 3-column
+grid owner. `slot-picker.tsx` loses its internal `lg:grid-cols-2` and exposes the Calendar and
+slot-time list as two separately placeable blocks. `booking-shell.tsx` controls all three columns.
+
+**Grid declaration:**
+
+```tsx
+<div className="grid gap-6 lg:grid-cols-[auto_1fr_320px]">
+  {/* Col 1: Calendar — auto width (≈280px natural width of shadcn Calendar) */}
+  {/* Col 2: Slot time list — takes remaining space */}
+  {/* Col 3: Form — fixed 320px */}
+</div>
+```
+
+`auto` for the calendar column lets `shadcn/ui Calendar` size to its intrinsic width (~280px)
+without over-allocating whitespace. `1fr` for the slot list adapts to remaining card width.
+`320px` for the form matches the existing shell convention. Alternative: `lg:grid-cols-3` (equal
+thirds) — simpler but gives the calendar more horizontal room than it uses. `[auto_1fr_320px]`
+is tighter and more intentional.
+
+**Tailwind v4 bracket syntax** (`lg:grid-cols-[auto_1fr_320px]`) is first-class and JIT-compiled.
+The codebase already uses `lg:grid-cols-[1fr_320px]` in `booking-shell.tsx:77` — same syntax,
+same behavior. No `tailwind.config.*` change needed.
+
+**Mobile breakpoint convention:** The codebase uses `lg:` exclusively for layout breakpoints
+(`lg:grid-cols-2`, `lg:border-l`, `lg:pt-0`, `lg:pl-6` in `booking-shell.tsx`; `lg:flex` in
+`auth-hero.tsx`; `lg:grid-cols-2` in `slot-picker.tsx`). Use `lg:` (1024px) for the 3-column
+breakpoint. Do not introduce a `md:` grid column variant — it would break codebase convention.
+
+### Form Reveal With No Layout Shift
+
+The form column must occupy its 320px slot at all times so the 3-column grid does not collapse
+to 2-column when the form is hidden. Conditional rendering (`{selectedSlot && <BookingForm />}`)
+removes the element from the DOM and collapses the column — this causes layout shift.
+
+**Correct pattern using Tailwind `invisible`:**
+
+```tsx
+<aside className={selectedSlot ? "" : "invisible pointer-events-none"}>
+  <BookingForm
+    key={selectedSlot?.start_at ?? "none"}
+    ...
+  />
+</aside>
+```
+
+`invisible` sets `visibility: hidden` — the element participates in layout (holds its column
+width and height), is not painted, and receives no pointer events. The `pointer-events-none` is
+belt-and-suspenders to prevent keyboard/tab focus reaching a visually hidden form. The `key` prop
+forces a remount when a new slot is selected, resetting form state cleanly.
+
+`BookingForm` must always be mounted for this to work. Its internal RHF `useForm` initializes
+from props on mount; a fresh `key` on slot change is the standard pattern for resetting RHF state.
+
+**Precedent in this codebase:** `app/(auth)/_components/auth-hero.tsx:24` uses
+`hidden lg:flex lg:flex-col` (display-based hide/show) for the auth layout. The booker case
+requires `invisible` instead of `hidden` because we need the column to occupy layout space even
+when not visible.
+
+### SlotPicker Refactor Strategy
+
+Three options for splitting the current monolithic `SlotPicker` into two separately placeable
+blocks:
+
+| Option | Description | Recommendation |
+|--------|-------------|---------------|
+| A — Render props | `SlotPicker` accepts `renderCalendar` and `renderSlots` props; caller places them separately | Adds indirection for no gain |
+| B — Two components (`SlotCalendar` + `SlotList`) | Shared state via context or props | Context overhead for simple state |
+| C — Lift state to `BookingShell` | Move slots fetch, loading, fetchError, slotsByDate up to `BookingShell`; delete `slot-picker.tsx` | **Recommended** |
+
+**Option C is recommended.** `BookingShell` already owns `selectedDate`, `selectedSlot`,
+`refetchKey`, `showRaceLoser`, `raceLoserMessage`. Adding `slots`, `loading`, `fetchError` is
+natural — it is the same state layer. The fetch logic in `slot-picker.tsx` is a single `useEffect`
+with one `fetch()` call; lifting it adds ~20 lines to `booking-shell.tsx` and removes one
+component file entirely. The Calendar and slot-time list then render as inline JSX in their
+respective grid column positions.
+
+### shadcn Components — Sufficiency Check
+
+All components needed for the redesign are already installed and used in the current booker:
+
+| Component | Current location | Status |
+|-----------|-----------------|--------|
+| `Calendar` (shadcn/ui) | `slot-picker.tsx` | Sufficient; no changes to component |
+| `Button` | `booking-form.tsx` | Sufficient |
+| `Input`, `Label`, `Textarea` | `booking-form.tsx` | Sufficient |
+| `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` | `booking-form.tsx` | Sufficient |
+
+No new shadcn components required. The redesign is a grid restructure + visibility toggle.
+
+### Mobile Stack
+
+Below `lg:` (i.e. `< 1024px`): no `grid-cols-*` applied = single column. DOM order determines
+visual order. Required order: Calendar → Slot times → Form. This is the natural DOM order when
+the three blocks are placed in order inside the single grid `div`. No additional ordering
+classes needed.
+
+The existing `justify-self-center` on the `Calendar` component (added in v1.3 PUB-13 for mobile
+centering, per project memory) should be preserved. In a single-column grid on mobile, it will
+continue to center the calendar correctly.
 
 ---
 
-## 8. What NOT to Do
+## What NOT to Use
 
-| Avoid | Why |
-|-------|-----|
-| Function-based expression in EXCLUDE | Postgres `EXCLUDE USING gist` requires a stored column reference, not an inline expression like `tstzrange(start_at, end_at)` — the DDL will fail to compile |
-| Application-layer pre-flight check for overlap | Races between the check and the INSERT are not closed; DB constraint is the only race-safe gate |
-| Replacing `bookings_capacity_slot_idx` with the EXCLUDE constraint | The two constraints are complementary, not substitutable; removing the unique index breaks capacity enforcement within the same event type |
-| Using `ON CONFLICT DO NOTHING` to suppress `23P01` | Exclusion violations are not caught by `ON CONFLICT`; the error will surface regardless |
-| Reusing `SLOT_TAKEN` code for `23P01` | The UX recovery path differs; the booker cannot resolve a `CONTRACTOR_BUSY` by retrying the same slot — they need to pick a different time |
-| Retrying with `slot_index+1` on `23P01` | Incrementing `slot_index` changes `(event_type_id, start_at, slot_index)` which affects `bookings_capacity_slot_idx`, but the EXCLUDE constraint checks account-scoped time overlap — a different slot_index for the same time still overlaps |
-| New ORMs, query builders, or Postgres client libraries | Zero new npm packages. The existing `@supabase/supabase-js` + `postgres` (direct) stack handles everything |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `supabase db push --linked` | Broken in this repo (orphan timestamps in remote tracking table) | `echo \| npx supabase db query --linked -f <file>` |
+| `md:grid-cols-*` for booker layout | Breaks codebase `lg:`-only breakpoint convention | `lg:grid-cols-[auto_1fr_320px]` |
+| `{selectedSlot && <BookingForm />}` conditional render | Collapses form column on hide, causing layout shift | Always-mounted `<BookingForm key={...}>` inside `invisible` wrapper |
+| `hidden` class on form column | Removes from layout flow, same shift problem as above | `invisible pointer-events-none` |
+| `bg-[${color}]` dynamic Tailwind (MP-04) | Purged at build time; not regenerated at runtime | Inline `style={{}}` for runtime color values — already the codebase pattern |
+| ts-morph / jscodeshift for identifier rename | Zero camelCase identifiers to rename; AST tooling is overhead for 6-touch-site text replacement | IDE find-and-replace |
+| DROP migration without 30-min drain | Stale Vercel instances still reading the column → 500 errors | CP-03 two-step protocol: code deploy first, drain, then DROP |
 
 ---
 
 ## Sources
 
-All DDL claims verified by direct execution against production Postgres 17.6.1 on 2026-05-02.
+All findings verified against live source files read on 2026-05-03 (HIGH confidence):
 
 | Source | What Was Verified |
 |--------|-------------------|
-| Live Supabase `pg_available_extensions` query | `btree_gist` available at v1.7, initially uninstalled |
-| Live `CREATE EXTENSION IF NOT EXISTS btree_gist` | Extension installs without error |
-| Live DDL sandbox test (scratch table `_v14_exclude_test`) | `tstzrange GENERATED ALWAYS AS ... STORED` + `EXCLUDE USING gist (account_id WITH =, during WITH &&) WHERE (status='confirmed')` compiles; `pg_get_constraintdef` returns expected definition |
-| Live behavioral test (`_v14_behavior_test`) | Overlap blocked; adjacent allowed; different account allowed; `cancelled`/`rescheduled` status allowed |
-| Live `ON CONFLICT` test | Exclusion violation is NOT suppressed by `ON CONFLICT DO NOTHING`; overlap INSERT left 1 row (baseline only) |
-| `app/api/bookings/route.ts` (read 2026-05-02) | Exact error handling structure at lines 242–248; confirmed `insertError.code` comparison pattern |
-| `tests/race-guard.test.ts` (read 2026-05-02) | `pgDirectClient` error shape; `.code` access pattern for `23505`; skip-guard pattern |
-| `supabase/migrations/20260428130002_*.sql` (read 2026-05-02) | `CREATE UNIQUE INDEX CONCURRENTLY` migration pattern; confirms CONCURRENTLY constraint requires no-transaction context |
-| PostgREST error docs (WebSearch verified) | PostgREST passes Postgres SQLSTATE directly as `.code` in the error JSON response |
+| `supabase/migrations/20260419120000_initial_schema.sql:35-36` | `buffer_before_minutes`, `buffer_after_minutes` already on `event_types` since day 0 |
+| `supabase/migrations/20260425120000_account_availability_settings.sql` | `accounts.buffer_minutes` added Phase 4; this is what the engine reads today |
+| `lib/slots.ts:277` | `account.buffer_minutes` passed to `slotConflictsWithBookings` |
+| `lib/slots.types.ts:15` | `AccountSettings.buffer_minutes` field declaration |
+| `app/api/slots/route.ts:89,121,160` | Full buffer read chain in the slots API |
+| `app/(shell)/app/availability/_components/settings-panel.tsx:15,25,48,75,84` | All 5 UI touch sites for `buffer_minutes` |
+| `app/(shell)/app/availability/_lib/actions.ts:64` | Server Action writes `buffer_minutes` |
+| `app/(shell)/app/availability/_lib/queries.ts:53` | SELECT includes `buffer_minutes` |
+| `app/(shell)/app/availability/_lib/schema.ts:135` | Zod schema declares `buffer_minutes` |
+| `app/(shell)/app/availability/_lib/types.ts:24` | TypeScript type declares `buffer_minutes` |
+| `app/(shell)/app/availability/page.tsx:50` | Page state uses `buffer_minutes` |
+| `app/(shell)/app/event-types/_lib/types.ts:43-44` | `EventTypeRow` already has `buffer_before_minutes`, `buffer_after_minutes` |
+| `app/(shell)/app/event-types/[id]/edit/page.tsx:18` | Edit page SELECT already includes `buffer_after_minutes` |
+| `app/(auth)/_components/auth-hero.tsx:21,42` | 2 contractor copy touch sites |
+| `app/[account]/[event-slug]/_components/booking-form.tsx:138` | 1 contractor comment-only touch site |
+| `README.md:3`, `FUTURE_DIRECTIONS.md:62,226,232` | Documentation touch sites |
+| `app/[account]/[event-slug]/_components/booking-shell.tsx:77` | Current `lg:grid-cols-[1fr_320px]` outer grid |
+| `app/[account]/[event-slug]/_components/slot-picker.tsx:125` | Current `lg:grid-cols-2` inner grid |
+| `supabase/migrations/20260502034300_v12_drop_deprecated_branding_columns.sql` | CP-03 DROP migration template (Phase 21 precedent) |
+| `PROJECT.md §196-209` | Two-step DROP deploy protocol documentation |
 
 ---
 
-*Stack research for: calendar-app v1.4 Slot Correctness + Polish*
-*Researched: 2026-05-02*
+*Stack research for: calendar-app v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign*
+*Researched: 2026-05-03*
