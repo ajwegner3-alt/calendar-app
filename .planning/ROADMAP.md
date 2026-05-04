@@ -107,9 +107,9 @@ See [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md) for full phase 
 **Plans:** 3 plans
 
 Plans:
-- [ ] 28-01: Backfill migration + slot engine rewire + event-type-form UI (Deploy A1 — code reads `buffer_after_minutes`; drain window begins)
-- [ ] 28-02: DROP migration + availability panel cleanup (Deploy A2 — after 30-min drain; `accounts.buffer_minutes` gone)
-- [ ] 28-03: Per-event-type divergence tests + smoke checkpoint (vitest green; Andrew live verify buffer behavior on `nsi`)
+- [x] 28-01: Backfill migration + slot engine rewire + event-type-form UI (Deploy A1 — code reads `buffer_after_minutes`; drain window begins) — completed 2026-05-04
+- [x] 28-02: DROP migration + availability panel cleanup (Deploy A2 — after 30-min drain; `accounts.buffer_minutes` gone) — completed 2026-05-04 (drain waived per zero-traffic rationale)
+- [x] 28-03: Per-event-type divergence tests + smoke checkpoint (vitest green; Andrew live verify buffer behavior on `nsi`) — completed 2026-05-04
 
 **CP-03 checkpoint:** Plans 28-01 and 28-02 have a mandatory human-verified 30-minute drain gate between them. Plan 28-02 must NOT begin until Andrew confirms Plan 28-01's Vercel deploy has been live for at least 30 minutes.
 
@@ -169,7 +169,7 @@ Plans:
 | 14-21 | v1.2 | 22 / 22 | ✅ Shipped | 2026-05-02 |
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
-| 28 | v1.5 | 0 / 3 | Not started | — |
+| 28 | v1.5 | 3 / 3 | ✅ Complete | 2026-05-04 |
 | 29 | v1.5 | 0 / 1 | Not started | — |
 | 30 | v1.5 | 0 / 2 | Not started | — |
 
@@ -184,4 +184,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-03 — v1.5 roadmap created (Phases 28-30). Run `/gsd:plan-phase 28` to begin.*
+*Roadmap last updated: 2026-05-04 — Phase 28 complete (BUFFER-01..06 shipped via CP-03 two-step DROP; drain waived per zero-traffic rationale). Run `/gsd:plan-phase 29` to continue with Audience Rebrand.*

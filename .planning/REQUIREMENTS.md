@@ -12,12 +12,12 @@
 
 Replaces account-wide `buffer_minutes` with per-event-type `buffer_after_minutes` (post-event only). Existing column reused (no ADD COLUMN). Two-step CP-03 deploy protocol drops `accounts.buffer_minutes`.
 
-- [ ] **BUFFER-01**: Owner can set a post-event buffer (in minutes) on each event type via the event-type editor (range: 0-360, step: 5, default: 0)
-- [ ] **BUFFER-02**: Slot engine (`computeSlots` / `slotConflictsWithBookings`) reads `event_types.buffer_after_minutes` per booking instead of `accounts.buffer_minutes` (asymmetric semantics: only the existing booking's post-buffer extends its blocked window)
-- [ ] **BUFFER-03**: Existing event types are backfilled with their account's current `buffer_minutes` value at migration time (no behavior change on day-1 for existing accounts)
-- [ ] **BUFFER-04**: `accounts.buffer_minutes` column is dropped from production Postgres via two-step CP-03 deploy protocol (30-min Vercel function drain between code-deploy and DROP migration)
-- [ ] **BUFFER-05**: Account-level buffer control is removed from the availability settings page; per-event-type buffer is the sole owner-facing control
-- [ ] **BUFFER-06**: Cross-event-type adjacency works correctly when one event type has buffer=0 and another has buffer>0 (verified via pg-driver test or smoke checkpoint)
+- [x] **BUFFER-01**: Owner can set a post-event buffer (in minutes) on each event type via the event-type editor (range: 0-360, step: 5, default: 0)
+- [x] **BUFFER-02**: Slot engine (`computeSlots` / `slotConflictsWithBookings`) reads `event_types.buffer_after_minutes` per booking instead of `accounts.buffer_minutes` (asymmetric semantics: only the existing booking's post-buffer extends its blocked window)
+- [x] **BUFFER-03**: Existing event types are backfilled with their account's current `buffer_minutes` value at migration time (no behavior change on day-1 for existing accounts)
+- [x] **BUFFER-04**: `accounts.buffer_minutes` column is dropped from production Postgres via two-step CP-03 deploy protocol (30-min Vercel function drain between code-deploy and DROP migration)
+- [x] **BUFFER-05**: Account-level buffer control is removed from the availability settings page; per-event-type buffer is the sole owner-facing control
+- [x] **BUFFER-06**: Cross-event-type adjacency works correctly when one event type has buffer=0 and another has buffer>0 (verified via pg-driver test or smoke checkpoint)
 
 ### Audience Rebrand (BRAND)
 
@@ -91,12 +91,12 @@ These items remain in the carryover backlog. v1.5 does NOT execute them; they ar
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUFFER-01 | Phase 28 | Pending |
-| BUFFER-02 | Phase 28 | Pending |
-| BUFFER-03 | Phase 28 | Pending |
-| BUFFER-04 | Phase 28 | Pending |
-| BUFFER-05 | Phase 28 | Pending |
-| BUFFER-06 | Phase 28 | Pending |
+| BUFFER-01 | Phase 28 | Complete |
+| BUFFER-02 | Phase 28 | Complete |
+| BUFFER-03 | Phase 28 | Complete |
+| BUFFER-04 | Phase 28 | Complete |
+| BUFFER-05 | Phase 28 | Complete |
+| BUFFER-06 | Phase 28 | Complete |
 | BRAND-01 | Phase 29 | Pending |
 | BRAND-02 | Phase 29 | Pending |
 | BRAND-03 | Phase 29 | Pending |
