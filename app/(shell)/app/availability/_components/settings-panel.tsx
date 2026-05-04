@@ -12,7 +12,6 @@ import { saveAccountSettingsAction } from "../_lib/actions";
 
 export interface SettingsPanelProps {
   initial: {
-    buffer_minutes: number;
     min_notice_hours: number;
     max_advance_days: number;
     daily_cap: number | null;
@@ -21,9 +20,6 @@ export interface SettingsPanelProps {
 
 export function SettingsPanel({ initial }: SettingsPanelProps) {
   const router = useRouter();
-  const [bufferMinutes, setBufferMinutes] = useState(
-    String(initial.buffer_minutes),
-  );
   const [minNoticeHours, setMinNoticeHours] = useState(
     String(initial.min_notice_hours),
   );
@@ -45,7 +41,6 @@ export function SettingsPanel({ initial }: SettingsPanelProps) {
 
     startTransition(async () => {
       const result = await saveAccountSettingsAction({
-        buffer_minutes: Number(bufferMinutes),
         min_notice_hours: Number(minNoticeHours),
         max_advance_days: Number(maxAdvanceDays),
         // Empty string → null (no cap).
@@ -71,18 +66,6 @@ export function SettingsPanel({ initial }: SettingsPanelProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field
-          id="buffer_minutes"
-          label="Buffer (minutes)"
-          help="Time held before and after each booking."
-          value={bufferMinutes}
-          onChange={setBufferMinutes}
-          min={0}
-          max={240}
-          step={5}
-          disabled={isPending}
-          errors={fieldErrors.buffer_minutes}
-        />
         <Field
           id="min_notice_hours"
           label="Min notice (hours)"

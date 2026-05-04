@@ -23,7 +23,7 @@ export default async function AvailabilityPage() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Availability</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Define when people can book and customize buffers, notice, and caps.
+          Define when people can book and customize notice and caps.
         </p>
       </header>
 
@@ -47,7 +47,6 @@ export default async function AvailabilityPage() {
         <h2 className="mb-4 text-lg font-medium">Booking settings</h2>
         <SettingsPanel
           initial={{
-            buffer_minutes: state.account.buffer_minutes,
             min_notice_hours: state.account.min_notice_hours,
             max_advance_days: state.account.max_advance_days,
             daily_cap: state.account.daily_cap,

@@ -50,7 +50,7 @@ export async function loadAvailabilityState(): Promise<AvailabilityState | null>
     supabase
       .from("accounts")
       .select(
-        "buffer_minutes, min_notice_hours, max_advance_days, daily_cap, timezone",
+        "min_notice_hours, max_advance_days, daily_cap, timezone",
       )
       .eq("id", accountId)
       .single(),

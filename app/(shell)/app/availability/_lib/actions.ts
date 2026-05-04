@@ -61,7 +61,6 @@ export async function saveAccountSettingsAction(
   const { error } = await supabase
     .from("accounts")
     .update({
-      buffer_minutes: parsed.data.buffer_minutes,
       min_notice_hours: parsed.data.min_notice_hours,
       max_advance_days: parsed.data.max_advance_days,
       daily_cap: parsed.data.daily_cap,

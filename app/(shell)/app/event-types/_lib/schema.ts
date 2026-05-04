@@ -63,9 +63,10 @@ export const eventTypeSchema = z.object({
     .int("Duration must be a whole number.")
     .min(1, "Duration must be at least 1 minute.")
     .max(480, "Duration cannot exceed 480 minutes (8 hours)."),
-  // Phase 28 LD-01: per-event-type post-event buffer (replaces accounts.buffer_minutes).
-  // .catch(0) → empty input or NaN coerces to 0 silently (CONTEXT: forgiving, no
-  // "required" error). Owner-facing label is "Buffer after event (minutes)".
+  // Phase 28 LD-01: per-event-type post-event buffer (replaces the legacy
+  // account-wide buffer column). .catch(0) → empty input or NaN coerces to 0
+  // silently (CONTEXT: forgiving, no "required" error). Owner-facing label is
+  // "Buffer after event (minutes)".
   buffer_after_minutes: z.coerce
     .number()
     .int()

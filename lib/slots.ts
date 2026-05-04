@@ -204,10 +204,10 @@ function slotConfirmedCount(slotStartUtc: Date, bookings: SlotInput["bookings"])
  *   - Candidate slot's own post-event buffer pushes its allowed end FORWARD
  *     (candidate slot needs space AFTER itself).
  *
- * This replaces v1.0's symmetric account-wide `buffer_minutes` (which extended
- * the slot equally on both sides). With per-event-type buffers, each booking's
- * buffer is applied to ITS side, and the candidate slot's buffer is applied to
- * its own forward side.
+ * This replaces the legacy v1.0 symmetric account-wide post-event buffer
+ * (which extended the slot equally on both sides). With per-event-type
+ * buffers, each booking's buffer is applied to ITS side, and the candidate
+ * slot's buffer is applied to its own forward side.
  */
 function slotConflictsWithBookings(
   slotStartUtc: Date,

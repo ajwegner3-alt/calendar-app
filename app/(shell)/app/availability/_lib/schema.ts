@@ -132,11 +132,6 @@ export const dateOverrideSchema = z.discriminatedUnion("type", [
  * constraints (Plan 04-01).
  */
 export const accountSettingsSchema = z.object({
-  buffer_minutes: z.coerce
-    .number()
-    .int("Buffer must be a whole number of minutes.")
-    .min(0, "Buffer cannot be negative.")
-    .max(240, "Buffer cannot exceed 240 minutes (4 hours)."),
   min_notice_hours: z.coerce
     .number()
     .int("Minimum notice must be a whole number of hours.")

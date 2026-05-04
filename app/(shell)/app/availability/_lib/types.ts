@@ -21,7 +21,6 @@ export interface TimeWindow {
 }
 
 export interface AccountSettingsRow {
-  buffer_minutes: number;
   min_notice_hours: number;
   max_advance_days: number;
   daily_cap: number | null;
