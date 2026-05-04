@@ -132,9 +132,23 @@ None. Phase 29 complete; production deploy in flight (auto-deploy on push, no ey
 
 **Last session:** 2026-05-04 — Plan 29-01 executed in ~2 min (1m 48s, `2026-05-04T01:39:11Z` → `2026-05-04T01:40:59Z`). Single batched content commit `0659c0e` (4 files, 7-line diff): auth-hero subtext default (line 21) + tagline `<li>` (line 42) → audience-neutral / "service businesses" copy; README opening (line 3) rewritten audience-led, drops "Calendly-style" + trade parenthetical; FUTURE_DIRECTIONS lines 62 / 226 / 232 audience-context contractor refs rewritten (`service-business` modifier on 62; `owners` on 226 + 232); booking-form.tsx:138 dev comment swapped contractor→owner per LD-07 override (runtime line 139 byte-identical, booker UI untouched). Three grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. tsc 33 errors all pre-existing in `tests/` (zero new). Pushed `8c464f6..0659c0e main -> main`; Vercel auto-deploy triggered. Live smoke waived per 29-CONTEXT.md (copy-only).
 
-**Stopped at:** Phase 29 complete. SUMMARY.md created at `.planning/phases/29-audience-rebrand/29-01-SUMMARY.md`. STATE.md updated. Metadata commit + push to main pending in this same session.
+**Stopped at:** Plan 30-02 checkpoint PRESENTED to Andrew, awaiting verbatim live-verify replies. Andrew paused the session before completing checks A–G ("Save these for later. Let's move on for now"). Plan 30-01 is fully shipped (commits `8b45c50` feat + `f83119f` docs on `main`, Vercel deploy live, HTTP 200 confirmed). No code work pending — only Andrew's eyeball verification remains.
 
-**Resume:** Run `/gsd:plan-phase 30` to begin Phase 30 (Public Booker 3-Column Desktop Layout). Per Phase queue, Phase 30 covers BOOKER-01..05 across 2 plans. Per V15-MP-05 lock, the `<BookingForm>` conditional-mount pattern (`{selectedSlot ? <BookingForm /> : <prompt>}`) MUST be preserved — always-mounted form causes Turnstile token expiry.
+**Resume Phase 30 verification:** Open `https://calendar-app-xi-smoky.vercel.app/nsi/30-minute-consultation` (deploy SHA `8b45c50`) and run the 8 checks defined in `.planning/phases/30-public-booker-3-column-layout/30-02-PLAN.md` `<how-to-verify>` block:
+- A: 1024×768 — 3 cols, no scroll, no internal dividers
+- B: 1280×800 — 3 cols, no scroll, comfortable
+- C: 1440×900 — 3 cols, no scroll, card stays max-w-4xl (no full-width)
+- D: pick a slot at 1280 — form fills col 3 in-place, NO shift in cols 1/2
+- E: selected slot stays highlighted (filled bg, primary color) while form is visible
+- F: re-pick a different slot — Name field clears (RHF reset via `key={selectedSlot.start_at}`)
+- G: mobile (real device or 375×667) — vertical stack calendar→times→form, no horizontal scroll
+- H (optional): embed iframe at 320–600px stays single-column
+
+After all 7 mandatory checks (A–G) confirmed verbatim, run `/gsd:execute-phase 30` to resume — the orchestrator will spawn a continuation agent to write `30-02-SUMMARY.md` (Andrew-quote-on-record format, precedent from Plan 28-03), commit it, push, then close Phase 30 + v1.5. If anything fails, the continuation will branch to fix-forward (small) or open a 30-03 gap-closure plan (large).
+
+**Plan 30-01 architectural deviation (recorded for audit):** Plan as written locked `slot-picker.tsx` for deletion. Executor surfaced unanticipated production importer at `app/reschedule/[token]/_components/reschedule-shell.tsx:6` (Phase 6 reschedule flow). Routed to Andrew as Rule 4 architectural decision; Andrew picked Option A (keep file on disk; booker no longer imports `SlotPicker` component, only `type Slot`). Plan body otherwise executed verbatim. Future follow-up: when reschedule layout is itself redesigned, evaluate extracting `<CalendarSlotPicker>` shared component or further consolidation. Documented in `30-01-SUMMARY.md`.
+
+**Planner-discipline note (new pattern):** Before any plan that locks a file deletion, the plan author MUST run `grep -rn "from .*<filename>" app/ lib/ tests/` and enumerate every importer in the plan body — not just the file the plan is primarily editing. Plan 30-01 missed this on `slot-picker.tsx` (caught the inline-shape consumer in `booking-form.tsx:40` but not the type-and-component consumer in `reschedule-shell.tsx`). Cost: one mid-execution Rule 4 routing + scope amendment. Cheap, but avoidable. Add to gsd-planner deletion checklist.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-03; v1.5 milestone started)
