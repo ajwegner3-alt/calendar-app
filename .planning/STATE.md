@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-04 — **Phase 29 COMPLETE. Plan 29-01 shipped.** Audience rebrand pass: 4 files, 7-line diff, 1 batched content commit. Canonical grep gate (`trade contractor|contractor` minus `contractor's brand` allowlist across `app/` + `lib/` + `README.md` + `FUTURE_DIRECTIONS.md`) returns 0 lines. Booker-surface neutrality gate confirms zero leak of "service businesses" into `app/[account]/` or `lib/email-sender/`. tsc 33 errors all pre-existing in `tests/` (zero new). Pushed to `main`, Vercel auto-deploy in flight. BRAND-01..03 all shipped. v1.5 progress 4/6. Phase 30 (Public Booker 3-Column Layout) ready to plan.
+**Last updated:** 2026-05-04 — **Phase 30 Plan 01 SHIPPED.** Public booker flat 3-column desktop layout (calendar | times | form) live; state lifted from `slot-picker.tsx` into `booking-shell.tsx`; single feat commit `8b45c50` (1 file, +201/-35). **Mid-execution Rule 4 architectural decision:** Andrew picked Option A — keep `slot-picker.tsx` on disk as Phase-6-only component (still consumed by `app/reschedule/[token]/_components/reschedule-shell.tsx`). Booker no longer imports `SlotPicker` (component); only imports `type Slot` from same file. tsc 33 errors all pre-existing in `tests/` (zero new). Test suite 228 passed | 9 skipped (matches baseline; zero regression). Pre-existing `02-VERIFICATION.md` drift remains UNSTAGED. Pushed to `main`, Vercel auto-deploy in flight. v1.5 progress 5/6. Plan 30-02 (Andrew live-verify smoke at 1024/1280/1440 + mobile) is the final v1.5 step.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 
 **Core value:** A visitor lands on a service-based business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign. Phases 28 + 29 shipped; Phase 30 (Public Booker 3-Column Layout) is the last v1.5 phase remaining.
+**Current focus:** v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign. Phases 28 + 29 shipped; Phase 30 Plan 01 shipped; Plan 30-02 (live-verify smoke) is the final v1.5 step.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.5 (started 2026-05-03).
-**Phase:** Phase 29 — Audience Rebrand ✅ COMPLETE 2026-05-04
-**Plan:** 29-01 — Audience copy scrub ✅ SHIPPED 2026-05-04
-**Status:** Phase 29 closed. BRAND-01..03 all shipped to production. Single batched content commit `0659c0e` (4 files, 7 insertions / 7 deletions): auth-hero subtext + tagline → audience-neutral / "service businesses"; README opening rewritten audience-led without "Calendly-style" or trade parenthetical; FUTURE_DIRECTIONS lines 62/226/232 audience-context contractor refs rewritten; booking-form.tsx:138 dev comment swapped contractor→owner per LD-07 override (runtime line 139 byte-identical). Canonical grep gate, ROADMAP-verbatim gate, AND booker-surface neutrality gate all 0 matches. tsc clean for plan scope (33 errors all pre-existing in `tests/`, predates Phase 28). Pushed to `main`; Vercel auto-deploy in flight. Live smoke explicitly waived per 29-CONTEXT.md (copy-only, no behavior). Phase 30 (Public Booker 3-Column Layout) ready to plan.
-**Last activity:** 2026-05-04 — Plan 29-01 executed in ~2 min (1m 48s wall clock from `2026-05-04T01:39:11Z` to `2026-05-04T01:40:59Z`). Zero retries, zero blockers, zero deviations beyond the plan-locked single-commit choice (recorded in 29-01 SUMMARY for audit). Pre-existing `M .planning/phases/02-...VERIFICATION.md` left unstaged in working tree (orthogonal to this plan).
+**Phase:** Phase 30 — Public Booker 3-Column Desktop Layout (1 of 2 plans complete)
+**Plan:** 30-01 — Booker layout restructure ✅ SHIPPED 2026-05-04
+**Status:** Plan 30-01 closed. BOOKER-01..04 all shipped. `booking-shell.tsx` is now the single grid owner: owns slot-fetch state (slots, loading, fetchError, rangeFrom/To, slotsByDate, markedDates, slotsForSelectedDate, isCompletelyEmpty), the date-range computation, the canonical async-fetch effect on `/api/slots`, and the 3-col grid template `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]`. Calendar + slot list + form column render as direct grid children. Form column always reserved at fixed 320px (zero layout shift on slot pick). V15-MP-05 Turnstile lifecycle lock honored: placeholder is `<div>`, NOT mounted form. V15-MP-04 honored: timezone hint is full-width `<p>` above grid. max-w-3xl on `<header>`, max-w-4xl on `<section>`. Selected-slot highlight ternary preserved verbatim. Empty-state branch lifted to shell level. Embed wrapper untouched. **Mid-execution Rule 4 architectural decision routed to Andrew:** Plan called for deleting `slot-picker.tsx`, but `app/reschedule/[token]/_components/reschedule-shell.tsx:6` still consumes it (per Phase 6 PLAN-04 verbatim reuse). Andrew picked Option A — keep file on disk; deletion deferred until reschedule itself is redesigned. Booker decoupling complete: `booking-shell.tsx` no longer imports `SlotPicker` (component); only imports `type Slot` (smallest-diff path). Single feat commit `8b45c50` (1 file, +201/-35); plan-locked single-commit batching honored. tsc 33 errors all pre-existing in `tests/` (zero new in `app/` or `lib/`). Test suite 228 passed | 9 skipped (zero regression vs baseline). Pre-existing `02-VERIFICATION.md` drift confirmed UNSTAGED. Pushed to `main`; Vercel auto-deploy in flight. Plan 30-02 (live-verify smoke) is the next step — does NOT gate on this plan's completion (this plan does not include human-verify).
+**Last activity:** 2026-05-04 — Plan 30-01 executed in ~13 min wall clock (Option A architectural pause + restart accounted for). Zero retries; one architectural deviation (Rule 4) routed cleanly via spawn checkpoint; Option A executed end-to-end with smaller scope than originally planned (no slot-picker.tsx deletion).
 
 **Drain gate (CP-03) — WAIVED 2026-05-04 by Andrew (preserved for record):**
 - Original gate: T0 + 30 min = `2026-05-04T00:57:49Z UTC` minimum
@@ -33,7 +33,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
   - [X] Plan 28-03: Divergence tests + smoke (shipped 2026-05-04, 1 metadata commit — verification only; no code edits required)
 - [X] Phase 29: Audience Rebrand (1 plan — BRAND-01..03 shipped 2026-05-04)
   - [X] Plan 29-01: Audience copy scrub (shipped 2026-05-04, 1 content commit `0659c0e` + 1 metadata commit)
-- [ ] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05)
+- [~] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05; 1/2 complete)
+  - [X] Plan 30-01: Booker layout restructure (shipped 2026-05-04, 1 feat commit `8b45c50`; BOOKER-01..04 closed)
+  - [ ] Plan 30-02: Live-verify smoke checkpoint at 1024/1280/1440 + mobile (BOOKER-05)
 
 **Phase 28 closing summary:** 3 plans, 7 commits total (3 + 3 + 1), executed across 2026-05-04. Two-step DROP (CP-03) completed end-to-end with drain waived for zero-traffic. Asymmetric per-booking + per-candidate buffer math (LD-04) live in production. accounts.buffer_minutes permanently removed from DB. Owner editor + list table expose buffer_after_minutes. BUFFER-06 divergence proven by both unit test (3/3) and Andrew's live cross-event verification.
 
@@ -47,7 +49,7 @@ v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 1
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
-v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 4/6 complete — Phases 28+29 shipped 2026-05-04)
+v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 5/6 complete — Phases 28+29 shipped 2026-05-04, Plan 30-01 shipped 2026-05-04)
 ```
 
 ## Performance Metrics
@@ -78,6 +80,14 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 4/6 complete — P
 - `describe.skipIf(skipIfNoDirectUrl)` for pg-driver tests
 - Per-instance className override for shared shadcn components (Phases 23-25)
 - Deploy-and-eyeball as canonical production gate (5th consecutive milestone)
+
+### Decisions / patterns added by Plan 30-01 (2026-05-04)
+
+- **Mid-execution Rule 4 architectural-decision pattern (new, validated):** When the executor discovers an unanticipated importer of a "to-be-deleted" file, surface as a Rule 4 architectural decision to the user before proceeding — do NOT assume the file is safe to delete just because the active phase no longer needs it. Plan 30-01 was the first v1.5 plan to exercise this pattern: the planner intended to delete `slot-picker.tsx` but missed that `app/reschedule/[token]/_components/reschedule-shell.tsx:6` (Phase 6 consumer, live in production) still imports it. Executor surfaced 3 options to Andrew (A: keep file as Phase-6-only / B: refactor reschedule to absorb the lift / C: extract a shared `<CalendarSlotPicker>`). Andrew chose **Option A**. Pattern is reusable for any future component-removal phase.
+- **Smallest-diff override of plan-locked refactor moves:** When a plan locks a refactor as a means to an end (e.g., "move type X from file A to file B because file A will be deleted"), and an architectural amendment changes the underlying assumption (file A no longer being deleted), pick the smallest-diff path to satisfy the new constraint — not the plan-locked move. Plan 30-01 example: the plan said move `Slot` interface into `booking-shell.tsx` because `slot-picker.tsx` was being deleted. With Option A, `slot-picker.tsx` stays; executor kept `import { type Slot } from "./slot-picker"` in `booking-shell.tsx` (single-line diff) instead of moving the type definition (would have caused churn for `reschedule-shell.tsx`). The plan's locked move was instrumental, not load-bearing.
+- **Single grid owner pattern (UI):** Parent shell owns the grid template; child columns render as direct grid children (no nested grids). Replaces the prior nested 2-col-inside-2-col booker pattern. Reusable for any future multi-column layout where the columns logically belong to the same visual unit (a "card") and should reflow together at breakpoint changes. Implementation in `booking-shell.tsx:180` — `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]` Tailwind v4 bracket-grid syntax.
+- **Reserved-column pattern for conditional-mount UI:** When a UI element (e.g., a form) is mounted/unmounted conditionally but should NOT cause layout shift in sibling columns, reserve its grid track at a fixed width (here: 320px). Show a `<div>` placeholder before mount; swap the placeholder for the real component on mount. Combined with V15-MP-05 Turnstile lifecycle lock, this gives "form column always visible at fixed width, content swaps in place, zero layout shift, Turnstile token never stales". Reusable for any other conditional-mount-with-side-effect component (analytics widgets, payment forms, etc.).
+- **Research-gap risk for component-removal phases:** Phase 30 RESEARCH.md cited STACK.md "Option C" (lift state out, delete child) without checking for non-booker consumers. Caught at execution time only because the executor ran a pre-deletion grep. **Future planner discipline:** any plan that deletes a shared component MUST run `grep -rn "from .*<filename>" app/ lib/ tests/` during research, NOT only during execution. Add to plan-phase research checklist.
 
 ### Decisions / patterns added by Plan 29-01 (2026-05-04)
 
