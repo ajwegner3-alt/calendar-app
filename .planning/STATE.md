@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-03 — **v1.5 roadmap created.** Phases 28-30 defined; Phase 28 ready to plan.
+**Last updated:** 2026-05-04 — **Phase 28 Plan 28-01 shipped.** Per-event-type buffer wired end-to-end; drain gate active for Plan 28-02.
 
 ## Project Reference
 
@@ -16,12 +16,20 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 
 **Milestone:** v1.5 (started 2026-05-03).
 **Phase:** Phase 28 — Per-Event-Type Buffer Wire-Up + Account Column Drop
-**Plan:** — (not yet planned)
-**Status:** Ready to plan.
-**Last activity:** 2026-05-03 — v1.5 roadmap created (Phases 28-30, 6 plans, 14 requirements mapped).
+**Plan:** 28-01 — Backfill, Rewire, and Form ✅ SHIPPED 2026-05-04
+**Status:** Plan 28-01 deployed; **drain gate active** for Plan 28-02.
+**Last activity:** 2026-05-04 — Plan 28-01 executed across two agent sessions (mid-plan usage-limit reset). Backfill applied; slot engine rewired for asymmetric per-event-type buffer per LD-04; owner UI exposed buffer field; Vercel deploy live.
+
+**Drain gate (CP-03):**
+- T0 (push completed): `2026-05-04T00:27:49Z UTC` (commit `4aba090`)
+- Earliest Plan 28-02 start: T0 + 30 min = `2026-05-04T00:57:49Z UTC` (or later if Vercel "Ready" time is after push)
+- Andrew should confirm exact Vercel "Ready" timestamp before Plan 28-02 launch.
 
 **Phase queue (v1.5):**
-- [ ] Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop (3 plans — BUFFER-01..06)
+- [~] Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop (3 plans — BUFFER-01..06)
+  - [X] Plan 28-01: Backfill, Rewire, and Form (shipped 2026-05-04)
+  - [ ] Plan 28-02: DROP migration + availability cleanup (gated on T0+30min drain)
+  - [ ] Plan 28-03: Divergence tests + smoke
 - [ ] Phase 29: Audience Rebrand (1 plan — BRAND-01..03)
 - [ ] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05)
 
@@ -33,7 +41,7 @@ v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 1
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
-v1.5 [ ] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans planned, in progress)
+v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 1/6 complete — Plan 28-01 shipped 2026-05-04)
 ```
 
 ## Performance Metrics
@@ -65,17 +73,25 @@ v1.5 [ ] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans planned, in progres
 - Per-instance className override for shared shadcn components (Phases 23-25)
 - Deploy-and-eyeball as canonical production gate (5th consecutive milestone)
 
+### Decisions / patterns added by Plan 28-01 (2026-05-04)
+
+- **Asymmetric per-booking + per-candidate buffer math (LD-04 codified):** `bufferedStart = slotStart − existingBooking.buffer_after_minutes`; `bufferedEnd = slotEnd + slotBufferAfterMinutes`. The existing booking's buffer determines back-side blocking; the candidate event type's buffer determines forward-side blocking. BUFFER-06 divergence test block (3 tests) is now a regression gate.
+- **Type-drift gate pattern (V15-CP-04 in practice):** Removing a type field entirely (rather than marking optional) surfaces missed callsites at compile time during a multi-deploy refactor.
+- **Supabase generated-type narrowing for `!inner` joins:** TS models the join as object|array depending on inferred cardinality. Defensive runtime narrowing required (`Array.isArray(et) ? et[0]?.field : et?.field`).
+- **Forgiving Zod numeric inputs:** `.catch(0)` on owner-facing settings coerces empty/NaN to 0 silently — matches CONTEXT lock for Buffer field UX.
+- **Push-as-T0-proxy pattern:** When the executor cannot directly observe Vercel deploy status, the local `git push` UTC timestamp is a conservative proxy for T0; user confirms the actual "Ready" timestamp on the dashboard.
+
 ### Active blockers
 
-None. Roadmap defined. Ready to plan Phase 28.
+- **Plan 28-02 is GATED until T0 + 30 min** (`2026-05-04T00:57:49Z UTC` minimum, or later if Vercel "Ready" time exceeds push time). DO NOT begin Plan 28-02 before this gate clears.
 
 ## Session Continuity
 
-**Last session:** 2026-05-03 — v1.5 roadmap created. ROADMAP.md extended with Phases 28-30 under v1.5 collapsible section. STATE.md updated to reflect Phase 28 as current position. REQUIREMENTS.md traceability table populated.
+**Last session:** 2026-05-04 — Plan 28-01 executed across two agent sessions due to mid-plan usage-limit reset. Session 1 produced Task 1 commit (`b6874c1`) and partial Task 2 diffs. Session 2 verified those diffs were correct, completed Task 2 (test file rewrite + missing route.ts BookingRow mapping field), committed as `2900a90`, then executed Task 3 (commit `4aba090`) and pushed to main.
 
-**Stopped at:** Roadmap complete. Phase 28 ready to plan.
+**Stopped at:** Plan 28-01 SUMMARY.md and STATE.md updated. Drain gate is the active blocker for Plan 28-02.
 
-**Resume:** Run `/gsd:plan-phase 28` to begin Phase 28 planning.
+**Resume:** Wait for T0 + 30 min, then run `/gsd:execute-plan 28-02` to begin Plan 28-02 (DROP migration + availability cleanup). Plan 28-02 PLAN.md already exists at `.planning/phases/28-per-event-type-buffer-and-column-drop/28-02-drop-column-and-availability-cleanup-PLAN.md`.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-03; v1.5 milestone started)
