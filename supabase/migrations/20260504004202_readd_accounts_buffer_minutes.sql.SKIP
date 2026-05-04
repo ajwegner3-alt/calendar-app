@@ -1,0 +1,17 @@
+-- ROLLBACK FOR v1.5 Phase 28 DROP — held as .SKIP per CP-03 convention.
+-- DO NOT RENAME without an intentional rollback decision.
+--
+-- This file is the inverse of 20260504004202_v15_drop_accounts_buffer_minutes.sql.
+-- Re-adds accounts.buffer_minutes with the same shape it had in v1.0..v1.4
+-- (INT NOT NULL DEFAULT 0). Apply only if a critical regression in production
+-- forces a rollback to the symmetric account-wide buffer model.
+--
+-- To apply (deliberate emergency rollback):
+--   1. Rename: drop the .SKIP suffix.
+--   2. Run: echo | npx supabase db query --linked -f <renamed file>
+--   3. Restore the legacy code paths (revert commit 653e620 + the v15 slot-engine
+--      rewire from Plan 28-01) before any traffic resumes.
+
+BEGIN;
+  ALTER TABLE accounts ADD COLUMN IF NOT EXISTS buffer_minutes INT NOT NULL DEFAULT 0;
+COMMIT;
