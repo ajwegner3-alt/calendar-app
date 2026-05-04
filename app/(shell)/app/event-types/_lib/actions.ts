@@ -112,6 +112,8 @@ export async function createEventTypeAction(
     name: parsed.data.name,
     slug: parsed.data.slug,
     duration_minutes: parsed.data.duration_minutes,
+    // Phase 28 LD-01: per-event-type post-event buffer (replaces account-wide).
+    buffer_after_minutes: parsed.data.buffer_after_minutes,
     description: parsed.data.description ?? null,
     is_active: parsed.data.is_active,
     custom_questions: parsed.data.custom_questions,
@@ -247,6 +249,8 @@ export async function updateEventTypeAction(
       name: parsed.data.name,
       slug: parsed.data.slug,
       duration_minutes: parsed.data.duration_minutes,
+      // Phase 28 LD-01: per-event-type post-event buffer.
+      buffer_after_minutes: parsed.data.buffer_after_minutes,
       description: parsed.data.description ?? null,
       is_active: parsed.data.is_active,
       custom_questions: parsed.data.custom_questions,

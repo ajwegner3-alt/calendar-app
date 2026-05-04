@@ -58,5 +58,13 @@ export type EventTypeRow = {
 
 export type EventTypeListItem = Pick<
   EventTypeRow,
-  "id" | "name" | "slug" | "duration_minutes" | "is_active" | "deleted_at" | "created_at"
+  | "id"
+  | "name"
+  | "slug"
+  | "duration_minutes"
+  // Phase 28 LD-01: surface per-event-type buffer in the list table.
+  | "buffer_after_minutes"
+  | "is_active"
+  | "deleted_at"
+  | "created_at"
 >;

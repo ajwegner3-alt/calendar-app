@@ -40,6 +40,8 @@ const DEFAULTS: EventTypeInput = {
   name: "",
   slug: "",
   duration_minutes: 30,
+  // Phase 28 LD-01: new event types default to no post-event buffer.
+  buffer_after_minutes: 0,
   description: "",
   is_active: true,
   custom_questions: [],
@@ -294,6 +296,29 @@ export function EventTypeForm({
         {errors.duration_minutes && (
           <p className="text-sm text-destructive">{errors.duration_minutes.message}</p>
         )}
+      </div>
+
+      {/* Buffer after event (Phase 28 LD-01) — per-event-type post-event buffer
+          replaces the legacy account-wide buffer. CONTEXT lock: plain number
+          input, no slider/preset dropdown, single help-text line. */}
+      <div className="grid gap-2">
+        <Label htmlFor="buffer_after_minutes">Buffer after event (minutes)</Label>
+        <Input
+          id="buffer_after_minutes"
+          type="number"
+          min={0}
+          max={360}
+          step={5}
+          inputMode="numeric"
+          className="max-w-[160px]"
+          {...register("buffer_after_minutes", { valueAsNumber: true })}
+        />
+        {errors.buffer_after_minutes && (
+          <p className="text-sm text-destructive">{errors.buffer_after_minutes.message}</p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Blocks additional time after this event type ends, preventing back-to-back bookings.
+        </p>
       </div>
 
       {/* Max bookings per slot (CAP-03, Phase 11 Plan 11-07) */}

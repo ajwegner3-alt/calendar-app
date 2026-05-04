@@ -34,6 +34,10 @@ export function EventTypesTable({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead className="w-28">Duration</TableHead>
+            {/* Phase 28 LD-01: Buffer column. Always rendered, including 0 values
+                (CONTEXT lock: never hide). Placed after Duration to mirror the
+                editor's Duration → Buffer pairing. */}
+            <TableHead className="w-28">Buffer</TableHead>
             <TableHead>Slug</TableHead>
             <TableHead className="w-28">Status</TableHead>
             <TableHead className="w-24 text-right">
@@ -52,6 +56,8 @@ export function EventTypesTable({
               <TableRow key={et.id} className={rowClass}>
                 <TableCell className="font-medium">{et.name}</TableCell>
                 <TableCell>{et.duration_minutes} min</TableCell>
+                {/* Phase 28 LD-01: per-event-type buffer (always shown, even 0). */}
+                <TableCell>{et.buffer_after_minutes} min</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {et.slug}
                 </TableCell>

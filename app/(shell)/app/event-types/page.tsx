@@ -44,7 +44,8 @@ export default async function EventTypesPage({
   let query = supabase
     .from("event_types")
     .select(
-      "id, name, slug, duration_minutes, is_active, deleted_at, created_at",
+      // Phase 28 LD-01: include buffer_after_minutes for the list-table column.
+      "id, name, slug, duration_minutes, buffer_after_minutes, is_active, deleted_at, created_at",
     )
     .order("created_at", { ascending: true });
 

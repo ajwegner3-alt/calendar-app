@@ -58,6 +58,8 @@ export default async function EditEventTypePage({
           name: eventType.name,
           slug: eventType.slug,
           duration_minutes: eventType.duration_minutes,
+          // Phase 28 LD-01: hydrate per-event-type buffer from DB.
+          buffer_after_minutes: eventType.buffer_after_minutes ?? 0,
           description: eventType.description ?? "",
           is_active: eventType.is_active,
           custom_questions: eventType.custom_questions ?? [],
