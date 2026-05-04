@@ -37,7 +37,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 
 **Phase 28 closing summary:** 3 plans, 7 commits total (3 + 3 + 1), executed across 2026-05-04. Two-step DROP (CP-03) completed end-to-end with drain waived for zero-traffic. Asymmetric per-booking + per-candidate buffer math (LD-04) live in production. accounts.buffer_minutes permanently removed from DB. Owner editor + list table expose buffer_after_minutes. BUFFER-06 divergence proven by both unit test (3/3) and Andrew's live cross-event verification.
 
-**Phase 29 closing summary:** 1 plan, 2 commits (1 batched content + 1 metadata), executed 2026-05-04 in ~2 min. 4 files, 7-line diff. Three independent grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. LD-07 deliberate override executed cleanly: inert dev comment scrubbed, runtime UI byte-identical. Live smoke explicitly waived per CONTEXT (copy-only). Pure stale-copy cleanup; zero behavioral change.
+**Phase 29 closing summary:** 1 plan, 2 commits (1 batched content + 1 metadata), executed 2026-05-04 in ~2 min. 4 files, 7-line diff. Three independent grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. LD-07 deliberate override executed cleanly: inert dev comment scrubbed, runtime UI byte-identical. Live smoke explicitly waived per CONTEXT (copy-only). Pure stale-copy cleanup; zero behavioral change. **gsd-verifier passed 5/5 must_haves against codebase** — `29-VERIFICATION.md` created with file+line evidence for each criterion (auth-hero subtext+tagline, README opening, FUTURE_DIRECTIONS lines 62/226/232, grep gates, booker neutrality).
 
 **Cumulative project progress:**
 

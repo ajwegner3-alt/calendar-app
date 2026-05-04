@@ -97,9 +97,9 @@ These items remain in the carryover backlog. v1.5 does NOT execute them; they ar
 | BUFFER-04 | Phase 28 | Complete |
 | BUFFER-05 | Phase 28 | Complete |
 | BUFFER-06 | Phase 28 | Complete |
-| BRAND-01 | Phase 29 | Pending |
-| BRAND-02 | Phase 29 | Pending |
-| BRAND-03 | Phase 29 | Pending |
+| BRAND-01 | Phase 29 | Complete |
+| BRAND-02 | Phase 29 | Complete |
+| BRAND-03 | Phase 29 | Complete |
 | BOOKER-01 | Phase 30 | Pending |
 | BOOKER-02 | Phase 30 | Pending |
 | BOOKER-03 | Phase 30 | Pending |

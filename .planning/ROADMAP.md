@@ -133,7 +133,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 29-01-audience-rebrand-PLAN.md — copy pass across auth-hero.tsx, booking-form.tsx:138 (LD-07 override), README.md, FUTURE_DIRECTIONS.md + canonical grep gate + deploy
+- [x] 29-01-audience-rebrand-PLAN.md — copy pass across auth-hero.tsx, booking-form.tsx:138 (LD-07 override), README.md, FUTURE_DIRECTIONS.md + canonical grep gate + deploy — completed 2026-05-04
 
 ---
 
@@ -170,7 +170,7 @@ Plans:
 | 22-24 | v1.3 | 6 / 6 | ✅ Shipped | 2026-05-02 |
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28 | v1.5 | 3 / 3 | ✅ Complete | 2026-05-04 |
-| 29 | v1.5 | 0 / 1 | Not started | — |
+| 29 | v1.5 | 1 / 1 | ✅ Complete | 2026-05-04 |
 | 30 | v1.5 | 0 / 2 | Not started | — |
 
 ## Cumulative Stats
@@ -184,4 +184,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-04 — Phase 28 complete (BUFFER-01..06 shipped via CP-03 two-step DROP; drain waived per zero-traffic rationale). Run `/gsd:plan-phase 29` to continue with Audience Rebrand.*
+*Roadmap last updated: 2026-05-04 — Phase 29 complete (BRAND-01..03 shipped; canonical grep gate clean; live smoke waived per copy-only scope). Run `/gsd:plan-phase 30` to continue with Public Booker 3-Column Desktop Layout.*
