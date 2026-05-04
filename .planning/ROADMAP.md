@@ -133,7 +133,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 29-01: Copy pass across `auth-hero.tsx`, `README.md`, `FUTURE_DIRECTIONS.md` + grep verification + deploy
+- [ ] 29-01-audience-rebrand-PLAN.md — copy pass across auth-hero.tsx, booking-form.tsx:138 (LD-07 override), README.md, FUTURE_DIRECTIONS.md + canonical grep gate + deploy
 
 ---
 
