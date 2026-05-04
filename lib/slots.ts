@@ -18,8 +18,9 @@
  *   7. For each window, generate slots at duration-minute steps
  *   8. Apply min-notice filter (slot.start >= now + min_notice_hours)
  *   9. Apply max-advance filter (slot.start <= now + max_advance_days)
- *   10. Apply buffer-overlap exclusion (no slot may overlap any existing booking
- *       extended by buffer_minutes on either side)
+ *   10. Apply buffer-overlap exclusion — Phase 28 LD-04 asymmetric per-event-type:
+ *       existing booking's `buffer_after_minutes` extends the blocked window
+ *       backward; candidate slot's `slotBufferAfterMinutes` extends it forward.
  *
  * @date-fns/tz v4 API note: TZDate inherits from Date; addMinutes/addDays
  * preserve the TZDate type and its bound timezone (RESEARCH §1 Open Q1).
@@ -193,22 +194,32 @@ function slotConfirmedCount(slotStartUtc: Date, bookings: SlotInput["bookings"])
 }
 
 /**
- * Buffer-overlap check: would this slot collide with any existing booking once
- * buffer_minutes is added on each side?
+ * Buffer-overlap check (Phase 28 LD-04 — asymmetric per-event-type buffer math).
  *
  * Two intervals [a1, a2) and [b1, b2) overlap iff a1 < b2 AND b1 < a2.
- * We extend the SLOT by buffer minutes on both sides; existing bookings stay as
- * stored (their buffer was applied when they were originally booked).
+ *
+ * ASYMMETRIC SEMANTICS:
+ *   - Existing booking's post-event buffer pushes the candidate slot's allowed
+ *     start BACKWARD (existing booking needs space AFTER it).
+ *   - Candidate slot's own post-event buffer pushes its allowed end FORWARD
+ *     (candidate slot needs space AFTER itself).
+ *
+ * This replaces v1.0's symmetric account-wide `buffer_minutes` (which extended
+ * the slot equally on both sides). With per-event-type buffers, each booking's
+ * buffer is applied to ITS side, and the candidate slot's buffer is applied to
+ * its own forward side.
  */
 function slotConflictsWithBookings(
   slotStartUtc: Date,
   slotEndUtc: Date,
-  bufferMinutes: number,
+  slotBufferAfterMinutes: number,
   bookings: SlotInput["bookings"],
 ): boolean {
-  const bufferedStart = addMinutes(slotStartUtc, -bufferMinutes);
-  const bufferedEnd = addMinutes(slotEndUtc, bufferMinutes);
   for (const b of bookings) {
+    // Existing booking's post-buffer pushes candidate slot start backward.
+    const bufferedStart = addMinutes(slotStartUtc, -b.buffer_after_minutes);
+    // Candidate slot's own post-buffer pushes its end forward.
+    const bufferedEnd = addMinutes(slotEndUtc, slotBufferAfterMinutes);
     const bStart = new Date(b.start_at);
     const bEnd = new Date(b.end_at);
     if (isBefore(bufferedStart, bEnd) && isBefore(bStart, bufferedEnd)) {
@@ -269,12 +280,12 @@ export function computeSlots(input: SlotInput): Slot[] {
             if (isBefore(slotStartUtc, earliest)) continue;
             // Max-advance filter (slot starts on or before "now + max_advance_days").
             if (isAfter(slotStartUtc, latest)) continue;
-            // Buffer overlap.
+            // Buffer overlap (Phase 28 LD-04 — asymmetric per-event-type buffer).
             if (
               slotConflictsWithBookings(
                 slotStartUtc,
                 slotEndUtc,
-                account.buffer_minutes,
+                input.slotBufferAfterMinutes,
                 bookings,
               )
             ) continue;

@@ -11,8 +11,6 @@
 export interface AccountSettings {
   /** IANA tz string. e.g. "America/Chicago" */
   timezone: string;
-  /** AVAIL-03: pre/post buffer minutes around every booking (default 0) */
-  buffer_minutes: number;
   /** AVAIL-04: hours before NOW that a slot becomes bookable (default 24) */
   min_notice_hours: number;
   /** AVAIL-05: days into future slots are shown (default 14) */
@@ -49,6 +47,13 @@ export interface BookingRow {
   start_at: string;
   /** UTC ISO string */
   end_at: string;
+  /**
+   * Phase 28 LD-04: per-event-type post-event buffer for THIS booking's event type.
+   * Populated from `event_types.buffer_after_minutes` via a join in the route handler.
+   * Used asymmetrically: an existing booking's post-buffer pushes the candidate
+   * slot's allowed start backward (the existing booking needs space after it).
+   */
+  buffer_after_minutes: number;
 }
 
 /** Input for computeSlots. The route handler (Plan 04-06) populates this. */
@@ -59,6 +64,13 @@ export interface SlotInput {
   rangeEnd: string;
   /** Event type duration in minutes (becomes the slot step size) */
   durationMinutes: number;
+  /**
+   * Phase 28 LD-04: candidate event type's post-event buffer in minutes.
+   * Populated from `event_types.buffer_after_minutes` for the event type whose
+   * slots are being computed. Used asymmetrically: extends the candidate slot's
+   * allowed end forward (the candidate slot needs space after itself).
+   */
+  slotBufferAfterMinutes: number;
   account: AccountSettings;
   rules: AvailabilityRuleRow[];
   overrides: DateOverrideRow[];

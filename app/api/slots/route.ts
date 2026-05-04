@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
   // ── Step 1: load event_type to get duration + account_id + capacity fields ──
   const { data: eventType, error: etError } = await supabase
     .from("event_types")
-    .select("id, account_id, duration_minutes, max_bookings_per_slot, show_remaining_capacity")
+    .select("id, account_id, duration_minutes, buffer_after_minutes, max_bookings_per_slot, show_remaining_capacity")
     .eq("id", eventTypeId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
     supabase
       .from("accounts")
       .select(
-        "timezone, buffer_minutes, min_notice_hours, max_advance_days, daily_cap",
+        "timezone, min_notice_hours, max_advance_days, daily_cap",
       )
       .eq("id", eventType.account_id)
       .single(),
@@ -134,7 +134,9 @@ export async function GET(req: NextRequest) {
       .lte("override_date", to),
     supabase
       .from("bookings")
-      .select("start_at, end_at")
+      // Phase 28 LD-04: join event_types so each booking row carries its own
+      // event type's post-event buffer (used asymmetrically in the slot engine).
+      .select("start_at, end_at, event_types!inner(buffer_after_minutes)")
       .eq("account_id", eventType.account_id)
       // Pitfall 4 fix (Plan 11-05): filter to confirmed only (NOT .neq('cancelled')).
       // The v1.0 .neq('cancelled') included 'rescheduled' rows, which over-blocked
@@ -157,7 +159,6 @@ export async function GET(req: NextRequest) {
 
   const account: AccountSettings = {
     timezone: accountRes.data.timezone,
-    buffer_minutes: accountRes.data.buffer_minutes,
     min_notice_hours: accountRes.data.min_notice_hours,
     max_advance_days: accountRes.data.max_advance_days,
     daily_cap: accountRes.data.daily_cap,
@@ -173,16 +174,36 @@ export async function GET(req: NextRequest) {
     start_minute: o.start_minute,
     end_minute: o.end_minute,
   }));
-  const bookings: BookingRow[] = (bookingsRes.data ?? []).map((b) => ({
-    start_at: b.start_at,
-    end_at: b.end_at,
-  }));
+  const bookings: BookingRow[] = (bookingsRes.data ?? []).map((b) => {
+    // Phase 28 LD-04: per-booking post-buffer comes from the joined event_types
+    // row. Supabase's generated types model the join as either a single object
+    // or an array (depending on inferred relationship cardinality); the actual
+    // runtime shape for `event_types!inner(...)` on a many-to-one FK is a
+    // single object. Normalize both shapes defensively. Defaults to 0 if the
+    // join is somehow null/missing.
+    const et = b.event_types as
+      | { buffer_after_minutes: number }
+      | { buffer_after_minutes: number }[]
+      | null
+      | undefined;
+    const bufferAfter = Array.isArray(et)
+      ? (et[0]?.buffer_after_minutes ?? 0)
+      : (et?.buffer_after_minutes ?? 0);
+    return {
+      start_at: b.start_at,
+      end_at: b.end_at,
+      buffer_after_minutes: bufferAfter,
+    };
+  });
 
   // ── Step 3: compute and return ──────────────────────────────────────────
   const slots = computeSlots({
     rangeStart: from,
     rangeEnd: to,
     durationMinutes: eventType.duration_minutes,
+    // Phase 28 LD-04: candidate event type's post-buffer (asymmetric — applied
+    // to the candidate slot's own forward edge in the conflict check).
+    slotBufferAfterMinutes: eventType.buffer_after_minutes,
     account,
     rules,
     overrides,

@@ -24,12 +24,15 @@ import type {
 
 const TZ = "America/Chicago";
 
-/** Default account settings: no buffer, no notice, no daily cap, big window.
+/** Default account settings: no notice, no daily cap, big window.
  * max_advance_days=9999 ensures dates in 2026 are never filtered out when
- * now is pinned to 2025-01-01 (2026 test dates are ~365-530 days ahead). */
+ * now is pinned to 2025-01-01 (2026 test dates are ~365-530 days ahead).
+ *
+ * Phase 28 LD-04: `buffer_minutes` is no longer on `AccountSettings` — buffers
+ * are now per-event-type. Tests pass `slotBufferAfterMinutes` on `SlotInput`
+ * and `buffer_after_minutes` on each `BookingRow`. */
 const baseAccount: AccountSettings = {
   timezone: TZ,
-  buffer_minutes: 0,
   min_notice_hours: 0,
   max_advance_days: 9999,
   daily_cap: null,
@@ -45,6 +48,10 @@ function input(partial: Partial<SlotInput>): SlotInput {
     rangeStart: "2026-06-15",
     rangeEnd: "2026-06-15",
     durationMinutes: 30,
+    // Phase 28 LD-04: default candidate-event-type post-buffer to 0 so existing
+    // tests (which don't care about per-event-type buffer divergence) keep
+    // passing without needing to set this field.
+    slotBufferAfterMinutes: 0,
     account: baseAccount,
     rules: [],
     overrides: [],
@@ -189,31 +196,37 @@ describe("computeSlots — AVAIL-09 fall back (November 1, 2026)", () => {
 });
 
 describe("computeSlots — buffer overlap excludes conflicting slots", () => {
-  it("removes slots that overlap an existing booking (with buffer)", () => {
-    // 9:00-17:00 Monday, 30-min slots. Existing booking 10:00-10:30 CDT.
-    // buffer = 15 min → each slot is EXTENDED by 15 min on both sides for
-    // the overlap check (not the booking).
+  it("removes slots that overlap an existing booking (asymmetric per-event-type buffer)", () => {
+    // 9:00-17:00 Monday, 30-min slots. Existing booking 10:00-10:30 CDT with
+    // buffer_after_minutes=15. Candidate event type also has buffer=15
+    // (slotBufferAfterMinutes=15) — this is the legacy "symmetric" case where
+    // both sides happen to match, so the result is the same as v1.0 buffer=15.
     //
-    // Slot 9:30 CDT (14:30Z–15:00Z): buffered = 14:15Z–15:15Z
+    // Phase 28 LD-04 (asymmetric semantics):
+    //   bufferedStart = slotStart - existingBooking.buffer_after_minutes
+    //   bufferedEnd   = slotEnd   + slotBufferAfterMinutes
+    //
+    // Slot 9:30 CDT (14:30Z–15:00Z): bufferedStart=14:15Z, bufferedEnd=15:15Z
     //   Overlaps booking [15:00Z, 15:30Z]? isBefore(14:15Z, 15:30Z)=T AND isBefore(15:00Z, 15:15Z)=T → YES, removed
-    // Slot 10:00 CDT (15:00Z–15:30Z): buffered = 14:45Z–15:45Z
+    // Slot 10:00 CDT (15:00Z–15:30Z): bufferedStart=14:45Z, bufferedEnd=15:45Z
     //   Overlaps booking [15:00Z, 15:30Z]? YES, removed
-    // Slot 10:30 CDT (15:30Z–16:00Z): buffered = 15:15Z–16:15Z
+    // Slot 10:30 CDT (15:30Z–16:00Z): bufferedStart=15:15Z, bufferedEnd=16:15Z
     //   Overlaps booking [15:00Z, 15:30Z]? isBefore(15:15Z, 15:30Z)=T AND isBefore(15:00Z, 16:15Z)=T → YES, removed
-    // Slot 9:00 CDT (14:00Z–14:30Z): buffered = 13:45Z–14:45Z
+    // Slot 9:00 CDT (14:00Z–14:30Z): bufferedStart=13:45Z, bufferedEnd=14:45Z
     //   Overlaps booking? isBefore(13:45Z, 15:30Z)=T AND isBefore(15:00Z, 14:45Z)=F → NO, kept ✓
-    // Slot 11:00 CDT (16:00Z–16:30Z): buffered = 15:45Z–16:45Z
+    // Slot 11:00 CDT (16:00Z–16:30Z): bufferedStart=15:45Z, bufferedEnd=16:45Z
     //   Overlaps booking? isBefore(15:45Z, 15:30Z)=F → NO, kept ✓
     // 16 normal slots − 3 = 13 slots.
     const existingBooking: BookingRow = {
       start_at: "2026-06-15T15:00:00.000Z",  // 10:00 CDT
       end_at: "2026-06-15T15:30:00.000Z",    // 10:30 CDT
+      buffer_after_minutes: 15,
     };
     const result = computeSlots(input({
       rangeStart: "2026-06-15",
       rangeEnd: "2026-06-15",
       durationMinutes: 30,
-      account: { ...baseAccount, buffer_minutes: 15 },
+      slotBufferAfterMinutes: 15,
       rules: [rule(1)],
       bookings: [existingBooking],
     }));
@@ -240,8 +253,8 @@ describe("computeSlots — daily cap excludes cancelled bookings (CONTEXT lock)"
       // Caller (route handler) already filtered .neq("status", "cancelled")
       // before passing bookings in — so these are all confirmed.
       bookings: [
-        { start_at: "2026-06-15T15:00:00.000Z", end_at: "2026-06-15T15:30:00.000Z" },
-        { start_at: "2026-06-15T16:00:00.000Z", end_at: "2026-06-15T16:30:00.000Z" },
+        { start_at: "2026-06-15T15:00:00.000Z", end_at: "2026-06-15T15:30:00.000Z", buffer_after_minutes: 0 },
+        { start_at: "2026-06-15T16:00:00.000Z", end_at: "2026-06-15T16:30:00.000Z", buffer_after_minutes: 0 },
       ],
     }));
     expect(result).toHaveLength(0);
@@ -257,8 +270,8 @@ describe("computeSlots — daily cap excludes cancelled bookings (CONTEXT lock)"
       bookings: [
         // Two confirmed bookings → buffer-overlap removes 2 slots; cap of 5
         // is not yet reached.
-        { start_at: "2026-06-15T15:00:00.000Z", end_at: "2026-06-15T15:30:00.000Z" },
-        { start_at: "2026-06-15T16:00:00.000Z", end_at: "2026-06-15T16:30:00.000Z" },
+        { start_at: "2026-06-15T15:00:00.000Z", end_at: "2026-06-15T15:30:00.000Z", buffer_after_minutes: 0 },
+        { start_at: "2026-06-15T16:00:00.000Z", end_at: "2026-06-15T16:30:00.000Z", buffer_after_minutes: 0 },
       ],
     }));
     // 16 − 2 (buffer overlap with two bookings, buffer=0 so only exact-overlap)
@@ -381,5 +394,103 @@ describe("computeSlots — date overrides (CONTEXT-locked semantics)", () => {
       overrides,
     }));
     expect(result).toHaveLength(0);
+  });
+});
+
+describe("computeSlots — per-event-type buffer divergence (BUFFER-06)", () => {
+  // Phase 28 LD-04 hard gate: prove the slot engine reads buffer per-booking
+  // (from BookingRow.buffer_after_minutes) and per-candidate (from
+  // SlotInput.slotBufferAfterMinutes) and applies them ASYMMETRICALLY:
+  //   bufferedStart = slotStart - existingBooking.buffer_after_minutes
+  //   bufferedEnd   = slotEnd   + slotBufferAfterMinutes
+  //
+  // This is the divergence test required by 28-RESEARCH.md and the v1.5
+  // refactor's "post" guard against silent regressions to the symmetric model.
+
+  it("event-type with buffer=0 does NOT block adjacent slots", () => {
+    // Booking at 10:00-10:30 with buffer_after_minutes=0.
+    // Adjacent slot at 10:30 should be available (no buffer extension on
+    // either side).
+    const booking: BookingRow = {
+      start_at: "2026-06-15T15:00:00.000Z",
+      end_at: "2026-06-15T15:30:00.000Z",
+      buffer_after_minutes: 0,
+    };
+    const result = computeSlots(input({
+      rangeStart: "2026-06-15",
+      rangeEnd: "2026-06-15",
+      durationMinutes: 30,
+      slotBufferAfterMinutes: 0,
+      rules: [rule(1)],
+      bookings: [booking],
+    }));
+    const starts = result.map((s) => s.start_at);
+    expect(starts).toContain("2026-06-15T15:30:00.000Z"); // 10:30 CDT — adjacent, not blocked
+  });
+
+  it("event-type with buffer=15 DOES block adjacent slots", () => {
+    // Booking at 10:00-10:30 with buffer_after_minutes=15.
+    // Slot at 10:30 (15:30Z) should be blocked:
+    //   bufferedStart = 15:30Z - 15min = 15:15Z
+    //   bufferedEnd   = 16:00Z + 0     = 16:00Z
+    //   booking [15:00Z, 15:30Z]: isBefore(15:15Z, 15:30Z)=T AND isBefore(15:00Z, 16:00Z)=T → conflict
+    const booking: BookingRow = {
+      start_at: "2026-06-15T15:00:00.000Z",
+      end_at: "2026-06-15T15:30:00.000Z",
+      buffer_after_minutes: 15,
+    };
+    const result = computeSlots(input({
+      rangeStart: "2026-06-15",
+      rangeEnd: "2026-06-15",
+      durationMinutes: 30,
+      slotBufferAfterMinutes: 0, // candidate event type has no buffer
+      rules: [rule(1)],
+      bookings: [booking],
+    }));
+    const starts = result.map((s) => s.start_at);
+    expect(starts).not.toContain("2026-06-15T15:30:00.000Z"); // blocked by existing booking's buffer
+  });
+
+  it("divergence: existing booking's buffer determines blocking, candidate's buffer does not (asymmetric)", () => {
+    // EXISTING booking with buffer=15: candidate slot at 10:30 is blocked
+    // regardless of the candidate event type's own buffer (asymmetric: existing
+    // booking's post-buffer extends back into the candidate slot's start).
+    const bookingWithBuffer: BookingRow = {
+      start_at: "2026-06-15T15:00:00.000Z",
+      end_at: "2026-06-15T15:30:00.000Z",
+      buffer_after_minutes: 15,
+    };
+    const resultNoBuf = computeSlots(input({
+      rangeStart: "2026-06-15",
+      rangeEnd: "2026-06-15",
+      durationMinutes: 30,
+      slotBufferAfterMinutes: 0,
+      rules: [rule(1)],
+      bookings: [bookingWithBuffer],
+    }));
+    expect(resultNoBuf.map((s) => s.start_at)).not.toContain(
+      "2026-06-15T15:30:00.000Z",
+    );
+
+    // EXISTING booking with buffer=0: candidate slot at 10:30 IS available
+    // even when the candidate event type's own buffer is 0. This proves the
+    // existing booking's buffer is what determines the blocking — not the
+    // account or candidate.
+    const bookingNoBuffer: BookingRow = {
+      start_at: "2026-06-15T15:00:00.000Z",
+      end_at: "2026-06-15T15:30:00.000Z",
+      buffer_after_minutes: 0,
+    };
+    const resultWithNoBuf = computeSlots(input({
+      rangeStart: "2026-06-15",
+      rangeEnd: "2026-06-15",
+      durationMinutes: 30,
+      slotBufferAfterMinutes: 0,
+      rules: [rule(1)],
+      bookings: [bookingNoBuffer],
+    }));
+    expect(resultWithNoBuf.map((s) => s.start_at)).toContain(
+      "2026-06-15T15:30:00.000Z",
+    );
   });
 });
