@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-04 — **Phase 28 Plan 28-01 shipped.** Per-event-type buffer wired end-to-end; drain gate active for Plan 28-02.
+**Last updated:** 2026-05-04 — **Phase 28 Plan 28-01 shipped.** Per-event-type buffer wired end-to-end; CP-03 drain gate waived by Andrew (no active booking traffic) — Plan 28-02 cleared to launch immediately.
 
 ## Project Reference
 
@@ -17,13 +17,13 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 **Milestone:** v1.5 (started 2026-05-03).
 **Phase:** Phase 28 — Per-Event-Type Buffer Wire-Up + Account Column Drop
 **Plan:** 28-01 — Backfill, Rewire, and Form ✅ SHIPPED 2026-05-04
-**Status:** Plan 28-01 deployed; **drain gate active** for Plan 28-02.
+**Status:** Plan 28-01 deployed; **CP-03 drain gate WAIVED** — Plan 28-02 launching immediately.
 **Last activity:** 2026-05-04 — Plan 28-01 executed across two agent sessions (mid-plan usage-limit reset). Backfill applied; slot engine rewired for asymmetric per-event-type buffer per LD-04; owner UI exposed buffer field; Vercel deploy live.
 
-**Drain gate (CP-03):**
-- T0 (push completed): `2026-05-04T00:27:49Z UTC` (commit `4aba090`)
-- Earliest Plan 28-02 start: T0 + 30 min = `2026-05-04T00:57:49Z UTC` (or later if Vercel "Ready" time is after push)
-- Andrew should confirm exact Vercel "Ready" timestamp before Plan 28-02 launch.
+**Drain gate (CP-03) — WAIVED 2026-05-04 by Andrew:**
+- Original gate: T0 + 30 min = `2026-05-04T00:57:49Z UTC` minimum
+- Waiver rationale: No active booking traffic on the product (single-tenant nsi only, no public booker requests in flight). The drain protects warm pre-28-01 `/api/slots` instances from 500'ing on a dropped column; with zero traffic, those instances stay cold and serverless idles them out (~15 min) before any request lands. Andrew confirmed nobody is booking and accepted the small residual risk (bots / monitoring / self-traffic during deploy window).
+- Decision logged at `2026-05-04T~00:35Z`. Plan 28-02 cleared to launch immediately.
 
 **Phase queue (v1.5):**
 - [~] Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop (3 plans — BUFFER-01..06)
@@ -83,7 +83,7 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 1/6 complete — P
 
 ### Active blockers
 
-- **Plan 28-02 is GATED until T0 + 30 min** (`2026-05-04T00:57:49Z UTC` minimum, or later if Vercel "Ready" time exceeds push time). DO NOT begin Plan 28-02 before this gate clears.
+None. CP-03 drain gate waived (see above). Plan 28-02 ready to execute.
 
 ## Session Continuity
 
