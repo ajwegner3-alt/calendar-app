@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-04 — **Phase 28 Plan 28-02 shipped.** `accounts.buffer_minutes` permanently dropped from production Postgres; availability settings panel scrubbed; CP-03 two-step deploy complete. Plan 28-03 (divergence tests + smoke) unblocked.
+**Last updated:** 2026-05-04 — **Phase 28 COMPLETE. Plan 28-03 shipped.** Vitest 228 passing + 9 skipped + 0 failed post-DROP; BUFFER-06 divergence (3/3) green; Andrew live-verified per-event-type buffer + cross-event-type divergence on production nsi. BUFFER-01..06 all shipped. v1.5 progress 3/6. Phase 29 (Audience Rebrand) ready to plan.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 ## Current Position
 
 **Milestone:** v1.5 (started 2026-05-03).
-**Phase:** Phase 28 — Per-Event-Type Buffer Wire-Up + Account Column Drop
-**Plan:** 28-02 — DROP migration + availability cleanup ✅ SHIPPED 2026-05-04
-**Status:** CP-03 two-step DROP COMPLETE. `accounts.buffer_minutes` permanently dropped. Plan 28-03 (divergence tests + smoke) unblocked.
-**Last activity:** 2026-05-04 — Plan 28-02 executed in ~11 min (00:36:24Z → 00:47:38Z). Drain checkpoint waived per prior Andrew decision; availability cleanup committed (`653e620`); DROP migration applied (`dfb421f`); push at `00:43:04Z`; Vercel deploy reached Ready before 00:47:03Z; smoke /api/slots HTTP 200 with real slot JSON.
+**Phase:** Phase 28 — Per-Event-Type Buffer Wire-Up + Account Column Drop ✅ COMPLETE 2026-05-04
+**Plan:** 28-03 — Divergence tests + smoke ✅ SHIPPED 2026-05-04
+**Status:** Phase 28 closed. BUFFER-01..06 all shipped to production. Plan 28-03 verification-only; no code commits — Task 1 confirmed BUFFER-06 (3/3) + full vitest (228 passing, 9 skipped) + grep + DB gates clean post-DROP; Task 2 received Andrew live-smoke approval on production nsi covering all four Verifications. Phase 29 (Audience Rebrand) ready to plan.
+**Last activity:** 2026-05-04 — Plan 28-03 executed in ~10 min as a pure verification pass. Andrew's exact approval words: "Looks like cross event is working. All event bookings seem to be working. Owner event pages seem to be working as well" (mapped to plan Verifications 1-4 in 28-03 SUMMARY).
 
 **Drain gate (CP-03) — WAIVED 2026-05-04 by Andrew (preserved for record):**
 - Original gate: T0 + 30 min = `2026-05-04T00:57:49Z UTC` minimum
@@ -27,12 +27,14 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 - Outcome: No regression detected. /api/slots remained HTTP 200 throughout; no 500s observed.
 
 **Phase queue (v1.5):**
-- [~] Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop (3 plans — BUFFER-01..06)
-  - [X] Plan 28-01: Backfill, Rewire, and Form (shipped 2026-05-04)
-  - [X] Plan 28-02: DROP migration + availability cleanup (shipped 2026-05-04)
-  - [ ] Plan 28-03: Divergence tests + smoke
+- [X] Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop (3 plans — BUFFER-01..06 shipped 2026-05-04)
+  - [X] Plan 28-01: Backfill, Rewire, and Form (shipped 2026-05-04, 3 commits)
+  - [X] Plan 28-02: DROP migration + availability cleanup (shipped 2026-05-04, 3 commits)
+  - [X] Plan 28-03: Divergence tests + smoke (shipped 2026-05-04, 1 metadata commit — verification only; no code edits required)
 - [ ] Phase 29: Audience Rebrand (1 plan — BRAND-01..03)
 - [ ] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05)
+
+**Phase 28 closing summary:** 3 plans, 7 commits total (3 + 3 + 1), executed across 2026-05-04. Two-step DROP (CP-03) completed end-to-end with drain waived for zero-traffic. Asymmetric per-booking + per-candidate buffer math (LD-04) live in production. accounts.buffer_minutes permanently removed from DB. Owner editor + list table expose buffer_after_minutes. BUFFER-06 divergence proven by both unit test (3/3) and Andrew's live cross-event verification.
 
 **Cumulative project progress:**
 
@@ -42,7 +44,7 @@ v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 1
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
-v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 2/6 complete — Plans 28-01..02 shipped 2026-05-04)
+v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 3/6 complete — Phase 28 shipped 2026-05-04)
 ```
 
 ## Performance Metrics
@@ -74,6 +76,12 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 2/6 complete — P
 - Per-instance className override for shared shadcn components (Phases 23-25)
 - Deploy-and-eyeball as canonical production gate (5th consecutive milestone)
 
+### Decisions / patterns added by Plan 28-03 (2026-05-04)
+
+- **Verification-only plan pattern:** When prior plans in a phase have already shipped the implementation, a phase-closing plan can be a pure verification pass with zero code commits. Plan 28-03's Task 1 (auto) found BUFFER-06 + full suite + grep + DB all green from Plan 28-01/02 work — no edits, no commits needed. The only commit is the SUMMARY metadata commit. Reusable for any future "prove it works in prod" closer.
+- **Andrew-quote-on-record approval format:** For live smoke checkpoints with multiple Verifications, capture Andrew's exact words verbatim in the SUMMARY. Free-text approval is acceptable when the words map unambiguously back to plan Verifications, and the mapping is documented in the SUMMARY for traceability. Avoids forcing rigid "type 'approved'" UX when the substance is already clear.
+- **Soft scrub deferred:** `tests/slot-generation.test.ts:31` retains a JSDoc historical reference to `buffer_minutes` (descriptive prose explaining the Phase 28 transition). Not live code; the gate intentionally scopes to `app/` + `lib/`. Flagged for a future docs scrub if a token-comprehensive cleanup is ever performed; not a blocker.
+
 ### Decisions / patterns added by Plan 28-02 (2026-05-04)
 
 - **CP-03 two-step DROP completed end-to-end:** Plan 28-01 (rewire) → drain (waived) → Plan 28-02 cleanup commit clears grep gate → DROP migration applies → cleanup commit deploys → smoke 200. Pattern proven for v1.5; reusable for any future column drops.
@@ -91,17 +99,19 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 2/6 complete — P
 
 ### Active blockers
 
-None. CP-03 two-step DROP complete; production smoke 200; Plan 28-03 ready to execute.
+None. Phase 28 complete; production verified by Andrew. **Phase 29 (Audience Rebrand) ready to plan via `/gsd:plan-phase 29`.**
 
-**Soft concern (not a blocker for 28-03):** 33 pre-existing tsc errors in `tests/` (test mock helpers `__setTurnstileResult`, `__mockSendCalls`, etc. — runtime-only or test-setup symbols not exported from their modules). None in `app/` or `lib/`. Predates Phase 28. Plan 28-03 may want to scope `tsc --noEmit` to non-test files or address the test-mock symbol exports as a separate cleanup pass.
+**Soft concerns carried into Phase 29 (not blockers):**
+- 33 pre-existing tsc errors in `tests/` (test mock helpers `__setTurnstileResult`, `__mockSendCalls`, etc. — runtime-only or test-setup symbols not exported from their modules). None in `app/` or `lib/`. Predates Phase 28. Address as a separate cleanup pass when convenient.
+- `tests/slot-generation.test.ts:31` JSDoc historical reference to `buffer_minutes` (descriptive prose, not live code). Optional future docs scrub.
 
 ## Session Continuity
 
-**Last session:** 2026-05-04 — Plan 28-02 executed in ~11 min in a single session. Drain checkpoint waived per prior Andrew decision; Task 2 committed as `653e620` (8 files: 6 availability + 2 doc-comment scrubs); Task 1 committed as `dfb421f` (DROP SQL + .SKIP rollback); Task 3 pushed at `00:43:04Z`; Vercel Ready before 00:47:03Z; smoke /api/slots HTTP 200; final information_schema returns 0 rows for `accounts.buffer_minutes`.
+**Last session:** 2026-05-04 — Plan 28-03 executed in ~10 min as a verification-only pass. Task 1 (auto): BUFFER-06 isolated 3/3 passed; full vitest 228 passing + 9 skipped + 0 failed across 28/28 files; grep `buffer_minutes` in `app/` + `lib/` = 0 matches; grep `post_buffer_minutes` everywhere = 0 matches; `information_schema` for `accounts.buffer_minutes` = 0 rows; production `event_types.buffer_after_minutes` = nsi/general-meeting=15, nsi/30-minute-consultation=15, others=0. No code edits, no task commits. Task 2 (Andrew live-smoke): approved 2026-05-04 with words "Looks like cross event is working. All event bookings seem to be working. Owner event pages seem to be working as well" — covers all four plan Verifications.
 
-**Stopped at:** Plan 28-02 SUMMARY.md and STATE.md updated. Plan 28-03 is the next step.
+**Stopped at:** Phase 28 complete. SUMMARY.md created at `.planning/phases/28-per-event-type-buffer-and-column-drop/28-03-SUMMARY.md`. STATE.md updated. Metadata commit + push to main pending in this same session.
 
-**Resume:** Run `/gsd:execute-plan 28-03` to begin Plan 28-03 (divergence tests + smoke). Plan 28-03 PLAN.md already exists at `.planning/phases/28-per-event-type-buffer-and-column-drop/28-03-divergence-tests-and-smoke-PLAN.md`.
+**Resume:** Run `/gsd:plan-phase 29` to begin Phase 29 (Audience Rebrand). Per Phase queue, Phase 29 covers BRAND-01..03 across 1 plan.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-03; v1.5 milestone started)
