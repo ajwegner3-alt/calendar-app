@@ -1,6 +1,6 @@
 # calendar-app
 
-Multi-tenant Calendly-style booking tool for trade contractors (plumbers, HVAC, roofers, electricians). A visitor lands on a contractor's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
+Multi-tenant booking tool for service businesses. A visitor lands on a business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
 **Live production:** https://calendar-app-xi-smoky.vercel.app/
 

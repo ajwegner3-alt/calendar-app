@@ -18,7 +18,7 @@ interface AuthHeroProps {
  */
 export function AuthHero({
   headline = "Bookings without the back-and-forth.",
-  subtext = "A multi-tenant scheduling tool built for trade contractors. Branded booking pages, capacity-aware slots, and email confirmations — done.",
+  subtext = "A multi-tenant scheduling tool built for service businesses. Branded booking pages, capacity-aware slots, and email confirmations — done.",
 }: AuthHeroProps) {
   return (
     <aside className="relative hidden overflow-hidden bg-gray-50 lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-12 lg:py-20">
@@ -39,7 +39,7 @@ export function AuthHero({
           </li>
           <li className="flex items-start gap-2">
             <span aria-hidden className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
-            Built for trade contractors, by NSI in Omaha.
+            Built by NSI in Omaha.
           </li>
         </ul>
       </div>

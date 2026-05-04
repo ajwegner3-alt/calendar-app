@@ -59,7 +59,7 @@ Audience: future Claude Code sessions. NOT a human-readable changelog. NOT marke
 ## 2. Assumptions & Constraints
 
 - **Single-owner per account.** v1 has no team / multi-user model within an account. v2 spec is multi-tenant signup + onboarding (no detail here per CONTEXT.md lock).
-- **Gmail SMTP for transactional delivery via owner's personal Gmail** (`GMAIL_USER` / `GMAIL_FROM_NAME` env vars; `lib/email-sender/providers/gmail.ts`). Not suitable for high volume; fine for v1 contractor use case.
+- **Gmail SMTP for transactional delivery via owner's personal Gmail** (`GMAIL_USER` / `GMAIL_FROM_NAME` env vars; `lib/email-sender/providers/gmail.ts`). Not suitable for high volume; fine for v1 service-business use case.
 - **Vercel Pro tier required.** `vercel.json` `crons[].schedule = "0 * * * *"` (hourly) only deploys on Pro. Hobby tier deploys at most daily; cron-job.org fallback was researched and dropped.
   - Source: STATE.md Plan 08-08 confirmation; Plan 08-04 daily-fallback note.
 - **Booker timezone is submitted at booking time, not verified.** `Intl.DateTimeFormat().resolvedOptions().timeZone` on mount; server trusts it. Booker owns their clock display.
@@ -223,13 +223,13 @@ Source: `09-CHECKLIST.md` Apple Mail code review findings section + Marathon Cri
 
 - **Magic-link / passwordless login.** Deferred per CONTEXT.md. The 10-02 `auth/confirm` route handler already supports `type=magiclink`. Enabling it requires a Supabase Dashboard toggle + UI surface.
 
-- **Slug 301 redirect for old slugs after change.** In v1.1 (Plan 10-07), changing a slug produces a 404 for the old URL. v1.2 could store `previous_slug` and serve a 301 from `app/[account]/page.tsx`. Revisit if contractors report broken-link complaints after promoting their booking page.
+- **Slug 301 redirect for old slugs after change.** In v1.1 (Plan 10-07), changing a slug produces a 404 for the old URL. v1.2 could store `previous_slug` and serve a 301 from `app/[account]/page.tsx`. Revisit if owners report broken-link complaints after promoting their booking page.
 
 - **Soft-delete reversibility / "restore on login within N days".** Plan 10-07 chose immediate-no-undo: `accounts.deleted_at = now()` + signOut + redirect to `/account-deleted`. Post-delete re-login lands on `/app/unlinked` (documented UX hole). v1.2 could offer a grace period where re-login triggers an account restore prompt.
 
 - **Hard-delete cron purge.** v1.1 ships soft-delete only; `auth.users` rows are preserved indefinitely. v1.2 cron should purge `auth.users` + `accounts` rows where `deleted_at < now() - interval '30 days'`. Requires a SECURITY DEFINER function since `auth.users` is not directly writable via RLS policies.
 
-- **Pick-from-templates first event type.** Plan 10-06 ships a single pre-filled "Consultation / 30 min" default in the wizard. v1.2 could offer 3–4 template cards (Consultation, Discovery Call, Site Visit, etc.) for contractors to choose from. Revisit if onboarding analytics show users bouncing at wizard step 3.
+- **Pick-from-templates first event type.** Plan 10-06 ships a single pre-filled "Consultation / 30 min" default in the wizard. v1.2 could offer 3–4 template cards (Consultation, Discovery Call, Site Visit, etc.) for owners to choose from. Revisit if onboarding analytics show users bouncing at wizard step 3.
 
 - **Onboarding analytics.** Phase 10 captures no metrics on wizard step progression or checklist dismissal rates. Add a `booking_events`-style event log (or use Supabase Realtime + a lightweight `onboarding_events` table) to track step transitions, drop-off points, and checklist item completion for v1.2 data-driven improvements.
 
