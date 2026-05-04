@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-04 — **Phase 28 COMPLETE. Plan 28-03 shipped.** Vitest 228 passing + 9 skipped + 0 failed post-DROP; BUFFER-06 divergence (3/3) green; Andrew live-verified per-event-type buffer + cross-event-type divergence on production nsi. BUFFER-01..06 all shipped. v1.5 progress 3/6. Phase 29 (Audience Rebrand) ready to plan.
+**Last updated:** 2026-05-04 — **Phase 29 COMPLETE. Plan 29-01 shipped.** Audience rebrand pass: 4 files, 7-line diff, 1 batched content commit. Canonical grep gate (`trade contractor|contractor` minus `contractor's brand` allowlist across `app/` + `lib/` + `README.md` + `FUTURE_DIRECTIONS.md`) returns 0 lines. Booker-surface neutrality gate confirms zero leak of "service businesses" into `app/[account]/` or `lib/email-sender/`. tsc 33 errors all pre-existing in `tests/` (zero new). Pushed to `main`, Vercel auto-deploy in flight. BRAND-01..03 all shipped. v1.5 progress 4/6. Phase 30 (Public Booker 3-Column Layout) ready to plan.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 
 **Core value:** A visitor lands on a service-based business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign. Roadmap created; ready to plan Phase 28.
+**Current focus:** v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign. Phases 28 + 29 shipped; Phase 30 (Public Booker 3-Column Layout) is the last v1.5 phase remaining.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.5 (started 2026-05-03).
-**Phase:** Phase 28 — Per-Event-Type Buffer Wire-Up + Account Column Drop ✅ COMPLETE 2026-05-04
-**Plan:** 28-03 — Divergence tests + smoke ✅ SHIPPED 2026-05-04
-**Status:** Phase 28 closed. BUFFER-01..06 all shipped to production. Plan 28-03 verification-only; no code commits — Task 1 confirmed BUFFER-06 (3/3) + full vitest (228 passing, 9 skipped) + grep + DB gates clean post-DROP; Task 2 received Andrew live-smoke approval on production nsi covering all four Verifications. Phase 29 (Audience Rebrand) ready to plan.
-**Last activity:** 2026-05-04 — Plan 28-03 executed in ~10 min as a pure verification pass. Andrew's exact approval words: "Looks like cross event is working. All event bookings seem to be working. Owner event pages seem to be working as well" (mapped to plan Verifications 1-4 in 28-03 SUMMARY).
+**Phase:** Phase 29 — Audience Rebrand ✅ COMPLETE 2026-05-04
+**Plan:** 29-01 — Audience copy scrub ✅ SHIPPED 2026-05-04
+**Status:** Phase 29 closed. BRAND-01..03 all shipped to production. Single batched content commit `0659c0e` (4 files, 7 insertions / 7 deletions): auth-hero subtext + tagline → audience-neutral / "service businesses"; README opening rewritten audience-led without "Calendly-style" or trade parenthetical; FUTURE_DIRECTIONS lines 62/226/232 audience-context contractor refs rewritten; booking-form.tsx:138 dev comment swapped contractor→owner per LD-07 override (runtime line 139 byte-identical). Canonical grep gate, ROADMAP-verbatim gate, AND booker-surface neutrality gate all 0 matches. tsc clean for plan scope (33 errors all pre-existing in `tests/`, predates Phase 28). Pushed to `main`; Vercel auto-deploy in flight. Live smoke explicitly waived per 29-CONTEXT.md (copy-only, no behavior). Phase 30 (Public Booker 3-Column Layout) ready to plan.
+**Last activity:** 2026-05-04 — Plan 29-01 executed in ~2 min (1m 48s wall clock from `2026-05-04T01:39:11Z` to `2026-05-04T01:40:59Z`). Zero retries, zero blockers, zero deviations beyond the plan-locked single-commit choice (recorded in 29-01 SUMMARY for audit). Pre-existing `M .planning/phases/02-...VERIFICATION.md` left unstaged in working tree (orthogonal to this plan).
 
 **Drain gate (CP-03) — WAIVED 2026-05-04 by Andrew (preserved for record):**
 - Original gate: T0 + 30 min = `2026-05-04T00:57:49Z UTC` minimum
@@ -31,10 +31,13 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
   - [X] Plan 28-01: Backfill, Rewire, and Form (shipped 2026-05-04, 3 commits)
   - [X] Plan 28-02: DROP migration + availability cleanup (shipped 2026-05-04, 3 commits)
   - [X] Plan 28-03: Divergence tests + smoke (shipped 2026-05-04, 1 metadata commit — verification only; no code edits required)
-- [ ] Phase 29: Audience Rebrand (1 plan — BRAND-01..03)
+- [X] Phase 29: Audience Rebrand (1 plan — BRAND-01..03 shipped 2026-05-04)
+  - [X] Plan 29-01: Audience copy scrub (shipped 2026-05-04, 1 content commit `0659c0e` + 1 metadata commit)
 - [ ] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05)
 
 **Phase 28 closing summary:** 3 plans, 7 commits total (3 + 3 + 1), executed across 2026-05-04. Two-step DROP (CP-03) completed end-to-end with drain waived for zero-traffic. Asymmetric per-booking + per-candidate buffer math (LD-04) live in production. accounts.buffer_minutes permanently removed from DB. Owner editor + list table expose buffer_after_minutes. BUFFER-06 divergence proven by both unit test (3/3) and Andrew's live cross-event verification.
+
+**Phase 29 closing summary:** 1 plan, 2 commits (1 batched content + 1 metadata), executed 2026-05-04 in ~2 min. 4 files, 7-line diff. Three independent grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. LD-07 deliberate override executed cleanly: inert dev comment scrubbed, runtime UI byte-identical. Live smoke explicitly waived per CONTEXT (copy-only). Pure stale-copy cleanup; zero behavioral change.
 
 **Cumulative project progress:**
 
@@ -44,7 +47,7 @@ v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 1
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
-v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 3/6 complete — Phase 28 shipped 2026-05-04)
+v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 4/6 complete — Phases 28+29 shipped 2026-05-04)
 ```
 
 ## Performance Metrics
@@ -76,6 +79,15 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 3/6 complete — P
 - Per-instance className override for shared shadcn components (Phases 23-25)
 - Deploy-and-eyeball as canonical production gate (5th consecutive milestone)
 
+### Decisions / patterns added by Plan 29-01 (2026-05-04)
+
+- **Copy-only phase pattern (new):** When an entire phase is documentation/copy and a deterministic grep gate exists, the gate replaces live-eyeball QA. Auto-deploy on push still happens (Andrew's global "live testing" default), but no human-verify checkpoint is needed. Reusable for any future pure-copy / pure-doc phase. Plan 29-01 baseline: ~2 min wall clock from start to push.
+- **LD-lock deliberate-override pattern (new):** A successor phase's CONTEXT.md can deliberately override a prior LD-lock when the carve-out is narrow (e.g., single inert line, no runtime/UI effect) and the override is auditable end-to-end (stated in CONTEXT → restated in PLAN → restated in SUMMARY). Plan 29-01 used this for LD-07 → `booking-form.tsx:138` dev comment. Pattern requires explicit narrow-scope language; it is NOT a license to revisit locks broadly.
+- **Plan-locked commit-batching pattern:** GSD's atomic-per-task default can be overridden by a plan author when (a) the change is several tiny string swaps, (b) a single canonical grep gate verifies them together, and (c) Andrew's "commit after a logical unit of work" preference favors batching. The plan must state the override in the body (Plan 29-01 did so in Task 3 Step 5) and lock the exact commit message verbatim. Recorded in SUMMARY as a process-level deviation for traceability.
+- **In-product term-of-art over audience term in dev docs:** When a developer-facing doc references the audience by their in-product role (e.g., "owners" — the role with an account on the product), use the in-product term rather than the marketing audience term ("service businesses"). Plan 29-01 applied this to FUTURE_DIRECTIONS lines 226 + 232. Marketing/onboarding-facing copy (auth-hero, README opening) gets the audience term.
+- **Three-gate verification block for copy phases:** Canonical grep gate + ROADMAP-verbatim narrower gate + booker-surface neutrality gate. The neutrality gate (proving the new audience copy did NOT leak into booker-facing surfaces) is novel and reusable for any future copy phase that has an audience-segmented contract.
+- **Pre-existing-modification preservation:** Files modified in the working tree before plan start that are orthogonal to the plan (e.g., `02-VERIFICATION.md` here) must NOT be staged into plan commits. Per-file `git add` of plan files only — never `git add -A`. Recorded in SUMMARY for audit.
+
 ### Decisions / patterns added by Plan 28-03 (2026-05-04)
 
 - **Verification-only plan pattern:** When prior plans in a phase have already shipped the implementation, a phase-closing plan can be a pure verification pass with zero code commits. Plan 28-03's Task 1 (auto) found BUFFER-06 + full suite + grep + DB all green from Plan 28-01/02 work — no edits, no commits needed. The only commit is the SUMMARY metadata commit. Reusable for any future "prove it works in prod" closer.
@@ -99,19 +111,20 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 3/6 complete — P
 
 ### Active blockers
 
-None. Phase 28 complete; production verified by Andrew. **Phase 29 (Audience Rebrand) ready to plan via `/gsd:plan-phase 29`.**
+None. Phase 29 complete; production deploy in flight (auto-deploy on push, no eyeball gate per CONTEXT waiver). **Phase 30 (Public Booker 3-Column Desktop Layout) ready to plan via `/gsd:plan-phase 30`.**
 
-**Soft concerns carried into Phase 29 (not blockers):**
+**Soft concerns carried into Phase 30 (not blockers, unchanged from Phase 28/29 close):**
 - 33 pre-existing tsc errors in `tests/` (test mock helpers `__setTurnstileResult`, `__mockSendCalls`, etc. — runtime-only or test-setup symbols not exported from their modules). None in `app/` or `lib/`. Predates Phase 28. Address as a separate cleanup pass when convenient.
 - `tests/slot-generation.test.ts:31` JSDoc historical reference to `buffer_minutes` (descriptive prose, not live code). Optional future docs scrub.
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` modification still in working tree (orthogonal; predates Plan 29-01). Decide whether to commit, revert, or leave at start of Phase 30.
 
 ## Session Continuity
 
-**Last session:** 2026-05-04 — Plan 28-03 executed in ~10 min as a verification-only pass. Task 1 (auto): BUFFER-06 isolated 3/3 passed; full vitest 228 passing + 9 skipped + 0 failed across 28/28 files; grep `buffer_minutes` in `app/` + `lib/` = 0 matches; grep `post_buffer_minutes` everywhere = 0 matches; `information_schema` for `accounts.buffer_minutes` = 0 rows; production `event_types.buffer_after_minutes` = nsi/general-meeting=15, nsi/30-minute-consultation=15, others=0. No code edits, no task commits. Task 2 (Andrew live-smoke): approved 2026-05-04 with words "Looks like cross event is working. All event bookings seem to be working. Owner event pages seem to be working as well" — covers all four plan Verifications.
+**Last session:** 2026-05-04 — Plan 29-01 executed in ~2 min (1m 48s, `2026-05-04T01:39:11Z` → `2026-05-04T01:40:59Z`). Single batched content commit `0659c0e` (4 files, 7-line diff): auth-hero subtext default (line 21) + tagline `<li>` (line 42) → audience-neutral / "service businesses" copy; README opening (line 3) rewritten audience-led, drops "Calendly-style" + trade parenthetical; FUTURE_DIRECTIONS lines 62 / 226 / 232 audience-context contractor refs rewritten (`service-business` modifier on 62; `owners` on 226 + 232); booking-form.tsx:138 dev comment swapped contractor→owner per LD-07 override (runtime line 139 byte-identical, booker UI untouched). Three grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. tsc 33 errors all pre-existing in `tests/` (zero new). Pushed `8c464f6..0659c0e main -> main`; Vercel auto-deploy triggered. Live smoke waived per 29-CONTEXT.md (copy-only).
 
-**Stopped at:** Phase 28 complete. SUMMARY.md created at `.planning/phases/28-per-event-type-buffer-and-column-drop/28-03-SUMMARY.md`. STATE.md updated. Metadata commit + push to main pending in this same session.
+**Stopped at:** Phase 29 complete. SUMMARY.md created at `.planning/phases/29-audience-rebrand/29-01-SUMMARY.md`. STATE.md updated. Metadata commit + push to main pending in this same session.
 
-**Resume:** Run `/gsd:plan-phase 29` to begin Phase 29 (Audience Rebrand). Per Phase queue, Phase 29 covers BRAND-01..03 across 1 plan.
+**Resume:** Run `/gsd:plan-phase 30` to begin Phase 30 (Public Booker 3-Column Desktop Layout). Per Phase queue, Phase 30 covers BOOKER-01..05 across 2 plans. Per V15-MP-05 lock, the `<BookingForm>` conditional-mount pattern (`{selectedSlot ? <BookingForm /> : <prompt>}`) MUST be preserved — always-mounted form causes Turnstile token expiry.
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why (updated 2026-05-03; v1.5 milestone started)
