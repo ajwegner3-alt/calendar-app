@@ -3,6 +3,11 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
 import {
+  checkAndConsumeQuota,
+  QuotaExceededError,
+  logQuotaRefusal,
+} from "@/lib/email-sender/quota-guard";
+import {
   renderEmailBrandedHeader,
   renderEmailFooter,
   brandedHeadingStyle,
@@ -23,6 +28,8 @@ interface EventTypeRecord {
 }
 
 interface AccountRecord {
+  /** Phase 31 (EMAIL-21): account UUID for the PII-free quota refusal log. */
+  id: string;
   name: string;
   timezone: string;       // IANA — owner email shows times in OWNER timezone
   owner_email: string | null;
@@ -138,6 +145,22 @@ ${answerEntries
   </p>
   ${renderEmailFooter()}
 </div>`;
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  // Re-throw so sendBookingEmails can apply save-and-flag semantics.
+  try {
+    await checkAndConsumeQuota("owner-notification");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "owner-notification",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
   // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` breaks Gmail SMTP auth.

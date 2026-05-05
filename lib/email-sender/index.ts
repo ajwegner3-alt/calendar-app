@@ -67,11 +67,12 @@ function getDefaultClient(): EmailClient {
 /**
  * Send an email via the configured provider (Gmail SMTP in v1.x).
  *
- * QUOTA GUARD CONTRACT (Phase 10): signup-side callers (signup, welcome,
- * password-reset, email-change) MUST call `checkAndConsumeQuota(category)`
- * from `@/lib/email-sender/quota-guard` BEFORE calling sendEmail(). Booking
- * and reminder paths bypass the guard intentionally — they have their own
- * retry semantics and protecting them is the design goal of the cap.
+ * QUOTA GUARD CONTRACT (Phase 31, EMAIL-21):
+ * All email senders — signup, booking confirmation, owner notification, reminder,
+ * cancel, and reschedule — MUST call checkAndConsumeQuota() with the matching
+ * EmailCategory before invoking sendEmail. The v1.1 carve-out for booking/reminder
+ * paths was closed in Phase 31. See lib/email-sender/quota-guard.ts for the helper
+ * signatures and EmailCategory union.
  */
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   try {

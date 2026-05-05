@@ -2,6 +2,11 @@ import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
+import {
+  checkAndConsumeQuota,
+  QuotaExceededError,
+  logQuotaRefusal,
+} from "@/lib/email-sender/quota-guard";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
 import {
   renderEmailBrandedHeader,
@@ -27,6 +32,8 @@ interface EventTypeRecord {
 }
 
 interface AccountRecord {
+  /** Phase 31 (EMAIL-21): account UUID for the PII-free quota refusal log. */
+  id: string;
   name: string;
   timezone: string;   // IANA — .ics uses ACCOUNT timezone; calendar clients adapt
   owner_email: string | null;
@@ -144,6 +151,23 @@ export async function sendBookingConfirmation(
     attendeeEmail:  booking.booker_email,
     attendeeName:   booking.booker_name,
   });
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  // logQuotaRefusal is PII-free; re-throw so callers (sendBookingEmails) can
+  // detect QuotaExceededError and apply save-and-flag semantics.
+  try {
+    await checkAndConsumeQuota("booking-confirmation");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "booking-confirmation",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
   // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP

@@ -327,6 +327,7 @@ export async function POST(req: NextRequest) {
       duration_minutes: eventType.duration_minutes,
     },
     account: {
+      id: account.id, // Phase 31: required for quota refusal log
       name: account.name,
       timezone: account.timezone,
       owner_email: account.owner_email,
@@ -349,6 +350,7 @@ export async function POST(req: NextRequest) {
       },
       eventType: { name: eventType.name },
       account: {
+        id: account.id, // Phase 31: required for quota refusal log
         name: account.name,
         timezone: account.timezone,
         owner_email: account.owner_email,
@@ -459,6 +461,7 @@ export async function POST(req: NextRequest) {
             location: enrichedEventType.location,
           },
           account: {
+            id: account.id, // Phase 31: required for quota refusal log
             slug: enrichedAccount.slug,
             name: enrichedAccount.name,
             logo_url: enrichedAccount.logo_url,

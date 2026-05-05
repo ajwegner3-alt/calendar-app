@@ -3,6 +3,11 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { sendEmail } from "@/lib/email-sender";
 import {
+  checkAndConsumeQuota,
+  QuotaExceededError,
+  logQuotaRefusal,
+} from "@/lib/email-sender/quota-guard";
+import {
   renderEmailBrandedHeader,
   renderEmailFooter,
   renderBrandedButton,
@@ -62,6 +67,8 @@ interface ReminderEventTypeRecord {
 }
 
 interface ReminderAccountRecord {
+  /** Phase 31 (EMAIL-21): account UUID for the PII-free quota refusal log. */
+  id: string;
   slug: string;
   name: string;
   logo_url: string | null;
@@ -193,6 +200,23 @@ ${segments.join("\n")}
   // Plain-text alternative — the email-sender mock and real nodemailer both
   // accept text. Without it, spam scores rise (mail-tester EMAIL-08).
   const text = stripHtml(html);
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  // Re-throw so the cron loop / immediate-send / manual-reminder action can
+  // branch on QuotaExceededError (continue-on-refuse / surface to UI).
+  try {
+    await checkAndConsumeQuota("reminder");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "reminder",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — sendEmail singleton constructs from GMAIL_FROM_NAME +
   // GMAIL_USER. Passing `from` breaks Gmail SMTP auth (matches Phase 5 lock).

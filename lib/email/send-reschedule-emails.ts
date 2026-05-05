@@ -3,6 +3,11 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { ICalCalendarMethod } from "ical-generator";
 import { sendEmail } from "@/lib/email-sender";
+import {
+  checkAndConsumeQuota,
+  QuotaExceededError,
+  logQuotaRefusal,
+} from "@/lib/email-sender/quota-guard";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
 import {
   renderEmailBrandedHeader,
@@ -28,6 +33,8 @@ interface EventTypeRecord {
 }
 
 interface AccountRecord {
+  /** Phase 31 (EMAIL-21): account UUID for the PII-free quota refusal log. */
+  id: string;
   name: string;
   slug: string;
   timezone: string;          // IANA
@@ -69,15 +76,29 @@ export interface SendRescheduleEmailsArgs {
  * Plan 12-06: Added text: stripHtml(html) to booker reschedule (EMAIL-10 extended).
  */
 export async function sendRescheduleEmails(args: SendRescheduleEmailsArgs): Promise<void> {
-  const tasks: Array<Promise<void>> = [
-    sendBookerRescheduleEmail(args).catch((err: unknown) => {
-      console.error("[reschedule-emails] booker notification failed:", err);
-    }),
-    sendOwnerRescheduleEmail(args).catch((err: unknown) => {
-      console.error("[reschedule-emails] owner notification failed:", err);
-    }),
-  ];
-  await Promise.allSettled(tasks);
+  const results = await Promise.allSettled([
+    sendBookerRescheduleEmail(args),
+    sendOwnerRescheduleEmail(args),
+  ]);
+
+  // Phase 31 (EMAIL-21): re-throw the first QuotaExceededError so the
+  // awaiting caller (lib/bookings/reschedule.ts) can surface emailFailed:
+  // "quota" to the owner UI. logQuotaRefusal already wrote inside the inner
+  // sender; do not double-log.
+  const quotaErr = results.find(
+    (r): r is PromiseRejectedResult =>
+      r.status === "rejected" && r.reason instanceof QuotaExceededError,
+  );
+  if (quotaErr) throw quotaErr.reason;
+
+  // Non-quota failures: log but don't throw. The reschedule UPDATE already
+  // committed; surfacing arbitrary SMTP errors would cause the owner UI to
+  // believe the reschedule failed.
+  for (const r of results) {
+    if (r.status === "rejected") {
+      console.error("[reschedule-emails] leg failed:", r.reason);
+    }
+  }
 }
 
 async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise<void> {
@@ -157,6 +178,21 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     method:        ICalCalendarMethod.REQUEST,
     sequence:      1,                             // RFC 5546: increment on update
   });
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  try {
+    await checkAndConsumeQuota("reschedule-booker");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "reschedule-booker",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
   // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.
@@ -247,6 +283,21 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
     method:        ICalCalendarMethod.REQUEST,
     sequence:      1,
   });
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  try {
+    await checkAndConsumeQuota("reschedule-owner");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "reschedule-owner",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
   // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.

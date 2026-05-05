@@ -3,6 +3,11 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { ICalCalendarMethod } from "ical-generator";
 import { sendEmail } from "@/lib/email-sender";
+import {
+  checkAndConsumeQuota,
+  QuotaExceededError,
+  logQuotaRefusal,
+} from "@/lib/email-sender/quota-guard";
 import { buildIcsBuffer } from "@/lib/email/build-ics";
 import {
   renderEmailBrandedHeader,
@@ -31,6 +36,8 @@ interface EventTypeRecord {
 }
 
 interface AccountRecord {
+  /** Phase 31 (EMAIL-21): account UUID for the PII-free quota refusal log. */
+  id: string;
   name: string;
   slug: string;            // for "Book again" CTA URL
   timezone: string;        // IANA — used for owner email times + .ics ORGANIZER tz
@@ -56,11 +63,14 @@ export interface SendCancelEmailsArgs {
 }
 
 /**
- * Fire-and-forget orchestrator for cancellation emails (CONTEXT lock: BOTH parties
- * always notified regardless of who triggered).
+ * Orchestrator for cancellation emails (CONTEXT lock: BOTH parties always
+ * notified regardless of who triggered).
  *
- * MUST NOT throw — caller pattern is `void sendCancelEmails(...)` after the DB
- * cancel UPDATE succeeds. Errors are caught per-sender and logged.
+ * Phase 31 (EMAIL-21): switched from fire-and-forget per-leg .catch() to
+ * Promise.allSettled inspection so the first QuotaExceededError surfaces to
+ * the awaiting caller (lib/bookings/cancel.ts) — the owner UI needs
+ * `emailFailed: "quota"` to render the Gmail-fallback callout. Non-quota
+ * errors stay swallowed (the cancel itself already committed).
  *
  * Subject patterns (CONTEXT decisions):
  *   - Booker: "Booking cancelled: [event name]"
@@ -70,15 +80,28 @@ export interface SendCancelEmailsArgs {
  * so any calendar that imported the original event removes it.
  */
 export async function sendCancelEmails(args: SendCancelEmailsArgs): Promise<void> {
-  const tasks: Array<Promise<void>> = [
-    sendBookerCancelEmail(args).catch((err: unknown) => {
-      console.error("[cancel-emails] booker notification failed:", err);
-    }),
-    sendOwnerCancelEmail(args).catch((err: unknown) => {
-      console.error("[cancel-emails] owner notification failed:", err);
-    }),
-  ];
-  await Promise.allSettled(tasks);
+  const results = await Promise.allSettled([
+    sendBookerCancelEmail(args),
+    sendOwnerCancelEmail(args),
+  ]);
+
+  // Phase 31 (EMAIL-21): re-throw the first QuotaExceededError so the
+  // awaiting caller can surface emailFailed: "quota" to the owner UI. The
+  // logQuotaRefusal write already happened inside the inner sender.
+  const quotaErr = results.find(
+    (r): r is PromiseRejectedResult =>
+      r.status === "rejected" && r.reason instanceof QuotaExceededError,
+  );
+  if (quotaErr) throw quotaErr.reason;
+
+  // Non-quota failures: log but don't throw. The cancel UPDATE already
+  // committed; surfacing arbitrary SMTP errors would cause the owner UI to
+  // believe the cancel failed.
+  for (const r of results) {
+    if (r.status === "rejected") {
+      console.error("[cancel-emails] leg failed:", r.reason);
+    }
+  }
 }
 
 async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
@@ -162,6 +185,21 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
     method:        ICalCalendarMethod.CANCEL,
     sequence:      1,
   });
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  try {
+    await checkAndConsumeQuota("cancel-booker");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "cancel-booker",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
   // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.
@@ -260,6 +298,21 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
     method:        ICalCalendarMethod.CANCEL,
     sequence:      1,
   });
+
+  // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
+  try {
+    await checkAndConsumeQuota("cancel-owner");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      logQuotaRefusal({
+        account_id: account.id,
+        sender_type: "cancel-owner",
+        count: err.count,
+        cap: err.cap,
+      });
+    }
+    throw err;
+  }
 
   // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
   // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.

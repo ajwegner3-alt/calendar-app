@@ -172,6 +172,7 @@ export async function cancelBooking(
         slug: eventType.slug,
       },
       account: {
+        id: pre.account_id, // Phase 31: required for quota refusal log
         name: account.name,
         slug: account.slug,
         timezone: account.timezone,

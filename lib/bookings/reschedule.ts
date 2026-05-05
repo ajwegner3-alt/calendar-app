@@ -206,6 +206,7 @@ export async function rescheduleBooking(
         duration_minutes: eventType.duration_minutes,
       },
       account: {
+        id: pre.account_id, // Phase 31: required for quota refusal log
         name: account.name,
         slug: account.slug,
         timezone: account.timezone,

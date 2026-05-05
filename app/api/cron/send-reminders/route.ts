@@ -246,6 +246,7 @@ export async function GET(request: NextRequest) {
             location: c.event_types.location,
           },
           account: {
+            id: c.account_id, // Phase 31: required for quota refusal log
             slug: c.accounts.slug,
             name: c.accounts.name,
             logo_url: c.accounts.logo_url,

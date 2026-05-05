@@ -217,6 +217,7 @@ export async function sendReminderForBookingAction(
         location: eventTypesRow.location,
       },
       account: {
+        id: account.id, // Phase 31: required for quota refusal log
         slug: account.slug,
         name: account.name,
         logo_url: account.logo_url,
