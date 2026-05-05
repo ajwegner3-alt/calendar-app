@@ -7,7 +7,7 @@
 - ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (22 plans across 8 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md).
 - ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
-- 🚧 **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — in progress.
+- ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05.
 
 ## Phases
 
@@ -81,7 +81,7 @@ See [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md) for full phase 
 </details>
 
 <details>
-<summary>🚧 v1.5 Buffer Fix + Audience Rebrand + Booker Redesign (Phases 28-30) — IN PROGRESS</summary>
+<summary>✅ v1.5 Buffer Fix + Audience Rebrand + Booker Redesign (Phases 28-30) — SHIPPED 2026-05-05</summary>
 
 **Milestone Goal:** Close the per-event-type buffer gap surfaced in Phase 27 smoke (replace account-wide `buffer_minutes` with per-event-type `buffer_after_minutes`), reposition from "trade contractors" to "service-based businesses" across owner-facing copy and docs, and redesign the public booker into a true 3-column desktop layout (calendar LEFT / times MIDDLE / form RIGHT).
 
@@ -155,8 +155,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 30-01: Grid restructure — `booking-shell.tsx` 3-col template + `max-w-4xl`; `slot-picker.tsx` internal 2-col wrapper removed; Calendar and slot list as direct grid children; timezone hint to slot-list column header; form column placeholder/conditional-mount preserved (Turnstile lifecycle safe)
-- [ ] 30-02: Andrew live-verify smoke checkpoint at 1024px / 1280px / 1440px + mobile real-device check
+- [x] 30-01: Grid restructure — `booking-shell.tsx` 3-col template + `max-w-4xl`; Calendar and slot list as direct grid children; form column placeholder/conditional-mount preserved (Turnstile lifecycle safe) — completed 2026-05-04 (mid-execution Rule 4 amendment: `slot-picker.tsx` kept on disk per Andrew Option A; reschedule still consumes it)
+- [x] 30-02: Andrew live-verify smoke checkpoint at 1024px / 1280px / 1440px + mobile real-device check — completed 2026-05-05 ("Everything looks good" — blanket approval covering BOOKER-01..05)
 
 </details>
 
@@ -171,17 +171,16 @@ Plans:
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28 | v1.5 | 3 / 3 | ✅ Complete | 2026-05-04 |
 | 29 | v1.5 | 1 / 1 | ✅ Complete | 2026-05-04 |
-| 30 | v1.5 | 0 / 2 | Not started | — |
+| 30 | v1.5 | 2 / 2 | ✅ Complete | 2026-05-05 |
 
 ## Cumulative Stats
 
-- **Total phases shipped:** 29 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27)
-- **Total plans shipped:** 122 (52 + 34 + 22 + 6 + 8)
-- **Total commits:** 499 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4)
-- **Test suite at v1.4 ship:** 225 passing + 9 skipped without `SUPABASE_DIRECT_URL` (≥230 + 4 with DIRECT_URL set)
-- **v1.5 planned:** 3 phases (28-30), 6 plans, 14 requirements
-- **Status:** v1.5 in progress — roadmap defined; Phase 28 ready to plan.
+- **Total phases shipped:** 32 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30)
+- **Total plans shipped:** 128 (52 + 34 + 22 + 6 + 8 + 6)
+- **Total commits:** ~510 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + ~11 v1.5)
+- **v1.5 final:** 3 phases (28-30), 6 plans, 14 requirements shipped
+- **Status:** v1.5 SHIPPED 2026-05-05. Run `/gsd:audit-milestone` to verify cross-phase integration before archiving.
 
 ---
 
-*Roadmap last updated: 2026-05-04 — Phase 29 complete (BRAND-01..03 shipped; canonical grep gate clean; live smoke waived per copy-only scope). Run `/gsd:plan-phase 30` to continue with Public Booker 3-Column Desktop Layout.*
+*Roadmap last updated: 2026-05-05 — Phase 30 complete (BOOKER-01..05 shipped; verifier 5/5 must-haves passed; Andrew live-verify "Everything looks good" on production at 1024/1280/1440 + mobile). v1.5 milestone CLOSED. Run `/gsd:audit-milestone` to begin v1.5 archival.*

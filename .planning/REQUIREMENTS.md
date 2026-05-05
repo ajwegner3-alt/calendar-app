@@ -23,19 +23,19 @@ Replaces account-wide `buffer_minutes` with per-event-type `buffer_after_minutes
 
 Owner-facing copy changes across signup, onboarding, dashboard, settings, and developer-facing docs. Zero TypeScript identifier renames needed (research confirmed no `tradeContractor*` / `contractor*` symbols exist). Booker-facing surfaces and transactional emails are explicitly OUT OF SCOPE for this rebrand.
 
-- [ ] **BRAND-01**: Owner-facing surfaces (signup hero, onboarding wizard copy, dashboard headings, settings copy, event-type editor placeholders) reference "service-based businesses" or generic framing instead of "trade contractors"
-- [ ] **BRAND-02**: README.md and FUTURE_DIRECTIONS.md (project-root, not archived `.planning/milestones/`) reference "service-based businesses"
-- [ ] **BRAND-03**: Booker-facing surfaces (`/[account]/[event-slug]`, `/[account]` index, embed widget, all 6 transactional emails) remain audience-neutral (no NSI product copy added; existing copy unchanged)
+- [x] **BRAND-01**: Owner-facing surfaces (signup hero, onboarding wizard copy, dashboard headings, settings copy, event-type editor placeholders) reference "service-based businesses" or generic framing instead of "trade contractors"
+- [x] **BRAND-02**: README.md and FUTURE_DIRECTIONS.md (project-root, not archived `.planning/milestones/`) reference "service-based businesses"
+- [x] **BRAND-03**: Booker-facing surfaces (`/[account]/[event-slug]`, `/[account]` index, embed widget, all 6 transactional emails) remain audience-neutral (no NSI product copy added; existing copy unchanged)
 
 ### Public Booker 3-Column Redesign (BOOKER)
 
 Refactor booking card from 2-column (calendar + form) to 3-column (calendar LEFT → time slots MIDDLE → form RIGHT) at `lg:` breakpoint. Form column reserves space at all times and reveals form content in-place after slot pick. Mobile collapses to single column (calendar → times → form). Embed widget inherits responsive breakpoint and naturally stays 2-column at iframe widths.
 
-- [ ] **BOOKER-01**: Public booking card displays a 3-column horizontal layout at `lg:` (1024px+): calendar LEFT, time slots MIDDLE, form RIGHT
-- [ ] **BOOKER-02**: Booker card uses `max-w-4xl` (was `max-w-3xl`) to accommodate 3-column content with breathing room
-- [ ] **BOOKER-03**: Form column is rendered with reserved width at all times; before slot pick, shows the prompt "Pick a time on the left to continue."; after slot pick, the booking form replaces the prompt in-place with NO layout shift (calendar and times columns do not reflow)
-- [ ] **BOOKER-04**: Mobile (below `lg:`) stacks vertically in DOM order: calendar → times → form
-- [ ] **BOOKER-05**: Andrew live-verifies the 3-column desktop layout on production at 1024px / 1280px / 1440px and the mobile stack on a real device
+- [x] **BOOKER-01**: Public booking card displays a 3-column horizontal layout at `lg:` (1024px+): calendar LEFT, time slots MIDDLE, form RIGHT
+- [x] **BOOKER-02**: Booker card uses `max-w-4xl` (was `max-w-3xl`) to accommodate 3-column content with breathing room
+- [x] **BOOKER-03**: Form column is rendered with reserved width at all times; before slot pick, shows the prompt "Pick a time on the left to continue."; after slot pick, the booking form replaces the prompt in-place with NO layout shift (calendar and times columns do not reflow)
+- [x] **BOOKER-04**: Mobile (below `lg:`) stacks vertically in DOM order: calendar → times → form
+- [x] **BOOKER-05**: Andrew live-verifies the 3-column desktop layout on production at 1024px / 1280px / 1440px and the mobile stack on a real device
 
 ## Future Requirements (v1.6+)
 
@@ -100,11 +100,11 @@ These items remain in the carryover backlog. v1.5 does NOT execute them; they ar
 | BRAND-01 | Phase 29 | Complete |
 | BRAND-02 | Phase 29 | Complete |
 | BRAND-03 | Phase 29 | Complete |
-| BOOKER-01 | Phase 30 | Pending |
-| BOOKER-02 | Phase 30 | Pending |
-| BOOKER-03 | Phase 30 | Pending |
-| BOOKER-04 | Phase 30 | Pending |
-| BOOKER-05 | Phase 30 | Pending |
+| BOOKER-01 | Phase 30 | Complete |
+| BOOKER-02 | Phase 30 | Complete |
+| BOOKER-03 | Phase 30 | Complete |
+| BOOKER-04 | Phase 30 | Complete |
+| BOOKER-05 | Phase 30 | Complete |
 
 **Coverage:**
 - v1.5 requirements: 14 total
@@ -113,4 +113,4 @@ These items remain in the carryover backlog. v1.5 does NOT execute them; they ar
 
 ---
 *Requirements defined: 2026-05-03*
-*Last updated: 2026-05-03 — traceability table populated by gsd-roadmapper (Phases 28-30)*
+*Last updated: 2026-05-05 — Phase 30 complete; BOOKER-01..05 shipped; v1.5 milestone closed (14/14 requirements complete)*

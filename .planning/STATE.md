@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-04 — **Phase 30 Plan 01 SHIPPED.** Public booker flat 3-column desktop layout (calendar | times | form) live; state lifted from `slot-picker.tsx` into `booking-shell.tsx`; single feat commit `8b45c50` (1 file, +201/-35). **Mid-execution Rule 4 architectural decision:** Andrew picked Option A — keep `slot-picker.tsx` on disk as Phase-6-only component (still consumed by `app/reschedule/[token]/_components/reschedule-shell.tsx`). Booker no longer imports `SlotPicker` (component); only imports `type Slot` from same file. tsc 33 errors all pre-existing in `tests/` (zero new). Test suite 228 passed | 9 skipped (matches baseline; zero regression). Pre-existing `02-VERIFICATION.md` drift remains UNSTAGED. Pushed to `main`, Vercel auto-deploy in flight. v1.5 progress 5/6. Plan 30-02 (Andrew live-verify smoke at 1024/1280/1440 + mobile) is the final v1.5 step.
+**Last updated:** 2026-05-05 — **PHASE 30 CLOSED. v1.5 MILESTONE SHIPPED.** Plan 30-02 live-verify checkpoint: Andrew approved with `"Everything looks good"` (blanket approval mapped to BOOKER-01..05 per Plan 28-03 Andrew-quote-on-record precedent) on production at `https://calendar-app-xi-smoky.vercel.app/nsi/30-minute-consultation` (deploy SHA `8b45c50`). Single metadata commit `3118d68` (+143 lines: SUMMARY only; zero code edits). gsd-verifier passed 5/5 must-haves against codebase: `booking-shell.tsx:180` confirms `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]`; placeholder/conditional-mount + RHF reset key intact at lines 255–270; `max-w-4xl` at line 150; embed wrapper unforked (`embed-shell.tsx:4,107` renders `<BookingShell>` verbatim — single-column at iframe widths inferred-correct via same `lg:` breakpoint). v1.5 final tally: 3 phases (28+29+30), 6 plans, 14 requirements (BUFFER-01..06 + BRAND-01..03 + BOOKER-01..05), shipped 2026-05-04 → 2026-05-05 (~2 calendar days). Pre-existing `02-VERIFICATION.md` drift remains UNSTAGED through entire v1.5 (hygiene preserved across 6 plans).
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
 
 **Core value:** A visitor lands on a service-based business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign. Phases 28 + 29 shipped; Phase 30 Plan 01 shipped; Plan 30-02 (live-verify smoke) is the final v1.5 step.
+**Current focus:** v1.5 SHIPPED 2026-05-05. Next: `/gsd:audit-milestone` to verify cross-phase integration before archiving v1.5 → milestones/v1.5-ROADMAP.md, then `/gsd:complete-milestone` to start v1.6 (or `/gsd:new-milestone` if no carryover backlog left to address).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.5 (started 2026-05-03).
-**Phase:** Phase 30 — Public Booker 3-Column Desktop Layout (1 of 2 plans complete)
-**Plan:** 30-01 — Booker layout restructure ✅ SHIPPED 2026-05-04
-**Status:** Plan 30-01 closed. BOOKER-01..04 all shipped. `booking-shell.tsx` is now the single grid owner: owns slot-fetch state (slots, loading, fetchError, rangeFrom/To, slotsByDate, markedDates, slotsForSelectedDate, isCompletelyEmpty), the date-range computation, the canonical async-fetch effect on `/api/slots`, and the 3-col grid template `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]`. Calendar + slot list + form column render as direct grid children. Form column always reserved at fixed 320px (zero layout shift on slot pick). V15-MP-05 Turnstile lifecycle lock honored: placeholder is `<div>`, NOT mounted form. V15-MP-04 honored: timezone hint is full-width `<p>` above grid. max-w-3xl on `<header>`, max-w-4xl on `<section>`. Selected-slot highlight ternary preserved verbatim. Empty-state branch lifted to shell level. Embed wrapper untouched. **Mid-execution Rule 4 architectural decision routed to Andrew:** Plan called for deleting `slot-picker.tsx`, but `app/reschedule/[token]/_components/reschedule-shell.tsx:6` still consumes it (per Phase 6 PLAN-04 verbatim reuse). Andrew picked Option A — keep file on disk; deletion deferred until reschedule itself is redesigned. Booker decoupling complete: `booking-shell.tsx` no longer imports `SlotPicker` (component); only imports `type Slot` (smallest-diff path). Single feat commit `8b45c50` (1 file, +201/-35); plan-locked single-commit batching honored. tsc 33 errors all pre-existing in `tests/` (zero new in `app/` or `lib/`). Test suite 228 passed | 9 skipped (zero regression vs baseline). Pre-existing `02-VERIFICATION.md` drift confirmed UNSTAGED. Pushed to `main`; Vercel auto-deploy in flight. Plan 30-02 (live-verify smoke) is the next step — does NOT gate on this plan's completion (this plan does not include human-verify).
-**Last activity:** 2026-05-04 — Plan 30-01 executed in ~13 min wall clock (Option A architectural pause + restart accounted for). Zero retries; one architectural deviation (Rule 4) routed cleanly via spawn checkpoint; Option A executed end-to-end with smaller scope than originally planned (no slot-picker.tsx deletion).
+**Milestone:** v1.5 SHIPPED 2026-05-05 (started 2026-05-03; ~2 calendar days end-to-end).
+**Phase:** Phase 30 ✅ CLOSED (2/2 plans complete; verifier 5/5 must-haves passed).
+**Plan:** 30-02 — Andrew live-verify smoke ✅ SHIPPED 2026-05-05.
+**Status:** v1.5 milestone CLOSED. Phase 30 verifier passed 5/5 against codebase + Andrew's quote-on-record. BOOKER-01..05 all shipped. Andrew's verbatim approval: `"Everything looks good"` (blanket sweep covering all 7 mandatory checks A–G at 1024/1280/1440 desktop + mobile real-device). Phase commits: `8b45c50` feat (Plan 30-01 code), `f83119f` docs (30-01 metadata), `7aaad37` docs (30-02 pause-state — pre-resume), `3118d68` docs (30-02 SUMMARY post-approval). 30-VERIFICATION.md created with file+line evidence per must-have (created by gsd-verifier this session). Pre-existing `02-VERIFICATION.md` drift remained UNSTAGED across all 4 commits — hygiene perfect.
+**Last activity:** 2026-05-05 — Plan 30-02 resumed from prior pause via `/gsd:execute-phase 30`. Re-presented checkpoint (Andrew clarified A–F desktop / G mobile / H optional split first), then approved with blanket "Everything looks good". Continuation agent wrote 30-02-SUMMARY.md with quote-on-record mapping table covering BOOKER-01..05; single metadata commit `3118d68` pushed to main. Verifier passed 5/5 against booking-shell.tsx + embed-shell.tsx evidence. v1.5 closed.
 
 **Drain gate (CP-03) — WAIVED 2026-05-04 by Andrew (preserved for record):**
 - Original gate: T0 + 30 min = `2026-05-04T00:57:49Z UTC` minimum
@@ -33,9 +33,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
   - [X] Plan 28-03: Divergence tests + smoke (shipped 2026-05-04, 1 metadata commit — verification only; no code edits required)
 - [X] Phase 29: Audience Rebrand (1 plan — BRAND-01..03 shipped 2026-05-04)
   - [X] Plan 29-01: Audience copy scrub (shipped 2026-05-04, 1 content commit `0659c0e` + 1 metadata commit)
-- [~] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05; 1/2 complete)
+- [X] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05 all shipped 2026-05-04..05)
   - [X] Plan 30-01: Booker layout restructure (shipped 2026-05-04, 1 feat commit `8b45c50`; BOOKER-01..04 closed)
-  - [ ] Plan 30-02: Live-verify smoke checkpoint at 1024/1280/1440 + mobile (BOOKER-05)
+  - [X] Plan 30-02: Live-verify smoke checkpoint (shipped 2026-05-05, 1 metadata commit `3118d68`; BOOKER-05 closed; verifier 5/5)
 
 **Phase 28 closing summary:** 3 plans, 7 commits total (3 + 3 + 1), executed across 2026-05-04. Two-step DROP (CP-03) completed end-to-end with drain waived for zero-traffic. Asymmetric per-booking + per-candidate buffer math (LD-04) live in production. accounts.buffer_minutes permanently removed from DB. Owner editor + list table expose buffer_after_minutes. BUFFER-06 divergence proven by both unit test (3/3) and Andrew's live cross-event verification.
 
@@ -49,7 +49,7 @@ v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 1
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
-v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 5/6 complete — Phases 28+29 shipped 2026-05-04, Plan 30-01 shipped 2026-05-04)
+v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 6/6 complete — shipped 2026-05-05; 14 requirements: BUFFER-01..06 + BRAND-01..03 + BOOKER-01..05)
 ```
 
 ## Performance Metrics
@@ -121,12 +121,12 @@ v1.5 [~] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 5/6 complete — P
 
 ### Active blockers
 
-None. Phase 29 complete; production deploy in flight (auto-deploy on push, no eyeball gate per CONTEXT waiver). **Phase 30 (Public Booker 3-Column Desktop Layout) ready to plan via `/gsd:plan-phase 30`.**
+None. **v1.5 milestone CLOSED 2026-05-05.** Next: `/gsd:audit-milestone` (cross-phase integration + E2E flow audit before archival), then `/gsd:complete-milestone` to archive v1.5 → `milestones/v1.5-ROADMAP.md` and prepare for v1.6 / next milestone planning.
 
-**Soft concerns carried into Phase 30 (not blockers, unchanged from Phase 28/29 close):**
+**Soft concerns carried into v1.5 close (not blockers; address opportunistically in v1.6 cleanup pass or next milestone):**
 - 33 pre-existing tsc errors in `tests/` (test mock helpers `__setTurnstileResult`, `__mockSendCalls`, etc. — runtime-only or test-setup symbols not exported from their modules). None in `app/` or `lib/`. Predates Phase 28. Address as a separate cleanup pass when convenient.
 - `tests/slot-generation.test.ts:31` JSDoc historical reference to `buffer_minutes` (descriptive prose, not live code). Optional future docs scrub.
-- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` modification still in working tree (orthogonal; predates Plan 29-01). Decide whether to commit, revert, or leave at start of Phase 30.
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` modification still in working tree (orthogonal; predates Plan 29-01 and Plan 30-01/02). Survived all 6 v1.5 plans without ever being staged. Decide whether to commit, revert, or leave at v1.5 audit / archive time.
 
 ## Session Continuity
 
