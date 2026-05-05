@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 31 Plan 02 complete (sender wiring + caller routing). Ready for Plan 31-03.
+**Last updated:** 2026-05-05 — Phase 31 Plan 03 complete (owner UX + test coverage). Phase 31 feature-complete pending verifier sign-off.
 
 ## Project Reference
 
@@ -16,9 +16,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
 **Phase:** 31 of 33 — Email Hard Cap Guard
-**Plan:** 02 of TBD — Sender wiring + caller routing — COMPLETE
-**Status:** Plan 31-02 shipped. Ready for Plan 31-03 (dashboard alert + manual-reminder UX inline callout).
-**Last activity:** 2026-05-05 — Plan 31-02 executed. All 7 email senders now go through checkAndConsumeQuota with typed EmailCategory + logQuotaRefusal. v1.1 carve-out comment in lib/email-sender/index.ts removed. send-booking-emails.ts save-and-flag UPDATEs bookings.confirmation_email_sent=false on quota refusal. lib/bookings/cancel.ts + reschedule.ts switched from after() to await; emailFailed?: "quota" | "send" return field. Cron loop moved out of after(); response returns reminders_sent + quota_refused live counters. Manual reminder action returns locked Gmail-fallback copy + errorCode: "EMAIL_QUOTA_EXCEEDED". TS clean (0 new src/ errors). Vitest unchanged: 177 passing, 4 skipped, 8 pre-existing-broken test files unchanged.
+**Plan:** 03 of 3 — Owner UX + test coverage — COMPLETE (Phase 31 feature-complete pending verifier)
+**Status:** Plan 31-03 shipped. Phase 31 ready for `/gsd:verify-phase 31`.
+**Last activity:** 2026-05-05 — Plan 31-03 executed atomically. day-detail-row.tsx Send Reminder dialog now reads errorCode 'EMAIL_QUOTA_EXCEEDED' and renders inline error in dialog footer (no toast); cancel-button.tsx branches on result.emailFailed for 3-way differentiated success toast (locked verbatim quota copy + send fallback + default). actions.ts CancelBookingAsOwnerResult extended to propagate emailFailed (Rule 2 auto-fix — required for differentiated toast to function). queries.ts countUnsentConfirmations(accountId) added; uses Plan 31-01 partial index. /app/bookings page mounts new self-suppressing UnsentConfirmationsBanner above filters/table — returns null when count <= 0 per locked CONTEXT (no always-visible widget). New tests/email-quota-refuse.test.ts: 7-category × allow/refuse matrix + getRemainingDailyQuota (200/50/clamp) + logQuotaRefusal exact 5-key shape with negative PII assertions + cron continue-on-refuse pattern (positive + non-quota re-throw). quota-guard.test.ts gained #5 regression test for the 80% warn block (vi.setSystemTime to bypass warnedDays day-cache). Tests: 21 new passing in email-quota-refuse + 5 in quota-guard. 8 pre-existing broken test files remain unrelated. TS still 35 errors (all pre-existing test-mock). npm run build clean.
 
 ## Cumulative project progress
 
@@ -29,10 +29,10 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 Plans 01-02 of TBD complete; Plan 31-03 next)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 all 3 plans complete, awaiting verifier; Phase 32 next)
 ```
 
-**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plans 31-01 + 31-02 (5 task commits + 2 metadata = 7 new commits in v1.6 so far).
+**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plans 31-01 + 31-02 + 31-03 (8 task commits + 3 metadata = 11 new commits in v1.6 so far).
 
 ## Accumulated Context
 
@@ -56,21 +56,21 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.6:
 
 ### Active blockers
 
-None. Plans 31-01 + 31-02 complete; Plan 31-03 (dashboard alert + manual-reminder UX inline callout) is next. Plan 31-03 reads bookings.confirmation_email_sent=false (from 31-02 save-and-flag) for the dashboard alert, branches on emailFailed: "quota" (cancel/reschedule) and errorCode: "EMAIL_QUOTA_EXCEEDED" (manual reminder) for the inline Gmail-fallback callout.
+None. Phase 31 is feature-complete (all 3 plans shipped). Next step: `/gsd:verify-phase 31` to confirm production readiness, then unblock Phase 32 (auto-cancel batch) and Phase 33 (pushback batch) — both depend on Phase 31's `getRemainingDailyQuota()` for batch pre-flight, and the inline-error / save-and-flag UX patterns from Plan 31-03.
 
 ### Open tech debt (carried into v1.6)
 
 - `slot-picker.tsx` on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — date+slot UI duplicated in `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is redesigned (extract shared `<CalendarSlotPicker>`).
 - Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — still uncommitted, untouched during Plan 31-01 (filed under "decide later"). Stage/revert decision deferred again.
-- Pre-existing TS errors in test-mock files (`tests/bookings-rate-limit.test.ts`, `tests/cancel-reschedule-api.test.ts`, `tests/email-6-row-matrix.test.ts`, `tests/owner-note-action.test.ts`, `tests/reminder-cron.test.ts`, `tests/reminder-email-content.test.ts`) referencing removed `__mockSendCalls` / `__setTurnstileResult` helpers. Surfaced during Plan 31-01 verification but unrelated to Phase 31 scope. Plan 31-02 should avoid extending those test files; if quota-guard tests need expansion, follow the existing `tests/quota-guard.test.ts` `vi.mock` pattern.
+- Pre-existing TS errors in test-mock files (`tests/bookings-api.test.ts`, `tests/bookings-rate-limit.test.ts`, `tests/cancel-reschedule-api.test.ts`, `tests/cross-event-overlap.test.ts`, `tests/email-6-row-matrix.test.ts`, `tests/owner-note-action.test.ts`, `tests/reminder-cron.test.ts`, `tests/reminder-email-content.test.ts`, `tests/send-reminder-for-booking.test.ts`) referencing removed `__mockSendCalls` / `__setTurnstileResult` helpers. Confirmed unrelated to Phase 31 (verified by stashing Plan 31-03 changes — same files fail at HEAD~3 too). Plan 31-03 followed the `tests/quota-guard.test.ts` `vi.mock` pattern in the new `tests/email-quota-refuse.test.ts` to avoid touching the broken files. Resolution deferred to a future cleanup pass.
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — Plan 31-02 executed atomically. All 7 senders wired through quota guard; v1.1 carve-out closed; save-and-flag + after()→await + cron live counters + locked Gmail-fallback copy all in place. SUMMARY.md written.
+**Last session:** 2026-05-05 — Plan 31-03 executed atomically. Inline reminder error in dialog footer; differentiated cancel toast (3-way); /app/bookings unsent-confirmations banner (self-suppressing); countUnsentConfirmations(accountId) helper; refuse-send test suite (21 new + 1 regression for 80% warn). One Rule 2 auto-fix (extended CancelBookingAsOwnerResult to propagate emailFailed). SUMMARY.md written.
 
-**Stopped at:** Plan 31-02 complete. Ready for Plan 31-03 (dashboard alert + manual-reminder UX inline callout — surfaces the new flags/error codes to the owner).
+**Stopped at:** Phase 31 feature-complete. Ready for `/gsd:verify-phase 31` to confirm production readiness before starting Phase 32.
 
-**Next session:** Run `/gsd:execute-phase 31` (continuation) or `/gsd:plan-phase 31` follow-up to surface Plan 31-03.
+**Next session:** Run `/gsd:verify-phase 31` to validate Phase 31 against ROADMAP success criteria; on pass, kick off `/gsd:plan-phase 32` for the auto-cancel batch.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -80,6 +80,12 @@ None. Plans 31-01 + 31-02 complete; Plan 31-03 (dashboard alert + manual-reminde
 **Plan 31-02 commits:**
 - `7348bc1` — feat(31-02): wire all 7 email senders through quota guard
 - `0de8dab` — feat(31-02): route quota errors to save-and-flag, await, cron, manual
+- `5b824dc` — docs(31-02): complete sender wiring plan
+
+**Plan 31-03 commits:**
+- `38f5688` — feat(31-03): inline reminder quota error + differentiated cancel toast
+- `0dc55e5` — feat(31-03): add unsent-confirmations dashboard banner + count query
+- `2f53f7e` — test(31-03): refuse-send coverage + 80% warn regression
 - (metadata commit appended at session close)
 
 **Files of record:**
@@ -90,3 +96,4 @@ None. Plans 31-01 + 31-02 complete; Plan 31-03 (dashboard alert + manual-reminde
 - `.planning/MILESTONES.md` — historical record (v1.6 entry created at milestone close)
 - `.planning/phases/31-email-hard-cap-guard/31-01-SUMMARY.md` — Plan 31-01 outcomes
 - `.planning/phases/31-email-hard-cap-guard/31-02-SUMMARY.md` — Plan 31-02 outcomes
+- `.planning/phases/31-email-hard-cap-guard/31-03-SUMMARY.md` — Plan 31-03 outcomes
