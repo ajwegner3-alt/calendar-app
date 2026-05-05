@@ -146,15 +146,23 @@ export async function saveWeeklyRulesAction(
 }
 
 /**
- * AVAIL-02: Upsert a date override (Block or Custom hours).
+ * AVAIL-02: Upsert a date override (Block entire day or Unavailable windows).
  *
  * RESEARCH Pitfall 5: enforces mutual exclusion at the action layer —
  * deletes ALL rows for the date first, then writes the new shape.
  *
- *   "block" save:        DELETE all rows for date → INSERT one is_closed=true row
- *   "custom_hours" save: DELETE all rows for date → INSERT N window rows
+ *   "block" save:       DELETE all rows for date → INSERT one is_closed=true row
+ *   "unavailable" save: DELETE all rows for date → INSERT N window rows
+ *                       (Phase 32: windows are BLOCKED times — slot engine
+ *                       subtracts from weekly base.)
  *
  * Always delete-all-first so orphaned mixed-state rows never exist.
+ *
+ * Note: when saving "unavailable" rows, Plan 32-02's editor first calls
+ * `previewAffectedBookingsAction` to detect confirmed bookings inside the
+ * proposed windows. If any are found, the editor routes to
+ * `commitInverseOverrideAction` (which adds quota pre-flight + batch cancel).
+ * This action remains the no-affected-bookings fast path.
  */
 export async function upsertDateOverrideAction(
   input: DateOverrideFormInput,
@@ -194,7 +202,7 @@ export async function upsertDateOverrideAction(
       return { formError: "Failed to save override. Please try again." };
     }
   } else {
-    // custom_hours: insert N window rows.
+    // unavailable: insert N window rows (BLOCKED times — inverse semantics).
     const rows = parsed.data.windows.map((w) => ({
       account_id: accountId,
       override_date: parsed.data.override_date,
@@ -235,8 +243,9 @@ export async function upsertDateOverrideAction(
 /**
  * Remove an override entirely (returns a date to its weekly rules).
  *
- * Deletes ALL rows for (account_id, override_date) so a "Custom hours" override
- * with multiple windows is removed atomically from the caller's perspective.
+ * Deletes ALL rows for (account_id, override_date) so an "Unavailable
+ * windows" override with multiple windows is removed atomically from the
+ * caller's perspective.
  */
 export async function deleteDateOverrideAction(
   override_date: string,

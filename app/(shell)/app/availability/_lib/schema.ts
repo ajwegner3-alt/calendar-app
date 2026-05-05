@@ -86,7 +86,12 @@ export const weeklyRulesSchema = z
 
 /**
  * Schema for upsertDateOverrideAction. Matches DateOverrideInput shape from
- * types.ts. Discriminator is "type" — "block" or "custom_hours".
+ * types.ts. Discriminator is "type" — "block" or "unavailable".
+ *
+ * Phase 32: variant renamed from "custom_hours" → "unavailable" to reflect
+ * inverse semantics (windows now describe BLOCKED times, not AVAILABLE
+ * times). DB row shape is unchanged: is_closed=false rows with
+ * start_minute/end_minute.
  */
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -100,14 +105,14 @@ export const dateOverrideSchema = z.discriminatedUnion("type", [
   }),
   z
     .object({
-      type: z.literal("custom_hours"),
+      type: z.literal("unavailable"),
       override_date: z
         .string()
         .regex(dateRegex, "Date must be in YYYY-MM-DD format."),
       windows: z
         .array(timeWindowSchema)
-        .min(1, "Add at least one time window or choose Block instead.")
-        .max(20, "Too many time windows for one day."),
+        .min(1, "Add at least one unavailable window or choose Block instead.")
+        .max(20, "Too many unavailable windows for one day."),
       note: z.string().max(200, "Note must be 200 characters or fewer.").optional(),
     })
     .superRefine((data, ctx) => {

@@ -37,7 +37,7 @@ export interface OverrideModalProps {
 
 const DEFAULT_WINDOW: TimeWindow = { start_minute: 540, end_minute: 1020 };
 
-type Mode = "block" | "custom_hours";
+type Mode = "block" | "unavailable";
 
 function existingFor(
   allOverrides: DateOverrideRow[],
@@ -56,7 +56,7 @@ function existingFor(
       end_minute: r.end_minute as number,
     }))
     .sort((a, b) => a.start_minute - b.start_minute);
-  return { mode: "custom_hours", windows, note: rows[0].note ?? "" };
+  return { mode: "unavailable", windows, note: rows[0].note ?? "" };
 }
 
 export function OverrideModal({
@@ -118,7 +118,7 @@ export function OverrideModal({
         mode === "block"
           ? { type: "block" as const, override_date: date, note: note || undefined }
           : {
-              type: "custom_hours" as const,
+              type: "unavailable" as const,
               override_date: date,
               windows,
               note: note || undefined,
@@ -196,10 +196,10 @@ export function OverrideModal({
             </Button>
             <Button
               type="button"
-              variant={mode === "custom_hours" ? "default" : "outline"}
+              variant={mode === "unavailable" ? "default" : "outline"}
               size="sm"
               onClick={() => {
-                setMode("custom_hours");
+                setMode("unavailable");
                 if (windows.length === 0) setWindows([{ ...DEFAULT_WINDOW }]);
               }}
               disabled={isPending}
@@ -208,7 +208,7 @@ export function OverrideModal({
             </Button>
           </div>
 
-          {mode === "custom_hours" && (
+          {mode === "unavailable" && (
             <div className="flex flex-col gap-2">
               <Label>Time windows</Label>
               {windows.map((w, i) => (

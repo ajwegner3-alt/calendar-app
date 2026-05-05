@@ -108,7 +108,7 @@ export function OverridesList({ overrides, onEdit }: OverridesListProps) {
               {g.is_closed ? (
                 <Badge variant="destructive">Blocked</Badge>
               ) : (
-                <Badge variant="secondary">Custom hours</Badge>
+                <Badge variant="secondary">Unavailable windows</Badge>
               )}
               <span className="text-muted-foreground text-sm">
                 {g.is_closed

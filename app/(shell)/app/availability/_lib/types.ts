@@ -5,7 +5,7 @@
  * - DayOfWeek: 0 (Sun) – 6 (Sat) literal union, matches Postgres convention
  * - TimeWindow: a single {start_minute, end_minute} window inside a day
  * - DateOverrideInput: client-facing discriminated union for the override form
- *   (one of "block" or "custom_hours"); the server action splits the union
+ *   (one of "block" or "unavailable"); the server action splits the union
  *   into the right DB row shape
  * - AvailabilityState: the loader's return value (used by Plan 04-04 + 04-05
  *   page-level Server Components)
@@ -51,7 +51,13 @@ export interface DateOverrideRow {
  * Form-side discriminated union for upsertDateOverrideAction.
  *
  * "block" = single is_closed=true row for the date.
- * "custom_hours" = one or more rows with start_minute/end_minute, no is_closed=true.
+ * "unavailable" = one or more rows with start_minute/end_minute, no is_closed=true.
+ *
+ * Phase 32 (AVAIL-01..03): Semantics are INVERSE — windows describe blocked
+ * times, not available times. Slot engine subtracts these from weekly base.
+ * Variant was previously labelled "custom_hours" with available-windows
+ * semantics; renamed in Plan 32-02 (the wipe migration in Plan 32-01 cleared
+ * the only legacy rows so the rename is safe).
  */
 export type DateOverrideInput =
   | {
@@ -60,7 +66,7 @@ export type DateOverrideInput =
       note?: string;
     }
   | {
-      type: "custom_hours";
+      type: "unavailable";
       override_date: string;
       windows: TimeWindow[];
       note?: string;
