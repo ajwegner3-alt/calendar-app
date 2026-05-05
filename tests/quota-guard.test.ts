@@ -147,6 +147,35 @@ describe("quota-guard", () => {
     void insertCalled; // suppress unused-var lint
   });
 
+  it("[#5 — Phase 31 regression] 80% warn log fires unchanged for booking categories", async () => {
+    // Regression guard: Plan 31-01 added new EmailCategory values + helper
+    // functions to quota-guard.ts. This test confirms the existing 80%
+    // GMAIL_SMTP_QUOTA_APPROACHING warn block was NOT accidentally moved,
+    // wrapped, or short-circuited by those edits — and that it covers the
+    // new booking categories, not just signup.
+    //
+    // The warn block dedupes via a module-level `warnedDays` Set keyed by
+    // UTC-day. Test #2 above already cached "today", so we advance the
+    // system clock to a fresh UTC day before exercising the warn path here.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-12-31T12:00:00Z"));
+    try {
+      setCountResult(170); // 170 = 85% of 200, above the 80% threshold
+
+      await expect(
+        checkAndConsumeQuota("booking-confirmation"),
+      ).resolves.toBeUndefined();
+
+      const warningCalls = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
+        String(args[0]).includes("GMAIL_SMTP_QUOTA_APPROACHING"),
+      );
+      expect(warningCalls.length).toBeGreaterThanOrEqual(1);
+      expect(String(warningCalls[0][0])).toContain("170/200");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("[#4] DB error on count: fails OPEN (returns 0, allows send)", async () => {
     // Simulate DB error on count query
     setCountResult(null, { message: "connection refused", code: "PGRST" });
