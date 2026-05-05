@@ -148,6 +148,111 @@ async function getAllConfirmedBookingsOnDate(
   );
 }
 
+/**
+ * Phase 32 Plan 02 (UI-coupled read-only helper): preview the affected
+ * bookings + remaining quota for a proposed inverse-override save.
+ *
+ * Called from the override modal on Save click — the response drives:
+ *   - the inline affected-bookings list (preview)
+ *   - the EMAIL-23 quota gate (Confirm button disabled when needed > remaining)
+ *   - the no-affected-bookings fast path (modal calls upsertDateOverrideAction
+ *     directly when affected.length === 0 — skipping commitInverseOverrideAction)
+ *
+ * Read-only: no DB writes, no sends. Safe to call repeatedly as the owner
+ * tweaks windows.
+ *
+ * Lives next to commitInverseOverrideAction (same file) because both are the
+ * UI-facing surface for inverse-override commits and share auth + the
+ * isFullDayBlock-vs-windows shape. Plan 32-03 deliberately deferred this
+ * helper to 32-02 because its return shape is UI-driven.
+ */
+const previewInputSchema = z.discriminatedUnion("isFullDayBlock", [
+  z.object({
+    isFullDayBlock: z.literal(true),
+    override_date: z
+      .string()
+      .regex(dateRegex, "Date must be in YYYY-MM-DD format."),
+    unavailableWindows: z.array(timeWindowSchema).length(0),
+  }),
+  z
+    .object({
+      isFullDayBlock: z.literal(false),
+      override_date: z
+        .string()
+        .regex(dateRegex, "Date must be in YYYY-MM-DD format."),
+      unavailableWindows: z
+        .array(timeWindowSchema)
+        .min(1, "Add at least one unavailable window or block the entire day.")
+        .max(20, "Too many unavailable windows for one day."),
+    })
+    .superRefine((data, ctx) => {
+      const sorted = [...data.unavailableWindows].sort(
+        (a, b) => a.start_minute - b.start_minute,
+      );
+      const overlap = findOverlap(sorted);
+      if (overlap) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["unavailableWindows"],
+          message: "Unavailable windows cannot overlap.",
+        });
+      }
+    }),
+]);
+
+export type PreviewAffectedBookingsResult =
+  | {
+      ok: true;
+      affected: AffectedBooking[];
+      remainingQuota: number;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+export async function previewAffectedBookingsAction(
+  rawInput: unknown,
+): Promise<PreviewAffectedBookingsResult> {
+  const parsed = previewInputSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]?.message ?? "Invalid input.";
+    return { ok: false, error: first };
+  }
+  const input = parsed.data;
+
+  const supabase = await createClient();
+  const ctx = await resolveOwnerContext(supabase);
+  if (!ctx) {
+    return { ok: false, error: "Account not found." };
+  }
+  const { accountId, accountTimezone } = ctx;
+
+  let affected: AffectedBooking[];
+  try {
+    affected = input.isFullDayBlock
+      ? await getAllConfirmedBookingsOnDate(
+          supabase,
+          accountId,
+          input.override_date,
+          accountTimezone,
+        )
+      : await getAffectedBookings(
+          supabase,
+          accountId,
+          input.override_date,
+          input.unavailableWindows,
+          accountTimezone,
+        );
+  } catch (err) {
+    console.error("[previewAffectedBookingsAction] query failed:", err);
+    return { ok: false, error: "Failed to load bookings. Please try again." };
+  }
+
+  const remainingQuota = await getRemainingDailyQuota();
+  return { ok: true, affected, remainingQuota };
+}
+
 export async function commitInverseOverrideAction(
   rawInput: unknown,
 ): Promise<CommitOverrideResult> {

@@ -38,7 +38,10 @@ export default async function AvailabilityPage() {
 
       <section aria-label="Date overrides">
         <h2 className="mb-4 text-lg font-medium">Date overrides</h2>
-        <DateOverridesSection overrides={state.overrides} />
+        <DateOverridesSection
+          overrides={state.overrides}
+          accountTimezone={state.account.timezone}
+        />
       </section>
 
       <Separator />

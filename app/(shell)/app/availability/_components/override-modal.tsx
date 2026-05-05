@@ -22,6 +22,11 @@ import {
   upsertDateOverrideAction,
   deleteDateOverrideAction,
 } from "../_lib/actions";
+import {
+  previewAffectedBookingsAction,
+  commitInverseOverrideAction,
+} from "../_lib/actions-batch-cancel";
+import type { AffectedBooking } from "../_lib/queries";
 import type { DateOverrideRow, TimeWindow } from "../_lib/types";
 
 import { TimeWindowPicker } from "./time-window-picker";
@@ -33,11 +38,25 @@ export interface OverrideModalProps {
   initialDate: string | null;
   /** All existing override rows for this account (used to seed Edit mode) */
   allOverrides: DateOverrideRow[];
+  /** IANA tz (e.g. "America/Chicago") used to format affected-booking times */
+  accountTimezone: string;
 }
 
 const DEFAULT_WINDOW: TimeWindow = { start_minute: 540, end_minute: 1020 };
 
 type Mode = "block" | "unavailable";
+
+/**
+ * Modal commit-flow state machine (Phase 32 Plan 02):
+ *   editing         — owner is editing the form; Save triggers preview
+ *   preview-loading — previewAffectedBookingsAction is in flight
+ *   preview-ready   — affected list rendered; Confirm/Back visible
+ *
+ * The "no-affected-bookings fast path" skips preview-ready and goes straight
+ * to upsertDateOverrideAction → close → toast (the snappy UX for the most
+ * common case where the owner is blocking a future date with no bookings).
+ */
+type CommitState = "editing" | "preview-loading" | "preview-ready";
 
 function existingFor(
   allOverrides: DateOverrideRow[],
@@ -59,11 +78,21 @@ function existingFor(
   return { mode: "unavailable", windows, note: rows[0].note ?? "" };
 }
 
+function formatLocalTime(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: timezone,
+  }).format(new Date(iso));
+}
+
 export function OverrideModal({
   open,
   onOpenChange,
   initialDate,
   allOverrides,
+  accountTimezone,
 }: OverrideModalProps) {
   const router = useRouter();
 
@@ -73,6 +102,11 @@ export function OverrideModal({
   const [note, setNote] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Phase 32: preview + quota gate state
+  const [commitState, setCommitState] = useState<CommitState>("editing");
+  const [affected, setAffected] = useState<AffectedBooking[]>([]);
+  const [remainingQuota, setRemainingQuota] = useState<number>(0);
 
   // Re-seed state every time the modal opens (initialDate may change).
   // External system being synchronized: the parent's open/initialDate props.
@@ -85,6 +119,8 @@ export function OverrideModal({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDate(seedDate);
     setError(null);
+    setCommitState("editing");
+    setAffected([]);
     if (seedDate) {
       const existing = existingFor(allOverrides, seedDate);
       if (existing) {
@@ -104,6 +140,8 @@ export function OverrideModal({
   }, [open, initialDate, allOverrides]);
 
   const isEdit = !!(date && existingFor(allOverrides, date));
+  const quotaError =
+    commitState === "preview-ready" && affected.length > remainingQuota;
 
   function save() {
     setError(null);
@@ -113,29 +151,113 @@ export function OverrideModal({
       return;
     }
 
+    // Step 1: preview affected bookings + remaining quota.
+    setCommitState("preview-loading");
     startTransition(async () => {
-      const payload =
+      const previewInput =
         mode === "block"
-          ? { type: "block" as const, override_date: date, note: note || undefined }
-          : {
-              type: "unavailable" as const,
+          ? {
+              isFullDayBlock: true as const,
               override_date: date,
-              windows,
-              note: note || undefined,
+              unavailableWindows: [] as TimeWindow[],
+            }
+          : {
+              isFullDayBlock: false as const,
+              override_date: date,
+              unavailableWindows: windows,
             };
 
-      const result = await upsertDateOverrideAction(payload);
-      if (result.formError) {
+      const preview = await previewAffectedBookingsAction(previewInput);
+      if (!preview.ok) {
+        setCommitState("editing");
+        setError(preview.error);
+        toast.error(preview.error);
+        return;
+      }
+
+      // Fast path: no confirmed bookings inside the proposed windows. Skip the
+      // preview UI entirely and call the existing upsertDateOverrideAction
+      // (no quota gate needed — it sends nothing).
+      if (preview.affected.length === 0) {
+        const payload =
+          mode === "block"
+            ? {
+                type: "block" as const,
+                override_date: date,
+                note: note || undefined,
+              }
+            : {
+                type: "unavailable" as const,
+                override_date: date,
+                windows,
+                note: note || undefined,
+              };
+
+        const result = await upsertDateOverrideAction(payload);
+        if (result.formError) {
+          setCommitState("editing");
+          toast.error(result.formError);
+          setError(result.formError);
+          return;
+        }
+        if (result.fieldErrors?.windows?.[0]) {
+          setCommitState("editing");
+          toast.error(result.fieldErrors.windows[0]);
+          setError(result.fieldErrors.windows[0]);
+          return;
+        }
+        toast.success(isEdit ? "Override updated." : "Override added.");
+        router.refresh();
+        onOpenChange(false);
+        return;
+      }
+
+      // Slow path: at least one confirmed booking will be cancelled. Show the
+      // inline preview + quota gate; owner must Confirm to proceed.
+      setAffected(preview.affected);
+      setRemainingQuota(preview.remainingQuota);
+      setCommitState("preview-ready");
+    });
+  }
+
+  function handleConfirm() {
+    if (quotaError) return; // belt-and-suspenders; button is also disabled
+
+    startTransition(async () => {
+      const result = await commitInverseOverrideAction({
+        isFullDayBlock: mode === "block",
+        override_date: date,
+        unavailableWindows: mode === "unavailable" ? windows : [],
+        affectedBookingIds: affected.map((b) => b.id),
+        reason: note || undefined,
+      });
+
+      if (!result.ok) {
+        if ("quotaError" in result) {
+          // Quota drifted between preview and confirm — refresh the UI gate.
+          setRemainingQuota(result.remaining);
+          // affected may have grown via race-safe re-query; keep the user's
+          // approved list as-is (they can click Save again if they want a
+          // fresh preview).
+          toast.error(
+            `Quota changed. ${result.needed} email${result.needed === 1 ? "" : "s"} needed, ${result.remaining} remaining today.`,
+          );
+          return;
+        }
         toast.error(result.formError);
-        setError(result.formError);
         return;
       }
-      if (result.fieldErrors?.windows?.[0]) {
-        toast.error(result.fieldErrors.windows[0]);
-        setError(result.fieldErrors.windows[0]);
-        return;
+
+      const cancelMsg =
+        result.cancelledCount > 0
+          ? `Saved. Cancelled ${result.cancelledCount} booking${result.cancelledCount === 1 ? "" : "s"}.`
+          : "Saved.";
+      toast.success(cancelMsg);
+      if (result.emailFailures.length > 0) {
+        toast.warning(
+          `${result.emailFailures.length} email${result.emailFailures.length === 1 ? "" : "s"} failed to send. Check the bookings page.`,
+        );
       }
-      toast.success(isEdit ? "Override updated." : "Override added.");
       router.refresh();
       onOpenChange(false);
     });
@@ -155,13 +277,17 @@ export function OverrideModal({
     });
   }
 
+  const showWindowsList = mode === "unavailable";
+  const inPreview = commitState === "preview-ready";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit override" : "Add override"}</DialogTitle>
           <DialogDescription>
-            Block a specific day or replace its hours just for that date.
+            Block an entire day or block specific time windows just for that
+            date.
           </DialogDescription>
         </DialogHeader>
 
@@ -173,7 +299,7 @@ export function OverrideModal({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              disabled={isPending || isEdit}
+              disabled={isPending || isEdit || inPreview}
             />
             {isEdit && (
               <p className="text-muted-foreground text-xs">
@@ -183,16 +309,18 @@ export function OverrideModal({
           </div>
 
           {/* Mode tabs implemented as two buttons (no shadcn Tabs primitive
-              installed; two-button toggle is sufficient and avoids an extra dep). */}
+              installed; two-button toggle is sufficient and avoids an extra
+              dep). Phase 32: "Block entire day" and "Add unavailable windows"
+              — toggle hides+preserves the windows list state. */}
           <div className="flex gap-2">
             <Button
               type="button"
               variant={mode === "block" ? "default" : "outline"}
               size="sm"
               onClick={() => setMode("block")}
-              disabled={isPending}
+              disabled={isPending || inPreview}
             >
-              Block this day
+              Block entire day
             </Button>
             <Button
               type="button"
@@ -202,15 +330,19 @@ export function OverrideModal({
                 setMode("unavailable");
                 if (windows.length === 0) setWindows([{ ...DEFAULT_WINDOW }]);
               }}
-              disabled={isPending}
+              disabled={isPending || inPreview}
             >
-              Custom hours
+              Add unavailable windows
             </Button>
           </div>
 
-          {mode === "unavailable" && (
+          {showWindowsList && (
             <div className="flex flex-col gap-2">
-              <Label>Time windows</Label>
+              <Label>Unavailable windows</Label>
+              <p className="text-muted-foreground text-xs">
+                These windows will be blocked. Slots inside these times
+                won&apos;t appear on your booking page.
+              </p>
               {windows.map((w, i) => (
                 <TimeWindowPicker
                   key={i}
@@ -226,7 +358,7 @@ export function OverrideModal({
                       ? () => setWindows((prev) => prev.filter((_, j) => j !== i))
                       : undefined
                   }
-                  disabled={isPending}
+                  disabled={isPending || inPreview}
                 />
               ))}
               <Button
@@ -237,7 +369,7 @@ export function OverrideModal({
                 onClick={() =>
                   setWindows((prev) => [...prev, { ...DEFAULT_WINDOW }])
                 }
-                disabled={isPending}
+                disabled={isPending || inPreview}
               >
                 <Plus className="mr-2 size-4" />
                 Add window
@@ -254,15 +386,56 @@ export function OverrideModal({
               maxLength={200}
               rows={2}
               placeholder="e.g. Vacation, Trade show"
-              disabled={isPending}
+              disabled={isPending || inPreview}
             />
           </div>
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && !inPreview && (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          )}
+
+          {inPreview && (
+            <div className="border-t mt-2 pt-4 flex flex-col gap-2">
+              <p className="text-sm font-medium">
+                Saving will cancel {affected.length} booking
+                {affected.length === 1 ? "" : "s"}:
+              </p>
+              <ul
+                className="space-y-2 max-h-64 overflow-y-auto"
+                aria-label="Affected bookings"
+              >
+                {affected.map((b) => (
+                  <li
+                    key={b.id}
+                    className="text-sm flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
+                  >
+                    <span className="font-medium">{b.booker_name}</span>
+                    <span className="text-muted-foreground">
+                      {formatLocalTime(b.start_at, accountTimezone)} &ndash;{" "}
+                      {formatLocalTime(b.end_at, accountTimezone)}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {b.event_type_name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {quotaError && (
+                <p className="text-sm text-red-600 mt-2" role="alert">
+                  {affected.length} email{affected.length === 1 ? "" : "s"}{" "}
+                  needed, {remainingQuota} remaining today. Quota resets at UTC
+                  midnight. Wait until tomorrow or contact bookers manually.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-          {isEdit ? (
+          {isEdit && !inPreview ? (
             <Button
               type="button"
               variant="ghost"
@@ -275,17 +448,46 @@ export function OverrideModal({
             <span />
           )}
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="button" onClick={save} disabled={isPending}>
-              {isPending ? "Saving..." : isEdit ? "Update" : "Add override"}
-            </Button>
+            {inPreview ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCommitState("editing")}
+                  disabled={isPending}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleConfirm}
+                  disabled={quotaError || isPending}
+                >
+                  {isPending
+                    ? "Cancelling..."
+                    : `Confirm — cancel ${affected.length} booking${affected.length === 1 ? "" : "s"}`}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button type="button" onClick={save} disabled={isPending}>
+                  {isPending
+                    ? "Saving..."
+                    : isEdit
+                      ? "Update"
+                      : "Add override"}
+                </Button>
+              </>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

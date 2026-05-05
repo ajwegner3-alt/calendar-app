@@ -13,9 +13,15 @@ import { OverrideModal } from "./override-modal";
 
 export interface DateOverridesSectionProps {
   overrides: DateOverrideRow[];
+  /** IANA tz (e.g. "America/Chicago") used by the override modal to format
+   *  affected-booking times in the inverse-override preview. */
+  accountTimezone: string;
 }
 
-export function DateOverridesSection({ overrides }: DateOverridesSectionProps) {
+export function DateOverridesSection({
+  overrides,
+  accountTimezone,
+}: DateOverridesSectionProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -47,6 +53,7 @@ export function DateOverridesSection({ overrides }: DateOverridesSectionProps) {
         onOpenChange={setModalOpen}
         initialDate={selectedDate}
         allOverrides={overrides}
+        accountTimezone={accountTimezone}
       />
     </div>
   );
