@@ -1,8 +1,14 @@
-import { queryBookings, listEventTypesForFilter } from "./_lib/queries";
+import { createClient } from "@/lib/supabase/server";
+import {
+  queryBookings,
+  listEventTypesForFilter,
+  countUnsentConfirmations,
+} from "./_lib/queries";
 import type { BookingStatusFilter } from "./_lib/queries";
 import { BookingsTable } from "./_components/bookings-table";
 import { BookingsFilters } from "./_components/bookings-filters";
 import { BookingsPagination } from "./_components/bookings-pagination";
+import { UnsentConfirmationsBanner } from "./_components/unsent-confirmations-banner";
 
 const PAGE_SIZE = 25;
 
@@ -43,7 +49,25 @@ export default async function BookingsPage({
       ? [sp.event_type]
       : [];
 
-  const [{ rows, total }, eventTypes] = await Promise.all([
+  // Phase 31 (EMAIL-24): resolve accountId via the canonical inline accounts
+  // lookup (matches load-month-bookings.ts pattern) so countUnsentConfirmations
+  // can scope to this account. The bookings table itself is RLS-scoped, but
+  // the count helper takes accountId explicitly — defense in depth + index hit.
+  const supabase = await createClient();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const ownerSub = claimsData?.claims?.sub;
+  let accountId: string | null = null;
+  if (ownerSub) {
+    const { data: accounts } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("owner_user_id", ownerSub)
+      .is("deleted_at", null)
+      .limit(1);
+    accountId = accounts?.[0]?.id ?? null;
+  }
+
+  const [{ rows, total }, eventTypes, unsentCount] = await Promise.all([
     queryBookings({
       statusFilter,
       from: sp.from ?? null,
@@ -54,6 +78,7 @@ export default async function BookingsPage({
       pageSize: PAGE_SIZE,
     }),
     listEventTypesForFilter(),
+    accountId ? countUnsentConfirmations(accountId) : Promise.resolve(0),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -66,6 +91,9 @@ export default async function BookingsPage({
           {total} {total === 1 ? "booking" : "bookings"} matching current filters
         </p>
       </header>
+      {/* Phase 31 (EMAIL-24): self-suppressing banner — renders only when
+          unsentCount > 0. No always-visible widget per locked CONTEXT decision. */}
+      <UnsentConfirmationsBanner count={unsentCount} />
       <BookingsFilters
         initial={{
           status: statusFilter,

@@ -115,3 +115,33 @@ export async function listEventTypesForFilter(): Promise<
     .order("name", { ascending: true });
   return data ?? [];
 }
+
+/**
+ * Phase 31 (EMAIL-24): count bookings whose confirmation email was refused by
+ * the quota guard for the given account. Backed by the partial index
+ * `bookings_confirmation_email_unsent_idx` (Plan 31-01) — keeps this cheap
+ * even at high booking volume because the index only covers
+ * confirmation_email_sent=false rows.
+ *
+ * Used by the /app/bookings dashboard banner. Does NOT filter by date so the
+ * owner sees the full backlog of unsent confirmations.
+ *
+ * Returns 0 on error (banner self-suppresses) — a transient DB hiccup must
+ * NOT swallow the rest of the page.
+ */
+export async function countUnsentConfirmations(accountId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("account_id", accountId)
+    .eq("confirmation_email_sent", false);
+  if (error) {
+    console.error("[BOOKINGS_QUERY_FAILED] countUnsentConfirmations", {
+      account_id: accountId,
+      error: error.message,
+    });
+    return 0;
+  }
+  return count ?? 0;
+}
