@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashToken } from "@/lib/bookings/tokens";
 import { sendCancelEmails } from "@/lib/email/send-cancel-emails";
+import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
 
 export interface CancelBookingArgs {
   /** UUID of the booking to cancel. Caller is responsible for any prior auth
@@ -36,6 +37,14 @@ export type CancelBookingResult =
         booker_email: string;
         booker_timezone: string;
       };
+      /** Phase 31 (EMAIL-24): set when the email send leg of the cancel
+       *  failed AFTER the DB UPDATE committed.
+       *    - "quota": daily Gmail SMTP cap was hit; owner UI surfaces the
+       *               Gmail-fallback callout (Plan 31-03)
+       *    - "send":  arbitrary non-quota SMTP error; owner UI surfaces a
+       *               generic "Cancel succeeded but email failed" notice
+       *  Absent on the happy path. */
+      emailFailed?: "quota" | "send";
     }
   | {
       ok: false;
@@ -135,12 +144,14 @@ export async function cancelBooking(
     return { ok: false, reason: "not_active" };
   }
 
-  // ── 4. Fire-and-forget cancellation emails (BOTH parties; CONTEXT lock) ───
+  // ── 4. Cancellation emails (BOTH parties; CONTEXT lock) ───────────────────
+  // Phase 31 (EMAIL-24): switched from after() to await so QuotaExceededError
+  // bubbles synchronously and the owner UI can surface the Gmail-fallback
+  // callout via the emailFailed: "quota" return field. Non-quota errors are
+  // also caught here so the cancel itself (already committed) doesn't fail.
+  //
   // Use the pre-fetched booking + event_type + account snapshot — these are the
-  // values at the moment the cancel succeeded. Email failure must not block.
-  // supabase-js returns nested join objects either as a single row or as
-  // arrays depending on the join cardinality; force shape via array index.
-  // event_types and accounts are 1:1 from the perspective of bookings.
+  // values at the moment the cancel succeeded.
   const eventType = Array.isArray(pre.event_types)
     ? pre.event_types[0]
     : pre.event_types;
@@ -148,13 +159,9 @@ export async function cancelBooking(
     ? pre.accounts[0]
     : pre.accounts;
 
-  // Plan 08-02: scheduled via next/server after() instead of `void` so the
-  // serverless worker is kept alive until the email orchestrator resolves.
-  // sendCancelEmails is called from request scopes only (the public /api/cancel
-  // Route Handler and the cancelBookingAsOwner Server Action), both of which
-  // satisfy after()'s request-context requirement.
-  after(() =>
-    sendCancelEmails({
+  let emailFailed: "quota" | "send" | undefined;
+  try {
+    await sendCancelEmails({
       booking: {
         id: pre.id,
         start_at: pre.start_at,
@@ -183,8 +190,19 @@ export async function cancelBooking(
       actor,
       reason,
       appUrl,
-    }),
-  );
+    });
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      emailFailed = "quota";
+      // logQuotaRefusal already wrote inside the inner sender; no double-log.
+    } else {
+      emailFailed = "send";
+      console.error("[CANCEL_EMAIL_FAILED]", {
+        booking_id: pre.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   // ── 5. Fire-and-forget audit row (Open Question C resolution) ──────────────
   // booking_events.event_type='cancelled', actor=booker|owner, metadata jsonb
@@ -220,5 +238,6 @@ export async function cancelBooking(
       booker_email: pre.booker_email,
       booker_timezone: pre.booker_timezone,
     },
+    ...(emailFailed ? { emailFailed } : {}),
   };
 }

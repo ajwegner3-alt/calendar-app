@@ -39,11 +39,12 @@
  * justification to /api/bookings and /api/cancel.
  */
 
-import { after, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateRawToken, hashToken } from "@/lib/booking-tokens";
 import { sendReminderBooker } from "@/lib/email/send-reminder-booker";
+import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" } as const;
 
@@ -220,57 +221,81 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // ── 5. Fire-and-forget email send AFTER response is flushed ─────────────
-  // after() keeps the worker alive past the response so the emails actually
-  // ship on Vercel serverless. Errors per email are caught + logged so a
-  // single SMTP failure doesn't kill the rest of the batch.
+  // ── 5. Email send loop (inline; no after() wrapper) ──────────────────────
+  // Phase 31 (EMAIL-21): moved out of after() so the per-booking quota_refused
+  // and reminders_sent counters are LIVE in the JSON response. The cron is
+  // server-internal (Vercel Cron + cron-job.org); no human waits on the
+  // response, and live counters give better operability than buried log
+  // emissions.
+  //
+  // Per-booking error handling:
+  //   - QuotaExceededError → continue iterating; accumulate quota_refused.
+  //     reminder_sent_at is NOT cleared (v1 posture per RESEARCH "Cron Behavior
+  //     Design"). logQuotaRefusal already wrote inside sendReminderBooker — no
+  //     double-log.
+  //   - Other errors → log and continue (single SMTP hiccup does not kill the
+  //     batch, matches prior posture).
   const appUrl = resolveAppUrl();
-  after(async () => {
-    for (const c of claimed) {
-      const tokens = tokensByBookingId.get(c.id);
-      if (!tokens) continue; // defensive — should never happen
-      try {
-        await sendReminderBooker({
-          booking: {
-            id: c.id,
-            start_at: c.start_at,
-            end_at: c.end_at,
-            booker_name: c.booker_name,
-            booker_email: c.booker_email,
-            booker_timezone: c.booker_timezone,
-            answers: c.answers,
-          },
-          eventType: {
-            name: c.event_types.name,
-            duration_minutes: c.event_types.duration_minutes,
-            location: c.event_types.location,
-          },
-          account: {
-            id: c.account_id, // Phase 31: required for quota refusal log
-            slug: c.accounts.slug,
-            name: c.accounts.name,
-            logo_url: c.accounts.logo_url,
-            brand_primary: c.accounts.brand_primary,
-            owner_email: c.accounts.owner_email,
-            reminder_include_custom_answers: c.accounts.reminder_include_custom_answers,
-            reminder_include_location: c.accounts.reminder_include_location,
-            reminder_include_lifecycle_links: c.accounts.reminder_include_lifecycle_links,
-          },
-          rawCancelToken: tokens.rawCancel,
-          rawRescheduleToken: tokens.rawReschedule,
-          appUrl,
-        });
-      } catch (err) {
-        // RESEARCH Pitfall 4 anti-pattern note: do NOT clear reminder_sent_at
-        // on failure (that would re-send next tick = retry spam). Manual
-        // remediation by the owner via dashboard (out of scope for v1).
-        console.error("[cron/send-reminders] send error", { bookingId: c.id, err });
+  let remindersSent = 0;
+  let quotaRefused = 0;
+
+  for (const c of claimed) {
+    const tokens = tokensByBookingId.get(c.id);
+    if (!tokens) continue; // defensive — should never happen
+    try {
+      await sendReminderBooker({
+        booking: {
+          id: c.id,
+          start_at: c.start_at,
+          end_at: c.end_at,
+          booker_name: c.booker_name,
+          booker_email: c.booker_email,
+          booker_timezone: c.booker_timezone,
+          answers: c.answers,
+        },
+        eventType: {
+          name: c.event_types.name,
+          duration_minutes: c.event_types.duration_minutes,
+          location: c.event_types.location,
+        },
+        account: {
+          id: c.account_id, // Phase 31: required for quota refusal log
+          slug: c.accounts.slug,
+          name: c.accounts.name,
+          logo_url: c.accounts.logo_url,
+          brand_primary: c.accounts.brand_primary,
+          owner_email: c.accounts.owner_email,
+          reminder_include_custom_answers: c.accounts.reminder_include_custom_answers,
+          reminder_include_location: c.accounts.reminder_include_location,
+          reminder_include_lifecycle_links: c.accounts.reminder_include_lifecycle_links,
+        },
+        rawCancelToken: tokens.rawCancel,
+        rawRescheduleToken: tokens.rawReschedule,
+        appUrl,
+      });
+      remindersSent++;
+    } catch (err) {
+      if (err instanceof QuotaExceededError) {
+        quotaRefused++;
+        // Do NOT clear reminder_sent_at — v1 posture (RESEARCH Pitfall 4).
+        // Subsequent bookings in this batch will also refuse and accumulate.
+        continue;
       }
+      // RESEARCH Pitfall 4 anti-pattern note: do NOT clear reminder_sent_at
+      // on failure (that would re-send next tick = retry spam). Manual
+      // remediation by the owner via dashboard (out of scope for v1).
+      console.error("[cron/send-reminders] send error", { bookingId: c.id, err });
     }
-  });
+  }
 
   return Response.json(
-    { ok: true, scanned: normalized.length, claimed: claimed.length },
+    {
+      ok: true,
+      scanned: normalized.length,
+      claimed: claimed.length,
+      reminders_sent: remindersSent,
+      quota_refused: quotaRefused,
+    },
     { headers: NO_STORE },
   );
 }

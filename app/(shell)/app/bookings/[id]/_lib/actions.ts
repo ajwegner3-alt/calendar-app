@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cancelBooking } from "@/lib/bookings/cancel";
 import { hashToken } from "@/lib/bookings/tokens";
 import { sendReminderBooker } from "@/lib/email/send-reminder-booker";
+import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
 
 /**
  * Server Action result shape — narrow discriminated union.
@@ -108,7 +109,16 @@ export async function cancelBookingAsOwner(
 // sendReminderForBookingAction
 // ---------------------------------------------------------------------------
 
-export type SendReminderForBookingResult = { ok: true } | { error: string };
+export type SendReminderForBookingResult =
+  | { ok: true }
+  | {
+      error: string;
+      /** Phase 31 (EMAIL-24): set to "EMAIL_QUOTA_EXCEEDED" when the daily
+       *  Gmail SMTP cap was hit. Plan 31-03 UI uses this to switch from a
+       *  toast to an inline Gmail-fallback callout. Absent for non-quota
+       *  failures. */
+      errorCode?: "EMAIL_QUOTA_EXCEEDED";
+    };
 
 /**
  * OWNER-INITIATED manual reminder send.
@@ -232,6 +242,14 @@ export async function sendReminderForBookingAction(
       appUrl,
     });
   } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      // Phase 31 (EMAIL-24): locked owner-error copy with Gmail-fallback
+      // wording. logQuotaRefusal already wrote inside sendReminderBooker.
+      return {
+        error: `Daily email quota reached (${err.count}/${err.cap}). Resets at UTC midnight. You can use normal Gmail to send the reminder manually.`,
+        errorCode: "EMAIL_QUOTA_EXCEEDED",
+      };
+    }
     console.error("[sendReminderForBookingAction] send error:", err);
     return { error: "Reminder send failed. Please try again." };
   }

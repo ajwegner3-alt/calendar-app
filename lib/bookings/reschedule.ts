@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateBookingTokens } from "@/lib/bookings/tokens";
 import { sendRescheduleEmails } from "@/lib/email/send-reschedule-emails";
+import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
 
 export interface RescheduleBookingArgs {
   /** UUID of the booking to reschedule. Caller (Plan 06-04 public route) hashes
@@ -35,6 +36,10 @@ export type RescheduleBookingResult =
         booker_email: string;
         booker_timezone: string;
       };
+      /** Phase 31 (EMAIL-24): set when the email send leg of the reschedule
+       *  failed AFTER the DB UPDATE committed. Same semantics as
+       *  CancelBookingResult.emailFailed. */
+      emailFailed?: "quota" | "send";
     }
   | {
       ok: false;
@@ -176,7 +181,9 @@ export async function rescheduleBooking(
     return { ok: false, reason: "not_active" };
   }
 
-  // ── 4. Fire-and-forget reschedule emails ──────────────────────────────────
+  // ── 4. Reschedule emails ─────────────────────────────────────────────────
+  // Phase 31 (EMAIL-24): switched from after() to await so QuotaExceededError
+  // bubbles synchronously and the owner UI can surface emailFailed: "quota".
   // supabase-js join shape varies by foreign key direction and PostgREST version;
   // defensive normalization (Array.isArray ? [0] : ...) is the established pattern.
   const eventType = Array.isArray(pre.event_types)
@@ -186,12 +193,9 @@ export async function rescheduleBooking(
     ? pre.accounts[0]
     : pre.accounts;
 
-  // Plan 08-02: scheduled via next/server after() instead of `void` so the
-  // serverless worker keeps the email orchestrator alive past the response
-  // flush. Same context note as cancel.ts: this function is only invoked from
-  // request-scoped callers (the public /api/reschedule Route Handler).
-  after(() =>
-    sendRescheduleEmails({
+  let emailFailed: "quota" | "send" | undefined;
+  try {
+    await sendRescheduleEmails({
       booking: {
         id: pre.id,
         start_at: updated.start_at, // NEW start (post-rotation)
@@ -219,8 +223,19 @@ export async function rescheduleBooking(
       rawCancelToken: fresh.rawCancel,
       rawRescheduleToken: fresh.rawReschedule,
       appUrl,
-    }),
-  );
+    });
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      emailFailed = "quota";
+      // logQuotaRefusal already wrote inside the inner sender; no double-log.
+    } else {
+      emailFailed = "send";
+      console.error("[RESCHEDULE_EMAIL_FAILED]", {
+        booking_id: pre.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   // ── 5. Fire-and-forget audit row ──────────────────────────────────────────
   // Plan 09-01: scheduled via next/server after() (matches sendRescheduleEmails
@@ -253,5 +268,6 @@ export async function rescheduleBooking(
       booker_email: pre.booker_email,
       booker_timezone: pre.booker_timezone,
     },
+    ...(emailFailed ? { emailFailed } : {}),
   };
 }
