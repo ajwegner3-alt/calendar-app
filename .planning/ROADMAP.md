@@ -142,12 +142,12 @@ Plans:
 4. The public booking page shows no slots inside newly-created unavailable windows; slots outside the windows continue to appear normally; buffer-after-minutes and the EXCLUDE GIST constraint still apply.
 5. When saving unavailable windows that overlap existing confirmed bookings, the editor shows a warning preview listing every affected booking; if the batch would exceed remaining daily email quota, the commit button is disabled with a clear quota error; on confirmation the affected bookings are cancelled (status → `cancelled`, audit row, .ics CANCEL email with rebook CTA link to booker, owner notification).
 
-**Plans:** TBD (likely 3 plans: DB/slot-engine layer, editor UI, auto-cancel + email lifecycle)
+**Plans:** 3 plans
 
 Plans:
-- [ ] 32-01: Slot engine MINUS-semantics for inverse overrides + `date_overrides` schema update
-- [ ] 32-02: Date-override editor UI (unavailable windows mode + full-day toggle + affected-booking preview)
-- [ ] 32-03: Auto-cancel lifecycle on commit (quota pre-flight + cancel batch + rebook CTA email)
+- [ ] 32-01-PLAN.md — Slot engine MINUS semantics + wipe-and-flip migration for legacy custom_hours rows + subtractWindows helper (Wave 1)
+- [ ] 32-03-PLAN.md — Server action surface: skipOwnerEmail flag on cancelBooking + getAffectedBookings query + commitInverseOverrideAction with HARD quota pre-flight + race-safe re-query (Wave 2)
+- [ ] 32-02-PLAN.md — Override modal rewrite: unavailable-windows mode + Block-entire-day hide+preserve toggle + inline affected-bookings preview + EMAIL-23 quota gate UX (Wave 3, has human-verify checkpoint)
 
 ---
 
