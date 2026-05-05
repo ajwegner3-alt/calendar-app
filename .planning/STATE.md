@@ -1,47 +1,26 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — **PHASE 30 CLOSED. v1.5 MILESTONE SHIPPED.** Plan 30-02 live-verify checkpoint: Andrew approved with `"Everything looks good"` (blanket approval mapped to BOOKER-01..05 per Plan 28-03 Andrew-quote-on-record precedent) on production at `https://calendar-app-xi-smoky.vercel.app/nsi/30-minute-consultation` (deploy SHA `8b45c50`). Single metadata commit `3118d68` (+143 lines: SUMMARY only; zero code edits). gsd-verifier passed 5/5 must-haves against codebase: `booking-shell.tsx:180` confirms `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]`; placeholder/conditional-mount + RHF reset key intact at lines 255–270; `max-w-4xl` at line 150; embed wrapper unforked (`embed-shell.tsx:4,107` renders `<BookingShell>` verbatim — single-column at iframe widths inferred-correct via same `lg:` breakpoint). v1.5 final tally: 3 phases (28+29+30), 6 plans, 14 requirements (BUFFER-01..06 + BRAND-01..03 + BOOKER-01..05), shipped 2026-05-04 → 2026-05-05 (~2 calendar days). Pre-existing `02-VERIFICATION.md` drift remains UNSTAGED through entire v1.5 (hygiene preserved across 6 plans).
+**Last updated:** 2026-05-05 — **v1.5 MILESTONE ARCHIVED.** All v1.5 artifacts moved to `.planning/milestones/`: `v1.5-ROADMAP.md` (full archive), `v1.5-REQUIREMENTS.md` (14/14 shipped), `v1.5-MILESTONE-AUDIT.md` (passed 5/5 phases × 5/5 must-haves; 6/6 cross-phase risks cleared; 3/3 E2E flows traced clean). PROJECT.md evolved (audience term updated to "service businesses"; v1.5 requirements moved to Validated; 9 new Key Decisions added covering LD-01/04/07, drain-waiver pattern, mid-execution Rule 4 pattern, smallest-diff override pattern, verification-only plan reuse, single grid owner UI pattern, reserved-column pattern, marathon QA 5th deferral). MILESTONES.md updated with v1.5 entry (top of file). ROADMAP.md collapsed v1.5 details to one-line summary linking to archive. REQUIREMENTS.md DELETED (fresh one created by next `/gsd:new-milestone` invocation). Git tag `v1.5` created and pushed. Pre-existing `02-VERIFICATION.md` working-tree drift preserved unstaged through entire v1.5 + archive (hygiene perfect across 6 plans + milestone close).
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-03 after v1.5 milestone start)
+See: `.planning/PROJECT.md` (updated 2026-05-05 after v1.5 milestone shipped)
 
-**Core value:** A visitor lands on a service-based business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
+**Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.5 SHIPPED 2026-05-05. Next: `/gsd:audit-milestone` to verify cross-phase integration before archiving v1.5 → milestones/v1.5-ROADMAP.md, then `/gsd:complete-milestone` to start v1.6 (or `/gsd:new-milestone` if no carryover backlog left to address).
+**Current focus:** Awaiting next milestone. Run `/gsd:new-milestone` to start v1.6 (or whatever the next version is) — questioning → research → requirements → roadmap.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.5 SHIPPED 2026-05-05 (started 2026-05-03; ~2 calendar days end-to-end).
-**Phase:** Phase 30 ✅ CLOSED (2/2 plans complete; verifier 5/5 must-haves passed).
-**Plan:** 30-02 — Andrew live-verify smoke ✅ SHIPPED 2026-05-05.
-**Status:** v1.5 milestone CLOSED. Phase 30 verifier passed 5/5 against codebase + Andrew's quote-on-record. BOOKER-01..05 all shipped. Andrew's verbatim approval: `"Everything looks good"` (blanket sweep covering all 7 mandatory checks A–G at 1024/1280/1440 desktop + mobile real-device). Phase commits: `8b45c50` feat (Plan 30-01 code), `f83119f` docs (30-01 metadata), `7aaad37` docs (30-02 pause-state — pre-resume), `3118d68` docs (30-02 SUMMARY post-approval). 30-VERIFICATION.md created with file+line evidence per must-have (created by gsd-verifier this session). Pre-existing `02-VERIFICATION.md` drift remained UNSTAGED across all 4 commits — hygiene perfect.
-**Last activity:** 2026-05-05 — Plan 30-02 resumed from prior pause via `/gsd:execute-phase 30`. Re-presented checkpoint (Andrew clarified A–F desktop / G mobile / H optional split first), then approved with blanket "Everything looks good". Continuation agent wrote 30-02-SUMMARY.md with quote-on-record mapping table covering BOOKER-01..05; single metadata commit `3118d68` pushed to main. Verifier passed 5/5 against booking-shell.tsx + embed-shell.tsx evidence. v1.5 closed.
+**Milestone:** v1.5 ✅ SHIPPED 2026-05-05 and ARCHIVED. No active milestone.
+**Phase:** None active.
+**Plan:** None active.
+**Status:** Ready to start next milestone via `/gsd:new-milestone`.
+**Last activity:** 2026-05-05 — `/gsd:complete-milestone 1.5` archived v1.5 (full ROADMAP + REQUIREMENTS + AUDIT moved to `milestones/`); PROJECT.md evolved; ROADMAP.md collapsed; MILESTONES.md updated; git tag `v1.5` created and pushed. Andrew handed off to next milestone planning.
 
-**Drain gate (CP-03) — WAIVED 2026-05-04 by Andrew (preserved for record):**
-- Original gate: T0 + 30 min = `2026-05-04T00:57:49Z UTC` minimum
-- Waiver rationale: No active booking traffic on the product (single-tenant nsi only, no public booker requests in flight). The drain protects warm pre-28-01 `/api/slots` instances from 500'ing on a dropped column; with zero traffic, those instances stay cold and serverless idles them out (~15 min) before any request lands. Andrew confirmed nobody is booking and accepted the small residual risk (bots / monitoring / self-traffic during deploy window).
-- Decision logged at `2026-05-04T~00:35Z`. Plan 28-02 launched at `2026-05-04T00:36:24Z` (~9 min after T0).
-- Outcome: No regression detected. /api/slots remained HTTP 200 throughout; no 500s observed.
-
-**Phase queue (v1.5):**
-- [X] Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop (3 plans — BUFFER-01..06 shipped 2026-05-04)
-  - [X] Plan 28-01: Backfill, Rewire, and Form (shipped 2026-05-04, 3 commits)
-  - [X] Plan 28-02: DROP migration + availability cleanup (shipped 2026-05-04, 3 commits)
-  - [X] Plan 28-03: Divergence tests + smoke (shipped 2026-05-04, 1 metadata commit — verification only; no code edits required)
-- [X] Phase 29: Audience Rebrand (1 plan — BRAND-01..03 shipped 2026-05-04)
-  - [X] Plan 29-01: Audience copy scrub (shipped 2026-05-04, 1 content commit `0659c0e` + 1 metadata commit)
-- [X] Phase 30: Public Booker 3-Column Desktop Layout (2 plans — BOOKER-01..05 all shipped 2026-05-04..05)
-  - [X] Plan 30-01: Booker layout restructure (shipped 2026-05-04, 1 feat commit `8b45c50`; BOOKER-01..04 closed)
-  - [X] Plan 30-02: Live-verify smoke checkpoint (shipped 2026-05-05, 1 metadata commit `3118d68`; BOOKER-05 closed; verifier 5/5)
-
-**Phase 28 closing summary:** 3 plans, 7 commits total (3 + 3 + 1), executed across 2026-05-04. Two-step DROP (CP-03) completed end-to-end with drain waived for zero-traffic. Asymmetric per-booking + per-candidate buffer math (LD-04) live in production. accounts.buffer_minutes permanently removed from DB. Owner editor + list table expose buffer_after_minutes. BUFFER-06 divergence proven by both unit test (3/3) and Andrew's live cross-event verification.
-
-**Phase 29 closing summary:** 1 plan, 2 commits (1 batched content + 1 metadata), executed 2026-05-04 in ~2 min. 4 files, 7-line diff. Three independent grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. LD-07 deliberate override executed cleanly: inert dev comment scrubbed, runtime UI byte-identical. Live smoke explicitly waived per CONTEXT (copy-only). Pure stale-copy cleanup; zero behavioral change. **gsd-verifier passed 5/5 must_haves against codebase** — `29-VERIFICATION.md` created with file+line evidence for each criterion (auth-hero subtext+tagline, README opening, FUTURE_DIRECTIONS lines 62/226/232, grep gates, booker neutrality).
-
-**Cumulative project progress:**
+## Cumulative project progress
 
 ```
 v1.0 [X] MVP                          (Phases 1-9, 52 plans, 222 commits, shipped 2026-04-27)
@@ -49,115 +28,89 @@ v1.1 [X] Multi-User + Capacity + UI   (Phases 10-13 incl. 12.5/12.6, 34 plans, 1
 v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipped 2026-05-02)
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
-v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 6/6 complete — shipped 2026-05-05; 14 requirements: BUFFER-01..06 + BRAND-01..03 + BOOKER-01..05)
+v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 ```
+
+**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits, 14/14 requirements at v1.5 close.
 
 ## Performance Metrics
 
-**v1.4 velocity (final):**
-- 3 phases (25-27), 8 plans, ~17 tasks, 50 commits over ~2 days
-- Test suite: 225 passing + 9 skipped (without DIRECT_URL) / ≥230 + 4 (with DIRECT_URL set)
-- 11/11 requirements shipped (100%)
+**v1.5 final velocity:**
+- 3 phases (28-30), 6 plans, ~10 tasks, 31 commits over ~2 days (`ca402a7` 2026-05-03 16:00 -0500 → `6dc91e8` 2026-05-04 19:44 -0500)
+- Test suite at sign-off: 228 passing + 9 skipped (without DIRECT_URL); zero regression vs v1.4 baseline; 3 new BUFFER-06 divergence tests added
+- Per-phase verifier results: 28 (5/5), 29 (5/5), 30 (5/5)
+- Milestone audit: passed (14/14 reqs, 3/3 phases, 6/6 cross-phase risks, 3/3 E2E flows)
+- 14/14 requirements shipped (100%)
 
-**Reference velocities:** v1.3: 3 phases, 6 plans, 34 commits, 1 day. v1.2: 8 phases, 22 plans, 91 commits, 3 days. v1.1: 6 phases, 34 plans, 135 commits, 3 days. v1.0: 9 phases, 52 plans, 222 commits, 10 days.
+**Reference velocities:** v1.4: 3 phases / 8 plans / 50 commits / 2 days. v1.3: 3 phases / 6 plans / 34 commits / same-day. v1.2: 8 phases / 22 plans / 91 commits / 3 days. v1.1: 6 phases / 34 plans / 135 commits / 3 days. v1.0: 9 phases / 52 plans / 222 commits / 10 days.
 
 ## Accumulated Context
 
-### Critical constraints for v1.5
+### Patterns established / locked through v1.5 (cumulative — see PROJECT.md Key Decisions for full table)
 
-- **CP-03 mandatory drain (Phase 28):** Plans 28-01 and 28-02 have a 30-minute hard gate between them. Andrew must confirm 28-01's Vercel deploy has been live ≥30 min before 28-02 begins. DROP migration file held local during drain (do not push).
-- **LD-01 column name lock:** Use existing `event_types.buffer_after_minutes` — do NOT add `post_buffer_minutes`. The column already exists in production with correct semantics.
-- **LD-08 phase order lock:** Buffer → Rebrand → Booker. Do not reorder.
-- **V15-MP-05 Turnstile lock:** Keep conditional mount pattern for `<BookingForm>` in Phase 30 (`{selectedSlot ? <BookingForm /> : <prompt>}`). Always-mounted form causes Turnstile token expiry.
-- **Migration apply path:** `echo | npx supabase db query --linked -f <file>` is the only working path in this repo (`supabase db push --linked` is broken).
-- **Pre-flight gate (Phase 28-01):** `SELECT id, slug, buffer_after_minutes FROM event_types WHERE buffer_after_minutes <> 0` must return 0 rows before backfill runs.
-- **Drain gate (Phase 28-02):** `grep -rn "buffer_minutes" app/ lib/` must return 0 matches before DROP migration applies.
-
-### Patterns carried forward from v1.4
-
-- Static-text scan tests for control-flow invariants (Phase 26 + 27 pattern)
-- Pre-flight diagnostic hard gate before VALIDATE-CONSTRAINT-aborting DDL (V14-CP-06)
-- `describe.skipIf(skipIfNoDirectUrl)` for pg-driver tests
-- Per-instance className override for shared shadcn components (Phases 23-25)
-- Deploy-and-eyeball as canonical production gate (5th consecutive milestone)
-
-### Decisions / patterns added by Plan 30-01 (2026-05-04)
-
-- **Mid-execution Rule 4 architectural-decision pattern (new, validated):** When the executor discovers an unanticipated importer of a "to-be-deleted" file, surface as a Rule 4 architectural decision to the user before proceeding — do NOT assume the file is safe to delete just because the active phase no longer needs it. Plan 30-01 was the first v1.5 plan to exercise this pattern: the planner intended to delete `slot-picker.tsx` but missed that `app/reschedule/[token]/_components/reschedule-shell.tsx:6` (Phase 6 consumer, live in production) still imports it. Executor surfaced 3 options to Andrew (A: keep file as Phase-6-only / B: refactor reschedule to absorb the lift / C: extract a shared `<CalendarSlotPicker>`). Andrew chose **Option A**. Pattern is reusable for any future component-removal phase.
-- **Smallest-diff override of plan-locked refactor moves:** When a plan locks a refactor as a means to an end (e.g., "move type X from file A to file B because file A will be deleted"), and an architectural amendment changes the underlying assumption (file A no longer being deleted), pick the smallest-diff path to satisfy the new constraint — not the plan-locked move. Plan 30-01 example: the plan said move `Slot` interface into `booking-shell.tsx` because `slot-picker.tsx` was being deleted. With Option A, `slot-picker.tsx` stays; executor kept `import { type Slot } from "./slot-picker"` in `booking-shell.tsx` (single-line diff) instead of moving the type definition (would have caused churn for `reschedule-shell.tsx`). The plan's locked move was instrumental, not load-bearing.
-- **Single grid owner pattern (UI):** Parent shell owns the grid template; child columns render as direct grid children (no nested grids). Replaces the prior nested 2-col-inside-2-col booker pattern. Reusable for any future multi-column layout where the columns logically belong to the same visual unit (a "card") and should reflow together at breakpoint changes. Implementation in `booking-shell.tsx:180` — `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]` Tailwind v4 bracket-grid syntax.
-- **Reserved-column pattern for conditional-mount UI:** When a UI element (e.g., a form) is mounted/unmounted conditionally but should NOT cause layout shift in sibling columns, reserve its grid track at a fixed width (here: 320px). Show a `<div>` placeholder before mount; swap the placeholder for the real component on mount. Combined with V15-MP-05 Turnstile lifecycle lock, this gives "form column always visible at fixed width, content swaps in place, zero layout shift, Turnstile token never stales". Reusable for any other conditional-mount-with-side-effect component (analytics widgets, payment forms, etc.).
-- **Research-gap risk for component-removal phases:** Phase 30 RESEARCH.md cited STACK.md "Option C" (lift state out, delete child) without checking for non-booker consumers. Caught at execution time only because the executor ran a pre-deletion grep. **Future planner discipline:** any plan that deletes a shared component MUST run `grep -rn "from .*<filename>" app/ lib/ tests/` during research, NOT only during execution. Add to plan-phase research checklist.
-
-### Decisions / patterns added by Plan 29-01 (2026-05-04)
-
-- **Copy-only phase pattern (new):** When an entire phase is documentation/copy and a deterministic grep gate exists, the gate replaces live-eyeball QA. Auto-deploy on push still happens (Andrew's global "live testing" default), but no human-verify checkpoint is needed. Reusable for any future pure-copy / pure-doc phase. Plan 29-01 baseline: ~2 min wall clock from start to push.
-- **LD-lock deliberate-override pattern (new):** A successor phase's CONTEXT.md can deliberately override a prior LD-lock when the carve-out is narrow (e.g., single inert line, no runtime/UI effect) and the override is auditable end-to-end (stated in CONTEXT → restated in PLAN → restated in SUMMARY). Plan 29-01 used this for LD-07 → `booking-form.tsx:138` dev comment. Pattern requires explicit narrow-scope language; it is NOT a license to revisit locks broadly.
-- **Plan-locked commit-batching pattern:** GSD's atomic-per-task default can be overridden by a plan author when (a) the change is several tiny string swaps, (b) a single canonical grep gate verifies them together, and (c) Andrew's "commit after a logical unit of work" preference favors batching. The plan must state the override in the body (Plan 29-01 did so in Task 3 Step 5) and lock the exact commit message verbatim. Recorded in SUMMARY as a process-level deviation for traceability.
-- **In-product term-of-art over audience term in dev docs:** When a developer-facing doc references the audience by their in-product role (e.g., "owners" — the role with an account on the product), use the in-product term rather than the marketing audience term ("service businesses"). Plan 29-01 applied this to FUTURE_DIRECTIONS lines 226 + 232. Marketing/onboarding-facing copy (auth-hero, README opening) gets the audience term.
-- **Three-gate verification block for copy phases:** Canonical grep gate + ROADMAP-verbatim narrower gate + booker-surface neutrality gate. The neutrality gate (proving the new audience copy did NOT leak into booker-facing surfaces) is novel and reusable for any future copy phase that has an audience-segmented contract.
-- **Pre-existing-modification preservation:** Files modified in the working tree before plan start that are orthogonal to the plan (e.g., `02-VERIFICATION.md` here) must NOT be staged into plan commits. Per-file `git add` of plan files only — never `git add -A`. Recorded in SUMMARY for audit.
-
-### Decisions / patterns added by Plan 28-03 (2026-05-04)
-
-- **Verification-only plan pattern:** When prior plans in a phase have already shipped the implementation, a phase-closing plan can be a pure verification pass with zero code commits. Plan 28-03's Task 1 (auto) found BUFFER-06 + full suite + grep + DB all green from Plan 28-01/02 work — no edits, no commits needed. The only commit is the SUMMARY metadata commit. Reusable for any future "prove it works in prod" closer.
-- **Andrew-quote-on-record approval format:** For live smoke checkpoints with multiple Verifications, capture Andrew's exact words verbatim in the SUMMARY. Free-text approval is acceptable when the words map unambiguously back to plan Verifications, and the mapping is documented in the SUMMARY for traceability. Avoids forcing rigid "type 'approved'" UX when the substance is already clear.
-- **Soft scrub deferred:** `tests/slot-generation.test.ts:31` retains a JSDoc historical reference to `buffer_minutes` (descriptive prose explaining the Phase 28 transition). Not live code; the gate intentionally scopes to `app/` + `lib/`. Flagged for a future docs scrub if a token-comprehensive cleanup is ever performed; not a blocker.
-
-### Decisions / patterns added by Plan 28-02 (2026-05-04)
-
-- **CP-03 two-step DROP completed end-to-end:** Plan 28-01 (rewire) → drain (waived) → Plan 28-02 cleanup commit clears grep gate → DROP migration applies → cleanup commit deploys → smoke 200. Pattern proven for v1.5; reusable for any future column drops.
-- **Drain gate waiver pattern (new):** When the product has zero traffic, the drain protects only theoretical warm-instance state. A documented waiver in STATE.md with explicit rationale + acceptance is acceptable. Future precedent: served drains remain default; waiver requires Andrew sign-off + STATE.md decision before launch.
-- **Doc-comment scrubbing as part of literal grep gates:** When the gate is "0 matches anywhere in app/ + lib/", historical doc-comments naming the deprecated token must also be reworded. Treated as Rule 3 (blocking) auto-fix during the cleanup commit.
-- **Settings-panel grid auto-flow tolerance:** `sm:grid-cols-2` with 3 fields renders as 2+1 visually; acceptable when grid wasn't hard-coded to a specific column count for the deprecated field.
-
-### Decisions / patterns added by Plan 28-01 (2026-05-04)
-
-- **Asymmetric per-booking + per-candidate buffer math (LD-04 codified):** `bufferedStart = slotStart − existingBooking.buffer_after_minutes`; `bufferedEnd = slotEnd + slotBufferAfterMinutes`. The existing booking's buffer determines back-side blocking; the candidate event type's buffer determines forward-side blocking. BUFFER-06 divergence test block (3 tests) is now a regression gate.
-- **Type-drift gate pattern (V15-CP-04 in practice):** Removing a type field entirely (rather than marking optional) surfaces missed callsites at compile time during a multi-deploy refactor.
-- **Supabase generated-type narrowing for `!inner` joins:** TS models the join as object|array depending on inferred cardinality. Defensive runtime narrowing required (`Array.isArray(et) ? et[0]?.field : et?.field`).
-- **Forgiving Zod numeric inputs:** `.catch(0)` on owner-facing settings coerces empty/NaN to 0 silently — matches CONTEXT lock for Buffer field UX.
-- **Push-as-T0-proxy pattern:** When the executor cannot directly observe Vercel deploy status, the local `git push` UTC timestamp is a conservative proxy for T0; user confirms the actual "Ready" timestamp on the dashboard.
+- **Race-safety at the DB layer** (v1.0 → reinforced v1.4 EXCLUDE GIST + half-open `[)` bound)
+- **Two-step DROP migration deploy protocol (CP-03)** (v1.2 → reused v1.5 with formal drain-waiver pattern for zero-traffic single-tenant)
+- **`echo | npx supabase db query --linked -f`** as canonical migration apply path (v1.1 → unchanged through v1.5)
+- **Per-instance className override for shared shadcn components** (v1.3 → 4th-milestone reuse pattern)
+- **Static-text scan tests for control-flow invariants** (v1.4 Phase 26+27 → reusable for any source-shape regression class)
+- **Pre-flight diagnostic hard gate before VALIDATE-CONSTRAINT-aborting DDL (V14-CP-06)** (v1.4 → reusable for any partial-WHERE migration)
+- **Deploy-and-eyeball as canonical production gate** (v1.3 formalized → 5 consecutive milestones; marathon QA fully retired)
+- **Verification-only plan pattern with Andrew-quote-on-record SUMMARY** (v1.4 Plan 28-03 → reused v1.5 Plan 30-02 with single-phrase blanket approval sub-pattern)
+- **Mid-execution Rule 4 architectural-decision pattern** (v1.5 Plan 30-01 first use; new — surface unanticipated importer of "to-be-deleted" file as Rule 4 routing)
+- **Smallest-diff override of plan-locked refactor moves** (v1.5 Plan 30-01; new — when amendment changes underlying assumption, pick smallest-diff path not plan-locked literal text)
+- **Drain-waiver pattern** (v1.5 Plan 28-02; new — formal CP-03 30-min skip under documented zero-traffic acceptance + Andrew sign-off)
+- **Single grid owner UI pattern** (v1.5 Plan 30-01; new — parent shell owns grid template, children are direct grid children, no nested grids)
+- **Reserved-column conditional-mount pattern** (v1.5 Plan 30-01; new — fixed-width track with `<div>` placeholder swapping to mounted form, zero layout shift, V15-MP-05 Turnstile lifecycle preserved)
+- **LD-lock deliberate-override pattern** (v1.5 LD-07; new — narrow auditable carve-out re-stated CONTEXT → PLAN → SUMMARY)
+- **Three-gate verification block for copy phases** (v1.5 Phase 29; new — canonical / ROADMAP-verbatim / booker-neutrality)
 
 ### Active blockers
 
-None. **v1.5 milestone CLOSED 2026-05-05.** Next: `/gsd:audit-milestone` (cross-phase integration + E2E flow audit before archival), then `/gsd:complete-milestone` to archive v1.5 → `milestones/v1.5-ROADMAP.md` and prepare for v1.6 / next milestone planning.
+None. v1.5 milestone closed and archived. Next milestone scope undefined.
 
-**Soft concerns carried into v1.5 close (not blockers; address opportunistically in v1.6 cleanup pass or next milestone):**
-- 33 pre-existing tsc errors in `tests/` (test mock helpers `__setTurnstileResult`, `__mockSendCalls`, etc. — runtime-only or test-setup symbols not exported from their modules). None in `app/` or `lib/`. Predates Phase 28. Address as a separate cleanup pass when convenient.
-- `tests/slot-generation.test.ts:31` JSDoc historical reference to `buffer_minutes` (descriptive prose, not live code). Optional future docs scrub.
-- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` modification still in working tree (orthogonal; predates Plan 29-01 and Plan 30-01/02). Survived all 6 v1.5 plans without ever being staged. Decide whether to commit, revert, or leave at v1.5 audit / archive time.
+### Open tech debt (carried into v1.6+)
+
+**Introduced in v1.5 (3 items):**
+- `slot-picker.tsx` kept on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — full date+slot UI now duplicated across `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is itself redesigned (preferred fix: extract shared `<CalendarSlotPicker>` component).
+- Slot-fetch effect duplication: `booking-shell.tsx:68-96` and `slot-picker.tsx:51-79` near-identical. Future changes (pagination, retry, cache headers) must be applied in two places until slot-picker.tsx is deleted.
+- `Slot` type import asymmetry: `booking-shell.tsx:8` imports `type Slot` from `./slot-picker` even though component no longer used here. Natural home is `lib/slots.types.ts`. Two `Slot` type sources with slightly different shapes; tidy when slot-picker.tsx is deleted.
+
+**Pre-existing (carried through v1.5 unchanged):**
+- 33 pre-existing tsc errors in `tests/` (test mock helpers `__setTurnstileResult`, `__mockSendCalls`, etc. — not exported from their modules). Predates v1.5. Address as separate cleanup pass.
+- `tests/slot-generation.test.ts:31` JSDoc historical reference to `buffer_minutes` (descriptive prose; not live code; outside grep gate scope of `app/+lib/`).
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — orthogonal to v1.5; survived all 6 v1.5 plans + milestone archive without ever being staged. Decide commit/revert at v1.6 plan time.
+
+**Carryover backlog from v1.0–v1.4 (NOT executed in v1.5):**
+- Marathon QA execution — formally retired as deploy-and-eyeball model (5th consecutive milestone)
+- INFRA-01: Resend migration (Gmail SMTP 200/day cap; ~$10/mo for 5k emails)
+- INFRA-02: Vercel Pro hourly cron flip (`vercel.json` `0 * * * *`)
+- AUTH-23: OAuth signup
+- AUTH-24: Magic-link login
+- BRAND-22: NSI brand asset replacement (`public/nsi-mark.png` placeholder)
+- DEBT-01..07 (7 items from v1.0–v1.2 carryover)
+- 3 Phase 26 audit fragilities: `bookings-table.tsx:37` unguarded TZDate; `queries.ts:92-94` undefined normalization; `queries.ts:86` unguarded throw
+
+**Future feature backlog from v1.5 (NOT executed in v1.5):**
+- BUFFER-07: pre-event buffer wiring (`buffer_before_minutes` schema column already exists at default 0)
+- BUFFER-08: owner sees "15 min buffer" badge on event-type list card
+- BUFFER-09: configurable buffer step granularity (1-min instead of 5-min)
+- BOOKER-06: animated form slide-in (CSS translate-x transition on slot pick)
+- BOOKER-07: skeleton loader on slow `/api/slots` response
 
 ## Session Continuity
 
-**Last session:** 2026-05-04 — Plan 29-01 executed in ~2 min (1m 48s, `2026-05-04T01:39:11Z` → `2026-05-04T01:40:59Z`). Single batched content commit `0659c0e` (4 files, 7-line diff): auth-hero subtext default (line 21) + tagline `<li>` (line 42) → audience-neutral / "service businesses" copy; README opening (line 3) rewritten audience-led, drops "Calendly-style" + trade parenthetical; FUTURE_DIRECTIONS lines 62 / 226 / 232 audience-context contractor refs rewritten (`service-business` modifier on 62; `owners` on 226 + 232); booking-form.tsx:138 dev comment swapped contractor→owner per LD-07 override (runtime line 139 byte-identical, booker UI untouched). Three grep gates (canonical / ROADMAP-verbatim / booker-neutrality) all 0 matches. tsc 33 errors all pre-existing in `tests/` (zero new). Pushed `8c464f6..0659c0e main -> main`; Vercel auto-deploy triggered. Live smoke waived per 29-CONTEXT.md (copy-only).
+**Last session:** 2026-05-05 — `/gsd:execute-phase 30` resumed Plan 30-02 from prior pause; Andrew approved with blanket "Everything looks good"; continuation agent wrote SUMMARY + commit `3118d68`; orchestrator updated ROADMAP/STATE/REQUIREMENTS + verifier 5/5; phase commit `6dc91e8`. Then `/gsd:audit-milestone` produced `v1.5-MILESTONE-AUDIT.md` (passed). Then `/gsd:complete-milestone 1.5` archived v1.5 — created `milestones/v1.5-ROADMAP.md` + `milestones/v1.5-REQUIREMENTS.md`; moved `v1.5-MILESTONE-AUDIT.md` to `milestones/`; deleted `REQUIREMENTS.md`; updated PROJECT.md / MILESTONES.md / ROADMAP.md / STATE.md; created git tag `v1.5`; committed milestone-close artifacts; pushed.
 
-**Stopped at:** Plan 30-02 checkpoint PRESENTED to Andrew, awaiting verbatim live-verify replies. Andrew paused the session before completing checks A–G ("Save these for later. Let's move on for now"). Plan 30-01 is fully shipped (commits `8b45c50` feat + `f83119f` docs on `main`, Vercel deploy live, HTTP 200 confirmed). No code work pending — only Andrew's eyeball verification remains.
+**Stopped at:** Milestone-archive-complete. No active work; awaiting next milestone scope from Andrew.
 
-**Resume Phase 30 verification:** Open `https://calendar-app-xi-smoky.vercel.app/nsi/30-minute-consultation` (deploy SHA `8b45c50`) and run the 8 checks defined in `.planning/phases/30-public-booker-3-column-layout/30-02-PLAN.md` `<how-to-verify>` block:
-- A: 1024×768 — 3 cols, no scroll, no internal dividers
-- B: 1280×800 — 3 cols, no scroll, comfortable
-- C: 1440×900 — 3 cols, no scroll, card stays max-w-4xl (no full-width)
-- D: pick a slot at 1280 — form fills col 3 in-place, NO shift in cols 1/2
-- E: selected slot stays highlighted (filled bg, primary color) while form is visible
-- F: re-pick a different slot — Name field clears (RHF reset via `key={selectedSlot.start_at}`)
-- G: mobile (real device or 375×667) — vertical stack calendar→times→form, no horizontal scroll
-- H (optional): embed iframe at 320–600px stays single-column
+**Next session:** Run `/gsd:new-milestone` to begin questioning → research → requirements → roadmap for the next milestone. Live-use feedback during the v1.5 → next-milestone interval will likely drive headline scope (pattern: same as v1.3 → v1.4 and v1.4 → v1.5 transitions).
 
-After all 7 mandatory checks (A–G) confirmed verbatim, run `/gsd:execute-phase 30` to resume — the orchestrator will spawn a continuation agent to write `30-02-SUMMARY.md` (Andrew-quote-on-record format, precedent from Plan 28-03), commit it, push, then close Phase 30 + v1.5. If anything fails, the continuation will branch to fix-forward (small) or open a 30-03 gap-closure plan (large).
-
-**Plan 30-01 architectural deviation (recorded for audit):** Plan as written locked `slot-picker.tsx` for deletion. Executor surfaced unanticipated production importer at `app/reschedule/[token]/_components/reschedule-shell.tsx:6` (Phase 6 reschedule flow). Routed to Andrew as Rule 4 architectural decision; Andrew picked Option A (keep file on disk; booker no longer imports `SlotPicker` component, only `type Slot`). Plan body otherwise executed verbatim. Future follow-up: when reschedule layout is itself redesigned, evaluate extracting `<CalendarSlotPicker>` shared component or further consolidation. Documented in `30-01-SUMMARY.md`.
-
-**Planner-discipline note (new pattern):** Before any plan that locks a file deletion, the plan author MUST run `grep -rn "from .*<filename>" app/ lib/ tests/` and enumerate every importer in the plan body — not just the file the plan is primarily editing. Plan 30-01 missed this on `slot-picker.tsx` (caught the inline-shape consumer in `booking-form.tsx:40` but not the type-and-component consumer in `reschedule-shell.tsx`). Cost: one mid-execution Rule 4 routing + scope amendment. Cheap, but avoidable. Add to gsd-planner deletion checklist.
-
-**Files of record:**
-- `.planning/PROJECT.md` — what + why (updated 2026-05-03; v1.5 milestone started)
-- `.planning/ROADMAP.md` — phase index (v1.5 Phases 28-30 added)
-- `.planning/REQUIREMENTS.md` — 14 v1.5 requirements; traceability table populated
-- `.planning/MILESTONES.md` — historical record
+**Files of record (post-archive):**
+- `.planning/PROJECT.md` — what + why (updated 2026-05-05; v1.5 requirements in Validated section; v1.5 Key Decisions added)
+- `.planning/ROADMAP.md` — milestone index (v1.5 collapsed to one-line summary linking to archive)
+- `.planning/MILESTONES.md` — historical record (v1.5 entry at top of file)
 - `.planning/STATE.md` — this file
-- `.planning/research/SUMMARY.md` — v1.5 research (9 locked decisions LD-01..09)
-- `.planning/research/ARCHITECTURE.md` — file touch sites, migration sequence, component boundaries
-- `.planning/research/PITFALLS.md` — V15-CP-01..11 + V15-MP-01..07 + V15-XF-01..03 catalog
-- `.planning/research/STACK.md` — migration apply path, two-step deploy spec, touch-site maps
-- `.planning/research/FEATURES.md` — behavioral specs for buffer, layout mockups
+- `.planning/milestones/v1.5-ROADMAP.md` — full v1.5 phase + plan archive
+- `.planning/milestones/v1.5-REQUIREMENTS.md` — v1.5 requirements with traceability
+- `.planning/milestones/v1.5-MILESTONE-AUDIT.md` — cross-phase integration + E2E audit (passed)
+- `.planning/phases/28-per-event-type-buffer-and-column-drop/`, `29-audience-rebrand/`, `30-public-booker-3-column-layout/` — raw execution history (NOT deleted; phase directories accumulate across milestones)

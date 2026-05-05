@@ -7,7 +7,7 @@
 - ✅ **v1.2 NSI Brand Lock-Down + UI Overhaul** — Phases 14-21 (22 plans across 8 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.2-ROADMAP.md`](./milestones/v1.2-ROADMAP.md).
 - ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
-- ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05.
+- ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 
 ## Phases
 
@@ -83,80 +83,11 @@ See [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md) for full phase 
 <details>
 <summary>✅ v1.5 Buffer Fix + Audience Rebrand + Booker Redesign (Phases 28-30) — SHIPPED 2026-05-05</summary>
 
-**Milestone Goal:** Close the per-event-type buffer gap surfaced in Phase 27 smoke (replace account-wide `buffer_minutes` with per-event-type `buffer_after_minutes`), reposition from "trade contractors" to "service-based businesses" across owner-facing copy and docs, and redesign the public booker into a true 3-column desktop layout (calendar LEFT / times MIDDLE / form RIGHT).
+See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase details.
 
-**Phase order locked (LD-08):** Buffer → Rebrand → Booker. Buffer must complete before Booker because both touch `lib/slots.ts` / `booking-shell.tsx`; completing Buffer first avoids merge conflicts. Rebrand is independent and sandwiches naturally between the two complex phases.
-
----
-
-### Phase 28: Per-Event-Type Buffer Wire-Up + Account Column Drop
-
-**Goal:** Owners can set a per-event-type post-event buffer; `accounts.buffer_minutes` is permanently dropped via the CP-03 two-step deploy protocol.
-
-**Depends on:** Phase 27 (v1.4 ship — stable `lib/slots.ts` and `booking-shell.tsx` baselines)
-
-**Requirements:** BUFFER-01, BUFFER-02, BUFFER-03, BUFFER-04, BUFFER-05, BUFFER-06
-
-**Success Criteria** (what must be TRUE when this phase completes):
-1. Owner can set a "Buffer after event" value (0–360 min, step 5) on each event type in the event-type editor and save it — the control is visible and persists across page reloads.
-2. The public slot picker for event type A hides the slot immediately after a confirmed booking when A has buffer > 0, and shows it when A has buffer = 0 — regardless of what other event types on the same account have.
-3. A slot adjacent to an event-B booking is bookable by event type A when A's buffer is 0, even though B's buffer is > 0 (asymmetric cross-event-type behavior confirmed).
-4. The "Buffer" field is absent from the Availability settings page; the account-level buffer control is gone.
-5. `SELECT column_name FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'buffer_minutes'` returns zero rows (column permanently dropped; CP-03 30-min drain satisfied before DROP ran).
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 28-01: Backfill migration + slot engine rewire + event-type-form UI (Deploy A1 — code reads `buffer_after_minutes`; drain window begins) — completed 2026-05-04
-- [x] 28-02: DROP migration + availability panel cleanup (Deploy A2 — after 30-min drain; `accounts.buffer_minutes` gone) — completed 2026-05-04 (drain waived per zero-traffic rationale)
-- [x] 28-03: Per-event-type divergence tests + smoke checkpoint (vitest green; Andrew live verify buffer behavior on `nsi`) — completed 2026-05-04
-
-**CP-03 checkpoint:** Plans 28-01 and 28-02 have a mandatory human-verified 30-minute drain gate between them. Plan 28-02 must NOT begin until Andrew confirms Plan 28-01's Vercel deploy has been live for at least 30 minutes.
-
----
-
-### Phase 29: Audience Rebrand
-
-**Goal:** All owner-facing surfaces and developer-facing docs reference "service-based businesses" instead of "trade contractors"; booker-facing surfaces remain unchanged.
-
-**Depends on:** Phase 28 (clean working tree after buffer work; avoids merge risk on `auth-hero.tsx`)
-
-**Requirements:** BRAND-01, BRAND-02, BRAND-03
-
-**Success Criteria** (what must be TRUE when this phase completes):
-1. The signup and login pages no longer reference "trade contractors" — the hero copy uses generic or "service-based businesses" framing visible to any prospective owner who lands on the auth surface.
-2. `README.md` opening description references "service-based businesses" instead of "trade contractors (plumbers, HVAC, roofers, electricians)".
-3. `FUTURE_DIRECTIONS.md` incidental "trade contractors" mentions are updated to reflect the broader audience.
-4. `grep -rn "trade contractor" app/ lib/ README.md FUTURE_DIRECTIONS.md` returns zero matches (only the inert `booking-form.tsx:138` developer comment may remain — it is explicitly out of scope per BRAND-03 / LD-07).
-5. The public booker form, slot picker, embed widget, and all 6 transactional emails contain no "service-based businesses" audience copy — they stay brand-neutral (contractor's brand, not NSI product copy).
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 29-01-audience-rebrand-PLAN.md — copy pass across auth-hero.tsx, booking-form.tsx:138 (LD-07 override), README.md, FUTURE_DIRECTIONS.md + canonical grep gate + deploy — completed 2026-05-04
-
----
-
-### Phase 30: Public Booker 3-Column Desktop Layout
-
-**Goal:** The public booking card displays a true 3-column layout at desktop widths (calendar LEFT, times MIDDLE, form RIGHT) with no layout shift on slot pick; mobile stacks vertically in the correct interaction order.
-
-**Depends on:** Phase 29 (clean working tree; `EventTypeSummary` type stable from Phase 28)
-
-**Requirements:** BOOKER-01, BOOKER-02, BOOKER-03, BOOKER-04, BOOKER-05
-
-**Success Criteria** (what must be TRUE when this phase completes):
-1. At 1024px, 1280px, and 1440px viewport widths the booking card shows three distinct columns — calendar on the left, time slots in the middle, and a form area on the right — with no horizontal overflow or scrollbar.
-2. Before a time slot is selected, the form column shows the prompt "Pick a time on the left to continue." in its reserved 320px space; after a slot is selected, the booking form replaces the prompt in-place and the calendar and times columns do not shift position (zero layout shift).
-3. On a mobile device (below 1024px), the booking card stacks vertically: calendar first, time slots below it, form below that — matching the natural interaction flow without any horizontal scroll.
-4. The embed widget at typical iframe widths (320–600px) renders as a single-column vertical stack, not a 3-column layout — the `lg:` breakpoint handles this automatically with no embed-specific code branch.
-5. Andrew has live-verified the 3-column layout on production at 1024px / 1280px / 1440px and confirmed the mobile stack on a real device (BOOKER-05 smoke checkpoint).
-
-**Plans:** 2 plans
-
-Plans:
-- [x] 30-01: Grid restructure — `booking-shell.tsx` 3-col template + `max-w-4xl`; Calendar and slot list as direct grid children; form column placeholder/conditional-mount preserved (Turnstile lifecycle safe) — completed 2026-05-04 (mid-execution Rule 4 amendment: `slot-picker.tsx` kept on disk per Andrew Option A; reschedule still consumes it)
-- [x] 30-02: Andrew live-verify smoke checkpoint at 1024px / 1280px / 1440px + mobile real-device check — completed 2026-05-05 ("Everything looks good" — blanket approval covering BOOKER-01..05)
+- [x] Phase 28: Per-Event-Type Buffer + Account Column Drop (3 plans) — completed 2026-05-04 (BUFFER-01..06 shipped; CP-03 DROP completed with drain waiver)
+- [x] Phase 29: Audience Rebrand (1 plan) — completed 2026-05-04 (BRAND-01..03 shipped; canonical grep gate clean)
+- [x] Phase 30: Public Booker 3-Column Desktop Layout (2 plans) — completed 2026-05-05 (BOOKER-01..05 shipped; Andrew live-verified at 1024/1280/1440 + mobile)
 
 </details>
 
@@ -179,8 +110,8 @@ Plans:
 - **Total plans shipped:** 128 (52 + 34 + 22 + 6 + 8 + 6)
 - **Total commits:** ~510 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + ~11 v1.5)
 - **v1.5 final:** 3 phases (28-30), 6 plans, 14 requirements shipped
-- **Status:** v1.5 SHIPPED 2026-05-05. Run `/gsd:audit-milestone` to verify cross-phase integration before archiving.
+- **Status:** v1.5 SHIPPED 2026-05-05 and ARCHIVED. Run `/gsd:new-milestone` to start v1.6 (or any next milestone) — questioning → research → requirements → roadmap.
 
 ---
 
-*Roadmap last updated: 2026-05-05 — Phase 30 complete (BOOKER-01..05 shipped; verifier 5/5 must-haves passed; Andrew live-verify "Everything looks good" on production at 1024/1280/1440 + mobile). v1.5 milestone CLOSED. Run `/gsd:audit-milestone` to begin v1.5 archival.*
+*Roadmap last updated: 2026-05-05 — v1.5 milestone archived to `milestones/v1.5-ROADMAP.md` + `milestones/v1.5-REQUIREMENTS.md` + `milestones/v1.5-MILESTONE-AUDIT.md`. Tagged `v1.5`. REQUIREMENTS.md deleted (fresh one created when next milestone is started). Run `/gsd:new-milestone` to continue.*
