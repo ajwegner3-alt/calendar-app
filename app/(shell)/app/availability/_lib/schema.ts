@@ -34,7 +34,7 @@ export const timeWindowSchema = z
  * pair (used to build a human-readable error). Touching boundaries
  * (a.end == b.start) are NOT overlaps — adjacent windows are valid.
  */
-function findOverlap(sorted: TimeWindow[]): { i: number; j: number } | null {
+export function findOverlap(sorted: TimeWindow[]): { i: number; j: number } | null {
   for (let i = 0; i < sorted.length - 1; i++) {
     if (sorted[i].end_minute > sorted[i + 1].start_minute) {
       return { i, j: i + 1 };
