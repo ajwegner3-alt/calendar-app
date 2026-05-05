@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-04 — v1.6 roadmap created (Phases 31-33). Ready to begin Phase 31.
+**Last updated:** 2026-05-05 — Phase 31 Plan 01 complete (foundation: schema + quota-guard extensions). Ready for Plan 31-02.
 
 ## Project Reference
 
@@ -16,9 +16,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
 **Phase:** 31 of 33 — Email Hard Cap Guard
-**Plan:** — (not started)
-**Status:** Roadmap created. Ready to plan Phase 31.
-**Last activity:** 2026-05-04 — REQUIREMENTS.md written, ROADMAP.md written (Phases 31-33), STATE.md updated. Traceability filled.
+**Plan:** 01 of TBD — Foundation (schema + quota-guard extensions) — COMPLETE
+**Status:** Plan 31-01 shipped. Ready for Plan 31-02 (call-site wiring).
+**Last activity:** 2026-05-05 — Plan 31-01 executed. Two migrations applied to linked Supabase (CHECK extension + bookings.confirmation_email_sent column). quota-guard.ts extended with 7 new EmailCategory values + getRemainingDailyQuota + logQuotaRefusal. Existing 80% warn block + boundary semantics unchanged. Existing tests (4/4) green.
 
 ## Cumulative project progress
 
@@ -29,10 +29,10 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [ ] Day-of-Disruption Tools      (Phases 31-33 — roadmap created; Phase 31 ready to plan)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 Plan 01 of TBD complete; Plan 31-02 next)
 ```
 
-**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits. v1.6 continues from Phase 31.
+**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plan 31-01 (2 task commits + metadata = 3 new commits in v1.6).
 
 ## Accumulated Context
 
@@ -56,20 +56,26 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.6:
 
 ### Active blockers
 
-None. Roadmap created; Phase 31 is ready to plan.
+None. Plan 31-01 complete; Plan 31-02 (call-site wiring) is next.
 
 ### Open tech debt (carried into v1.6)
 
 - `slot-picker.tsx` on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — date+slot UI duplicated in `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is redesigned (extract shared `<CalendarSlotPicker>`).
-- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — decide commit/revert at Phase 31 plan time.
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — still uncommitted, untouched during Plan 31-01 (filed under "decide later"). Stage/revert decision deferred again.
+- Pre-existing TS errors in test-mock files (`tests/bookings-rate-limit.test.ts`, `tests/cancel-reschedule-api.test.ts`, `tests/email-6-row-matrix.test.ts`, `tests/owner-note-action.test.ts`, `tests/reminder-cron.test.ts`, `tests/reminder-email-content.test.ts`) referencing removed `__mockSendCalls` / `__setTurnstileResult` helpers. Surfaced during Plan 31-01 verification but unrelated to Phase 31 scope. Plan 31-02 should avoid extending those test files; if quota-guard tests need expansion, follow the existing `tests/quota-guard.test.ts` `vi.mock` pattern.
 
 ## Session Continuity
 
-**Last session:** 2026-05-04 — `/gsd:new-milestone` complete through roadmap phase. REQUIREMENTS.md written, ROADMAP.md updated, STATE.md updated.
+**Last session:** 2026-05-05 — Plan 31-01 executed atomically. Migrations applied + quota-guard extended. SUMMARY.md written.
 
-**Stopped at:** Roadmap created, traceability filled. Ready for `/gsd:plan-phase 31`.
+**Stopped at:** Plan 31-01 complete. Ready for Plan 31-02 (call-site wiring through all 5 email-sender modules).
 
-**Next session:** Run `/gsd:plan-phase 31` to plan Phase 31: Email Hard Cap Guard.
+**Next session:** Run `/gsd:execute-phase 31` (continuation) or `/gsd:plan-phase 31` follow-up to surface Plan 31-02.
+
+**Plan 31-01 commits:**
+- `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
+- `ac886ca` — feat(31-01): extend quota-guard with booking categories + helpers
+- (metadata commit appended at session close)
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
@@ -77,3 +83,4 @@ None. Roadmap created; Phase 31 is ready to plan.
 - `.planning/REQUIREMENTS.md` — 25 v1.6 requirements with traceability
 - `.planning/STATE.md` — this file
 - `.planning/MILESTONES.md` — historical record (v1.6 entry created at milestone close)
+- `.planning/phases/31-email-hard-cap-guard/31-01-SUMMARY.md` — Plan 31-01 outcomes
