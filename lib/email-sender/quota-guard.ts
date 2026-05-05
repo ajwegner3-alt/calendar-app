@@ -14,7 +14,15 @@ export type EmailCategory =
   | "signup-welcome"
   | "password-reset"
   | "email-change"
-  | "other";
+  | "other"
+  // Phase 31 (EMAIL-21): booking-side paths now go through the guard
+  | "booking-confirmation"
+  | "owner-notification"
+  | "reminder"
+  | "cancel-booker"
+  | "cancel-owner"
+  | "reschedule-booker"
+  | "reschedule-owner";
 
 export class QuotaExceededError extends Error {
   constructor(
@@ -77,4 +85,35 @@ export async function checkAndConsumeQuota(category: EmailCategory): Promise<voi
   if (error) {
     console.error("[quota-guard] insert failed; send proceeds anyway", error);
   }
+}
+
+/**
+ * Phase 31 (EMAIL-21): batch pre-flight helper.
+ * Returns the count of sends remaining today, clamped to >= 0.
+ * Consumed by Phase 32 (auto-cancel batch) and Phase 33 (pushback batch) pre-flight checks.
+ */
+export async function getRemainingDailyQuota(): Promise<number> {
+  const count = await getDailySendCount();
+  return Math.max(0, SIGNUP_DAILY_EMAIL_CAP - count);
+}
+
+/**
+ * Phase 31 (EMAIL-25): PII-free structured refusal log.
+ * Required fields per requirement: code, account_id, sender_type, count, cap.
+ * Do NOT add booker_email / booker_name / booker_phone / ip / answers.
+ * Pass null for account_id only when truly unknown (e.g., signup paths pre-account).
+ */
+export function logQuotaRefusal(params: {
+  account_id: string | null;
+  sender_type: EmailCategory;
+  count: number;
+  cap: number;
+}): void {
+  console.error("[EMAIL_QUOTA_EXCEEDED]", {
+    code: "EMAIL_QUOTA_EXCEEDED",
+    account_id: params.account_id,
+    sender_type: params.sender_type,
+    count: params.count,
+    cap: params.cap,
+  });
 }
