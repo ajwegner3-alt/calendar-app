@@ -16,7 +16,19 @@ import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
  * - `{ error }`     — anything that prevented the cancel. Caller toasts the message; the dialog
  *                      stays open so the owner can retry or cancel out.
  */
-export type CancelBookingAsOwnerResult = { ok: true } | { error: string };
+export type CancelBookingAsOwnerResult =
+  | {
+      ok: true;
+      /** Phase 31 (EMAIL-24): the booking was cancelled, but the cancellation
+       *  email leg failed AFTER the DB UPDATE committed.
+       *    - "quota": daily Gmail SMTP cap was hit — owner UI shows the locked
+       *               Gmail-fallback toast.
+       *    - "send":  non-quota SMTP error — owner UI shows a generic "email
+       *               delivery failed" toast.
+       *  Absent on the happy path. */
+      emailFailed?: "quota" | "send";
+    }
+  | { error: string };
 
 /**
  * OWNER-SIDE cancel.
@@ -102,7 +114,12 @@ export async function cancelBookingAsOwner(
   // ── 5. Refresh the detail page so the cancelled-state branch renders ────
   revalidatePath(`/app/bookings/${bookingId}`);
 
-  return { ok: true };
+  // Phase 31 (EMAIL-24): propagate the email-leg outcome so the owner UI can
+  // surface the differentiated "quota" / "send" toast. The booking is cancelled
+  // either way — emailFailed only changes which success copy renders.
+  return result.emailFailed
+    ? { ok: true, emailFailed: result.emailFailed }
+    : { ok: true };
 }
 
 // ---------------------------------------------------------------------------

@@ -58,6 +58,12 @@ export function DayDetailRow({ booking, accountTimezone }: DayDetailRowProps) {
   // --- Send reminder ---
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderPending, startReminderTransition] = useTransition();
+  // Phase 31 (EMAIL-24): inline error rendered in the AlertDialog footer when
+  // sendReminderForBookingAction returns errorCode "EMAIL_QUOTA_EXCEEDED". The
+  // locked CONTEXT decision says: NEVER toast the quota error here — render it
+  // inline alongside the Send button so the owner sees the Gmail-fallback hint
+  // without dismissing the dialog.
+  const [reminderError, setReminderError] = useState<string | null>(null);
 
   // Format the start time in the owner's account timezone
   const formattedTime = new Intl.DateTimeFormat("en-US", {
@@ -112,11 +118,20 @@ export function DayDetailRow({ booking, accountTimezone }: DayDetailRowProps) {
   }
 
   function handleReminderConfirm() {
+    setReminderError(null);
     startReminderTransition(async () => {
       const result = await sendReminderForBookingAction(booking.id);
       if ("ok" in result && result.ok) {
         setReminderOpen(false);
         toast.success("Reminder sent.");
+        return;
+      }
+      // Phase 31 (EMAIL-24): quota refusal renders inline (NOT a toast) so the
+      // owner can read the Gmail-fallback hint while the dialog is still open.
+      // The action's error string already contains the Gmail-fallback wording —
+      // do not duplicate it here.
+      if ("errorCode" in result && result.errorCode === "EMAIL_QUOTA_EXCEEDED") {
+        setReminderError(result.error);
         return;
       }
       const message =
@@ -224,7 +239,16 @@ export function DayDetailRow({ booking, accountTimezone }: DayDetailRowProps) {
         </AlertDialog>
 
         {/* 4. Send reminder */}
-        <AlertDialog open={reminderOpen} onOpenChange={setReminderOpen}>
+        <AlertDialog
+          open={reminderOpen}
+          onOpenChange={(next) => {
+            setReminderOpen(next);
+            // Phase 31: clear the inline quota error whenever the dialog opens
+            // or closes, so a stale message from a previous attempt never
+            // lingers across opens.
+            if (!next || next) setReminderError(null);
+          }}
+        >
           <AlertDialogTrigger asChild>
             <Button variant="ghost" size="sm">
               Send reminder
@@ -239,6 +263,18 @@ export function DayDetailRow({ booking, accountTimezone }: DayDetailRowProps) {
                 — the links from previous emails will stop working.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            {/* Phase 31 (EMAIL-24): inline quota error — renders in the footer
+                area only when the action returned errorCode EMAIL_QUOTA_EXCEEDED.
+                NEVER toasted, per locked CONTEXT decision. */}
+            {reminderError && (
+              <p
+                className="text-sm text-red-600 mt-2"
+                role="alert"
+                data-testid="reminder-quota-error"
+              >
+                {reminderError}
+              </p>
+            )}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={reminderPending}>
                 Cancel

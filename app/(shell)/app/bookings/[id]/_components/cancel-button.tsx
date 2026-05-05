@@ -56,7 +56,20 @@ export function CancelButton({
       if ("ok" in result && result.ok) {
         setOpen(false);
         setReason("");
-        toast.success("Booking cancelled. Both parties have been notified.");
+        // Phase 31 (EMAIL-24): differentiated success toast based on the email
+        // leg. The booking is cancelled regardless — only the message changes.
+        // The "quota" copy is the locked CONTEXT wording; do not paraphrase.
+        if (result.emailFailed === "quota") {
+          toast.success(
+            "Booking cancelled. Email could not be sent (daily quota reached). Use normal Gmail to notify the booker.",
+          );
+        } else if (result.emailFailed === "send") {
+          toast.success(
+            "Booking cancelled. Email delivery failed — please notify the booker manually.",
+          );
+        } else {
+          toast.success("Booking cancelled. Both parties have been notified.");
+        }
         router.refresh();
         return;
       }
