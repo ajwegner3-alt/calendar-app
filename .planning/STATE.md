@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Plan 32-03 (Server Actions + Batch Cancel) executed. Phase 32 in progress (2 of 3 plans complete; Wave 2 done).
+**Last updated:** 2026-05-05 — Plan 32-02 (Override Modal Rewrite) executed and human-verified. Phase 32 plan execution complete (3 of 3); phase verifier (`/gsd:verify-phase 32`) still to run.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 32 of 33 — Inverse Date Overrides (in progress)
-**Plan:** 32-03 of 3 — Server Actions + Batch Cancel (complete, 2026-05-05)
-**Status:** Plans 32-01 (slot engine) + 32-03 (server actions + batch cancel) complete. Wave 2 done. Plan 32-02 (override editor UI) still pending — it consumes the now-shipped `commitInverseOverrideAction` server action and `getAffectedBookings` query helper. EMAIL-23 hard quota gate live; `skipOwnerEmail` flag plumbed end-to-end through `cancelBooking → sendCancelEmails`.
-**Last activity:** 2026-05-05 — Plan 32-03 shipped: 3 atomic commits (`a001b0a` flag+query, `73c32ed` server action, `d05dd88` tests+vitest alias fix) + metadata. 9 new tests green. Vitest `resolve.alias` migrated string-prefix → array+regex form (Rule 3 - Blocking deviation); side-effect: unblocks 5+ pre-existing broken test files (30 of 31 test files now pass; pre-stash baseline was 24/31). Lone remaining failure (`bookings-api.test.ts` "(a)" case) confirmed pre-existing fixture mismatch unrelated to this plan.
+**Phase:** 32 of 33 — Inverse Date Overrides (plan execution complete; phase verifier pending)
+**Plan:** 32-02 of 3 — Override Modal Rewrite (complete, 2026-05-05) — final plan in Phase 32
+**Status:** All 3 Phase 32 plans complete. Plan 32-01 (slot engine MINUS) + Plan 32-03 (server actions + batch cancel) + Plan 32-02 (override modal UI) all shipped. Wave 3 done. EMAIL-23 hard quota gate is now live end-to-end (server pre-flight in `commitInverseOverrideAction` + inline modal UX matching Phase 31 day-detail-row pattern). `skipOwnerEmail` plumbed through `cancelBooking → sendCancelEmails`. Owner-facing label vocabulary flipped: "Block entire day" / "Add unavailable windows" replace the v1.5-and-prior "Custom hours" / "Enter available times". Phase 32 verifier (`/gsd:verify-phase 32`) is the next gate before phase close.
+**Last activity:** 2026-05-05 — Plan 32-02 shipped: 2 atomic commits (`7913349` schema/types rename, `7ea8292` modal rewrite + previewAffectedBookingsAction + accountTimezone thread-through) + metadata. Andrew approved 8/8 human-verify scenarios at `/app/availability` (mode labels, multi-window add/edit/remove, hide+preserve toggle, slot engine MINUS, affected-bookings preview, brand-neutral booker email, suppressed owner duplicate, EMAIL-23 quota gate, race-safety re-query, v1.5 buffer + EXCLUDE GIST invariants). Quota-guard test edit was reverted before approval. No deviations.
 
 ## Cumulative project progress
 
@@ -29,10 +29,10 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 verified 2026-05-05; Plans 32-01 + 32-03 complete 2026-05-05; 32-02 pending)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 verified 2026-05-05; all 3 Phase 32 plans complete 2026-05-05; Phase 32 verifier pending; Phase 33 not yet started)
 ```
 
-**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Phase 31 (8 task commits + 3 metadata) + Plan 32-01 (3 task commits + 1 metadata) + Plan 32-03 (3 task commits + 1 metadata = 4 new commits) = 19 new commits in v1.6 so far.
+**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Phase 31 (8 task commits + 3 metadata) + Plan 32-01 (3 task commits + 1 metadata) + Plan 32-03 (3 task commits + 1 metadata) + Plan 32-02 (2 task commits + 1 metadata = 3 new commits) = 22 new commits in v1.6 so far.
 
 ## Accumulated Context
 
@@ -56,7 +56,7 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.6:
 
 ### Active blockers
 
-None. Plans 32-01 + 32-03 shipped. Plan 32-02 (override editor UI) is unblocked — it can now import `commitInverseOverrideAction` (server action) and `getAffectedBookings` (query helper) directly. Phase 31's `getRemainingDailyQuota()` is wired into the action as the EMAIL-23 hard gate.
+None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:verify-phase 32`) is the next gate. Phase 33 (Day-of-Pushback) is unblocked once Phase 32 verifier passes; the canonical "preview-then-commit with HARD quota gate" pattern (previewAffectedBookingsAction + commitInverseOverrideAction + Phase 31 inline-error UX) is now ready to be mirrored for the EMAIL-22 PUSH batch quota pre-flight UI.
 
 ### Plan 32-01 decisions (accumulated context)
 
@@ -71,19 +71,29 @@ None. Plans 32-01 + 32-03 shipped. Plan 32-02 (override editor UI) is unblocked 
 - **Race-safety pattern: write → re-query → union** — override rows written first (slot engine starts blocking new bookings), then `getAffectedBookings()` re-queried, then UNION'd with the preview-approved IDs. No booking missed even if a race-window booking landed between preview and commit.
 - **Vitest `resolve.alias` array+regex form** — exact-match for `@/lib/email-sender` so sub-paths (`@/lib/email-sender/quota-guard`, `@/lib/email-sender/types`) pass through. Side-effect: 5+ previously-broken tech-debt test files now load and mostly pass.
 
+### Plan 32-02 decisions (accumulated context)
+
+- **Discriminator rename `custom_hours` → `unavailable` end-to-end.** Schema, types, modal state literal, and action branch labels all use the new label. DB row shape unchanged (still `is_closed=false` + `start_minute`/`end_minute` per window). Plan 32-01's wipe migration cleared the only legacy rows so the rename is safe.
+- **Block-entire-day toggle is hide+preserve, not wipe.** Owners can experiment with the mode flip without losing the windows they've entered. Implemented by gating the windows-list render on `mode === "unavailable"` while keeping `windows` state untouched on toggle (CONTEXT.md "safer default").
+- **`previewAffectedBookingsAction` placed in `actions-batch-cancel.ts` alongside `commitInverseOverrideAction`.** Both are UI-facing server actions that share auth + the `isFullDayBlock`-vs-windows discriminated input shape. Plan 32-03 deliberately deferred this helper to 32-02 because its return shape is UI-driven.
+- **Fast path retained via `upsertDateOverrideAction`.** When the preview returns `affected.length === 0`, the modal bypasses the slow path entirely and calls `upsertDateOverrideAction` directly — preserving snappy UX for the common case of blocking a future date with no bookings.
+- **`accountTimezone` threaded from server loader, not derived in the browser.** Booker time ranges in the preview are formatted via `Intl.DateTimeFormat` with the account's IANA zone, not the browser's local zone — owners always see times the way bookers received them.
+- **Phase 31 inline quota error UX reused verbatim.** `text-sm text-red-600`, `role="alert"`, copy: "X email(s) needed, Y remaining today. Quota resets at UTC midnight. Wait until tomorrow or contact bookers manually." — locks the EMAIL-22/EMAIL-23 visual vocabulary across the v1.6 surfaces.
+
 ### Open tech debt (carried into v1.6)
 
 - `slot-picker.tsx` on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — date+slot UI duplicated in `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is redesigned (extract shared `<CalendarSlotPicker>`).
-- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — still uncommitted, untouched during Plan 31-01 (filed under "decide later"). Stage/revert decision deferred again.
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — still uncommitted, untouched during Plan 32-02 (filed under "decide later"). Stage/revert decision deferred again.
+- `app/globals.css` `@source not "../.planning"` correction — orchestrator-level fix introduced during Plan 32-02 execution to keep Tailwind's source-glob from scanning the planning tree. Intentionally NOT bundled into Plan 32-02's metadata commit; the orchestrator commits it separately as a phase-level fix.
 - Pre-existing TS errors in test-mock files (`tests/bookings-api.test.ts`, `tests/bookings-rate-limit.test.ts`, `tests/cancel-reschedule-api.test.ts`, `tests/cross-event-overlap.test.ts`, `tests/email-6-row-matrix.test.ts`, `tests/owner-note-action.test.ts`, `tests/reminder-cron.test.ts`, `tests/reminder-email-content.test.ts`, `tests/send-reminder-for-booking.test.ts`) referencing removed `__mockSendCalls` / `__setTurnstileResult` helpers. Plan 32-03's vitest alias fix (`d05dd88`) unblocked module resolution for several of these — most now load and pass; `tests/bookings-api.test.ts` "(a)" case still fails on a fixture mismatch (`__mockSendCalls.length >= 1` against quota-gated production code that needs per-test guard setup the broken mock never provides). Resolution deferred to a future cleanup pass.
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — `/gsd:execute-phase 32` Plan 32-03 executed atomically. New server action `commitInverseOverrideAction` (HARD quota pre-flight + override write + race-safe re-query + Promise.allSettled batch cancel via `cancelBooking` with `skipOwnerEmail: true`) live at `app/(shell)/app/availability/_lib/actions-batch-cancel.ts`. New `getAffectedBookings()` query helper at `app/(shell)/app/availability/_lib/queries.ts`. 9 new tests green; 30 of 31 test files pass (up from 24/31). Vitest `resolve.alias` migrated to array+regex form (Rule 3 deviation, commit `d05dd88`).
+**Last session:** 2026-05-05 — `/gsd:execute-phase 32` Plan 32-02 executed atomically. Override modal flipped to inverse-windows semantics: 2-button mode toggle ("Block entire day" / "Add unavailable windows"), hide+preserve windows state, 3-state commit flow (editing → preview-loading → preview-ready), inline affected-bookings preview with chronological ordering + account-TZ time formatting, EMAIL-23 quota gate matching Phase 31 day-detail-row pattern, fast-path retained via direct `upsertDateOverrideAction` call. `previewAffectedBookingsAction` added to `actions-batch-cancel.ts`. `accountTimezone` threaded from page loader. Andrew approved 8/8 human-verify scenarios.
 
-**Stopped at:** Plan 32-03 complete. Plan 32-02 (override editor UI) is the only plan remaining in Phase 32.
+**Stopped at:** Plan 32-02 complete. All 3 Phase 32 plans now executed. Phase 32 verifier (`/gsd:verify-phase 32`) is the next gate.
 
-**Next session:** Run `/gsd:execute-phase 32` to execute Plan 32-02 — override editor UI: rename "Custom hours" → "Add unavailable windows" mode, hide+preserve toggle behavior on "Block entire day," inline affected-bookings preview, wire to the now-shipped `commitInverseOverrideAction` server action and `getAffectedBookings` query.
+**Next session:** Run `/gsd:verify-phase 32` to verify Phase 32 against its requirements (AVAIL-01 through AVAIL-08 + EMAIL-23). After verifier passes, Phase 33 (Day-of-Pushback) opens with `/gsd:plan-phase 33`.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -111,7 +121,12 @@ None. Plans 32-01 + 32-03 shipped. Plan 32-02 (override editor UI) is unblocked 
 - `a001b0a` — feat(32-03): skipOwnerEmail flag on cancelBooking + getAffectedBookings query
 - `73c32ed` — feat(32-03): commitInverseOverrideAction server action with quota pre-flight
 - `d05dd88` — test(32-03): batch cancel server action coverage + vitest alias fix
-- (metadata commit appended at session close)
+- `10715d6` — docs(32-03): complete server-actions + batch-cancel plan
+
+**Plan 32-02 commits:**
+- `7913349` — feat(32-02): rename schema + types from custom_hours to unavailable
+- `7ea8292` — feat(32-02): override modal rewrite — unavailable windows + preview + quota gate
+- (metadata commit appended at this session close)
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
@@ -123,4 +138,5 @@ None. Plans 32-01 + 32-03 shipped. Plan 32-02 (override editor UI) is unblocked 
 - `.planning/phases/31-email-hard-cap-guard/31-02-SUMMARY.md` — Plan 31-02 outcomes
 - `.planning/phases/31-email-hard-cap-guard/31-03-SUMMARY.md` — Plan 31-03 outcomes
 - `.planning/phases/32-inverse-date-overrides/32-01-SUMMARY.md` — Plan 32-01 outcomes
+- `.planning/phases/32-inverse-date-overrides/32-02-SUMMARY.md` — Plan 32-02 outcomes
 - `.planning/phases/32-inverse-date-overrides/32-03-SUMMARY.md` — Plan 32-03 outcomes
