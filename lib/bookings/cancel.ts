@@ -23,6 +23,15 @@ export interface CancelBookingArgs {
   /** Optional client IP for the audit row (forensics for rate-limit / abuse).
    *  Public token routes pass it; owner Server Action may pass null. */
   ip?: string | null;
+  /**
+   * Phase 32 (AVAIL-06): when true, suppress the owner notification email leg
+   * of the cancel lifecycle. Used by batch-initiated cancels (e.g. inverse-
+   * override commit in commitInverseOverrideAction) to avoid sending the
+   * owner N duplicate notifications when they themselves triggered the batch.
+   * The booker email leg always fires (LD-07 booker-neutrality preserved).
+   * Default: false (owner email leg fires).
+   */
+  skipOwnerEmail?: boolean;
 }
 
 export type CancelBookingResult =
@@ -83,7 +92,7 @@ export type CancelBookingResult =
 export async function cancelBooking(
   args: CancelBookingArgs,
 ): Promise<CancelBookingResult> {
-  const { bookingId, actor, reason, appUrl, ip } = args;
+  const { bookingId, actor, reason, appUrl, ip, skipOwnerEmail } = args;
   const supabase = createAdminClient();
 
   // ── 1. Need event_type + account context for the email senders BEFORE the
@@ -190,6 +199,9 @@ export async function cancelBooking(
       actor,
       reason,
       appUrl,
+      // Phase 32 (AVAIL-06): batch-initiated cancels (e.g. inverse-override
+      // commit) suppress the owner email leg to avoid N duplicate notifications.
+      sendOwner: !skipOwnerEmail,
     });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

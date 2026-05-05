@@ -60,6 +60,13 @@ export interface SendCancelEmailsArgs {
   reason?: string;
   /** Base URL for "Book again" CTA. Caller resolves NEXT_PUBLIC_APP_URL. */
   appUrl: string;
+  /**
+   * Phase 32 (AVAIL-06): when explicitly false, suppress the owner email leg.
+   * Used by batch-initiated cancels (inverse-override commit) where N owner
+   * emails would be duplicate noise — the owner triggered the batch.
+   * Default: true (owner leg fires; existing single-cancel callers unaffected).
+   */
+  sendOwner?: boolean;
 }
 
 /**
@@ -80,10 +87,17 @@ export interface SendCancelEmailsArgs {
  * so any calendar that imported the original event removes it.
  */
 export async function sendCancelEmails(args: SendCancelEmailsArgs): Promise<void> {
-  const results = await Promise.allSettled([
-    sendBookerCancelEmail(args),
-    sendOwnerCancelEmail(args),
-  ]);
+  // Phase 32 (AVAIL-06): batch-initiated cancels suppress the owner leg.
+  // Default sendOwner=true preserves the original two-leg behavior for all
+  // existing single-cancel callers (booker token route + owner cancel action).
+  const sendOwner = args.sendOwner !== false;
+
+  const legs: Array<Promise<void>> = [sendBookerCancelEmail(args)];
+  if (sendOwner) {
+    legs.push(sendOwnerCancelEmail(args));
+  }
+
+  const results = await Promise.allSettled(legs);
 
   // Phase 31 (EMAIL-21): re-throw the first QuotaExceededError so the
   // awaiting caller can surface emailFailed: "quota" to the owner UI. The

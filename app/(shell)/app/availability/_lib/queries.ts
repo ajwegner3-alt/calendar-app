@@ -1,5 +1,7 @@
 import "server-only";
 
+import { TZDate } from "@date-fns/tz";
+
 import { createClient } from "@/lib/supabase/server";
 
 import type {
@@ -8,6 +10,28 @@ import type {
   AvailabilityRuleRow,
   DateOverrideRow,
 } from "./types";
+
+/**
+ * Phase 32 (AVAIL-06): a confirmed booking projected to be cancelled by an
+ * inverse-override save. Surfaced in the editor preview list AND re-queried
+ * post-write inside commitInverseOverrideAction for race-safety.
+ */
+export interface AffectedBooking {
+  id: string;
+  start_at: string; // UTC ISO
+  end_at: string;
+  booker_name: string;
+  event_type_name: string;
+}
+
+/**
+ * Generic supabase client type used by this module's helpers. Matches the
+ * shape returned by `createClient()` in lib/supabase/server.ts (RLS-scoped
+ * server client) AND createAdminClient() in lib/supabase/admin.ts (service
+ * role) — both expose the same chainable .from(...).select(...) API at the
+ * call sites we need.
+ */
+type SupabaseLike = Awaited<ReturnType<typeof createClient>>;
 
 /**
  * Resolve the current owner's account_id via the SETOF uuid RPC.
@@ -77,4 +101,99 @@ export async function loadAvailabilityState(): Promise<AvailabilityState | null>
     rules: (rulesRes.data ?? []) as AvailabilityRuleRow[],
     overrides: (overridesRes.data ?? []) as DateOverrideRow[],
   };
+}
+
+/**
+ * Phase 32 (AVAIL-06): Find confirmed bookings on `overrideDate` whose
+ * `start_at` falls inside any of the proposed `unavailableWindows`.
+ *
+ * Filtering is done in JS using the account timezone — same TZDate pattern
+ * used elsewhere (e.g. countBookingsOnLocalDate in lib/slots.ts). The DB
+ * filter widens to a UTC day window because the local-day boundary in
+ * `accountTimezone` may span ~25–26 UTC hours due to DST edges; the JS
+ * filter then narrows back to exact local-date match.
+ *
+ * Used by:
+ *   - The editor UI (Plan 32-02) to render the live "this will cancel N
+ *     bookings" preview before the owner clicks Save.
+ *   - commitInverseOverrideAction (Plan 32-03) for the post-write race-safe
+ *     re-query — any booking that snuck in between preview and commit is
+ *     also captured.
+ *
+ * @param supabase RLS-scoped server client OR admin client (same API)
+ * @param accountId account UUID
+ * @param overrideDate "YYYY-MM-DD" in account timezone
+ * @param unavailableWindows the windows the owner proposes to block
+ * @param accountTimezone IANA tz (e.g. "America/Chicago")
+ * @returns confirmed bookings whose start_at is inside any unavailable
+ *          window, sorted chronologically by start_at
+ */
+export async function getAffectedBookings(
+  supabase: SupabaseLike,
+  accountId: string,
+  overrideDate: string,
+  unavailableWindows: Array<{ start_minute: number; end_minute: number }>,
+  accountTimezone: string,
+): Promise<AffectedBooking[]> {
+  if (unavailableWindows.length === 0) return [];
+
+  // Widen by ~24h on each side of the UTC date to safely cover any timezone
+  // offset (UTC-12 .. UTC+14) plus DST edges. JS-side filter narrows back
+  // to exact local-date match in `accountTimezone`.
+  const startProbe = new Date(`${overrideDate}T00:00:00.000Z`);
+  startProbe.setUTCDate(startProbe.getUTCDate() - 1);
+  const endProbe = new Date(`${overrideDate}T00:00:00.000Z`);
+  endProbe.setUTCDate(endProbe.getUTCDate() + 2);
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      "id, start_at, end_at, booker_name, event_types!inner(name)",
+    )
+    .eq("account_id", accountId)
+    .eq("status", "confirmed")
+    .gte("start_at", startProbe.toISOString())
+    .lt("start_at", endProbe.toISOString());
+
+  if (error) throw error;
+  if (!data) return [];
+
+  type BookingRow = {
+    id: string;
+    start_at: string;
+    end_at: string;
+    booker_name: string;
+    event_types:
+      | { name: string }
+      | { name: string }[]
+      | null;
+  };
+
+  return (data as unknown as BookingRow[])
+    .filter((b) => {
+      const localStart = new TZDate(new Date(b.start_at), accountTimezone);
+      // Confirm we're on the override date in local TZ (handles DST edges).
+      const localDate = `${localStart.getFullYear()}-${String(
+        localStart.getMonth() + 1,
+      ).padStart(2, "0")}-${String(localStart.getDate()).padStart(2, "0")}`;
+      if (localDate !== overrideDate) return false;
+      const startMinute =
+        localStart.getHours() * 60 + localStart.getMinutes();
+      return unavailableWindows.some(
+        (w) => startMinute >= w.start_minute && startMinute < w.end_minute,
+      );
+    })
+    .map((b) => {
+      const et = Array.isArray(b.event_types)
+        ? b.event_types[0]
+        : b.event_types;
+      return {
+        id: b.id,
+        start_at: b.start_at,
+        end_at: b.end_at,
+        booker_name: b.booker_name,
+        event_type_name: et?.name ?? "Unknown",
+      };
+    })
+    .sort((a, b) => a.start_at.localeCompare(b.start_at));
 }
