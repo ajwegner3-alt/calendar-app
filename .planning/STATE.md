@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 31 Plan 01 complete (foundation: schema + quota-guard extensions). Ready for Plan 31-02.
+**Last updated:** 2026-05-05 — Phase 31 Plan 02 complete (sender wiring + caller routing). Ready for Plan 31-03.
 
 ## Project Reference
 
@@ -16,9 +16,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
 **Phase:** 31 of 33 — Email Hard Cap Guard
-**Plan:** 01 of TBD — Foundation (schema + quota-guard extensions) — COMPLETE
-**Status:** Plan 31-01 shipped. Ready for Plan 31-02 (call-site wiring).
-**Last activity:** 2026-05-05 — Plan 31-01 executed. Two migrations applied to linked Supabase (CHECK extension + bookings.confirmation_email_sent column). quota-guard.ts extended with 7 new EmailCategory values + getRemainingDailyQuota + logQuotaRefusal. Existing 80% warn block + boundary semantics unchanged. Existing tests (4/4) green.
+**Plan:** 02 of TBD — Sender wiring + caller routing — COMPLETE
+**Status:** Plan 31-02 shipped. Ready for Plan 31-03 (dashboard alert + manual-reminder UX inline callout).
+**Last activity:** 2026-05-05 — Plan 31-02 executed. All 7 email senders now go through checkAndConsumeQuota with typed EmailCategory + logQuotaRefusal. v1.1 carve-out comment in lib/email-sender/index.ts removed. send-booking-emails.ts save-and-flag UPDATEs bookings.confirmation_email_sent=false on quota refusal. lib/bookings/cancel.ts + reschedule.ts switched from after() to await; emailFailed?: "quota" | "send" return field. Cron loop moved out of after(); response returns reminders_sent + quota_refused live counters. Manual reminder action returns locked Gmail-fallback copy + errorCode: "EMAIL_QUOTA_EXCEEDED". TS clean (0 new src/ errors). Vitest unchanged: 177 passing, 4 skipped, 8 pre-existing-broken test files unchanged.
 
 ## Cumulative project progress
 
@@ -29,10 +29,10 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 Plan 01 of TBD complete; Plan 31-02 next)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 Plans 01-02 of TBD complete; Plan 31-03 next)
 ```
 
-**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plan 31-01 (2 task commits + metadata = 3 new commits in v1.6).
+**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plans 31-01 + 31-02 (5 task commits + 2 metadata = 7 new commits in v1.6 so far).
 
 ## Accumulated Context
 
@@ -56,7 +56,7 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.6:
 
 ### Active blockers
 
-None. Plan 31-01 complete; Plan 31-02 (call-site wiring) is next.
+None. Plans 31-01 + 31-02 complete; Plan 31-03 (dashboard alert + manual-reminder UX inline callout) is next. Plan 31-03 reads bookings.confirmation_email_sent=false (from 31-02 save-and-flag) for the dashboard alert, branches on emailFailed: "quota" (cancel/reschedule) and errorCode: "EMAIL_QUOTA_EXCEEDED" (manual reminder) for the inline Gmail-fallback callout.
 
 ### Open tech debt (carried into v1.6)
 
@@ -66,15 +66,20 @@ None. Plan 31-01 complete; Plan 31-02 (call-site wiring) is next.
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — Plan 31-01 executed atomically. Migrations applied + quota-guard extended. SUMMARY.md written.
+**Last session:** 2026-05-05 — Plan 31-02 executed atomically. All 7 senders wired through quota guard; v1.1 carve-out closed; save-and-flag + after()→await + cron live counters + locked Gmail-fallback copy all in place. SUMMARY.md written.
 
-**Stopped at:** Plan 31-01 complete. Ready for Plan 31-02 (call-site wiring through all 5 email-sender modules).
+**Stopped at:** Plan 31-02 complete. Ready for Plan 31-03 (dashboard alert + manual-reminder UX inline callout — surfaces the new flags/error codes to the owner).
 
-**Next session:** Run `/gsd:execute-phase 31` (continuation) or `/gsd:plan-phase 31` follow-up to surface Plan 31-02.
+**Next session:** Run `/gsd:execute-phase 31` (continuation) or `/gsd:plan-phase 31` follow-up to surface Plan 31-03.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
 - `ac886ca` — feat(31-01): extend quota-guard with booking categories + helpers
+- `42f3c9d` — docs(31-01): complete foundation plan
+
+**Plan 31-02 commits:**
+- `7348bc1` — feat(31-02): wire all 7 email senders through quota guard
+- `0de8dab` — feat(31-02): route quota errors to save-and-flag, await, cron, manual
 - (metadata commit appended at session close)
 
 **Files of record:**
@@ -84,3 +89,4 @@ None. Plan 31-01 complete; Plan 31-02 (call-site wiring) is next.
 - `.planning/STATE.md` — this file
 - `.planning/MILESTONES.md` — historical record (v1.6 entry created at milestone close)
 - `.planning/phases/31-email-hard-cap-guard/31-01-SUMMARY.md` — Plan 31-01 outcomes
+- `.planning/phases/31-email-hard-cap-guard/31-02-SUMMARY.md` — Plan 31-02 outcomes
