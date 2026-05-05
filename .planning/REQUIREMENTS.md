@@ -35,11 +35,11 @@ Requirements for the v1.6 milestone. Each maps to roadmap phases.
 
 ### Email — 200/day Hard Cap
 
-- [ ] **EMAIL-21**: The Gmail SMTP daily quota guard (`lib/email-sender/quota-guard.ts`) refuses to send when the day's count is at 200; refusal applies to ALL email senders including bookings, reminders, reschedules, and pushback (extends the v1.1 carve-out which previously exempted bookings/reminders).
+- [x] **EMAIL-21**: The Gmail SMTP daily quota guard (`lib/email-sender/quota-guard.ts`) refuses to send when the day's count is at 200; refusal applies to ALL email senders including bookings, reminders, reschedules, and pushback (extends the v1.1 carve-out which previously exempted bookings/reminders).
 - [ ] **EMAIL-22**: When a pushback batch is previewed (before commit), the dialog computes the batch email count and shows remaining daily quota; if the batch would exceed remaining quota, the preview shows a clear error and the commit button is disabled (pre-flight budget; no partial sends).
 - [ ] **EMAIL-23**: When a date-override auto-cancel batch (AVAIL-06) would exceed remaining daily quota, the same pre-flight budget pattern applies — preview surfaces the conflict and commit is disabled until the next day or the cap is raised.
-- [ ] **EMAIL-24**: A refused single send (e.g., a booking confirmation when the cap is hit) returns a clear error to the user-facing path that triggered it; no silent failure, no retry-spam.
-- [ ] **EMAIL-25**: All quota refusals are logged with PII-free structured fields (`code: 'EMAIL_QUOTA_EXCEEDED'`, `account_id`, `sender_type`, `count`, `cap`); existing v1.4 PII-free observability discipline preserved.
+- [x] **EMAIL-24**: A refused single send (e.g., a booking confirmation when the cap is hit) returns a clear error to the user-facing path that triggered it; no silent failure, no retry-spam.
+- [x] **EMAIL-25**: All quota refusals are logged with PII-free structured fields (`code: 'EMAIL_QUOTA_EXCEEDED'`, `account_id`, `sender_type`, `count`, `cap`); existing v1.4 PII-free observability discipline preserved.
 
 ## Future Requirements (deferred to v1.7+)
 
@@ -90,9 +90,9 @@ Explicitly excluded from v1.6.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EMAIL-21 | Phase 31 | Pending |
-| EMAIL-24 | Phase 31 | Pending |
-| EMAIL-25 | Phase 31 | Pending |
+| EMAIL-21 | Phase 31 | Complete |
+| EMAIL-24 | Phase 31 | Complete |
+| EMAIL-25 | Phase 31 | Complete |
 | AVAIL-01 | Phase 32 | Pending |
 | AVAIL-02 | Phase 32 | Pending |
 | AVAIL-03 | Phase 32 | Pending |

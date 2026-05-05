@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 31 Plan 03 complete (owner UX + test coverage). Phase 31 feature-complete pending verifier sign-off.
+**Last updated:** 2026-05-05 — Phase 31 (Email Hard Cap Guard) complete + Andrew live verification approved. Ready for Phase 32.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.6 — Phase 31: Email Hard Cap Guard (first phase; foundation for Phases 32 + 33)
+**Current focus:** v1.6 — Phase 32: Inverse Date Overrides (Phase 31 guard now live as foundation for Phases 32 + 33)
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 31 of 33 — Email Hard Cap Guard
-**Plan:** 03 of 3 — Owner UX + test coverage — COMPLETE (Phase 31 feature-complete pending verifier)
-**Status:** Plan 31-03 shipped. Phase 31 ready for `/gsd:verify-phase 31`.
-**Last activity:** 2026-05-05 — Plan 31-03 executed atomically. day-detail-row.tsx Send Reminder dialog now reads errorCode 'EMAIL_QUOTA_EXCEEDED' and renders inline error in dialog footer (no toast); cancel-button.tsx branches on result.emailFailed for 3-way differentiated success toast (locked verbatim quota copy + send fallback + default). actions.ts CancelBookingAsOwnerResult extended to propagate emailFailed (Rule 2 auto-fix — required for differentiated toast to function). queries.ts countUnsentConfirmations(accountId) added; uses Plan 31-01 partial index. /app/bookings page mounts new self-suppressing UnsentConfirmationsBanner above filters/table — returns null when count <= 0 per locked CONTEXT (no always-visible widget). New tests/email-quota-refuse.test.ts: 7-category × allow/refuse matrix + getRemainingDailyQuota (200/50/clamp) + logQuotaRefusal exact 5-key shape with negative PII assertions + cron continue-on-refuse pattern (positive + non-quota re-throw). quota-guard.test.ts gained #5 regression test for the 80% warn block (vi.setSystemTime to bypass warnedDays day-cache). Tests: 21 new passing in email-quota-refuse + 5 in quota-guard. 8 pre-existing broken test files remain unrelated. TS still 35 errors (all pre-existing test-mock). npm run build clean.
+**Phase:** 32 of 33 — Inverse Date Overrides (Phase 31 complete + verified)
+**Plan:** — (not started)
+**Status:** Phase 31 verified (status: human_needed → Andrew approved 2026-05-05). REQUIREMENTS.md EMAIL-21/24/25 marked Complete. ROADMAP.md updated. Ready to plan Phase 32.
+**Last activity:** 2026-05-05 — Phase 31 closed: 4/4 must-haves + 4/4 ROADMAP success criteria structurally verified by gsd-verifier; 6 live runtime checks passed by Andrew (manual reminder inline error, differentiated cancel toast, save-and-flag booker confirmation, /app/bookings banner self-suppression, cron mid-batch quota_refused counter, booker reschedule generic copy). 10 commits this phase (`ab3ceb2` through `035f779`). VERIFICATION.md created. Pre-existing M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md drift carried forward — still unresolved.
 
 ## Cumulative project progress
 
@@ -29,7 +29,7 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 all 3 plans complete, awaiting verifier; Phase 32 next)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 complete + verified 2026-05-05; Phase 32 next)
 ```
 
 **Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plans 31-01 + 31-02 + 31-03 (8 task commits + 3 metadata = 11 new commits in v1.6 so far).
@@ -66,11 +66,11 @@ None. Phase 31 is feature-complete (all 3 plans shipped). Next step: `/gsd:verif
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — Plan 31-03 executed atomically. Inline reminder error in dialog footer; differentiated cancel toast (3-way); /app/bookings unsent-confirmations banner (self-suppressing); countUnsentConfirmations(accountId) helper; refuse-send test suite (21 new + 1 regression for 80% warn). One Rule 2 auto-fix (extended CancelBookingAsOwnerResult to propagate emailFailed). SUMMARY.md written.
+**Last session:** 2026-05-05 — `/gsd:execute-phase 31` ran all 3 plans through 3 sequential waves, then verifier returned `human_needed`. Andrew live-verified the 6 checkpoints (inline reminder error, differentiated cancel toast, save-and-flag booker confirmation, /app/bookings banner self-suppression, cron mid-batch quota_refused counter, booker reschedule generic copy) and approved. REQUIREMENTS.md EMAIL-21/24/25 → Complete. ROADMAP.md Phase 31 → ✅ Complete 2026-05-05.
 
-**Stopped at:** Phase 31 feature-complete. Ready for `/gsd:verify-phase 31` to confirm production readiness before starting Phase 32.
+**Stopped at:** Phase 31 closed. Ready for Phase 32 (Inverse Date Overrides).
 
-**Next session:** Run `/gsd:verify-phase 31` to validate Phase 31 against ROADMAP success criteria; on pass, kick off `/gsd:plan-phase 32` for the auto-cancel batch.
+**Next session:** Run `/gsd:discuss-phase 32` (or `/gsd:plan-phase 32` to skip discussion) to begin Phase 32 — slot engine MINUS-semantics, date-override editor UI, auto-cancel lifecycle with quota pre-flight (uses Phase 31 `getRemainingDailyQuota`).
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations

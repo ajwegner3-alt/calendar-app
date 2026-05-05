@@ -98,7 +98,7 @@ See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase 
 
 **Dependency note:** Phase 31 (hard cap guard) ships first because both AVAIL-06's auto-cancel batch and PUSH-08's pre-flight quota check depend on the guard being live. EMAIL-23 (AVAIL pre-flight UI) is delivered inside Phase 32 and EMAIL-22 (PUSH pre-flight UI) is delivered inside Phase 33; both depend on the Phase 31 guard layer being present. If Phases 32 or 33 were to ship before Phase 31, the auto-cancel and pushback paths would need the existing v1.1 carve-out as a temporary fallback — avoided by the 31 → 32 → 33 execution order.
 
-- [ ] **Phase 31: Email Hard Cap Guard** — Extend `quota-guard.ts` to refuse-send fail-closed at 200/day for all email paths; user-visible error on single refused send; PII-free structured quota-exceeded log.
+- [x] **Phase 31: Email Hard Cap Guard** — completed 2026-05-05 (3 plans, 10 commits; Andrew live verification approved)
 - [ ] **Phase 32: Inverse Date Overrides** — Replace "enter available times" mode with "enter unavailable windows" in the date-override editor; multi-window support; full-day toggle; slot engine recompute (MINUS semantics); warn-and-auto-cancel affected bookings with quota pre-flight check.
 - [ ] **Phase 33: Day-Level Pushback Cascade** — New Pushback action on `/app/bookings`; anchor booking + delay dialog; smart cascade algorithm; optional reason field; owner confirmation preview with quota pre-flight check; reschedule lifecycle for all affected bookings; post-commit summary.
 
@@ -189,7 +189,7 @@ Plans:
 | 28 | v1.5 | 3 / 3 | ✅ Complete | 2026-05-04 |
 | 29 | v1.5 | 1 / 1 | ✅ Complete | 2026-05-04 |
 | 30 | v1.5 | 2 / 2 | ✅ Complete | 2026-05-05 |
-| 31 | v1.6 | 0 / TBD | Not started | - |
+| 31 | v1.6 | 3 / 3 | ✅ Complete | 2026-05-05 |
 | 32 | v1.6 | 0 / TBD | Not started | - |
 | 33 | v1.6 | 0 / TBD | Not started | - |
 
@@ -202,4 +202,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-04 — v1.6 phases 31-33 defined. Run `/gsd:plan-phase 31` to begin.*
+*Roadmap last updated: 2026-05-05 — Phase 31 (Email Hard Cap Guard) complete + verified. Run `/gsd:discuss-phase 32` to begin Phase 32.*
