@@ -8,11 +8,14 @@
  * wall-clock-correct in the named timezone. Never use raw new Date() arithmetic
  * or fixed-millisecond offsets here — RESEARCH Pitfall 2.
  *
- * Algorithm order (CONTEXT-locked + RESEARCH §2):
+ * Algorithm order (CONTEXT-locked + RESEARCH §2; Phase 32 semantic flip noted):
  *   1. Iterate local calendar dates in [rangeStart, rangeEnd]
  *   2. For each date, check overrides FIRST (override always wins, CONTEXT)
  *   3. If overrides[date] has any is_closed=true row → skip the whole day
- *   4. Else if overrides[date] has custom-hours rows → use those windows
+ *   4. Else if overrides[date] has unavailable windows (is_closed=false rows with
+ *      non-null start/end_minute, Phase 32 semantics) → start from weekly rules
+ *      for this day and subtract those windows via subtractWindows() (MINUS).
+ *      If the subtraction yields no remaining windows, the day has no slots.
  *   5. Else use weekly rules for getDay(date) in account TZ
  *   6. Daily cap: count non-cancelled bookings on this local-date; if >= cap, skip
  *   7. For each window, generate slots at duration-minute steps
@@ -118,8 +121,62 @@ function* generateWindowSlots(
 }
 
 /**
+ * Phase 32: Subtract a set of "blocked" intervals from a set of "base" intervals.
+ * Returns the remaining sub-intervals (may be empty if every base window is fully covered).
+ *
+ * Algorithm: for each blocked interval, walk every current base window and split
+ * it into 0, 1, or 2 fragments depending on overlap. Time complexity O(B * N).
+ *
+ * Edge cases handled:
+ *   - blocked entirely outside any base window → no-op (base unchanged)
+ *   - blocked fully covers a base window → that base window is removed
+ *   - blocked overlaps the start of a base window → trim the left edge
+ *   - blocked overlaps the end of a base window → trim the right edge
+ *   - blocked sits in the middle of a base window → split into two fragments
+ *   - empty `blocked` → returns a copy of `base`
+ *   - empty `base` → returns `[]`
+ *
+ * @param base    - candidate windows (e.g., from weekly rules)
+ * @param blocked - windows to subtract (e.g., date-override unavailable windows)
+ * @returns remaining windows after subtraction; possibly empty
+ */
+export function subtractWindows(
+  base: Array<{ start_minute: number; end_minute: number }>,
+  blocked: Array<{ start_minute: number; end_minute: number }>,
+): Array<{ start_minute: number; end_minute: number }> {
+  let result = base.map((w) => ({ start_minute: w.start_minute, end_minute: w.end_minute }));
+  for (const b of blocked) {
+    const next: typeof result = [];
+    for (const w of result) {
+      // No overlap: keep as-is
+      if (b.end_minute <= w.start_minute || b.start_minute >= w.end_minute) {
+        next.push(w);
+        continue;
+      }
+      // Left fragment: base start up to blocked start
+      if (b.start_minute > w.start_minute) {
+        next.push({ start_minute: w.start_minute, end_minute: b.start_minute });
+      }
+      // Right fragment: blocked end up to base end
+      if (b.end_minute < w.end_minute) {
+        next.push({ start_minute: b.end_minute, end_minute: w.end_minute });
+      }
+      // If neither fragment: this base window is fully swallowed — emit nothing
+    }
+    result = next;
+  }
+  return result;
+}
+
+/**
  * Determine the windows to apply for a single local date.
- * Override always wins (CONTEXT-locked).
+ *
+ * Phase 32 semantic flip:
+ *   - Rows with is_closed=true still block the entire day (no slots).
+ *   - Rows with is_closed=false are now UNAVAILABLE windows that are subtracted
+ *     from the weekly-hours base for that day (MINUS semantics). Previously
+ *     these rows REPLACED weekly rules entirely (PLUS semantics); legacy rows
+ *     in production were wiped by migration 20260505120000_phase32_wipe_legacy_custom_hours.sql.
  *
  * Returns null if the date is fully blocked (no slots).
  */
@@ -131,25 +188,37 @@ function windowsForDate(
 ): Array<{ start_minute: number; end_minute: number }> | null {
   const dayOverrides = overrides.filter((o) => o.override_date === localDate);
 
-  // is_closed wins over everything else for that date.
+  // is_closed wins over everything else for that date (unchanged from pre-Phase-32).
   if (dayOverrides.some((o) => o.is_closed)) return null;
 
-  const customHours = dayOverrides.filter(
-    (o) => !o.is_closed && o.start_minute !== null && o.end_minute !== null,
-  );
+  // Weekly rules form the base set of available windows for this day-of-week.
+  const dayRules = rules.filter((r) => r.day_of_week === dayOfWeek);
 
-  if (customHours.length > 0) {
-    // Override-replace: use the override windows; ignore weekly rules entirely
-    // (CONTEXT: "override always wins, even on closed weekdays").
-    return customHours.map((o) => ({
+  // Phase 32: rows with is_closed=false are UNAVAILABLE windows.
+  // Compute (weekly-rules base) MINUS (unavailable windows).
+  const unavailableWindows = dayOverrides
+    .filter((o) => !o.is_closed && o.start_minute !== null && o.end_minute !== null)
+    .map((o) => ({
       start_minute: o.start_minute as number,
       end_minute: o.end_minute as number,
     }));
+
+  if (unavailableWindows.length > 0) {
+    // Start from weekly rules for this day-of-week.
+    const baseWindows = dayRules.map((r) => ({
+      start_minute: r.start_minute,
+      end_minute: r.end_minute,
+    }));
+    // If the weekly schedule already has no windows for this day, nothing to subtract from.
+    if (baseWindows.length === 0) return null;
+    const remaining = subtractWindows(baseWindows, unavailableWindows);
+    // If unavailable windows fully cover the weekly base, the day is closed.
+    if (remaining.length === 0) return null;
+    return remaining;
   }
 
-  // No override → fall back to weekly rules for this day-of-week.
+  // No unavailable windows → fall back to weekly rules for this day-of-week.
   // No rules for this dow → closed weekday → no slots.
-  const dayRules = rules.filter((r) => r.day_of_week === dayOfWeek);
   if (dayRules.length === 0) return null;
 
   return dayRules.map((r) => ({

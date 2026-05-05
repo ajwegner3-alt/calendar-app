@@ -321,7 +321,7 @@ describe("computeSlots — min-notice + max-advance filters", () => {
   });
 });
 
-describe("computeSlots — date overrides (CONTEXT-locked semantics)", () => {
+describe("computeSlots — date overrides (Phase 32 MINUS semantics)", () => {
   it("override is_closed=true blocks the day entirely (overrides weekly rules)", () => {
     const override: DateOverrideRow = {
       override_date: "2026-06-15",
@@ -339,8 +339,10 @@ describe("computeSlots — date overrides (CONTEXT-locked semantics)", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("override custom hours OPENS a normally-closed weekday (override always wins)", () => {
-    // Sunday is closed (no rules for day_of_week=0); override opens 10-12.
+  it("Phase 32: unavailable-window override on a closed weekday is a no-op (no weekly base to subtract from)", () => {
+    // Phase 32 semantic flip: rows with is_closed=false now mean "unavailable
+    // windows," not "custom available hours." Sunday has no weekly rules, so
+    // there is nothing to subtract from → day stays closed (0 slots).
     const override: DateOverrideRow = {
       override_date: "2026-06-21",  // Sunday
       is_closed: false,
@@ -354,13 +356,13 @@ describe("computeSlots — date overrides (CONTEXT-locked semantics)", () => {
       rules: [],  // No weekly rules for any day → normally always closed
       overrides: [override],
     }));
-    expect(result).toHaveLength(4);
-    // 10:00 CDT = 15:00 UTC
-    expect(result[0].start_at).toBe("2026-06-21T15:00:00.000Z");
+    expect(result).toHaveLength(0);
   });
 
-  it("override custom hours REPLACES weekly rules for that date", () => {
-    // Monday rule says 9-5 (16 slots). Override says 13-15 (4 slots).
+  it("Phase 32: unavailable-window override SUBTRACTS from weekly rules (MINUS semantics)", () => {
+    // Phase 32 semantic flip: a 13:00–15:00 override is now an UNAVAILABLE
+    // window subtracted from the Monday 9–17 base. Result: 9–13 (8 slots) +
+    // 15–17 (4 slots) = 12 slots; the 4 slots between 13:00–15:00 are blocked.
     const override: DateOverrideRow = {
       override_date: "2026-06-15",
       is_closed: false,
@@ -374,12 +376,16 @@ describe("computeSlots — date overrides (CONTEXT-locked semantics)", () => {
       rules: [rule(1)],
       overrides: [override],
     }));
-    expect(result).toHaveLength(4);
-    // 13:00 CDT = 18:00 UTC
-    expect(result[0].start_at).toBe("2026-06-15T18:00:00.000Z");
+    expect(result).toHaveLength(12);
+    // First slot: 9:00 CDT = 14:00 UTC (start of weekly base, not blocked).
+    expect(result[0].start_at).toBe("2026-06-15T14:00:00.000Z");
+    // No slot starts at 13:00 CDT (18:00 UTC) — that's inside the unavailable window.
+    expect(result.find((s) => s.start_at === "2026-06-15T18:00:00.000Z")).toBeUndefined();
+    // Slot at 15:00 CDT (20:00 UTC) is the first slot after the unavailable window.
+    expect(result.find((s) => s.start_at === "2026-06-15T20:00:00.000Z")).toBeDefined();
   });
 
-  it("mixed is_closed + custom-hours rows on same date → is_closed wins", () => {
+  it("mixed is_closed + unavailable-window rows on same date → is_closed wins", () => {
     // Defensive: should never happen if the action enforces mutual exclusion,
     // but the engine must be robust (CONTEXT pitfall #5 in RESEARCH).
     const overrides: DateOverrideRow[] = [

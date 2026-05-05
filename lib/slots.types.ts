@@ -29,15 +29,25 @@ export interface AvailabilityRuleRow {
   end_minute: number;
 }
 
-/** Single per-date override row from date_overrides. */
+/**
+ * Single per-date override row from date_overrides.
+ *
+ * Phase 32 semantic flip: rows with `is_closed=true` block the entire day
+ * (no slots). Rows with `is_closed=false` define an UNAVAILABLE window that
+ * is subtracted from the weekly-hours base for that day (MINUS semantics).
+ * Pre-Phase-32 these rows meant "custom available hours" (replaced weekly
+ * rules entirely). The legacy interpretation was wiped from production by
+ * migration 20260505120000_phase32_wipe_legacy_custom_hours.sql; new writes
+ * from the Phase 32 UI always carry the unavailable-window meaning.
+ */
 export interface DateOverrideRow {
   /** YYYY-MM-DD local calendar date (Postgres date type → ISO string in JS) */
   override_date: string;
-  /** true = block this whole day; false = use the start_minute/end_minute window */
+  /** true = block this whole day; false = start_minute/end_minute is an unavailable window */
   is_closed: boolean;
-  /** Null when is_closed=true; otherwise the custom-hours window start */
+  /** Null when is_closed=true; otherwise the unavailable window start (Phase 32 MINUS semantics) */
   start_minute: number | null;
-  /** Null when is_closed=true; otherwise the custom-hours window end */
+  /** Null when is_closed=true; otherwise the unavailable window end (Phase 32 MINUS semantics) */
   end_minute: number | null;
 }
 
