@@ -88,41 +88,39 @@ Explicitly excluded from v1.6.
 
 ## Traceability
 
-Empty initially. Populated during roadmap creation (Phase 9 of `/gsd:new-milestone`).
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AVAIL-01 | TBD | Pending |
-| AVAIL-02 | TBD | Pending |
-| AVAIL-03 | TBD | Pending |
-| AVAIL-04 | TBD | Pending |
-| AVAIL-05 | TBD | Pending |
-| AVAIL-06 | TBD | Pending |
-| AVAIL-07 | TBD | Pending |
-| AVAIL-08 | TBD | Pending |
-| PUSH-01 | TBD | Pending |
-| PUSH-02 | TBD | Pending |
-| PUSH-03 | TBD | Pending |
-| PUSH-04 | TBD | Pending |
-| PUSH-05 | TBD | Pending |
-| PUSH-06 | TBD | Pending |
-| PUSH-07 | TBD | Pending |
-| PUSH-08 | TBD | Pending |
-| PUSH-09 | TBD | Pending |
-| PUSH-10 | TBD | Pending |
-| PUSH-11 | TBD | Pending |
-| PUSH-12 | TBD | Pending |
-| EMAIL-21 | TBD | Pending |
-| EMAIL-22 | TBD | Pending |
-| EMAIL-23 | TBD | Pending |
-| EMAIL-24 | TBD | Pending |
-| EMAIL-25 | TBD | Pending |
+| EMAIL-21 | Phase 31 | Pending |
+| EMAIL-24 | Phase 31 | Pending |
+| EMAIL-25 | Phase 31 | Pending |
+| AVAIL-01 | Phase 32 | Pending |
+| AVAIL-02 | Phase 32 | Pending |
+| AVAIL-03 | Phase 32 | Pending |
+| AVAIL-04 | Phase 32 | Pending |
+| AVAIL-05 | Phase 32 | Pending |
+| AVAIL-06 | Phase 32 | Pending |
+| AVAIL-07 | Phase 32 | Pending |
+| AVAIL-08 | Phase 32 | Pending |
+| EMAIL-23 | Phase 32 | Pending |
+| PUSH-01 | Phase 33 | Pending |
+| PUSH-02 | Phase 33 | Pending |
+| PUSH-03 | Phase 33 | Pending |
+| PUSH-04 | Phase 33 | Pending |
+| PUSH-05 | Phase 33 | Pending |
+| PUSH-06 | Phase 33 | Pending |
+| PUSH-07 | Phase 33 | Pending |
+| PUSH-08 | Phase 33 | Pending |
+| PUSH-09 | Phase 33 | Pending |
+| PUSH-10 | Phase 33 | Pending |
+| PUSH-11 | Phase 33 | Pending |
+| PUSH-12 | Phase 33 | Pending |
+| EMAIL-22 | Phase 33 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 25 total (8 AVAIL + 12 PUSH + 5 EMAIL)
-- Mapped to phases: 0 ⚠️ (filled by roadmapper)
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25 / 25 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-04*
-*Last updated: 2026-05-04 after `/gsd:new-milestone` requirements pass; awaiting roadmap.*
+*Last updated: 2026-05-04 — traceability filled after roadmap creation (Phases 31-33).*

@@ -8,6 +8,7 @@
 - ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
+- 🚧 **v1.6 Day-of-Disruption Tools** — Phases 31-33 (in progress)
 
 ## Phases
 
@@ -91,6 +92,90 @@ See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase 
 
 </details>
 
+### 🚧 v1.6 Day-of-Disruption Tools (Phases 31-33)
+
+**Milestone Goal:** Give owners two new operational levers for day-of disruption — partial-day unavailability via inverse date overrides and day-level pushback with smart cascade — while hardening the 200/day Gmail SMTP cap into a true refuse-send guard so pushback's higher email volume can't silently exceed it.
+
+**Dependency note:** Phase 31 (hard cap guard) ships first because both AVAIL-06's auto-cancel batch and PUSH-08's pre-flight quota check depend on the guard being live. EMAIL-23 (AVAIL pre-flight UI) is delivered inside Phase 32 and EMAIL-22 (PUSH pre-flight UI) is delivered inside Phase 33; both depend on the Phase 31 guard layer being present. If Phases 32 or 33 were to ship before Phase 31, the auto-cancel and pushback paths would need the existing v1.1 carve-out as a temporary fallback — avoided by the 31 → 32 → 33 execution order.
+
+- [ ] **Phase 31: Email Hard Cap Guard** — Extend `quota-guard.ts` to refuse-send fail-closed at 200/day for all email paths; user-visible error on single refused send; PII-free structured quota-exceeded log.
+- [ ] **Phase 32: Inverse Date Overrides** — Replace "enter available times" mode with "enter unavailable windows" in the date-override editor; multi-window support; full-day toggle; slot engine recompute (MINUS semantics); warn-and-auto-cancel affected bookings with quota pre-flight check.
+- [ ] **Phase 33: Day-Level Pushback Cascade** — New Pushback action on `/app/bookings`; anchor booking + delay dialog; smart cascade algorithm; optional reason field; owner confirmation preview with quota pre-flight check; reschedule lifecycle for all affected bookings; post-commit summary.
+
+---
+
+#### Phase 31: Email Hard Cap Guard
+
+**Goal:** The Gmail quota guard refuses to send when the daily count is at 200, for every email path in the system — no silent drops, no partial batches.
+
+**Depends on:** Phase 30 (v1.5 invariants preserved; no new dependency)
+
+**Requirements:** EMAIL-21, EMAIL-24, EMAIL-25
+
+**Success Criteria** (what must be TRUE):
+1. Sending a booking confirmation or reminder when the day's count is exactly 200 returns a clear error to the caller — no email is sent, no silent swallow.
+2. The owner-facing trigger path (e.g., triggering a manual reminder) receives a visible error message when the cap is hit — not a spinner that goes nowhere.
+3. Every quota refusal writes a structured log entry with `code: 'EMAIL_QUOTA_EXCEEDED'`, `account_id`, `sender_type`, `count`, and `cap` — no PII fields.
+4. The guard's refuse-send behavior covers all sender types (booking confirmation, reminder, cancel, reschedule, owner notification) — not just the paths that previously had fail-closed behavior.
+
+**Plans:** TBD (likely 2 plans: guard extension + observability/test)
+
+Plans:
+- [ ] 31-01: Extend quota guard to refuse-send all paths + owner-visible error on single refused send
+- [ ] 31-02: PII-free structured logging + test coverage for refuse path
+
+---
+
+#### Phase 32: Inverse Date Overrides
+
+**Goal:** Owners can mark specific time windows (or the whole day) as unavailable on a date override; the slot engine computes available slots as weekly-hours MINUS unavailable windows; existing bookings inside a new unavailable window are warned about and auto-cancelled on commit.
+
+**Depends on:** Phase 31 (auto-cancel batch pre-flight quota check requires EMAIL-21 guard to be live)
+
+**Requirements:** AVAIL-01, AVAIL-02, AVAIL-03, AVAIL-04, AVAIL-05, AVAIL-06, AVAIL-07, AVAIL-08, EMAIL-23
+
+**Success Criteria** (what must be TRUE):
+1. Owner opens the date-override editor and sees "Enter unavailable windows" — the old "Enter available times" mode is gone; the new mode is the only option.
+2. Owner can add multiple separate unavailable windows on the same date (e.g., 10:00–11:00 and 14:00–15:00), edit each window, and remove individual windows without affecting others.
+3. Owner can toggle "Block entire day" — when on, the unavailable-windows list disappears and the day shows fully blocked; toggling off restores the windows list.
+4. The public booking page shows no slots inside newly-created unavailable windows; slots outside the windows continue to appear normally; buffer-after-minutes and the EXCLUDE GIST constraint still apply.
+5. When saving unavailable windows that overlap existing confirmed bookings, the editor shows a warning preview listing every affected booking; if the batch would exceed remaining daily email quota, the commit button is disabled with a clear quota error; on confirmation the affected bookings are cancelled (status → `cancelled`, audit row, .ics CANCEL email with rebook CTA link to booker, owner notification).
+
+**Plans:** TBD (likely 3 plans: DB/slot-engine layer, editor UI, auto-cancel + email lifecycle)
+
+Plans:
+- [ ] 32-01: Slot engine MINUS-semantics for inverse overrides + `date_overrides` schema update
+- [ ] 32-02: Date-override editor UI (unavailable windows mode + full-day toggle + affected-booking preview)
+- [ ] 32-03: Auto-cancel lifecycle on commit (quota pre-flight + cancel batch + rebook CTA email)
+
+---
+
+#### Phase 33: Day-Level Pushback Cascade
+
+**Goal:** Owners can push back all bookings from a chosen anchor point forward on a given day by a specified delay, with smart cascade (gap absorption), a pre-commit preview, an optional reason field, and all affected bookings processed through the existing reschedule lifecycle.
+
+**Depends on:** Phase 31 (batch email pre-flight quota check requires EMAIL-21 guard to be live), Phase 32 (no hard dep but natural last in v1.6 — both earlier phases preserve v1.5 invariants that pushback also relies on)
+
+**Requirements:** PUSH-01, PUSH-02, PUSH-03, PUSH-04, PUSH-05, PUSH-06, PUSH-07, PUSH-08, PUSH-09, PUSH-10, PUSH-11, PUSH-12, EMAIL-22
+
+**Success Criteria** (what must be TRUE):
+1. Owner opens `/app/bookings`, triggers "Pushback," and sees a dialog defaulting to today's date listing that day's confirmed bookings in chronological order; owner can change the date.
+2. Owner picks an anchor booking, enters a delay (positive integer, minutes or hours), and optionally types a reason; the dialog recalculates new times in real time as delay input changes.
+3. The confirmation preview accurately shows: every booking that will move (old time → new time), every booking whose gap absorbs the push (stays in place), and every booking flagged "past end-of-day"; total email count and remaining daily quota are surfaced; if the batch would exceed remaining quota the commit button is disabled.
+4. On confirm, every affected booking's status updates and the existing reschedule lifecycle fires: `booking_events` audit row, .ics `METHOD:REQUEST` SEQUENCE+1 calendar invite, "sorry for the inconvenience" copy plus reason text in the email (brand-neutral on booker-facing surfaces), and a cancel link so bookers can decline the new time.
+5. A concurrent booker cancellation or reschedule during the pushback commit does not produce duplicate emails or inconsistent calendar state; the existing v1.4 EXCLUDE GIST + v1.1 capacity index continue to bind on the new times.
+6. Owner sees a post-commit summary listing emails sent and bookings updated; any individual email failure surfaces in the summary without rolling back successful sends.
+
+**Plans:** TBD (likely 3-4 plans: dialog + date/booking fetch, cascade algorithm + preview, commit + reschedule lifecycle, post-commit summary + race safety)
+
+Plans:
+- [ ] 33-01: Pushback dialog shell (date picker, bookings list, anchor selection, delay input, reason field)
+- [ ] 33-02: Smart cascade algorithm + real-time preview (gap absorption, end-of-day flag, email count + quota pre-flight)
+- [ ] 33-03: Commit path — reschedule lifecycle for each affected booking + race-safety gate
+- [ ] 33-04: Post-commit summary + failure surface
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -103,15 +188,17 @@ See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase 
 | 28 | v1.5 | 3 / 3 | ✅ Complete | 2026-05-04 |
 | 29 | v1.5 | 1 / 1 | ✅ Complete | 2026-05-04 |
 | 30 | v1.5 | 2 / 2 | ✅ Complete | 2026-05-05 |
+| 31 | v1.6 | 0 / TBD | Not started | - |
+| 32 | v1.6 | 0 / TBD | Not started | - |
+| 33 | v1.6 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
 
 - **Total phases shipped:** 32 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30)
 - **Total plans shipped:** 128 (52 + 34 + 22 + 6 + 8 + 6)
 - **Total commits:** ~510 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + ~11 v1.5)
-- **v1.5 final:** 3 phases (28-30), 6 plans, 14 requirements shipped
-- **Status:** v1.5 SHIPPED 2026-05-05 and ARCHIVED. Run `/gsd:new-milestone` to start v1.6 (or any next milestone) — questioning → research → requirements → roadmap.
+- **v1.6 scope:** 3 phases (31-33), TBD plans, 25 requirements
 
 ---
 
-*Roadmap last updated: 2026-05-05 — v1.5 milestone archived to `milestones/v1.5-ROADMAP.md` + `milestones/v1.5-REQUIREMENTS.md` + `milestones/v1.5-MILESTONE-AUDIT.md`. Tagged `v1.5`. REQUIREMENTS.md deleted (fresh one created when next milestone is started). Run `/gsd:new-milestone` to continue.*
+*Roadmap last updated: 2026-05-04 — v1.6 phases 31-33 defined. Run `/gsd:plan-phase 31` to begin.*
