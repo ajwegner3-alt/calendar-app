@@ -118,11 +118,12 @@ See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase 
 3. Every quota refusal writes a structured log entry with `code: 'EMAIL_QUOTA_EXCEEDED'`, `account_id`, `sender_type`, `count`, and `cap` — no PII fields.
 4. The guard's refuse-send behavior covers all sender types (booking confirmation, reminder, cancel, reschedule, owner notification) — not just the paths that previously had fail-closed behavior.
 
-**Plans:** TBD (likely 2 plans: guard extension + observability/test)
+**Plans:** 3 plans
 
 Plans:
-- [ ] 31-01: Extend quota guard to refuse-send all paths + owner-visible error on single refused send
-- [ ] 31-02: PII-free structured logging + test coverage for refuse path
+- [ ] 31-01-PLAN.md — Foundation: DB migrations (extend `email_send_log.category` CHECK, add `bookings.confirmation_email_sent`) + extend `quota-guard.ts` with new EmailCategory values, `getRemainingDailyQuota()`, and `logQuotaRefusal()` helper
+- [ ] 31-02-PLAN.md — Wire all 7 email senders through the guard + caller routing (save-and-flag bookings, await cancel/reschedule, cron mid-batch handling, manual-reminder Gmail-fallback error copy)
+- [ ] 31-03-PLAN.md — Owner UX surfaces (inline reminder dialog error, differentiated cancel toast, `/app/bookings` unsent-confirmations banner) + test coverage for refuse paths and PII-free log shape
 
 ---
 
