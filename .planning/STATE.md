@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 31 (Email Hard Cap Guard) complete + Andrew live verification approved. Ready for Phase 32.
+**Last updated:** 2026-05-05 — Plan 32-01 (Slot Engine MINUS Semantics + Legacy Wipe) executed. Phase 32 in progress (1 of 3 plans complete).
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 32 of 33 — Inverse Date Overrides (Phase 31 complete + verified)
-**Plan:** — (not started)
-**Status:** Phase 31 verified (status: human_needed → Andrew approved 2026-05-05). REQUIREMENTS.md EMAIL-21/24/25 marked Complete. ROADMAP.md updated. Ready to plan Phase 32.
-**Last activity:** 2026-05-05 — Phase 31 closed: 4/4 must-haves + 4/4 ROADMAP success criteria structurally verified by gsd-verifier; 6 live runtime checks passed by Andrew (manual reminder inline error, differentiated cancel toast, save-and-flag booker confirmation, /app/bookings banner self-suppression, cron mid-batch quota_refused counter, booker reschedule generic copy). 10 commits this phase (`ab3ceb2` through `035f779`). VERIFICATION.md created. Pre-existing M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md drift carried forward — still unresolved.
+**Phase:** 32 of 33 — Inverse Date Overrides (in progress)
+**Plan:** 32-01 of 3 — Slot Engine MINUS Semantics + Legacy Wipe (complete, 2026-05-05)
+**Status:** Plan 32-01 executed atomically. Migration applied (3 legacy `is_closed=false` rows wiped from production; 0 rows remain). `subtractWindows()` exported from `lib/slots.ts`. `windowsForDate()` rewritten with MINUS semantics. 17 new tests + 31 existing slot tests = 48 slot tests green. Per-task commits + metadata commit created. Ready for Plan 32-02 (override editor UI).
+**Last activity:** 2026-05-05 — Plan 32-01 shipped: 3 atomic commits (`7ac5def` migration, `8c673e6` slot engine, `dc12ada` tests) + metadata. Bundled refactor of 2 pre-existing slot-generation tests that asserted PLUS semantics (now assert MINUS) to keep regressions clean. Pre-existing TS errors in test-mock files + `02-VERIFICATION.md` drift confirmed unrelated and carried forward.
 
 ## Cumulative project progress
 
@@ -29,10 +29,10 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 complete + verified 2026-05-05; Phase 32 next)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 verified 2026-05-05; Plan 32-01 of 3 complete 2026-05-05)
 ```
 
-**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Plans 31-01 + 31-02 + 31-03 (8 task commits + 3 metadata = 11 new commits in v1.6 so far).
+**Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Phase 31 (8 task commits + 3 metadata) + Plan 32-01 (3 task commits + 1 metadata = 4 new commits) = 15 new commits in v1.6 so far.
 
 ## Accumulated Context
 
@@ -56,7 +56,13 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.6:
 
 ### Active blockers
 
-None. Phase 31 is feature-complete (all 3 plans shipped). Next step: `/gsd:verify-phase 31` to confirm production readiness, then unblock Phase 32 (auto-cancel batch) and Phase 33 (pushback batch) — both depend on Phase 31's `getRemainingDailyQuota()` for batch pre-flight, and the inline-error / save-and-flag UX patterns from Plan 31-03.
+None. Plan 32-01 shipped: slot engine MINUS semantics in place + 3 legacy custom-hours rows wiped from production. Plan 32-02 (override editor UI) and Plan 32-03 (auto-cancel batch) can now consume the foundation. Phase 31's `getRemainingDailyQuota()` remains the canonical pre-flight gate for the EMAIL-23 quota check that ships in Plan 32-03.
+
+### Plan 32-01 decisions (accumulated context)
+
+- **Wipe (Option B) over `semantics_v2` column (Option A)** — Production diagnostic confirmed exactly 3 legacy `is_closed=false` rows. Wipe is simpler than CP-03 dual-read; no schema column changes triggered. Migration `20260505120000_phase32_wipe_legacy_custom_hours.sql`.
+- **Phase 32 MINUS semantics locked into `lib/slots.ts`** — `is_closed=true` → null (full block); `is_closed=false` rows → `subtractWindows(weekly base, unavailable windows)`; if MINUS yields empty, return null. Closed-weekday no-op behavior: an unavailable window cannot open a day with no weekly rules (deliberate divergence vs pre-Phase-32).
+- **`subtractWindows()` exported and reusable** — Phases 32-02 and 32-03 (and any future planner that needs interval subtraction) can import from `@/lib/slots` rather than re-implementing.
 
 ### Open tech debt (carried into v1.6)
 
@@ -66,11 +72,11 @@ None. Phase 31 is feature-complete (all 3 plans shipped). Next step: `/gsd:verif
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — `/gsd:execute-phase 31` ran all 3 plans through 3 sequential waves, then verifier returned `human_needed`. Andrew live-verified the 6 checkpoints (inline reminder error, differentiated cancel toast, save-and-flag booker confirmation, /app/bookings banner self-suppression, cron mid-batch quota_refused counter, booker reschedule generic copy) and approved. REQUIREMENTS.md EMAIL-21/24/25 → Complete. ROADMAP.md Phase 31 → ✅ Complete 2026-05-05.
+**Last session:** 2026-05-05 — `/gsd:execute-phase 32` Plan 32-01 executed atomically. Migration applied to linked Supabase project (3 legacy `is_closed=false` rows deleted, 0 remain). `subtractWindows()` exported from `lib/slots.ts`; `windowsForDate()` rewritten with MINUS semantics. 17 new tests + 31 existing slot tests all green (48 total). Two existing slot-generation tests refactored alongside the engine change (they encoded pre-Phase-32 PLUS semantics).
 
-**Stopped at:** Phase 31 closed. Ready for Phase 32 (Inverse Date Overrides).
+**Stopped at:** Plan 32-01 complete. Plan 32-02 (override editor UI) ready to plan/execute.
 
-**Next session:** Run `/gsd:discuss-phase 32` (or `/gsd:plan-phase 32` to skip discussion) to begin Phase 32 — slot engine MINUS-semantics, date-override editor UI, auto-cancel lifecycle with quota pre-flight (uses Phase 31 `getRemainingDailyQuota`).
+**Next session:** Run `/gsd:plan-phase 32` next plan (32-02) — override editor UI: rename "Custom hours" → "Add unavailable windows" mode, hide+preserve toggle behavior on "Block entire day," inline affected-bookings preview surface (preview list + quota pre-flight stub for Plan 32-03 to plug into).
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -88,6 +94,12 @@ None. Phase 31 is feature-complete (all 3 plans shipped). Next step: `/gsd:verif
 - `2f53f7e` — test(31-03): refuse-send coverage + 80% warn regression
 - (metadata commit appended at session close)
 
+**Plan 32-01 commits:**
+- `7ac5def` — feat(32-01): wipe-and-flip migration for legacy custom_hours rows
+- `8c673e6` — feat(32-01): slot engine MINUS semantics + subtractWindows helper
+- `dc12ada` — test(32-01): unit tests for subtractWindows + MINUS semantics
+- (metadata commit appended at session close)
+
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
 - `.planning/ROADMAP.md` — phases 31-33 defined
@@ -97,3 +109,4 @@ None. Phase 31 is feature-complete (all 3 plans shipped). Next step: `/gsd:verif
 - `.planning/phases/31-email-hard-cap-guard/31-01-SUMMARY.md` — Plan 31-01 outcomes
 - `.planning/phases/31-email-hard-cap-guard/31-02-SUMMARY.md` — Plan 31-02 outcomes
 - `.planning/phases/31-email-hard-cap-guard/31-03-SUMMARY.md` — Plan 31-03 outcomes
+- `.planning/phases/32-inverse-date-overrides/32-01-SUMMARY.md` — Plan 32-01 outcomes
