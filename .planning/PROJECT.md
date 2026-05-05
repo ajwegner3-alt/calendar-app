@@ -10,15 +10,25 @@ A visitor lands on a service business's website, picks an available time slot in
 
 (Validated in v1.0; held through v1.1, v1.2, v1.3, v1.4. v1.5 confirmed once more: per-event-type buffer + 3-column desktop layout strengthened the wedge by removing two friction sources (cross-event-type buffer correctness + form-on-pick layout shift); the audience rebrand from "trade contractors" to "service businesses" extended the wedge's reach without changing the core promise. The booker experience itself remains brand-neutral — invitees see the contractor's brand, never NSI's product copy.)
 
-## Current Milestone: (none — ready for next)
+## Current Milestone: v1.6 Day-of-Disruption Tools
 
-v1.5 shipped 2026-05-05. Awaiting next milestone via `/gsd:new-milestone`.
+**Goal:** Give owners two new operational levers for handling real-world day-of-disruption — partial-day unavailability via inverse date overrides, and day-level pushback that cascades all later appointments and emails affected bookers — while hardening the existing 200/day Gmail SMTP cap into a true refuse-send guard so pushback's higher email volume can't silently exceed it.
+
+**Target features:**
+
+1. **Inverse availability on date overrides.** Replace the "enter available times" mode in the date-override editor with "enter unavailable windows." Multi-window per day supported (e.g. 10–11am AND 2–3pm). Full-day off remains a separate toggle. Existing bookings inside a newly-created unavailable window trigger a warning preview, then on commit are auto-cancelled with a cancellation email (existing cancel lifecycle, .ics CANCEL).
+
+2. **Day-level pushback under the Bookings tab.** New action that opens a dialog defaulting to today's date, lets owner pick an anchor booking on that day, enter a delay in minutes or hours (with optional reason field, encouraged but not required), preview which bookings will move and which will be pushed past end-of-day, and on confirm: smart cascade (each later booking only pushes if the prior booking's new end exceeds its original start; otherwise gap is absorbed and that booking is left alone), all affected bookings ride the existing reschedule lifecycle (`METHOD:REQUEST` SEQUENCE+1 .ics, calendar invite updates, cancel link in email, "sorry for the inconvenience" copy + reason text). Bookings pushed past end-of-workday use the same email pattern (no separate variant).
+
+3. **Gmail SMTP 200/day hard cap.** Harden the existing soft-warning `email_send_log` quota guard into a refuse-send fail-closed at 200/day for ALL paths (existing v1.1 quota guard exempted bookings/reminders to protect core flow; pushback emails are reschedule-flow and may fire 5+ at once, so the cap is now a real ceiling — extend the guard to all senders or pre-flight-budget the pushback batch). Per-account Gmail / Resend migration deferred to v1.7+ per Path A scope-lock.
 
 ## Requirements
 
 ### Active
 
-(None — v1.5 closed all 14 requirements at 100%; next milestone TBD via `/gsd:new-milestone`.)
+- [ ] **AVAIL-01..N**: Inverse-window date override editor (replace "available times" mode; multi-window; full-day toggle; warn-and-auto-cancel affected bookings)
+- [ ] **PUSH-01..N**: Day-level pushback dialog under Bookings tab (anchor booking + delay; smart cascade; optional reason; owner confirmation preview; reschedule-lifecycle emails)
+- [ ] **EMAIL-21..N**: Gmail SMTP 200/day hard cap with pre-flight budget for pushback batches (refuse-send fail-closed at cap; extend guard scope or batch pre-budget so pushback can't silently drop emails)
 
 ### Validated
 
@@ -334,4 +344,4 @@ v1.5 shipped 2026-05-05. Awaiting next milestone via `/gsd:new-milestone`.
 | Marathon QA waived AGAIN at v1.5 sign-off (5th consecutive deferral; deploy-and-eyeball formally the operating model since v1.3) | v1.0 → v1.1 → v1.2 → v1.3 → v1.4 → v1.5 all chose deploy-and-eyeball with no marathon QA executed. Andrew live-approved each phase as it shipped on production Vercel. The pattern is no longer deferral; it IS the operating model | ✓ Good — pattern fully institutionalized. The carryover backlog (Marathon QA retired, INFRA-01/02, AUTH-23/24, BRAND-22, DEBT-01..07, 3 Phase 26 audit fragilities) remains correctly classified as v1.6+ backlog. Future milestones SHOULD ship surgically against direct user feedback. |
 
 ---
-*Last updated: 2026-05-05 after v1.5 milestone shipped (Buffer Fix + Audience Rebrand + Booker Redesign — 14/14 requirements complete; 3 phases; 6 plans; ~2 calendar days; per-phase verifier 5/5 × 3; milestone audit cleared 6/6 cross-phase risks; deploy-and-eyeball 5th consecutive milestone)*
+*Last updated: 2026-05-04 after `/gsd:new-milestone` started v1.6 Day-of-Disruption Tools (3 target features: inverse-window date overrides, day-level pushback with cascade + reschedule-lifecycle emails, Gmail SMTP 200/day hard cap; per-account Gmail / Resend migration deferred to v1.7+ per Path A scope-lock).*
