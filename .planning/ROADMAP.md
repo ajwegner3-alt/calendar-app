@@ -167,13 +167,13 @@ Plans:
 5. A concurrent booker cancellation or reschedule during the pushback commit does not produce duplicate emails or inconsistent calendar state; the existing v1.4 EXCLUDE GIST + v1.1 capacity index continue to bind on the new times.
 6. Owner sees a post-commit summary listing emails sent and bookings updated; any individual email failure surfaces in the summary without rolling back successful sends.
 
-**Plans:** TBD (likely 3-4 plans: dialog + date/booking fetch, cascade algorithm + preview, commit + reschedule lifecycle, post-commit summary + race safety)
+**Plans:** 4 plans
 
 Plans:
-- [ ] 33-01: Pushback dialog shell (date picker, bookings list, anchor selection, delay input, reason field)
-- [ ] 33-02: Smart cascade algorithm + real-time preview (gap absorption, end-of-day flag, email count + quota pre-flight)
-- [ ] 33-03: Commit path — reschedule lifecycle for each affected booking + race-safety gate
-- [ ] 33-04: Post-commit summary + failure surface
+- [ ] 33-01-PLAN.md — Pushback dialog shell + day-grouped upcoming view + getBookingsForPushback query (Wave 1)
+- [ ] 33-02-PLAN.md — Pure cascade module + previewPushbackAction + EMAIL-22 quota gate (Wave 2, has human-verify checkpoint)
+- [ ] 33-03-PLAN.md — rescheduleBooking() skipOwnerEmail+actor extensions + commitPushbackAction with abort-on-diverge race safety (Wave 3)
+- [ ] 33-04-PLAN.md — Post-commit summary state + per-row retryPushbackEmailAction (Wave 4, has human-verify checkpoint)
 
 ---
 
@@ -191,15 +191,15 @@ Plans:
 | 30 | v1.5 | 2 / 2 | ✅ Complete | 2026-05-05 |
 | 31 | v1.6 | 3 / 3 | ✅ Complete | 2026-05-05 |
 | 32 | v1.6 | 3 / 3 | ✅ Complete | 2026-05-05 |
-| 33 | v1.6 | 0 / TBD | Not started | - |
+| 33 | v1.6 | 0 / 4 | In progress (planned) | - |
 
 ## Cumulative Stats
 
 - **Total phases shipped:** 32 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30)
 - **Total plans shipped:** 128 (52 + 34 + 22 + 6 + 8 + 6)
 - **Total commits:** ~510 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + ~11 v1.5)
-- **v1.6 scope:** 3 phases (31-33), TBD plans, 25 requirements
+- **v1.6 scope:** 3 phases (31-33), 10 plans (3+3+4), 25 requirements
 
 ---
 
-*Roadmap last updated: 2026-05-05 — Phase 32 (Inverse Date Overrides) complete + verified. Run `/gsd:discuss-phase 33` to begin Phase 33 (Day-Level Pushback Cascade), the final phase of v1.6.*
+*Roadmap last updated: 2026-05-05 — Phase 33 (Day-Level Pushback Cascade) planned: 4 plans across 4 sequential waves. Run `/gsd:execute-phase 33` to begin execution.*
