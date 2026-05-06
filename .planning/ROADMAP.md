@@ -133,7 +133,11 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 4. An owner can disconnect Gmail from `/app/settings`; the page returns to "Never connected" or "Needs reconnect" status and the stored credential is revoked.
 5. Gmail refresh tokens never appear in plaintext in any environment; `account_oauth_credentials` table stores only `refresh_token_encrypted`.
 
-**Plans:** TBD
+**Plans:** 4 plans in 3 waves
+- [ ] 34-01-PLAN.md — DB migration (`account_oauth_credentials`) + supabase/config.toml `enable_manual_linking` (Wave 1)
+- [ ] 34-02-PLAN.md — Encryption util + Google HTTP helpers + branded GoogleOAuthButton (Wave 1)
+- [ ] 34-03-PLAN.md — `/auth/google-callback` route handler + signup/login Google buttons + actions (Wave 2)
+- [ ] 34-04-PLAN.md — Settings Gmail panel (connect/disconnect/status) + onboarding optional step + linked-banner toast (Wave 3)
 
 ---
 
@@ -259,7 +263,7 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28-30 | v1.5 | 6 / 6 | ✅ Shipped | 2026-05-05 |
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
-| 34 | v1.7 | 0 / TBD | Not started | - |
+| 34 | v1.7 | 0 / 4 | Planned | - |
 | 35 | v1.7 | 0 / TBD | Not started | - |
 | 36 | v1.7 | 0 / TBD | Not started | - |
 | 37 | v1.7 | 0 / TBD | Not started | - |
