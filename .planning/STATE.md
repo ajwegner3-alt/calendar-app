@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 33 Plan 01 (Pushback Shell + Day-Grouped View) complete. 3 tasks executed, 3 commits. PushbackDialog 5-state shell, PushbackDialogProvider, BookingsDayGroupedView, getBookingsForPushback query, actions-pushback.ts all shipped. TypeScript + build clean. Ready for Plan 33-02 (cascade algorithm + preview wiring).
+**Last updated:** 2026-05-06 — Phase 33 Plan 02 (Cascade Algorithm + Preview Wiring) tasks 1+2 complete (paused at checkpoint:human-verify Task 3). computeCascadePreview pure module, getEndOfDayMinute, 14 unit tests, previewPushbackAction, dialog preview-ready state with MOVE/ABSORBED/PAST_EOD badges + EMAIL-22 quota gate all shipped. TypeScript + build clean. Awaiting human-verify of 7 cascade preview scenarios before Plan 33-02 is finalized.
 
 ## Project Reference
 
@@ -15,9 +15,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-01 complete)
-**Plan:** 01 of 4 complete (Plans 33-02 through 33-04 remain)
-**Status:** Plan 33-01 shipped. PUSH-01/02/03/04/05 UI surfaces built. TypeScript + build clean. Ready for Plan 33-02 (cascade algorithm + preview wiring).
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-02 in progress — paused at Task 3 checkpoint)
+**Plan:** 02 of 4 — Tasks 1+2 committed, awaiting human-verify checkpoint (Plans 33-03 and 33-04 remain after verification)
+**Status:** Plan 33-02 Tasks 1+2 shipped. computeCascadePreview, getEndOfDayMinute, previewPushbackAction, dialog preview-ready state all committed. Awaiting owner verification of 7 cascade preview scenarios before finalization.
 **Last activity:** 2026-05-06 — Plan 33-01 executed autonomously (3/3 tasks). PushbackDialog shell, PushbackDialogProvider, BookingsDayGroupedView, getBookingsForPushback query, actions-pushback.ts all committed. One deviation: shadcn RadioGroup not installed → used native accessible radio inputs (no impact on 33-02 wiring).
 
 ## Cumulative project progress
@@ -89,11 +89,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — `/gsd:execute-phase 33` Plan 33-01 executed autonomously. PushbackDialog 5-state shell (editing fully wired), PushbackDialogProvider (context + header button + day-section button), BookingsDayGroupedView (server-renderable day groups with per-day Pushback shortcuts), getBookingsForPushback (TZDate day-window query), getBookingsForPushbackAction (server action with auth + ownership check), accountTimezone threading in page.tsx. One deviation: native radio inputs used instead of shadcn RadioGroup (not installed). TypeScript + build clean.
+**Last session:** 2026-05-06 — Plan 33-02 Tasks 1+2 executed. lib/bookings/pushback.ts (computeCascadePreview pure function, snapToNextSlotMs, isPastEod, countMoved), lib/slots.ts (getEndOfDayMinute with 1440 sentinel), tests/pushback-cascade.test.ts (14 tests, all green), actions-pushback.ts (previewPushbackAction server action with auth + cascade + quota math), pushback-dialog.tsx (preview-ready state: CascadeBadge, chronological list, quota footer, verbatim Phase 31 error, Confirm button). TypeScript + build clean. Paused at Task 3 (checkpoint:human-verify).
 
-**Stopped at:** Plan 33-01 complete. Plans 33-02 through 33-04 remain.
+**Stopped at:** Plan 33-02 Task 3 checkpoint (human-verify). Continuation agent must verify 7 scenarios then proceed to metadata commit + Plan 33-03.
 
-**Next session:** Execute Plan 33-02 (cascade algorithm + preview wiring). Key entry point: `actions-pushback.ts` (append `previewPushbackAction`), `lib/bookings/pushback.ts` (new pure function `computeCascadePreview`), `lib/slots.ts` (export `windowsForDate` or wrapper). Wire preview into dialog's `preview-loading` → `preview-ready` transition.
+**Next session:** Continuation agent for Plan 33-02 Task 3 human-verify. After approval: create metadata commit, update STATE.md, then execute Plan 33-03 (commitPushbackAction + reschedule-batch commit logic).
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -133,6 +133,10 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `760a345` — feat(33-01): PushbackDialog shell — date picker, anchor radios, delay input, reason textarea
 - `86192c6` — feat(33-01): PushbackDialogProvider + day-grouped view + page mount
 
+**Plan 33-02 commits (Tasks 1+2 — Task 3 awaiting human-verify):**
+- `9020fe5` — feat(33-02): pure cascade module + getEndOfDayMinute + unit tests
+- `9220802` — feat(33-02): previewPushbackAction + cascade preview render with quota gate
+
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
 - `.planning/ROADMAP.md` — phases 31-33 defined
@@ -146,3 +150,4 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `.planning/phases/32-inverse-date-overrides/32-02-SUMMARY.md` — Plan 32-02 outcomes
 - `.planning/phases/32-inverse-date-overrides/32-03-SUMMARY.md` — Plan 32-03 outcomes
 - `.planning/phases/33-day-level-pushback-cascade/33-01-SUMMARY.md` — Plan 33-01 outcomes
+- `.planning/phases/33-day-level-pushback-cascade/33-02-SUMMARY.md` — Plan 33-02 outcomes (partial — Task 3 checkpoint pending)
