@@ -9,6 +9,7 @@
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
+- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — in planning.
 
 ## Phases
 
@@ -103,6 +104,150 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 
 </details>
 
+### 🚧 v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code (Phases 34-40) — IN PLANNING
+
+**Milestone Goal:** Open multi-tenant signup with Google OAuth (combined `gmail.send` consent), retire the centralized Gmail SMTP singleton in favor of per-account Gmail OAuth send, build the cap-hit "Request upgrade" path with NSI-owned Resend behind it for upgraded accounts, enable magic-link login, ship BOOKER-06/07 animated form polish, and audit the runtime tree for dead code with surgical removal under per-item sign-off.
+
+**Manual Prerequisites (Andrew action required before gated phases can ship):**
+- **PREREQ-01** (blocks Phase 34): Google Cloud Console — create OAuth project, enable Gmail API, configure consent screen with `gmail.send` sensitive scope, create Client ID + Secret. Start app verification immediately (3-5 business day lead time).
+- **PREREQ-02** (blocks Phase 34): Supabase dashboard — enable Google provider, paste Client ID + Secret.
+- **PREREQ-03** (blocks Phase 36): Resend — create account, verify NSI domain via Namecheap DNS (SPF/DKIM/DMARC), capture API key, confirm Pro tier (~$20/month).
+- **PREREQ-04** (blocks Phases 34, 35, 36): Vercel env vars on Preview + Production — `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` (32-byte hex), `RESEND_API_KEY`.
+
+---
+
+#### Phase 34: Google OAuth Signup + Credential Capture
+
+**Goal:** Users can sign up with Google (combined `gmail.send` consent), existing accounts can connect or disconnect Gmail, and all OAuth tokens are stored encrypted — making Google-linked accounts available for Phase 35's per-account send.
+
+**Depends on:** Phase 33 (prior milestone complete); PREREQ-01, PREREQ-02, PREREQ-04 (Andrew action required)
+
+**Requirements:** AUTH-23, AUTH-25, AUTH-26, AUTH-27, EMAIL-29, EMAIL-30, EMAIL-31
+
+**Andrew action required before this phase can ship:** PREREQ-01 (Google Cloud Console setup), PREREQ-02 (Supabase Google provider), PREREQ-04 (Vercel env vars).
+
+**Success Criteria** (what must be TRUE):
+1. Clicking "Sign up with Google" on `/app/signup` opens a single Google consent screen requesting `openid email profile` and `gmail.send` together; after approval the user lands in onboarding.
+2. When a user denies `gmail.send` at the consent screen the account is still created and the onboarding wizard shows a skippable "Connect Gmail" step — no error, no blocked state.
+3. An existing email/password account holder can connect their Gmail from `/app/settings` and the settings page shows "Connected" status — no duplicate user is created.
+4. An owner can disconnect Gmail from `/app/settings`; the page returns to "Never connected" or "Needs reconnect" status and the stored credential is revoked.
+5. Gmail refresh tokens never appear in plaintext in any environment; `account_oauth_credentials` table stores only `refresh_token_encrypted`.
+
+**Plans:** TBD
+
+---
+
+#### Phase 35: Per-Account Gmail OAuth Send
+
+**Goal:** All seven transactional email paths route through a per-account sender factory backed by each account's own Gmail OAuth credential, with per-account quota isolation and a strangler-fig cutover that retires the centralized SMTP singleton in a separate post-verification deploy.
+
+**Depends on:** Phase 34 (OAuth tokens in database; `account_oauth_credentials` table exists); PREREQ-04 (Vercel env vars)
+
+**Requirements:** AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33
+
+**Andrew action required before SMTP removal deploy:** Andrew connects `nsi` Gmail OAuth on preview branch; booking confirmation arrives in real inbox; only then does the SMTP removal commit ship as a separate deploy.
+
+**Success Criteria** (what must be TRUE):
+1. A booking confirmation sent from the `nsi` account arrives in Andrew's inbox via Gmail OAuth (not SMTP) after the preview-branch test.
+2. Two test accounts can each independently receive email while the other's daily count is at 200 — one account at cap does not affect the other's quota.
+3. When a Gmail refresh token is revoked (`invalid_grant`), the in-app banner appears prompting reconnect; subsequent send attempts refuse-send fail-closed rather than silently failing.
+4. All 7 send paths (booking-confirmation, owner-notification, reminder, cancel-booker, cancel-owner, reschedule-booker, reschedule-owner) call `getSenderForAccount(accountId)` — zero direct `sendEmail()` singleton calls remain in production send code.
+5. `GMAIL_APP_PASSWORD` and the centralized SMTP path are removed in a separate deploy only after Andrew confirms production sends working via Gmail OAuth.
+
+**Plans:** TBD
+
+---
+
+#### Phase 36: Resend Backend for Upgraded Accounts
+
+**Goal:** A Resend HTTP client backed by NSI's verified domain is wired into the sender factory so that any account with `email_provider = 'resend'` routes all sends through Resend — bypassing the 200/day Gmail cap entirely while still logging to `email_send_log` for analytics.
+
+**Depends on:** Phase 35 (`accounts.email_provider` column and `getSenderForAccount` factory exist); PREREQ-03 (Resend domain verified — hard gate)
+
+**Requirements:** UPGRADE-05, UPGRADE-06
+
+**Andrew action required before this phase can ship:** PREREQ-03 — Resend account created, NSI domain DNS records added in Namecheap, Resend dashboard shows "Verified" for SPF and DKIM. Do not deploy Resend send code until verified.
+
+**Success Criteria** (what must be TRUE):
+1. An account with `email_provider = 'resend'` receives a booking confirmation email delivered via Resend (visible in Resend dashboard sent log) using the account's business name as display name and NSI's verified domain in the envelope.
+2. A `.ics` calendar attachment is present and renders as a calendar invite in the received email (MEDIUM-confidence: verify in QA; `content_type: 'text/calendar'` may be needed if not).
+3. An account with `email_provider = 'resend'` can receive more than 200 booking emails in a day — the 200/day cap check is skipped for Resend accounts; sends still appear in `email_send_log`.
+
+**Plans:** TBD
+
+---
+
+#### Phase 37: Upgrade Flow + In-App Cap-Hit UI
+
+**Goal:** When an account hits the 200/day Gmail cap, the owner sees an inline "Request upgrade" link; submitting the upgrade request emails Andrew via NSI Resend, bypassing the requester's own quota guard entirely (bootstrap-safe: works at the exact moment the account is at cap).
+
+**Depends on:** Phase 36 (`createResendClient` must exist before `requestUpgradeAction` can be implemented per LD-05 bootstrap constraint)
+
+**Requirements:** UPGRADE-01, UPGRADE-02, UPGRADE-03, UPGRADE-04
+
+**Success Criteria** (what must be TRUE):
+1. When an account's `email_send_log` contains 200 rows for the current day, the existing quota-exceeded banner gains an inline "Request upgrade" link — the banner is otherwise unchanged.
+2. Clicking "Request upgrade" opens `/app/settings/upgrade` with an optional message field; submitting the form sends an email to Andrew via NSI Resend.
+3. With `email_send_log` seeded to 200 rows for the requester's account, the upgrade request email still arrives in Andrew's inbox — the quota guard is bypassed for this specific send path.
+4. Submitting the upgrade request disables the button for 24 hours (one request per account per day); a second submit within 24 hours is rejected with a clear message.
+
+**Plans:** TBD
+
+---
+
+#### Phase 38: Magic-Link Login
+
+**Goal:** An existing account holder can request a passwordless login email from the `/app/login` card; the flow is rate-limited, enumeration-safe, and uses Supabase `signInWithOtp` — no new route required.
+
+**Depends on:** None (fully independent of Phases 34-37; can be developed in parallel with Phase 36)
+
+**Requirements:** AUTH-24, AUTH-28, AUTH-29
+
+**Success Criteria** (what must be TRUE):
+1. On the existing `/app/login` card, a user can enter their email and request a magic-link login email without leaving the page or navigating to a separate route.
+2. Submitting a known email address and submitting an unknown email address return identical HTTP status codes and identical response body text — no enumeration leakage.
+3. More than 3 magic-link requests from the same IP within one hour are rejected (rate-limited via `rate_limit_events`); the 4th request returns an error, not a sent email.
+
+**Plans:** TBD
+
+---
+
+#### Phase 39: BOOKER Polish
+
+**Goal:** After a slot is picked, the booking form column animates in smoothly; before a slot is picked the column shows a shape-only skeleton; the animation respects reduced-motion; and the V15-MP-05 Turnstile lifecycle lock is preserved with zero CLS.
+
+**Depends on:** None (pure UI; zero backend dependencies; can be developed in parallel with Phases 36-38)
+
+**Requirements:** BOOKER-06, BOOKER-07, BOOKER-08, BOOKER-09
+
+**Success Criteria** (what must be TRUE):
+1. After picking a time slot, the form column animates in over 200-250ms using `transform`/`opacity` only (no layout-shifting properties); Chrome DevTools Performance panel shows CLS = 0.0.
+2. Before any slot is selected, the form column area shows a shape-only skeleton placeholder — no false "loading" spinner and no empty white space.
+3. With OS reduced-motion enabled, picking a slot shows the form immediately with no animation — the skeleton disappears and the form appears without any transition.
+4. React DevTools confirms `BookingForm` is absent from the DOM before a slot is selected (V15-MP-05 Turnstile lifecycle lock preserved); Turnstile token does not stale on slot re-pick.
+
+**Plans:** TBD
+
+---
+
+#### Phase 40: Dead-Code Audit
+
+**Goal:** `knip` is installed, configured with an explicit ignore list, run against the full codebase, and its report reviewed by Andrew item-by-item — resulting in atomic surgical removals under per-item sign-off, leaving `next build` green throughout.
+
+**Depends on:** Phases 34-39 all complete (audit a stable codebase, not a moving target — LD-09)
+
+**Requirements:** DEBT-09, DEBT-10, DEBT-11, DEBT-12
+
+**Success Criteria** (what must be TRUE):
+1. `knip` is installed as a devDependency and `knip.json` at the project root has an explicit ignore list covering `slot-picker.tsx` (Plan 30-01 Rule 4), test mock helpers, and `__mocks__/`.
+2. A `knip` report (markdown + JSON) is committed to the phase folder and Andrew has reviewed each removal candidate with a REMOVE / KEEP / INVESTIGATE decision recorded.
+3. Each removal group is committed atomically; `next build` runs green between batches; SQL migration files are not touched.
+4. After all approved removals, `npx knip` reports zero issues in the target categories.
+
+**Plans:** TBD
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -114,14 +259,22 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28-30 | v1.5 | 6 / 6 | ✅ Shipped | 2026-05-05 |
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
+| 34 | v1.7 | 0 / TBD | Not started | - |
+| 35 | v1.7 | 0 / TBD | Not started | - |
+| 36 | v1.7 | 0 / TBD | Not started | - |
+| 37 | v1.7 | 0 / TBD | Not started | - |
+| 38 | v1.7 | 0 / TBD | Not started | - |
+| 39 | v1.7 | 0 / TBD | Not started | - |
+| 40 | v1.7 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
 
-- **Total milestones shipped:** 6 (v1.0 → v1.6)
+- **Total milestones shipped:** 6 (v1.0 → v1.6); v1.7 in planning
 - **Total phases shipped:** 33 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30 + 31-33)
 - **Total plans shipped:** 138 (52 + 34 + 22 + 6 + 8 + 6 + 10)
 - **Total commits:** ~563 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + 31 v1.5 + 53 v1.6)
+- **v1.7 phases planned:** 7 (Phases 34-40); 30 requirements mapped; plans TBD
 
 ---
 
-*Roadmap last updated: 2026-05-06 — v1.6 Day-of-Disruption Tools milestone archived. Phases 31-33 collapsed to `<details>` block. Run `/gsd:new-milestone` to plan v1.7.*
+*Roadmap last updated: 2026-05-06 — v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code roadmap created. Phases 34-40 defined. Run `/gsd:plan-phase 34` to begin.*

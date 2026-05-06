@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — v1.7 milestone started. PROJECT.md Current Milestone section added (Auth Expansion + Per-Account Email + Polish + Dead Code). REQUIREMENTS.md and ROADMAP.md pending in `/gsd:new-milestone` flow.
+**Last updated:** 2026-05-06 — v1.7 roadmap created. Phases 34-40 defined. 30/30 requirements mapped.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Defining v1.7 requirements. Milestone goals locked: Google OAuth signup with combined gmail.send scope, magic-link login, per-account Gmail OAuth send (retiring centralized Gmail SMTP), in-app "Request upgrade" cap-hit path, shared NSI Resend backend for upgraded accounts, BOOKER-06/07 polish, dead-code audit phase.
+**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Roadmap created; ready to plan first phase.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PLANNING
-**Phase:** Not started (defining requirements). Next phase number: 34 (continues from Phase 33 in v1.6).
+**Phase:** 34 — Google OAuth Signup + Credential Capture (first v1.7 phase)
 **Plan:** —
-**Status:** Defining requirements (questioning complete; research decision next).
-**Last activity:** 2026-05-06 — v1.7 milestone kickoff via `/gsd:new-milestone`. PROJECT.md updated with Current Milestone section.
+**Status:** Roadmap created. Ready to plan first phase.
+**Last activity:** 2026-05-06 — v1.7 roadmap written. ROADMAP.md, STATE.md, REQUIREMENTS.md traceability updated.
 
 ## Cumulative project progress
 
@@ -30,9 +30,10 @@ v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shippe
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipped 2026-05-06 — ~2 days)
+v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in planning)
 ```
 
-**Total shipped:** 7 milestones archived (v1.0–v1.6), 33 phases, 138 plans, ~563 commits
+**Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases, 138 plans, ~563 commits
 
 ## Accumulated Context
 
@@ -40,42 +41,34 @@ v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipp
 
 See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
-- **Refuse-send fail-closed (Phase 31)** — all 7 email senders now go through `checkAndConsumeQuota()`; v1.1 carve-out permanently removed. `getRemainingDailyQuota()` available for batch pre-flights. Inline quota error UX vocabulary locked: `text-sm text-red-600` + `role="alert"`.
-- **MINUS semantics for date overrides (Phase 32)** — `windowsForDate()` in `lib/slots.ts` returns weekly-base MINUS unavailable windows. `subtractWindows()` exported as reusable pure helper. All legacy custom_hours rows wiped.
-- **ABORT-on-diverge for cascade operations (Phase 33)** — when operation's correctness depends on ordering (cascade math), abort on any ID set difference rather than union. Contrasts with Phase 32's union approach for set operations where ordering doesn't matter.
-- **`skipOwnerEmail`/`actor` owner-batch pattern** — symmetric across `cancelBooking` + `rescheduleBooking` + their respective email orchestrators. Quota math = N (not 2N) with `skipOwnerEmail=true`.
-- **`firstNameOf(fullName)` render helper** — first name derived at render time; not stored in DB. Pattern for all future surfaces needing first-name-only display.
-- **Planner discipline: grep migrations before naming DB columns in plan bodies** — `booker_first_name` invented column caused silent runtime failure (fixed commit `bba0e18`).
-- **Vitest `resolve.alias` array/regex exact-match** — `find: /^@\/lib\/email-sender$/` prevents alias prefix-bleed to sub-paths. Locked in `vitest.config.ts`.
-- **PUSH-10 reason callout pattern** — `actor='owner' && reason non-empty` → apology + "Reason:" block in booker template. Mirrored in cancel and reschedule lifecycles. LD-07 preserved.
-- **Deploy-and-eyeball as canonical production gate** — 6th consecutive milestone with no marathon QA. Pattern is the operating model.
+- **Refuse-send fail-closed (Phase 31)** — all 7 email senders go through `checkAndConsumeQuota()`; v1.1 carve-out removed. `getRemainingDailyQuota()` for batch pre-flights.
+- **Vitest `resolve.alias` array/regex exact-match** — `find: /^@\/lib\/email-sender$/` prevents alias prefix-bleed. New provider sub-paths get their own alias entries (LD-14).
+- **Two-step deploy protocol (CP-03)** — strangler-fig pattern for cutover; SMTP removal is a separate deploy after production verification (LD-06).
+- **`slot-picker.tsx` kept on disk** — Plan 30-01 Rule 4; explicit `knip` ignore list required (LD-09).
+- **Deploy-and-eyeball as canonical production gate** — 6th consecutive milestone, formally the operating model.
+
+### Blockers / prereqs for v1.7
+
+- **PREREQ-01** (blocks Phase 34): Google Cloud Console OAuth setup + app verification (3-5 day lead time — start immediately).
+- **PREREQ-02** (blocks Phase 34): Supabase Google provider toggle + credential paste.
+- **PREREQ-03** (blocks Phase 36): Resend account + NSI domain DNS verification via Namecheap.
+- **PREREQ-04** (blocks Phases 34, 35, 36): Vercel env vars — `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`, `RESEND_API_KEY`.
 
 ### Open tech debt (carried into v1.7)
 
-- `slot-picker.tsx` on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — date+slot UI duplicated in `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is redesigned (extract shared `<CalendarSlotPicker>`).
-- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — still uncommitted.
-- Pre-existing TS errors in test-mock files (9 files) referencing removed `__mockSendCalls` / `__setTurnstileResult` helpers. `tests/bookings-api.test.ts` one failing test (fixture mismatch vs quota-gated production code). 30/31 test files green.
-- `oldEndAt` placeholder in `retryPushbackEmailAction` = `input.oldStartAt` — safe today (`sendOwner:false`); thread properly if owner retry leg ever activates.
-
-### v1.7 carryover backlog (no scope commitment yet)
-
-INFRA-01 (Resend migration), INFRA-02 (Vercel Pro hourly cron), AUTH-23 (OAuth), AUTH-24 (magic-link), BRAND-22 (NSI brand asset), DEBT-01..08, BUFFER-07/08/09, BOOKER-06/07, EMAIL-26/27 (per-account Gmail / Resend). Live-use feedback on inverse overrides and pushback will drive v1.7 scope.
+- `slot-picker.tsx` on disk per Andrew Option A (Phase 40 audit will surface it; explicit knip ignore required).
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — uncommitted.
+- `tests/bookings-api.test.ts` one failing test (fixture mismatch); 30/31 test files green.
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — v1.6 milestone archived. All planning artifacts updated. git tag `v1.6` created and pushed. `chore: complete v1.6 milestone` commit pushed to main.
+**Last session:** 2026-05-06 — v1.7 roadmap created via `/gsd:new-milestone` flow.
 
-**Stopped at:** Milestone archive complete.
+**Stopped at:** Roadmap creation complete. Files written: ROADMAP.md, STATE.md, REQUIREMENTS.md (traceability filled).
 
-**Next session:** Run `/gsd:new-milestone` to plan v1.7. `/clear` first for a fresh context window.
+**Next session:** Run `/gsd:plan-phase 34` to plan Phase 34 (Google OAuth Signup). Before starting: confirm PREREQ-01 and PREREQ-02 are in flight (Google Cloud Console + Supabase provider). PREREQ-04 env vars needed before first deploy.
 
 **Files of record:**
-- `.planning/PROJECT.md` — updated 2026-05-06 after v1.6
-- `.planning/ROADMAP.md` — v1.6 collapsed to `<details>` block; all milestones v1.0-v1.6 shown
-- `.planning/MILESTONES.md` — v1.6 entry prepended (reverse-chrono)
+- `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
 - `.planning/STATE.md` — this file
-- `.planning/milestones/v1.6-ROADMAP.md` — full phase 31-33 details archive
-- `.planning/milestones/v1.6-REQUIREMENTS.md` — all 25 v1.6 requirements archived as Complete
-- `.planning/phases/31-email-hard-cap-guard/31-0{1,2,3}-SUMMARY.md` — Phase 31 plan outcomes
-- `.planning/phases/32-inverse-date-overrides/32-0{1,2,3}-SUMMARY.md` — Phase 32 plan outcomes
-- `.planning/phases/33-day-level-pushback-cascade/33-0{1,2,3,4}-SUMMARY.md` — Phase 33 plan outcomes
+- `.planning/REQUIREMENTS.md` — all 30 v1.7 requirements with phase traceability filled

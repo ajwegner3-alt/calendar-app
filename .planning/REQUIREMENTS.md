@@ -98,54 +98,52 @@ These block specific phases. Andrew action required before phase can ship.
 
 | Prereq | Required for | Description |
 |--------|--------------|-------------|
-| **PREREQ-01** | Phase 1 (AUTH-23..27) | Google Cloud Console: create/configure OAuth project, enable Gmail API, configure consent screen, add `gmail.send` sensitive scope, create OAuth Client ID + Secret. Start app verification (3–5 business days lead time). |
-| **PREREQ-02** | Phase 1 (AUTH-23..27) | Supabase dashboard: enable Google provider, paste Client ID + Secret. |
-| **PREREQ-03** | Phase 3 (UPGRADE-05) | Resend: create account, verify NSI domain via Namecheap DNS (SPF/DKIM/DMARC records), capture API key, confirm Pro tier (~$20/month). |
-| **PREREQ-04** | Phases 1, 2, 3 | Vercel env vars on Preview + Production: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` (32-byte hex), `RESEND_API_KEY`. |
+| **PREREQ-01** | Phase 34 (AUTH-23..27) | Google Cloud Console: create/configure OAuth project, enable Gmail API, configure consent screen, add `gmail.send` sensitive scope, create OAuth Client ID + Secret. Start app verification (3–5 business days lead time). |
+| **PREREQ-02** | Phase 34 (AUTH-23..27) | Supabase dashboard: enable Google provider, paste Client ID + Secret. |
+| **PREREQ-03** | Phase 36 (UPGRADE-05) | Resend: create account, verify NSI domain via Namecheap DNS (SPF/DKIM/DMARC records), capture API key, confirm Pro tier (~$20/month). |
+| **PREREQ-04** | Phases 34, 35, 36 | Vercel env vars on Preview + Production: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY` (32-byte hex), `RESEND_API_KEY`. |
 
 ## Traceability
 
-Filled during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-23 | Phase TBD | Pending |
-| AUTH-24 | Phase TBD | Pending |
-| AUTH-25 | Phase TBD | Pending |
-| AUTH-26 | Phase TBD | Pending |
-| AUTH-27 | Phase TBD | Pending |
-| AUTH-28 | Phase TBD | Pending |
-| AUTH-29 | Phase TBD | Pending |
-| AUTH-30 | Phase TBD | Pending |
-| EMAIL-26 | Phase TBD | Pending |
-| EMAIL-27 | Phase TBD | Pending |
-| EMAIL-28 | Phase TBD | Pending |
-| EMAIL-29 | Phase TBD | Pending |
-| EMAIL-30 | Phase TBD | Pending |
-| EMAIL-31 | Phase TBD | Pending |
-| EMAIL-32 | Phase TBD | Pending |
-| EMAIL-33 | Phase TBD | Pending |
-| UPGRADE-01 | Phase TBD | Pending |
-| UPGRADE-02 | Phase TBD | Pending |
-| UPGRADE-03 | Phase TBD | Pending |
-| UPGRADE-04 | Phase TBD | Pending |
-| UPGRADE-05 | Phase TBD | Pending |
-| UPGRADE-06 | Phase TBD | Pending |
-| BOOKER-06 | Phase TBD | Pending |
-| BOOKER-07 | Phase TBD | Pending |
-| BOOKER-08 | Phase TBD | Pending |
-| BOOKER-09 | Phase TBD | Pending |
-| DEBT-09 | Phase TBD | Pending |
-| DEBT-10 | Phase TBD | Pending |
-| DEBT-11 | Phase TBD | Pending |
-| DEBT-12 | Phase TBD | Pending |
+| AUTH-23 | Phase 34 | Pending |
+| AUTH-24 | Phase 38 | Pending |
+| AUTH-25 | Phase 34 | Pending |
+| AUTH-26 | Phase 34 | Pending |
+| AUTH-27 | Phase 34 | Pending |
+| AUTH-28 | Phase 38 | Pending |
+| AUTH-29 | Phase 38 | Pending |
+| AUTH-30 | Phase 35 | Pending |
+| EMAIL-26 | Phase 35 | Pending |
+| EMAIL-27 | Phase 35 | Pending |
+| EMAIL-28 | Phase 35 | Pending |
+| EMAIL-29 | Phase 34 | Pending |
+| EMAIL-30 | Phase 34 | Pending |
+| EMAIL-31 | Phase 34 | Pending |
+| EMAIL-32 | Phase 35 | Pending |
+| EMAIL-33 | Phase 35 | Pending |
+| UPGRADE-01 | Phase 37 | Pending |
+| UPGRADE-02 | Phase 37 | Pending |
+| UPGRADE-03 | Phase 37 | Pending |
+| UPGRADE-04 | Phase 37 | Pending |
+| UPGRADE-05 | Phase 36 | Pending |
+| UPGRADE-06 | Phase 36 | Pending |
+| BOOKER-06 | Phase 39 | Pending |
+| BOOKER-07 | Phase 39 | Pending |
+| BOOKER-08 | Phase 39 | Pending |
+| BOOKER-09 | Phase 39 | Pending |
+| DEBT-09 | Phase 40 | Pending |
+| DEBT-10 | Phase 40 | Pending |
+| DEBT-11 | Phase 40 | Pending |
+| DEBT-12 | Phase 40 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 30 total (8 AUTH + 8 EMAIL + 6 UPGRADE + 4 BOOKER + 4 DEBT)
-- Mapped to phases: 0 (filled by roadmap)
-- Unmapped: 30 (will resolve after roadmap)
+- Mapped to phases: 30 / 30
+- Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-05-06*
-*Last updated: 2026-05-06 — initial v1.7 definition from research SUMMARY.md*
+*Last updated: 2026-05-06 — traceability filled by roadmap creation. All 30 requirements mapped to Phases 34-40.*
