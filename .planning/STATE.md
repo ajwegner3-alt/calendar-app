@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Plan 32-02 (Override Modal Rewrite) executed and human-verified. Phase 32 plan execution complete (3 of 3); phase verifier (`/gsd:verify-phase 32`) still to run.
+**Last updated:** 2026-05-05 — Phase 32 (Inverse Date Overrides) complete + verified. gsd-verifier returned `passed`: 5/5 ROADMAP success criteria + 11/11 plan must_haves verified in code. REQUIREMENTS.md AVAIL-01..08 + EMAIL-23 → Complete. ROADMAP.md updated. Ready for Phase 33 (Day-Level Pushback Cascade) — final phase of v1.6.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.6 — Phase 32: Inverse Date Overrides (Phase 31 guard now live as foundation for Phases 32 + 33)
+**Current focus:** v1.6 — Phase 33: Day-Level Pushback Cascade (Phases 31 + 32 now live as foundations)
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 32 of 33 — Inverse Date Overrides (plan execution complete; phase verifier pending)
-**Plan:** 32-02 of 3 — Override Modal Rewrite (complete, 2026-05-05) — final plan in Phase 32
-**Status:** All 3 Phase 32 plans complete. Plan 32-01 (slot engine MINUS) + Plan 32-03 (server actions + batch cancel) + Plan 32-02 (override modal UI) all shipped. Wave 3 done. EMAIL-23 hard quota gate is now live end-to-end (server pre-flight in `commitInverseOverrideAction` + inline modal UX matching Phase 31 day-detail-row pattern). `skipOwnerEmail` plumbed through `cancelBooking → sendCancelEmails`. Owner-facing label vocabulary flipped: "Block entire day" / "Add unavailable windows" replace the v1.5-and-prior "Custom hours" / "Enter available times". Phase 32 verifier (`/gsd:verify-phase 32`) is the next gate before phase close.
-**Last activity:** 2026-05-05 — Plan 32-02 shipped: 2 atomic commits (`7913349` schema/types rename, `7ea8292` modal rewrite + previewAffectedBookingsAction + accountTimezone thread-through) + metadata. Andrew approved 8/8 human-verify scenarios at `/app/availability` (mode labels, multi-window add/edit/remove, hide+preserve toggle, slot engine MINUS, affected-bookings preview, brand-neutral booker email, suppressed owner duplicate, EMAIL-23 quota gate, race-safety re-query, v1.5 buffer + EXCLUDE GIST invariants). Quota-guard test edit was reverted before approval. No deviations.
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (Phase 32 complete + verified)
+**Plan:** — (not started)
+**Status:** Phase 32 closed. gsd-verifier returned `passed` (5/5 ROADMAP criteria + 11/11 plan must_haves substantively verified against codebase: subtractWindows export, MINUS branch in windowsForDate, "Block entire day" / "Add unavailable windows" labels, hide+preserve toggle, getAffectedBookings, commitInverseOverrideAction with HARD pre-flight + race-safe re-query, skipOwnerEmail flag plumbed end-to-end, wipe migration applied). Andrew live-verified all 8 plan-defined scenarios on 2026-05-05. Orchestrator correction `app/globals.css` `@source not "../.planning"` (commit `7d7233d`) shipped during the phase to unblock the dev build. Ready to plan Phase 33 — final phase of v1.6.
+**Last activity:** 2026-05-05 — `/gsd:execute-phase 32` ran 3 sequential waves (32-01 → 32-03 → 32-02), reached 32-02's human-verify checkpoint, Andrew approved 8/8 scenarios, finalization commit (`e9a6074`) appended. Phase verifier (`32-VERIFICATION.md`) created and returned `passed`. REQUIREMENTS.md AVAIL-01..08 + EMAIL-23 → Complete. ROADMAP.md Phase 32 → ✅ Complete 2026-05-05.
 
 ## Cumulative project progress
 
@@ -29,7 +29,7 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phase 31 verified 2026-05-05; all 3 Phase 32 plans complete 2026-05-05; Phase 32 verifier pending; Phase 33 not yet started)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phases 31 + 32 verified 2026-05-05; Phase 33 not yet started — final phase of v1.6)
 ```
 
 **Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Phase 31 (8 task commits + 3 metadata) + Plan 32-01 (3 task commits + 1 metadata) + Plan 32-03 (3 task commits + 1 metadata) + Plan 32-02 (2 task commits + 1 metadata = 3 new commits) = 22 new commits in v1.6 so far.
