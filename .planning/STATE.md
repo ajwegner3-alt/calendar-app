@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 32 (Inverse Date Overrides) complete + verified. gsd-verifier returned `passed`: 5/5 ROADMAP success criteria + 11/11 plan must_haves verified in code. REQUIREMENTS.md AVAIL-01..08 + EMAIL-23 → Complete. ROADMAP.md updated. Ready for Phase 33 (Day-Level Pushback Cascade) — final phase of v1.6.
+**Last updated:** 2026-05-06 — Phase 33 Plan 01 (Pushback Shell + Day-Grouped View) complete. 3 tasks executed, 3 commits. PushbackDialog 5-state shell, PushbackDialogProvider, BookingsDayGroupedView, getBookingsForPushback query, actions-pushback.ts all shipped. TypeScript + build clean. Ready for Plan 33-02 (cascade algorithm + preview wiring).
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 33 of 33 — Day-Level Pushback Cascade (Phase 32 complete + verified)
-**Plan:** — (not started)
-**Status:** Phase 32 closed. gsd-verifier returned `passed` (5/5 ROADMAP criteria + 11/11 plan must_haves substantively verified against codebase: subtractWindows export, MINUS branch in windowsForDate, "Block entire day" / "Add unavailable windows" labels, hide+preserve toggle, getAffectedBookings, commitInverseOverrideAction with HARD pre-flight + race-safe re-query, skipOwnerEmail flag plumbed end-to-end, wipe migration applied). Andrew live-verified all 8 plan-defined scenarios on 2026-05-05. Orchestrator correction `app/globals.css` `@source not "../.planning"` (commit `7d7233d`) shipped during the phase to unblock the dev build. Ready to plan Phase 33 — final phase of v1.6.
-**Last activity:** 2026-05-05 — `/gsd:execute-phase 32` ran 3 sequential waves (32-01 → 32-03 → 32-02), reached 32-02's human-verify checkpoint, Andrew approved 8/8 scenarios, finalization commit (`e9a6074`) appended. Phase verifier (`32-VERIFICATION.md`) created and returned `passed`. REQUIREMENTS.md AVAIL-01..08 + EMAIL-23 → Complete. ROADMAP.md Phase 32 → ✅ Complete 2026-05-05.
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-01 complete)
+**Plan:** 01 of 4 complete (Plans 33-02 through 33-04 remain)
+**Status:** Plan 33-01 shipped. PUSH-01/02/03/04/05 UI surfaces built. TypeScript + build clean. Ready for Plan 33-02 (cascade algorithm + preview wiring).
+**Last activity:** 2026-05-06 — Plan 33-01 executed autonomously (3/3 tasks). PushbackDialog shell, PushbackDialogProvider, BookingsDayGroupedView, getBookingsForPushback query, actions-pushback.ts all committed. One deviation: shadcn RadioGroup not installed → used native accessible radio inputs (no impact on 33-02 wiring).
 
 ## Cumulative project progress
 
@@ -89,11 +89,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — `/gsd:execute-phase 32` Plan 32-02 executed atomically. Override modal flipped to inverse-windows semantics: 2-button mode toggle ("Block entire day" / "Add unavailable windows"), hide+preserve windows state, 3-state commit flow (editing → preview-loading → preview-ready), inline affected-bookings preview with chronological ordering + account-TZ time formatting, EMAIL-23 quota gate matching Phase 31 day-detail-row pattern, fast-path retained via direct `upsertDateOverrideAction` call. `previewAffectedBookingsAction` added to `actions-batch-cancel.ts`. `accountTimezone` threaded from page loader. Andrew approved 8/8 human-verify scenarios.
+**Last session:** 2026-05-06 — `/gsd:execute-phase 33` Plan 33-01 executed autonomously. PushbackDialog 5-state shell (editing fully wired), PushbackDialogProvider (context + header button + day-section button), BookingsDayGroupedView (server-renderable day groups with per-day Pushback shortcuts), getBookingsForPushback (TZDate day-window query), getBookingsForPushbackAction (server action with auth + ownership check), accountTimezone threading in page.tsx. One deviation: native radio inputs used instead of shadcn RadioGroup (not installed). TypeScript + build clean.
 
-**Stopped at:** Plan 32-02 complete. All 3 Phase 32 plans now executed. Phase 32 verifier (`/gsd:verify-phase 32`) is the next gate.
+**Stopped at:** Plan 33-01 complete. Plans 33-02 through 33-04 remain.
 
-**Next session:** Run `/gsd:verify-phase 32` to verify Phase 32 against its requirements (AVAIL-01 through AVAIL-08 + EMAIL-23). After verifier passes, Phase 33 (Day-of-Pushback) opens with `/gsd:plan-phase 33`.
+**Next session:** Execute Plan 33-02 (cascade algorithm + preview wiring). Key entry point: `actions-pushback.ts` (append `previewPushbackAction`), `lib/bookings/pushback.ts` (new pure function `computeCascadePreview`), `lib/slots.ts` (export `windowsForDate` or wrapper). Wire preview into dialog's `preview-loading` → `preview-ready` transition.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -128,6 +128,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `7ea8292` — feat(32-02): override modal rewrite — unavailable windows + preview + quota gate
 - (metadata commit appended at this session close)
 
+**Plan 33-01 commits:**
+- `89b10b1` — feat(33-01): add getBookingsForPushback query + accountTimezone wiring
+- `760a345` — feat(33-01): PushbackDialog shell — date picker, anchor radios, delay input, reason textarea
+- `86192c6` — feat(33-01): PushbackDialogProvider + day-grouped view + page mount
+
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
 - `.planning/ROADMAP.md` — phases 31-33 defined
@@ -140,3 +145,4 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `.planning/phases/32-inverse-date-overrides/32-01-SUMMARY.md` — Plan 32-01 outcomes
 - `.planning/phases/32-inverse-date-overrides/32-02-SUMMARY.md` — Plan 32-02 outcomes
 - `.planning/phases/32-inverse-date-overrides/32-03-SUMMARY.md` — Plan 32-03 outcomes
+- `.planning/phases/33-day-level-pushback-cascade/33-01-SUMMARY.md` — Plan 33-01 outcomes
