@@ -1,5 +1,105 @@
 import "server-only";
+import { TZDate } from "@date-fns/tz";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Phase 33 (PUSH-02, PUSH-03): A confirmed booking returned by the pushback
+ * query. Includes event_types join fields needed for cascade math (33-02) and
+ * the CAS guard token needed by commitPushbackAction (33-03).
+ */
+export interface PushbackBooking {
+  id: string;
+  start_at: string; // UTC ISO
+  end_at: string; // UTC ISO
+  status: "confirmed"; // narrowed
+  booker_first_name: string;
+  booker_email: string;
+  duration_minutes: number; // from event_types join
+  buffer_after_minutes: number; // from event_types join
+  event_type_id: string;
+  event_type_name: string; // for owner-facing display
+  reschedule_token_hash: string; // 33-03 CAS guard pre-fetch
+}
+
+/**
+ * Minimal SupabaseLike type for this module — same shape as createClient() return.
+ */
+type SupabaseLike = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Phase 33 (PUSH-02): Fetch confirmed bookings for a single local date
+ * (in accountTimezone), with event_types join for cascade math.
+ *
+ * Uses the canonical TZDate day-window pattern from Phase 32
+ * `getAffectedBookings()` in app/(shell)/app/availability/_lib/queries.ts:
+ * convert the local midnight in accountTimezone to UTC boundaries, then query
+ * on start_at. Results are sorted chronologically ascending so the caller can
+ * directly render them in order.
+ *
+ * @param supabase RLS-scoped server client
+ * @param params.accountId account UUID
+ * @param params.dateIsoYmd "YYYY-MM-DD" in account timezone
+ * @param params.accountTimezone IANA tz (e.g. "America/Chicago")
+ */
+export async function getBookingsForPushback(
+  supabase: SupabaseLike,
+  params: { accountId: string; dateIsoYmd: string; accountTimezone: string },
+): Promise<PushbackBooking[]> {
+  // Compute UTC day-window bounds from the local date in accountTimezone.
+  // TZDate interprets the string as local-midnight in the given zone.
+  const localMidnight = new TZDate(
+    `${params.dateIsoYmd}T00:00:00`,
+    params.accountTimezone,
+  );
+  const dayStartUtc = localMidnight.toISOString();
+  const dayEndUtc = new TZDate(
+    localMidnight.getTime() + 24 * 60 * 60 * 1000,
+    params.accountTimezone,
+  ).toISOString();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id,
+      start_at,
+      end_at,
+      status,
+      booker_first_name,
+      booker_email,
+      reschedule_token_hash,
+      event_type_id,
+      event_types!inner ( id, name, duration_minutes, buffer_after_minutes )
+    `,
+    )
+    .eq("account_id", params.accountId)
+    .eq("status", "confirmed")
+    .gte("start_at", dayStartUtc)
+    .lt("start_at", dayEndUtc)
+    .order("start_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => {
+    // Normalize join cardinality (same defensive pattern as queryBookings).
+    const et = Array.isArray(row.event_types)
+      ? row.event_types[0]
+      : row.event_types;
+    return {
+      id: row.id,
+      start_at: row.start_at,
+      end_at: row.end_at,
+      status: "confirmed" as const,
+      booker_first_name: row.booker_first_name,
+      booker_email: row.booker_email,
+      reschedule_token_hash: row.reschedule_token_hash,
+      event_type_id: row.event_type_id,
+      duration_minutes: et.duration_minutes,
+      buffer_after_minutes: et.buffer_after_minutes,
+      event_type_name: et.name,
+    };
+  });
+}
 
 export type BookingStatusFilter =
   | "upcoming"
