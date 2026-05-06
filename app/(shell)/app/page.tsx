@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadMonthBookings } from "./_lib/load-month-bookings";
 import { HomeDashboard } from "./_components/home-dashboard";
 import { OnboardingBanner } from "./_components/onboarding-banner";
+import { GoogleLinkToast } from "./_components/google-link-toast";
 
 // 7-day onboarding checklist visibility window (matches OnboardingChecklist
 // client-side gate in components/onboarding-checklist.tsx).
@@ -86,6 +88,11 @@ export default async function DashboardHome() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Google link toast — reads ?google_linked=1, fires once, strips param. Returns null. */}
+      <Suspense fallback={null}>
+        <GoogleLinkToast />
+      </Suspense>
+
       {/* Onboarding banner — renders only within first 7 days, before dismiss.
           Wraps the existing OnboardingChecklist in a compact above-calendar layout. */}
       {checklistWindowOpen && (
