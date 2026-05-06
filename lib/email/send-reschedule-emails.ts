@@ -57,6 +57,14 @@ export interface SendRescheduleEmailsArgs {
   rawRescheduleToken: string;
   /** Base URL for cancel/reschedule links. Caller resolves NEXT_PUBLIC_APP_URL. */
   appUrl: string;
+  /**
+   * Phase 33 (PUSH-09): when explicitly false, suppresses the owner notification
+   * email leg. Used by batch-initiated reschedules (pushback commit) where N owner
+   * emails would be duplicate noise — the owner triggered the batch.
+   * Default: true (owner leg fires; existing single-reschedule callers unaffected).
+   * Mirrors send-cancel-emails.ts sendOwner pattern (Phase 32 AVAIL-06).
+   */
+  sendOwner?: boolean;
 }
 
 /**
@@ -76,10 +84,17 @@ export interface SendRescheduleEmailsArgs {
  * Plan 12-06: Added text: stripHtml(html) to booker reschedule (EMAIL-10 extended).
  */
 export async function sendRescheduleEmails(args: SendRescheduleEmailsArgs): Promise<void> {
-  const results = await Promise.allSettled([
-    sendBookerRescheduleEmail(args),
-    sendOwnerRescheduleEmail(args),
-  ]);
+  // Phase 33 (PUSH-09): batch-initiated reschedules suppress the owner leg.
+  // Default sendOwner=true preserves the original two-leg behavior for all
+  // existing single-reschedule callers (public /api/reschedule route).
+  const sendOwner = args.sendOwner !== false;
+
+  const legs: Array<Promise<void>> = [sendBookerRescheduleEmail(args)];
+  if (sendOwner) {
+    legs.push(sendOwnerRescheduleEmail(args));
+  }
+
+  const results = await Promise.allSettled(legs);
 
   // Phase 31 (EMAIL-21): re-throw the first QuotaExceededError so the
   // awaiting caller (lib/bookings/reschedule.ts) can surface emailFailed:

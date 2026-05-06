@@ -22,6 +22,21 @@ export interface RescheduleBookingArgs {
   appUrl: string;
   /** Optional client IP for the audit row */
   ip?: string | null;
+  /**
+   * Phase 33 (PUSH-09): when true, suppresses the owner notification email leg
+   * of the reschedule lifecycle. Used by the pushback batch path to avoid N
+   * duplicate owner notifications when the owner themselves triggered the batch.
+   * The booker email leg is unconditional regardless (LD-07 booker-neutrality).
+   * Default: false (owner email leg fires — existing behavior preserved).
+   */
+  skipOwnerEmail?: boolean;
+  /**
+   * Phase 33 (PUSH-09): actor recorded on the booking_events audit row.
+   * 'booker' = public booker-initiated reschedule (existing v1 behavior).
+   * 'owner'  = owner-initiated batch reschedule (Phase 33 pushback).
+   * Default: 'booker'.
+   */
+  actor?: "booker" | "owner";
 }
 
 export type RescheduleBookingResult =
@@ -77,7 +92,7 @@ export type RescheduleBookingResult =
 export async function rescheduleBooking(
   args: RescheduleBookingArgs,
 ): Promise<RescheduleBookingResult> {
-  const { bookingId, oldRescheduleHash, newStartAt, newEndAt, appUrl, ip } =
+  const { bookingId, oldRescheduleHash, newStartAt, newEndAt, appUrl, ip, skipOwnerEmail, actor } =
     args;
 
   // ── 0. Invariant checks BEFORE UPDATE ──────────────────────────────────────
@@ -223,6 +238,10 @@ export async function rescheduleBooking(
       rawCancelToken: fresh.rawCancel,
       rawRescheduleToken: fresh.rawReschedule,
       appUrl,
+      // Phase 33 (PUSH-09): batch-initiated reschedules suppress the owner
+      // email leg to avoid N duplicate owner notifications. sendOwner=false
+      // when skipOwnerEmail=true; default true preserves existing behavior.
+      sendOwner: !skipOwnerEmail,
     });
   } catch (err) {
     if (err instanceof QuotaExceededError) {
@@ -247,7 +266,7 @@ export async function rescheduleBooking(
         booking_id: pre.id,
         account_id: pre.account_id,
         event_type: "rescheduled",
-        actor: "booker", // public reschedule path is booker-initiated only in v1
+        actor: actor ?? "booker", // Phase 33 (PUSH-09): owner-initiated batch uses actor='owner'
         metadata: {
           old_start_at: oldStartAt,
           new_start_at: updated.start_at,
