@@ -337,15 +337,9 @@ export async function commitPushbackAction(
         newStartAt: m.new_start_at,
         newEndAt: m.new_end_at,
         appUrl,
-        // Note: rescheduleBooking does not expose a 'reason' param — the reason
-        // text is recorded on the commitPushbackAction input and stored in the
-        // dialog summary for the owner. The audit row captures the action via
-        // actor='owner' + event_type='rescheduled'. PUSH-10 (reason in email)
-        // is a deviation to document: the existing reschedule email template
-        // does not include a reason field, so the reason is currently for
-        // owner-internal context only. Tracked as tech debt for future polish.
         skipOwnerEmail: true,  // Phase 33 lock: owner sees in-dialog summary
         actor: "owner",        // Phase 33 lock: audit row records owner action
+        reason: input.reason,  // PUSH-10: rendered as "Reason:" callout in booker email when non-empty
         ip: null,
       });
 
@@ -565,6 +559,9 @@ export async function retryPushbackEmailAction(
       rawRescheduleToken: rawReschedule,
       appUrl,
       sendOwner: false,
+      // PUSH-10: retry preserves the original batch's apology + reason callout.
+      actor: "owner",
+      reason: input.reason,
     });
   } catch (e) {
     if (e instanceof QuotaExceededError) {

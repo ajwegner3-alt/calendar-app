@@ -37,6 +37,14 @@ export interface RescheduleBookingArgs {
    * Default: 'booker'.
    */
   actor?: "booker" | "owner";
+  /**
+   * Phase 33 (PUSH-10): optional owner-supplied reason text shown in the booker
+   * reschedule email (only when actor='owner' && non-empty). Mirrors the cancel
+   * email reason callout pattern (LD-07: callout shown to the OPPOSITE party of
+   * the trigger). Brand-neutral: copy stays audience-neutral, no owner identity
+   * surfaced.
+   */
+  reason?: string;
 }
 
 export type RescheduleBookingResult =
@@ -92,7 +100,7 @@ export type RescheduleBookingResult =
 export async function rescheduleBooking(
   args: RescheduleBookingArgs,
 ): Promise<RescheduleBookingResult> {
-  const { bookingId, oldRescheduleHash, newStartAt, newEndAt, appUrl, ip, skipOwnerEmail, actor } =
+  const { bookingId, oldRescheduleHash, newStartAt, newEndAt, appUrl, ip, skipOwnerEmail, actor, reason } =
     args;
 
   // ── 0. Invariant checks BEFORE UPDATE ──────────────────────────────────────
@@ -242,6 +250,10 @@ export async function rescheduleBooking(
       // email leg to avoid N duplicate owner notifications. sendOwner=false
       // when skipOwnerEmail=true; default true preserves existing behavior.
       sendOwner: !skipOwnerEmail,
+      // Phase 33 (PUSH-10): thread actor + reason so the booker email can render
+      // a "Reason:" callout when actor='owner' && reason is non-empty.
+      actor,
+      reason,
     });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

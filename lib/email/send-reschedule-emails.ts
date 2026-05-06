@@ -65,6 +65,19 @@ export interface SendRescheduleEmailsArgs {
    * Mirrors send-cancel-emails.ts sendOwner pattern (Phase 32 AVAIL-06).
    */
   sendOwner?: boolean;
+  /**
+   * Phase 33 (PUSH-10): who initiated the reschedule. Used to gate the booker-
+   * facing reason callout (only when actor='owner' && reason non-empty —
+   * mirrors send-cancel-emails.ts: reason shown to the OPPOSITE party).
+   * Default: undefined (no callout rendered for legacy callers).
+   */
+  actor?: "booker" | "owner";
+  /**
+   * Phase 33 (PUSH-10): optional owner-supplied reason text. Rendered as a
+   * "Reason:" callout in the booker email when actor='owner' && non-empty.
+   * Brand-neutral copy: no owner identity surfaced (LD-07).
+   */
+  reason?: string;
 }
 
 /**
@@ -117,7 +130,7 @@ export async function sendRescheduleEmails(args: SendRescheduleEmailsArgs): Prom
 }
 
 async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise<void> {
-  const { booking, eventType, account, oldStartAt, rawCancelToken, rawRescheduleToken, appUrl } = args;
+  const { booking, eventType, account, oldStartAt, rawCancelToken, rawRescheduleToken, appUrl, actor, reason } = args;
 
   // Booker-tz formatting for both old and new times
   const oldTz = new TZDate(new Date(oldStartAt), booking.booker_timezone);
@@ -137,12 +150,29 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     brand_primary: account.brand_primary,
   };
 
+  // Phase 33 (PUSH-10 / SC4): owner-initiated reschedule shows an apology line
+  // plus an optional reason callout. Booker-initiated reschedules omit both.
+  // Brand-neutral: no owner identity surfaced — LD-07 lock.
+  const isOwnerInitiated = actor === "owner";
+  const apologyLine = isOwnerInitiated
+    ? `<p style="margin: 0 0 24px 0;">We&rsquo;re sorry for the inconvenience.</p>`
+    : "";
+  const reasonBlock =
+    isOwnerInitiated && reason && reason.trim().length > 0
+      ? `<div style="margin: 0 0 24px 0; padding: 12px 16px; background: #f6f6f6; border-radius: 6px;">
+           <p style="margin: 0; font-size: 13px; color: #555;">Reason:</p>
+           <p style="margin: 4px 0 0 0; font-size: 14px;">${escapeHtml(reason)}</p>
+         </div>`
+      : "";
+
   const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
   ${renderEmailBrandedHeader(branding)}
   <h1 style="${brandedHeadingStyle(account.brand_primary)}">Your appointment was rescheduled</h1>
   <p style="margin: 0 0 8px 0;">Hi ${escapeHtml(booking.booker_name)},</p>
-  <p style="margin: 0 0 24px 0;">Your appointment with <strong>${escapeHtml(account.name)}</strong> has been moved.</p>
+  <p style="margin: 0 0 ${apologyLine ? "8px" : "24px"} 0;">Your appointment with <strong>${escapeHtml(account.name)}</strong> has been moved.</p>
+  ${apologyLine}
+  ${reasonBlock}
 
   <table style="border-collapse: collapse; margin: 0 0 24px 0; width: 100%;">
     <tr>
