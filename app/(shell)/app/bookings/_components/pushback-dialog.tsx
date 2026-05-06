@@ -34,6 +34,8 @@ import { cn } from "@/lib/utils";
 import {
   getBookingsForPushbackAction,
   previewPushbackAction,
+  commitPushbackAction,
+  type CommitPushbackResultRow,
 } from "../_lib/actions-pushback";
 import type { PushbackBooking } from "../_lib/queries";
 import type { CascadeRow, CascadeStatus } from "@/lib/bookings/pushback";
@@ -159,6 +161,11 @@ export function PushbackDialog({
   const [remainingQuota, setRemainingQuota] = useState(0);
   const [quotaError, setQuotaError] = useState(false);
 
+  // Commit state — populated by commitPushbackAction (Plan 33-03)
+  const [commitRows, setCommitRows] = useState<CommitPushbackResultRow[]>([]);
+  // Diverged message shown inline in editing state after an abort-on-diverge
+  const [divergedMessage, setDivergedMessage] = useState<string | null>(null);
+
   // Re-seed state whenever the modal opens or initialDate prop changes.
   // Pattern: setState-in-useEffect (avoids full unmount/remount of dialog tree
   // which would break exit animations). Matches override-modal.tsx line 116.
@@ -175,6 +182,8 @@ export function PushbackDialog({
     setMovedCount(0);
     setRemainingQuota(0);
     setQuotaError(false);
+    setCommitRows([]);
+    setDivergedMessage(null);
   }, [open, initialDate]);
 
   // Fetch bookings whenever open state or date changes.
@@ -241,10 +250,96 @@ export function PushbackDialog({
   }
 
   // ── handleConfirm ────────────────────────────────────────────────────────────
-  // Stub — Plan 33-03 will replace this with the real commitPushbackAction call.
+  // Plan 33-03: wired to commitPushbackAction. Transitions editing → committing
+  // → summary on success. On diverge, resets to editing with refreshed bookings
+  // and an inline diverge-message banner. On quota drift, resets to preview-ready.
 
-  async function handleConfirm() {
-    toast.info("Commit path lands in Plan 33-03");
+  function handleConfirm() {
+    setState("committing");
+    startTransition(async () => {
+      // Build movedBookings from MOVE + PAST_EOD rows (ABSORBED rows are excluded).
+      const movedBookings = previewRows
+        .filter((r) => r.status === "MOVE" || r.status === "PAST_EOD")
+        .map((r) => ({
+          booking_id: r.booking.id,
+          new_start_at: r.new_start_at!, // non-null guaranteed for MOVE/PAST_EOD
+          new_end_at: r.new_end_at!,
+        }));
+
+      // Full set of booking IDs (including ABSORBED) for abort-on-diverge check.
+      const previewBookingIds = previewRows.map((r) => r.booking.id);
+
+      const result = await commitPushbackAction({
+        accountId,
+        date,
+        accountTimezone,
+        reason: reason || undefined,
+        movedBookings,
+        previewBookingIds,
+      });
+
+      // ── Quota drift between preview and commit ────────────────────────────────
+      if (!result.ok && "quotaError" in result && result.quotaError) {
+        setRemainingQuota(result.remaining);
+        setQuotaError(true);
+        setState("preview-ready");
+        toast.error(
+          `Quota changed: ${result.needed} needed, ${result.remaining} remaining.`,
+        );
+        return;
+      }
+
+      // ── Abort-on-diverge: bookings changed since preview ─────────────────────
+      if (!result.ok && "diverged" in result && result.diverged) {
+        setDivergedMessage(result.message);
+        setState("editing");
+        // Refresh the bookings list so the owner sees the updated state.
+        startTransition(async () => {
+          const refresh = await getBookingsForPushbackAction({
+            accountId,
+            date,
+            accountTimezone,
+          });
+          if (refresh.ok) {
+            setBookings(refresh.bookings);
+            setAnchorId(refresh.bookings[0]?.id ?? null);
+          }
+        });
+        toast.error(result.message);
+        return;
+      }
+
+      // ── Generic form error ────────────────────────────────────────────────────
+      if (!result.ok) {
+        toast.error(
+          "formError" in result ? result.formError : "Failed to commit pushback",
+        );
+        setState("preview-ready");
+        return;
+      }
+
+      // ── Success ───────────────────────────────────────────────────────────────
+      setCommitRows(result.rows);
+      setState("summary");
+
+      const sentCount = result.rows.filter((r) => r.status === "sent").length;
+      const failureCount = result.rows.filter(
+        (r) =>
+          r.status === "email_failed" ||
+          r.status === "slot_taken" ||
+          r.status === "not_active",
+      ).length;
+
+      if (failureCount === 0) {
+        toast.success(
+          `${sentCount} pushback email${sentCount === 1 ? "" : "s"} sent.`,
+        );
+      } else {
+        toast.warning(
+          `${sentCount} sent · ${failureCount} need attention. See summary.`,
+        );
+      }
+    });
   }
 
   return (
@@ -256,22 +351,38 @@ export function PushbackDialog({
 
         {/* ── Editing state — full form ── */}
         {state === "editing" && (
-          <EditingForm
-            date={date}
-            setDate={setDate}
-            todayLocal={todayLocal}
-            bookings={bookings}
-            bookingsLoading={bookingsLoading}
-            anchorId={anchorId}
-            setAnchorId={setAnchorId}
-            delayValue={delayValue}
-            setDelayValue={setDelayValue}
-            delayUnit={delayUnit}
-            setDelayUnit={setDelayUnit}
-            reason={reason}
-            setReason={setReason}
-            accountTimezone={accountTimezone}
-          />
+          <div className="space-y-3">
+            {/* Diverged message banner — shown when a prior commit was aborted
+                because bookings changed between preview and confirm. Owner must
+                review the refreshed list and preview again. */}
+            {divergedMessage && (
+              <div
+                className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+                role="alert"
+              >
+                {divergedMessage}
+              </div>
+            )}
+            <EditingForm
+              date={date}
+              setDate={(d) => {
+                setDate(d);
+                setDivergedMessage(null); // clear banner when date changes
+              }}
+              todayLocal={todayLocal}
+              bookings={bookings}
+              bookingsLoading={bookingsLoading}
+              anchorId={anchorId}
+              setAnchorId={setAnchorId}
+              delayValue={delayValue}
+              setDelayValue={setDelayValue}
+              delayUnit={delayUnit}
+              setDelayUnit={setDelayUnit}
+              reason={reason}
+              setReason={setReason}
+              accountTimezone={accountTimezone}
+            />
+          </div>
         )}
 
         {/* ── Preview-loading state ── */}
@@ -348,8 +459,17 @@ export function PushbackDialog({
 
         {/* ── Summary state — 33-04 will render per-row Sent/Failed/Skipped badges ── */}
         {state === "summary" && (
-          <div className="text-sm text-muted-foreground py-4">
-            {/* 33-04: per-booking result rows with retry buttons for failed emails */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">
+              Pushback complete &middot;{" "}
+              {commitRows.filter((r) => r.status === "sent").length}/
+              {commitRows.filter((r) => r.status !== "skipped").length} sent
+            </p>
+            {/* 33-04 will replace this debug dump with styled per-row badges
+                and retry buttons for email_failed rows. */}
+            <pre className="text-xs text-muted-foreground overflow-auto max-h-64 rounded border p-2 bg-muted/40">
+              {JSON.stringify(commitRows, null, 2)}
+            </pre>
           </div>
         )}
 
@@ -385,7 +505,9 @@ export function PushbackDialog({
             </>
           )}
 
-          {/* 33-03 / 33-04: footer buttons for committing and summary states */}
+          {state === "summary" && (
+            <Button onClick={() => onOpenChange(false)}>Close</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
