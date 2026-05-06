@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 33 Plan 02 (Cascade Algorithm + Preview Wiring) complete + human-verified. computeCascadePreview pure module, getEndOfDayMinute, 14 unit tests, previewPushbackAction, dialog preview-ready state with MOVE/ABSORBED/PAST_EOD badges + EMAIL-22 quota gate all shipped. booker_name column fix applied by orchestrator mid-checkpoint (bba0e18). Andrew verified scenarios 1-3 live + approved checkpoint. Plan 33-03 unblocked.
+**Last updated:** 2026-05-05 — Phase 33 Plan 03 (Commit Path) complete. rescheduleBooking skipOwnerEmail/actor extensions, sendRescheduleEmails sendOwner gate, commitPushbackAction with ABORT-on-diverge + per-booking result rows, dialog Confirm wired end-to-end. Pushed to main. Plan 33-04 (summary rendering + retry) is next.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-02 complete + human-verified)
-**Plan:** 02 of 4 complete — Plans 33-03 and 33-04 remain
-**Status:** Plan 33-02 finalized. computeCascadePreview, getEndOfDayMinute, previewPushbackAction, dialog preview-ready state all committed + human-verified. booker_name fix applied (bba0e18). Plan 33-03 (commitPushbackAction) is next.
-**Last activity:** 2026-05-05 — Plan 33-02 executed (Tasks 1+2 committed: 9020fe5, 9220802). Orchestrator correction mid-checkpoint: booker_name fix (bba0e18). Andrew human-verified scenarios 1-3 live + approved checkpoint. Metadata commit closes plan.
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-03 complete)
+**Plan:** 03 of 4 complete — Plan 33-04 remains
+**Status:** Plan 33-03 finalized. commitPushbackAction + rescheduleBooking extensions + dialog Confirm wired + pushed to main. Plan 33-04 (summary rendering + retryPushbackEmailAction) is next.
+**Last activity:** 2026-05-05 — Plan 33-03 executed (Tasks 1+2+3 committed: 5c96a9c, f31b064, 18577de). Pushed to main.
 
 ## Cumulative project progress
 
@@ -91,6 +91,15 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - **`firstNameOf(fullName)` render helper:** First name derived at render time by splitting `booker_name` on whitespace. Not stored separately in DB. Pattern to reuse in 33-03/33-04 surfaces.
 - **Scenario (d) absorb-then-move skipped:** Valid non-overlapping absorb-then-move not constructible in 30-min slot grids without booking overlap. Pre-authorized skip in plan text. Scenarios (b)+(c) cover the same algorithm branches.
 
+### Plan 33-03 decisions (accumulated context)
+
+- **ABORT-on-diverge (NOT union):** Phase 32's commitInverseOverrideAction unions the preview IDs with re-queried IDs. Phase 33 ABORTS — cascade math is order-dependent; any addition or removal on the day invalidates all computed new times. Returns `{ ok: false, diverged: true, message }`. No partial commits.
+- **rescheduleBooking() returns discriminated union — never throws on DB failure:** DB failures are `{ ok: false, reason: "slot_taken" | "not_active" | ... }` — not throws. Email failures surface as `emailFailed?: "quota" | "send"` on the `ok: true` branch. The commit loop checks `rescheduleResult.ok` rather than try/catch. Critical to understand for 33-04 retry logic.
+- **reason text not in reschedule email (PUSH-10 partial):** `RescheduleBookingArgs` has no `reason` field and the template has no reason block. Reason is captured in `CommitPushbackInput` for owner context but not surfaced in the booker email. Tech debt deferred.
+- **CommitPushbackResultRow uses booker_name (full name):** Consistent with DB column lock and Plan 33-02 pattern. `firstNameOf()` helper at render time.
+- **ABSORBED → status='skipped' in result rows:** Complete summary coverage for 33-04 — every booking on the day appears in commitRows with an appropriate status badge, not just moved ones.
+- **skipOwnerEmail/actor pattern mirrored from Phase 32:** `RescheduleBookingArgs.skipOwnerEmail?` + `actor?` exactly parallels Phase 32's `CancelBookingArgs.skipOwnerEmail` + `actor` (already had actor). `SendRescheduleEmailsArgs.sendOwner?` mirrors `SendCancelEmailsArgs.sendOwner?`. Canonical pattern for owner-batch email suppression established across both cancel and reschedule lifecycles.
+
 ### Open tech debt (carried into v1.6)
 
 - `slot-picker.tsx` on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — date+slot UI duplicated in `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is redesigned (extract shared `<CalendarSlotPicker>`).
@@ -100,11 +109,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — Plan 33-02 finalized. Tasks 1+2 committed (9020fe5, 9220802). Orchestrator correction mid-checkpoint: booker_name column fix (bba0e18) — plan invented non-existent booker_first_name; real column is booker_name + firstNameOf() render helper added. Andrew human-verified scenarios 1-3 live + approved checkpoint. Metadata commit closes plan 33-02. Plan 33-03 (commitPushbackAction) is next.
+**Last session:** 2026-05-05 — Plan 33-03 complete. Tasks 1+2+3 committed (5c96a9c, f31b064, 18577de). rescheduleBooking skipOwnerEmail/actor extensions, sendRescheduleEmails sendOwner gate, commitPushbackAction with ABORT-on-diverge + per-booking result rows, dialog Confirm wired end-to-end + pushed to main.
 
-**Stopped at:** Plan 33-02 complete. Plan 33-03 is next (commitPushbackAction + reschedule-batch commit logic).
+**Stopped at:** Plan 33-03 complete. Plan 33-04 is next (summary rendering + retryPushbackEmailAction).
 
-**Next session:** Execute Plan 33-03 (commitPushbackAction). handleConfirm stub at line ~246 of pushback-dialog.tsx is the entry point. previewRows CascadeRow[] state is the data source.
+**Next session:** Execute Plan 33-04 (summary rendering + retry). commitRows: CommitPushbackResultRow[] in dialog state is the data source. 33-04 replaces the JSON debug dump in summary state with styled per-row badges. retryPushbackEmailAction handles email_failed row re-sends.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -150,6 +159,12 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `bba0e18` — fix(33-02): use bookings.booker_name (not invented booker_first_name) [orchestrator correction]
 - (metadata commit — docs(33-02): complete cascade preview plan)
 
+**Plan 33-03 commits (complete):**
+- `5c96a9c` — feat(33-03): extend rescheduleBooking with skipOwnerEmail + actor params
+- `f31b064` — feat(33-03): commitPushbackAction with abort-on-diverge race safety + per-row failure shape
+- `18577de` — feat(33-03): wire dialog Confirm to commitPushbackAction; transition to summary
+- (metadata commit — docs(33-03): complete commit-path plan)
+
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
 - `.planning/ROADMAP.md` — phases 31-33 defined
@@ -164,3 +179,4 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `.planning/phases/32-inverse-date-overrides/32-03-SUMMARY.md` — Plan 32-03 outcomes
 - `.planning/phases/33-day-level-pushback-cascade/33-01-SUMMARY.md` — Plan 33-01 outcomes
 - `.planning/phases/33-day-level-pushback-cascade/33-02-SUMMARY.md` — Plan 33-02 outcomes (complete + human-verified)
+- `.planning/phases/33-day-level-pushback-cascade/33-03-SUMMARY.md` — Plan 33-03 outcomes (complete)
