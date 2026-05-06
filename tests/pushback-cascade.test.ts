@@ -34,7 +34,7 @@ function mkBooking(
   },
 ): PushbackBookingInput {
   return {
-    booker_first_name: "Test",
+    booker_name: "Test User",
     duration_minutes: 30,
     buffer_after_minutes: 0,
     event_type_id: "et-1",

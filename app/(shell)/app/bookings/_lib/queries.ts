@@ -12,7 +12,7 @@ export interface PushbackBooking {
   start_at: string; // UTC ISO
   end_at: string; // UTC ISO
   status: "confirmed"; // narrowed
-  booker_first_name: string;
+  booker_name: string; // full name (column lock); first-name derivation at render
   booker_email: string;
   duration_minutes: number; // from event_types join
   buffer_after_minutes: number; // from event_types join
@@ -65,7 +65,7 @@ export async function getBookingsForPushback(
       start_at,
       end_at,
       status,
-      booker_first_name,
+      booker_name,
       booker_email,
       reschedule_token_hash,
       event_type_id,
@@ -90,7 +90,7 @@ export async function getBookingsForPushback(
       start_at: row.start_at,
       end_at: row.end_at,
       status: "confirmed" as const,
-      booker_first_name: row.booker_first_name,
+      booker_name: row.booker_name,
       booker_email: row.booker_email,
       reschedule_token_hash: row.reschedule_token_hash,
       event_type_id: row.event_type_id,

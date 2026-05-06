@@ -35,7 +35,7 @@ export interface PushbackBookingInput {
   id: string;
   start_at: string; // UTC ISO
   end_at: string; // UTC ISO
-  booker_first_name: string;
+  booker_name: string; // full name from bookings.booker_name
   duration_minutes: number; // event_type.duration_minutes — used as slot step
   buffer_after_minutes: number; // event_type.buffer_after_minutes
   event_type_id: string;

@@ -98,6 +98,11 @@ function isValidDelay(s: string): boolean {
   return Number.isInteger(n) && n > 0;
 }
 
+/** First-name derivation from full booker_name. CONTEXT.md: row metadata is first name only. */
+function firstNameOf(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
+
 // ─── CascadeBadge ─────────────────────────────────────────────────────────────
 
 /**
@@ -305,7 +310,7 @@ export function PushbackDialog({
                     )}
                   </span>
                   <span className="text-sm font-medium">
-                    {row.booking.booker_first_name}
+                    {firstNameOf(row.booking.booker_name)}
                   </span>
                   <span className="text-xs text-muted-foreground ml-auto shrink-0">
                     {row.booking.duration_minutes}min
@@ -476,7 +481,7 @@ function EditingForm({
                   {formatLocalTime(b.start_at, accountTimezone)} &rarr;{" "}
                   {formatLocalTime(b.end_at, accountTimezone)}
                 </span>
-                <span className="text-sm font-medium">{b.booker_first_name}</span>
+                <span className="text-sm font-medium">{firstNameOf(b.booker_name)}</span>
                 <span className="text-xs text-muted-foreground ml-auto shrink-0">
                   {b.duration_minutes}min
                 </span>
