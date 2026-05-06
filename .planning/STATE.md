@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 34 Plan 02 complete. AES-256-GCM encryption util + Google HTTP helpers + branded OAuth button.
+**Last updated:** 2026-05-06 — Phase 34 Plan 03 complete. Google OAuth front door: initiateGoogleOAuthAction + GoogleOAuthButton on forms + /auth/google-callback handler.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Plans 01 + 02 complete; Plans 03-04 next.
+**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Plans 01-03 complete; Plan 04 next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
 **Phase:** 34 — Google OAuth Signup + Credential Capture (first v1.7 phase)
-**Plan:** 02 of ~4 — complete
-**Status:** Plans 01-02 complete. Plans 03-04 pending.
-**Last activity:** 2026-05-06 — Completed 34-02-PLAN.md (OAuth primitives: encryption util + HTTP helpers + branded button)
+**Plan:** 03 of ~4 — complete
+**Status:** Plans 01-03 complete. Plan 04 pending.
+**Last activity:** 2026-05-06 — Completed 34-03-PLAN.md (OAuth front door: server actions + form UI + callback handler)
 
-Progress (Phase 34): ██░░ 2/4 plans complete
+Progress (Phase 34): ███░ 3/4 plans complete
 
 ## Cumulative project progress
 
@@ -46,6 +46,9 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **Lazy env var read in encryption utils (Phase 34, Plan 02)** — `getKey()` reads `GMAIL_TOKEN_ENCRYPTION_KEY` inside the function body, not at module top level. Required for test isolation (beforeEach can modify process.env). Apply same pattern to any new env-var-gated server utility.
 - **Google OAuth HTTP helpers fail-safe return (Phase 34, Plan 02)** — `fetchGoogleGrantedScopes` and `revokeGoogleRefreshToken` return `null`/`false` on any network error, never throw. Callers branch on return value.
 - **GoogleOAuthButton is NSI-color-locked (Phase 34, Plan 02)** — Google brand guidelines prohibit NSI colors. Component uses raw `<button>` (not `ui/button`). DO NOT apply brand theme to this component in any future plan.
+- **useSearchParams-in-Suspense pattern (Phase 34, Plan 03)** — Any client component using `useSearchParams()` must isolate that hook in a child component wrapped in `<Suspense fallback={null}>`. Next.js 16 prerender fails with CSR bailout error otherwise. Applied in signup-form.tsx and login-form.tsx.
+- **Server-action OAuth init (Phase 34, Plan 03)** — `<form action={initiateGoogleOAuthAction}><Button type="submit">` — clean progressive enhancement, no `useTransition` needed. Combined scope string is a single space-delimited string, NOT an array.
+- **Partial-grant detection via tokeninfo endpoint (Phase 34, Plan 03)** — Use Google tokeninfo endpoint (authoritative) to detect whether gmail.send was actually granted. Do NOT use heuristic scope string inspection. Only persist credentials when gmail.send confirmed granted.
 
 ### Patterns established / locked through v1.6
 
@@ -59,10 +62,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ### Blockers / prereqs for v1.7
 
-- **PREREQ-01** (blocks Phase 34): Google Cloud Console OAuth setup + app verification (3-5 day lead time — start immediately).
-- **PREREQ-02** (blocks Phase 34): Supabase Google provider toggle + credential paste.
+- **PREREQ-01** (blocks Phase 34 live testing): Google Cloud Console OAuth setup + app verification (3-5 day lead time — start immediately). Also: add `https://{your-domain}/auth/google-callback` to Authorized Redirect URIs.
+- **PREREQ-02** (blocks Phase 34 live testing): Supabase Google provider toggle + credential paste.
 - **PREREQ-03** (blocks Phase 36): Resend account + NSI domain DNS verification via Namecheap.
 - **PREREQ-04** (blocks Phases 34, 35, 36): Vercel env vars — `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`, `RESEND_API_KEY`.
+- **CALLBACK-URL** (blocks Phase 34 live testing): `/auth/google-callback` must be registered in both Google Cloud Console (Authorized Redirect URIs) AND Supabase Dashboard (Additional Redirect URLs). Preview branch wildcard: `https://*-{vercel-team}.vercel.app/auth/google-callback`.
 
 ### Open tech debt (carried into v1.7)
 
@@ -72,11 +76,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — Phase 34 Plan 02 executed (OAuth primitives).
+**Last session:** 2026-05-06 — Phase 34 Plan 03 executed (OAuth front door).
 
-**Stopped at:** Completed 34-02-PLAN.md. Commits: e09f019 (encrypt.ts + tests), f639f0c (google.ts), e427e52 (google-oauth-button.tsx).
+**Stopped at:** Completed 34-03-PLAN.md. Commits: e3a7dfb (initiateGoogleOAuthAction), c816e8c (form UI), 66f47f0 (callback route).
 
-**Next session:** Execute Phase 34 Plan 03 — Google OAuth callback route handler + initiateGoogleOAuthAction server action.
+**Next session:** Execute Phase 34 Plan 04 — Settings panel: Google OAuth disconnect + reconnect + /app?google_linked=1 banner UI + /onboarding?gmail_skipped=1 step.
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
@@ -84,9 +88,14 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 - `.planning/REQUIREMENTS.md` — all 30 v1.7 requirements with phase traceability filled
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-01-SUMMARY.md` — Plan 01 complete
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-02-SUMMARY.md` — Plan 02 complete
+- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-03-SUMMARY.md` — Plan 03 complete
 - `lib/oauth/encrypt.ts` — AES-256-GCM encrypt/decrypt/generateKey (e09f019)
 - `lib/oauth/google.ts` — fetchGoogleGrantedScopes, revokeGoogleRefreshToken, hasGmailSendScope (f639f0c)
 - `components/google-oauth-button.tsx` — branded Google button (e427e52)
-- `tests/oauth-encrypt.test.ts` — 5 encryption tests, all passing (e09f019)
+- `app/(auth)/app/signup/actions.ts` — signUpAction + initiateGoogleOAuthAction (e3a7dfb)
+- `app/(auth)/app/login/actions.ts` — loginAction + initiateGoogleOAuthAction (e3a7dfb)
+- `app/(auth)/app/signup/signup-form.tsx` — GoogleOAuthButton first + divider + error alerts (c816e8c)
+- `app/(auth)/app/login/login-form.tsx` — GoogleOAuthButton first + divider + error alerts (c816e8c)
+- `app/auth/google-callback/route.ts` — PKCE exchange + token capture + routing (66f47f0)
 
-**Note:** Docker was not running during Plan 01 execution. Run `npx supabase db reset` to verify migration applies cleanly before testing Plan 03 locally. PREREQ-04 (GMAIL_TOKEN_ENCRYPTION_KEY in Vercel) must be set before Plan 03's callback route is deployed.
+**Note for Plan 04:** `/app?google_linked=1` redirect is wired but the banner UI is NOT implemented. `/onboarding?gmail_skipped=1` param is wired but the "Connect Gmail" onboarding step is NOT implemented. Plan 04 owns both.
