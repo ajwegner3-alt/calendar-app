@@ -10,11 +10,26 @@ A visitor lands on a service business's website, picks an available time slot in
 
 (Validated in v1.0; held through v1.1, v1.2, v1.3, v1.4. v1.5 confirmed once more: per-event-type buffer + 3-column desktop layout strengthened the wedge by removing two friction sources (cross-event-type buffer correctness + form-on-pick layout shift); the audience rebrand from "trade contractors" to "service businesses" extended the wedge's reach without changing the core promise. The booker experience itself remains brand-neutral — invitees see the contractor's brand, never NSI's product copy.)
 
+## Current Milestone: v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code
+
+**Goal:** Open multi-tenant signup with Google OAuth (combined `gmail.send` consent), enable magic-link login, retire the centralized Gmail SMTP in favor of per-account Gmail OAuth send, build the cap-hit "Request upgrade" path with NSI-owned Resend behind it for upgraded accounts, ship the v1.5-deferred booker polish (animated form slide-in + skeleton loader), and audit the runtime tree for dead code with surgical removal under per-item sign-off.
+
+**Target features:**
+
+- Google OAuth signup with combined `gmail.send` scope (single consent screen)
+- Magic-link login (passwordless email link)
+- Per-account Gmail OAuth send — every account (including nsi) sends via its own connected Gmail; v1.0 centralized Gmail SMTP retired
+- 200/day per-account cap retained as fail-closed refuse-send (Phase 31 vocabulary preserved); cap-hit shows in-app "Request upgrade" button that emails Andrew
+- Shared NSI-owned Resend account as upgrade backend; flagged accounts route sends through Resend instead of their own Gmail (Andrew bills customer above Resend cost)
+- Animated form slide-in on slot pick (BOOKER-06; v1.5 carryover)
+- Skeleton loader for empty form column (BOOKER-07; v1.5 carryover)
+- Dead-code audit: read-only mapper produces unreferenced-files/exports list → Andrew approves item-by-item → atomic surgical removals
+
 ## Requirements
 
 ### Active
 
-(No active requirements — v1.6 shipped all 25 requirements. Next requirements defined via `/gsd:new-milestone`.)
+See `## Current Milestone: v1.7` above. Detailed checkable requirements live in `.planning/REQUIREMENTS.md` (created during `/gsd:new-milestone`).
 
 ### Validated
 
@@ -374,4 +389,4 @@ A visitor lands on a service business's website, picks an available time slot in
 | Marathon QA waived AGAIN at v1.6 sign-off (6th consecutive deferral; deploy-and-eyeball is the canonical production gate; `/gsd:audit-milestone` also skipped in yolo mode) | v1.0 → v1.1 → v1.2 → v1.3 → v1.4 → v1.5 → v1.6 all chose deploy-and-eyeball with no marathon QA executed. `/gsd:audit-milestone` also skipped in yolo mode for v1.6 — phase-level verifiers (8/8 scenarios for Phase 32 + 8/8 for Phase 33 + 6/6 for Phase 31) covered all must-haves. The carryover backlog remains correctly classified as v1.7+ | ✓ Good — pattern institutionalized across 6 milestones. Deploy-and-eyeball IS the production gate. Future milestones SHOULD continue shipping surgically against direct user feedback. |
 
 ---
-*Last updated: 2026-05-06 after v1.6 Day-of-Disruption Tools milestone shipped — 3 phases (31-33), 10 plans, 25 requirements all Complete. Key deliverables: refuse-send fail-closed quota guard across all 7 email paths; inverse date overrides with MINUS semantics + auto-cancel batch; day-level pushback cascade with abort-on-diverge + per-row retry; PUSH-10 reason callout wired end-to-end. Next milestone: `/gsd:new-milestone`.*
+*Last updated: 2026-05-06 after v1.7 milestone kickoff — Current Milestone section added (Auth Expansion + Per-Account Email + Polish + Dead Code). Detailed requirements pending in `.planning/REQUIREMENTS.md` (next step in `/gsd:new-milestone` flow).*

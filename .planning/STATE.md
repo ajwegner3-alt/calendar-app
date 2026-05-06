@@ -1,24 +1,24 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — v1.6 Day-of-Disruption Tools milestone archived. MILESTONES.md, PROJECT.md, ROADMAP.md, STATE.md updated. Archives: `milestones/v1.6-ROADMAP.md` + `milestones/v1.6-REQUIREMENTS.md`. REQUIREMENTS.md deleted. Git tag v1.6 created and pushed.
+**Last updated:** 2026-05-06 — v1.7 milestone started. PROJECT.md Current Milestone section added (Auth Expansion + Per-Account Email + Polish + Dead Code). REQUIREMENTS.md and ROADMAP.md pending in `/gsd:new-milestone` flow.
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.6 milestone)
+See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Planning next milestone. All milestones through v1.6 shipped and archived. Run `/gsd:new-milestone` to define v1.7.
+**Current focus:** Defining v1.7 requirements. Milestone goals locked: Google OAuth signup with combined gmail.send scope, magic-link login, per-account Gmail OAuth send (retiring centralized Gmail SMTP), in-app "Request upgrade" cap-hit path, shared NSI Resend backend for upgraded accounts, BOOKER-06/07 polish, dead-code audit phase.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.6 Day-of-Disruption Tools — COMPLETE and ARCHIVED
-**Phase:** All phases (31-33) shipped and verified. Next phase: undefined (start with `/gsd:new-milestone`)
-**Plan:** N/A — no active plan
-**Status:** Milestone archived. Ready to plan v1.7.
-**Last activity:** 2026-05-06 — v1.6 milestone complete. `chore: complete v1.6 milestone` commit + git tag `v1.6` pushed.
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PLANNING
+**Phase:** Not started (defining requirements). Next phase number: 34 (continues from Phase 33 in v1.6).
+**Plan:** —
+**Status:** Defining requirements (questioning complete; research decision next).
+**Last activity:** 2026-05-06 — v1.7 milestone kickoff via `/gsd:new-milestone`. PROJECT.md updated with Current Milestone section.
 
 ## Cumulative project progress
 
