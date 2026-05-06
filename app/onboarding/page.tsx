@@ -1,7 +1,18 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function OnboardingRouter() {
+export default async function OnboardingRouter({
+  searchParams,
+}: {
+  searchParams: Promise<{ gmail_skipped?: string }>;
+}) {
+  const params = await searchParams;
+  if (params.gmail_skipped === "1") {
+    // Google OAuth signup denied gmail.send — surface the optional Connect Gmail step.
+    // After connecting OR skipping, the connect-gmail page redirects into the normal step router.
+    redirect("/onboarding/connect-gmail");
+  }
+
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const { data: accounts } = await supabase
