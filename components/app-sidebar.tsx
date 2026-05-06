@@ -116,6 +116,14 @@ export function AppSidebar({ email }: AppSidebarProps) {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         asChild
+                        isActive={pathname === "/app/settings/gmail"}
+                      >
+                        <Link href="/app/settings/gmail">Gmail</Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
                         isActive={pathname === "/app/settings/profile"}
                       >
                         <Link href="/app/settings/profile">Profile</Link>
