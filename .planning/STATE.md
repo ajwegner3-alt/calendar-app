@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 33 Plan 02 (Cascade Algorithm + Preview Wiring) tasks 1+2 complete (paused at checkpoint:human-verify Task 3). computeCascadePreview pure module, getEndOfDayMinute, 14 unit tests, previewPushbackAction, dialog preview-ready state with MOVE/ABSORBED/PAST_EOD badges + EMAIL-22 quota gate all shipped. TypeScript + build clean. Awaiting human-verify of 7 cascade preview scenarios before Plan 33-02 is finalized.
+**Last updated:** 2026-05-05 — Phase 33 Plan 02 (Cascade Algorithm + Preview Wiring) complete + human-verified. computeCascadePreview pure module, getEndOfDayMinute, 14 unit tests, previewPushbackAction, dialog preview-ready state with MOVE/ABSORBED/PAST_EOD badges + EMAIL-22 quota gate all shipped. booker_name column fix applied by orchestrator mid-checkpoint (bba0e18). Andrew verified scenarios 1-3 live + approved checkpoint. Plan 33-03 unblocked.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-02 in progress — paused at Task 3 checkpoint)
-**Plan:** 02 of 4 — Tasks 1+2 committed, awaiting human-verify checkpoint (Plans 33-03 and 33-04 remain after verification)
-**Status:** Plan 33-02 Tasks 1+2 shipped. computeCascadePreview, getEndOfDayMinute, previewPushbackAction, dialog preview-ready state all committed. Awaiting owner verification of 7 cascade preview scenarios before finalization.
-**Last activity:** 2026-05-06 — Plan 33-01 executed autonomously (3/3 tasks). PushbackDialog shell, PushbackDialogProvider, BookingsDayGroupedView, getBookingsForPushback query, actions-pushback.ts all committed. One deviation: shadcn RadioGroup not installed → used native accessible radio inputs (no impact on 33-02 wiring).
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-02 complete + human-verified)
+**Plan:** 02 of 4 complete — Plans 33-03 and 33-04 remain
+**Status:** Plan 33-02 finalized. computeCascadePreview, getEndOfDayMinute, previewPushbackAction, dialog preview-ready state all committed + human-verified. booker_name fix applied (bba0e18). Plan 33-03 (commitPushbackAction) is next.
+**Last activity:** 2026-05-05 — Plan 33-02 executed (Tasks 1+2 committed: 9020fe5, 9220802). Orchestrator correction mid-checkpoint: booker_name fix (bba0e18). Andrew human-verified scenarios 1-3 live + approved checkpoint. Metadata commit closes plan.
 
 ## Cumulative project progress
 
@@ -80,6 +80,17 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - **`accountTimezone` threaded from server loader, not derived in the browser.** Booker time ranges in the preview are formatted via `Intl.DateTimeFormat` with the account's IANA zone, not the browser's local zone — owners always see times the way bookers received them.
 - **Phase 31 inline quota error UX reused verbatim.** `text-sm text-red-600`, `role="alert"`, copy: "X email(s) needed, Y remaining today. Quota resets at UTC midnight. Wait until tomorrow or contact bookers manually." — locks the EMAIL-22/EMAIL-23 visual vocabulary across the v1.6 surfaces.
 
+### Plan 33-02 decisions (accumulated context)
+
+- **Pure cascade module API locked:** `computeCascadePreview(args: ComputeCascadeArgs): CascadeRow[]` — zero I/O, zero Supabase. `snapToNextSlotMs`, `isPastEod`, `countMoved` helpers exported. All types from `lib/bookings/pushback.ts`.
+- **1440 sentinel for no-rules days (OQ-5):** `getEndOfDayMinute` returns `1440` when `windowsForDate` returns null or empty. `isPastEod` short-circuits immediately — no PAST_EOD badges on days with no availability rules.
+- **Per-booking slot step (OQ-2):** `snapToNextSlotMs` called with each booking's own `duration_minutes`. 30-min bookings snap to 30-min boundaries; 60-min bookings to 60-min boundaries. Not a shared account-wide step.
+- **Quota math = `movedBookings.length` NOT x2:** `skipOwnerEmail=true` on commit (Plan 32-03 decision) means 1 email per moved booking. `countMoved(rows)` directly equals `emailsNeeded`. Locked in `previewPushbackAction` and documented inline.
+- **Phase 31 quota error markup VERBATIM reused:** `text-sm text-red-600` + `role="alert"` + exact copy. Source: `override-modal.tsx` lines 426-432. Replicated at `pushback-dialog.tsx` lines 331-337. EMAIL-22 visual vocabulary locked.
+- **booker_name column fix (critical lesson):** Plan text invented non-existent column `booker_first_name`. Real column is `booker_name` (full name, v1.0). Caused silent runtime failure — empty anchor list on live test. Fixed in commit `bba0e18` by orchestrator mid-checkpoint. **Future planning must grep migrations before naming DB fields.**
+- **`firstNameOf(fullName)` render helper:** First name derived at render time by splitting `booker_name` on whitespace. Not stored separately in DB. Pattern to reuse in 33-03/33-04 surfaces.
+- **Scenario (d) absorb-then-move skipped:** Valid non-overlapping absorb-then-move not constructible in 30-min slot grids without booking overlap. Pre-authorized skip in plan text. Scenarios (b)+(c) cover the same algorithm branches.
+
 ### Open tech debt (carried into v1.6)
 
 - `slot-picker.tsx` on disk per Andrew Option A (Plan 30-01 Rule 4 amendment) — date+slot UI duplicated in `booking-shell.tsx` + `slot-picker.tsx`. Resolve when reschedule UI is redesigned (extract shared `<CalendarSlotPicker>`).
@@ -89,11 +100,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — Plan 33-02 Tasks 1+2 executed. lib/bookings/pushback.ts (computeCascadePreview pure function, snapToNextSlotMs, isPastEod, countMoved), lib/slots.ts (getEndOfDayMinute with 1440 sentinel), tests/pushback-cascade.test.ts (14 tests, all green), actions-pushback.ts (previewPushbackAction server action with auth + cascade + quota math), pushback-dialog.tsx (preview-ready state: CascadeBadge, chronological list, quota footer, verbatim Phase 31 error, Confirm button). TypeScript + build clean. Paused at Task 3 (checkpoint:human-verify).
+**Last session:** 2026-05-05 — Plan 33-02 finalized. Tasks 1+2 committed (9020fe5, 9220802). Orchestrator correction mid-checkpoint: booker_name column fix (bba0e18) — plan invented non-existent booker_first_name; real column is booker_name + firstNameOf() render helper added. Andrew human-verified scenarios 1-3 live + approved checkpoint. Metadata commit closes plan 33-02. Plan 33-03 (commitPushbackAction) is next.
 
-**Stopped at:** Plan 33-02 Task 3 checkpoint (human-verify). Continuation agent must verify 7 scenarios then proceed to metadata commit + Plan 33-03.
+**Stopped at:** Plan 33-02 complete. Plan 33-03 is next (commitPushbackAction + reschedule-batch commit logic).
 
-**Next session:** Continuation agent for Plan 33-02 Task 3 human-verify. After approval: create metadata commit, update STATE.md, then execute Plan 33-03 (commitPushbackAction + reschedule-batch commit logic).
+**Next session:** Execute Plan 33-03 (commitPushbackAction). handleConfirm stub at line ~246 of pushback-dialog.tsx is the entry point. previewRows CascadeRow[] state is the data source.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -133,9 +144,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `760a345` — feat(33-01): PushbackDialog shell — date picker, anchor radios, delay input, reason textarea
 - `86192c6` — feat(33-01): PushbackDialogProvider + day-grouped view + page mount
 
-**Plan 33-02 commits (Tasks 1+2 — Task 3 awaiting human-verify):**
+**Plan 33-02 commits (complete + human-verified):**
 - `9020fe5` — feat(33-02): pure cascade module + getEndOfDayMinute + unit tests
 - `9220802` — feat(33-02): previewPushbackAction + cascade preview render with quota gate
+- `bba0e18` — fix(33-02): use bookings.booker_name (not invented booker_first_name) [orchestrator correction]
+- (metadata commit — docs(33-02): complete cascade preview plan)
 
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
@@ -150,4 +163,4 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `.planning/phases/32-inverse-date-overrides/32-02-SUMMARY.md` — Plan 32-02 outcomes
 - `.planning/phases/32-inverse-date-overrides/32-03-SUMMARY.md` — Plan 32-03 outcomes
 - `.planning/phases/33-day-level-pushback-cascade/33-01-SUMMARY.md` — Plan 33-01 outcomes
-- `.planning/phases/33-day-level-pushback-cascade/33-02-SUMMARY.md` — Plan 33-02 outcomes (partial — Task 3 checkpoint pending)
+- `.planning/phases/33-day-level-pushback-cascade/33-02-SUMMARY.md` — Plan 33-02 outcomes (complete + human-verified)
