@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 33 Plan 03 (Commit Path) complete. rescheduleBooking skipOwnerEmail/actor extensions, sendRescheduleEmails sendOwner gate, commitPushbackAction with ABORT-on-diverge + per-booking result rows, dialog Confirm wired end-to-end. Pushed to main. Plan 33-04 (summary rendering + retry) is next.
+**Last updated:** 2026-05-05 — Phase 33 Plan 04 (Summary Rendering + Retry) complete + human-verified. Per-row Sent/Failed/Conflict/Stale/Skipped badges, retryPushbackEmailAction with fresh-token mint + quota guard, Close→router.refresh. All 8 live scenarios approved by Andrew. Phase 33 fully shipped. v1.6 ready for milestone close pending verifier.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 ## Current Position
 
 **Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 33 of 33 — Day-Level Pushback Cascade (Plan 33-03 complete)
-**Plan:** 03 of 4 complete — Plan 33-04 remains
-**Status:** Plan 33-03 finalized. commitPushbackAction + rescheduleBooking extensions + dialog Confirm wired + pushed to main. Plan 33-04 (summary rendering + retryPushbackEmailAction) is next.
-**Last activity:** 2026-05-05 — Plan 33-03 executed (Tasks 1+2+3 committed: 5c96a9c, f31b064, 18577de). Pushed to main.
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (COMPLETE — all 4 plans shipped + human-verified)
+**Plan:** 04 of 4 complete — Phase 33 closed (pending verifier)
+**Status:** Plan 33-04 finalized. Summary render + retryPushbackEmailAction + Close→router.refresh complete. All 8 live scenarios approved by Andrew. v1.6 ready for milestone close.
+**Last activity:** 2026-05-05 — Plan 33-04 executed (Tasks 1+2 committed: fe4bc89, 6e93dda; Task 3 human-verify approved). Phase 33 fully shipped.
 
 ## Cumulative project progress
 
@@ -29,7 +29,7 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phases 31 + 32 verified 2026-05-05; Phase 33 not yet started — final phase of v1.6)
+v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phases 31 + 32 verified 2026-05-05; Phase 33 shipped + human-verified 2026-05-05 — pending verifier for milestone close)
 ```
 
 **Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Phase 31 (8 task commits + 3 metadata) + Plan 32-01 (3 task commits + 1 metadata) + Plan 32-03 (3 task commits + 1 metadata) + Plan 32-02 (2 task commits + 1 metadata = 3 new commits) = 22 new commits in v1.6 so far.
@@ -91,6 +91,15 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - **`firstNameOf(fullName)` render helper:** First name derived at render time by splitting `booker_name` on whitespace. Not stored separately in DB. Pattern to reuse in 33-03/33-04 surfaces.
 - **Scenario (d) absorb-then-move skipped:** Valid non-overlapping absorb-then-move not constructible in 30-min slot grids without booking overlap. Pre-authorized skip in plan text. Scenarios (b)+(c) cover the same algorithm branches.
 
+### Plan 33-04 decisions (accumulated context)
+
+- **5-variant status taxonomy locked:** `sent` / `email_failed` / `slot_taken` / `not_active` / `skipped` — only `email_failed` is retry-eligible (RESEARCH.md Risk 7). `slot_taken` and `not_active` are DB-layer rejections with no email to retry.
+- **Phase 31 quota guard plumbed through retry:** `getRemainingDailyQuota()` pre-flight before token mint; `EMAIL_QUOTA_EXCEEDED` catch returns `{ ok: false, quotaError: true, remaining }` distinct from generic send errors.
+- **LD-07 preserved on retry:** `sendOwner: false` in `retryPushbackEmailAction` — booker leg only, same as original batch.
+- **Per-row useTransition isolation:** `RetryEmailButton` owns its own `[pending, startTransition]` pair; retry spinner on one row does not block other rows or the Close button.
+- **oldEndAt placeholder = input.oldStartAt in retry:** Safe today because `sendOwner:false` suppresses the owner leg; booker template reads only `oldStartAt` for "Was:". Thread properly if owner retry leg is ever activated.
+- **router.refresh() on Close from summary state:** Terminal state; Close refreshes the bookings page to surface new `start_at`/`end_at` values, then closes the dialog.
+
 ### Plan 33-03 decisions (accumulated context)
 
 - **ABORT-on-diverge (NOT union):** Phase 32's commitInverseOverrideAction unions the preview IDs with re-queried IDs. Phase 33 ABORTS — cascade math is order-dependent; any addition or removal on the day invalidates all computed new times. Returns `{ ok: false, diverged: true, message }`. No partial commits.
@@ -109,11 +118,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — Plan 33-03 complete. Tasks 1+2+3 committed (5c96a9c, f31b064, 18577de). rescheduleBooking skipOwnerEmail/actor extensions, sendRescheduleEmails sendOwner gate, commitPushbackAction with ABORT-on-diverge + per-booking result rows, dialog Confirm wired end-to-end + pushed to main.
+**Last session:** 2026-05-05 — Plan 33-04 complete + human-verified. Tasks 1+2 committed (fe4bc89, 6e93dda). retryPushbackEmailAction (fresh-token mint + quota guard + sendOwner:false), summary render (per-row Sent/Failed/Conflict/Stale/Skipped badges + RetryEmailButton on email_failed rows + Close→router.refresh). All 8 live scenarios approved by Andrew. Phase 33 fully shipped.
 
-**Stopped at:** Plan 33-03 complete. Plan 33-04 is next (summary rendering + retryPushbackEmailAction).
+**Stopped at:** Phase 33 complete. Run `/gsd:verify-phase 33` for Phase 33 verifier, then `/gsd:close-milestone v1.6` for milestone close.
 
-**Next session:** Execute Plan 33-04 (summary rendering + retry). commitRows: CommitPushbackResultRow[] in dialog state is the data source. 33-04 replaces the JSON debug dump in summary state with styled per-row badges. retryPushbackEmailAction handles email_failed row re-sends.
+**Next session:** Phase 33 verifier + v1.6 milestone close. No code changes expected unless verifier surfaces regressions.
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
@@ -165,6 +174,11 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `18577de` — feat(33-03): wire dialog Confirm to commitPushbackAction; transition to summary
 - (metadata commit — docs(33-03): complete commit-path plan)
 
+**Plan 33-04 commits (complete + human-verified):**
+- `fe4bc89` — feat(33-04): retryPushbackEmailAction with fresh tokens + quota guard
+- `6e93dda` — feat(33-04): post-commit summary with per-row retry + Close-refresh
+- (metadata commit — docs(33-04): complete summary + retry plan)
+
 **Files of record:**
 - `.planning/PROJECT.md` — what + why
 - `.planning/ROADMAP.md` — phases 31-33 defined
@@ -180,3 +194,4 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 - `.planning/phases/33-day-level-pushback-cascade/33-01-SUMMARY.md` — Plan 33-01 outcomes
 - `.planning/phases/33-day-level-pushback-cascade/33-02-SUMMARY.md` — Plan 33-02 outcomes (complete + human-verified)
 - `.planning/phases/33-day-level-pushback-cascade/33-03-SUMMARY.md` — Plan 33-03 outcomes (complete)
+- `.planning/phases/33-day-level-pushback-cascade/33-04-SUMMARY.md` — Plan 33-04 outcomes (complete + human-verified; Phase 33 closed pending verifier)
