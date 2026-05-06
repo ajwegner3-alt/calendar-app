@@ -20,23 +20,23 @@ Requirements for the v1.6 milestone. Each maps to roadmap phases.
 
 ### Pushback — Day-Level Cascade
 
-- [ ] **PUSH-01**: Owner can open a "Pushback" action from the `/app/bookings` page (button or menu); the action opens a modal/dialog over the bookings list.
-- [ ] **PUSH-02**: The pushback dialog defaults to today's date in the owner's account timezone; owner can change the date via a date picker. The dialog lists all confirmed bookings for the selected date in chronological order.
-- [ ] **PUSH-03**: Owner picks an anchor booking from the day's bookings (the first booking that needs to move); all bookings starting before the anchor are unaffected.
-- [ ] **PUSH-04**: Owner enters a delay amount with units of minutes OR hours (e.g., 15 min, 45 min, 2 hr); input must be a positive integer; the dialog computes new times in real time as input changes.
-- [ ] **PUSH-05**: Owner has an optional reason text field (encouraged but not required, max ~280 characters); the same reason text is included in every pushback email in the batch.
-- [ ] **PUSH-06**: Smart cascade rule — for each booking after the anchor (in chronological order), the booking moves only if the prior booking's NEW end time is greater than this booking's ORIGINAL start time; otherwise the gap is absorbed and the booking is left in place. When a booking must move, its new start time is the prior booking's new end time (rounded up to the next available slot per existing slot-engine semantics if necessary).
-- [ ] **PUSH-07**: Bookings whose new start time would push past the account's end-of-workday for that date (per weekly availability rules and any date overrides) are still moved through the same email lifecycle but flagged in the preview as "rescheduled past end-of-day"; no separate email variant.
-- [ ] **PUSH-08**: Owner sees a confirmation preview before commit listing: every booking that will move (booker name + old time → new time + duration), every booking that will not move (gap absorbed), and every booking flagged as "past end-of-day"; total email count surfaced.
-- [ ] **PUSH-09**: On confirm, every affected booking rides the existing reschedule lifecycle: `booking_events` audit row, .ics with `METHOD:REQUEST` SEQUENCE+1, calendar invite update email to booker, owner notification, cancel-link in email so booker can decline if the new time doesn't work.
-- [ ] **PUSH-10**: Pushback emails include "sorry for the inconvenience" copy + the owner's reason text (when provided); copy is brand-neutral on the booker-facing surfaces (existing v1.5 booker-neutrality lock preserved).
-- [ ] **PUSH-11**: Pushback action is race-safe — a booker cancelling or rescheduling concurrently with the pushback commit must not produce duplicate emails or inconsistent calendar state; existing v1.4 EXCLUDE GIST + v1.1 capacity index continue to bind on the new times.
-- [ ] **PUSH-12**: Owner sees a post-commit success summary listing emails sent + bookings updated; failure on any individual email surfaces in the summary (does not roll back successful sends).
+- [x] **PUSH-01**: Owner can open a "Pushback" action from the `/app/bookings` page (button or menu); the action opens a modal/dialog over the bookings list.
+- [x] **PUSH-02**: The pushback dialog defaults to today's date in the owner's account timezone; owner can change the date via a date picker. The dialog lists all confirmed bookings for the selected date in chronological order.
+- [x] **PUSH-03**: Owner picks an anchor booking from the day's bookings (the first booking that needs to move); all bookings starting before the anchor are unaffected.
+- [x] **PUSH-04**: Owner enters a delay amount with units of minutes OR hours (e.g., 15 min, 45 min, 2 hr); input must be a positive integer; the dialog computes new times in real time as input changes.
+- [x] **PUSH-05**: Owner has an optional reason text field (encouraged but not required, max ~280 characters); the same reason text is included in every pushback email in the batch.
+- [x] **PUSH-06**: Smart cascade rule — for each booking after the anchor (in chronological order), the booking moves only if the prior booking's NEW end time is greater than this booking's ORIGINAL start time; otherwise the gap is absorbed and the booking is left in place. When a booking must move, its new start time is the prior booking's new end time (rounded up to the next available slot per existing slot-engine semantics if necessary).
+- [x] **PUSH-07**: Bookings whose new start time would push past the account's end-of-workday for that date (per weekly availability rules and any date overrides) are still moved through the same email lifecycle but flagged in the preview as "rescheduled past end-of-day"; no separate email variant.
+- [x] **PUSH-08**: Owner sees a confirmation preview before commit listing: every booking that will move (booker name + old time → new time + duration), every booking that will not move (gap absorbed), and every booking flagged as "past end-of-day"; total email count surfaced.
+- [x] **PUSH-09**: On confirm, every affected booking rides the existing reschedule lifecycle: `booking_events` audit row, .ics with `METHOD:REQUEST` SEQUENCE+1, calendar invite update email to booker, owner notification, cancel-link in email so booker can decline if the new time doesn't work.
+- [x] **PUSH-10**: Pushback emails include "sorry for the inconvenience" copy + the owner's reason text (when provided); copy is brand-neutral on the booker-facing surfaces (existing v1.5 booker-neutrality lock preserved). *(Closed in commit `2aa9177` — apology line + "Reason:" callout wired through rescheduleBooking → sendRescheduleEmails → commitPushbackAction → retryPushbackEmailAction; LD-07 preserved.)*
+- [x] **PUSH-11**: Pushback action is race-safe — a booker cancelling or rescheduling concurrently with the pushback commit must not produce duplicate emails or inconsistent calendar state; existing v1.4 EXCLUDE GIST + v1.1 capacity index continue to bind on the new times.
+- [x] **PUSH-12**: Owner sees a post-commit success summary listing emails sent + bookings updated; failure on any individual email surfaces in the summary (does not roll back successful sends).
 
 ### Email — 200/day Hard Cap
 
 - [x] **EMAIL-21**: The Gmail SMTP daily quota guard (`lib/email-sender/quota-guard.ts`) refuses to send when the day's count is at 200; refusal applies to ALL email senders including bookings, reminders, reschedules, and pushback (extends the v1.1 carve-out which previously exempted bookings/reminders).
-- [ ] **EMAIL-22**: When a pushback batch is previewed (before commit), the dialog computes the batch email count and shows remaining daily quota; if the batch would exceed remaining quota, the preview shows a clear error and the commit button is disabled (pre-flight budget; no partial sends).
+- [x] **EMAIL-22**: When a pushback batch is previewed (before commit), the dialog computes the batch email count and shows remaining daily quota; if the batch would exceed remaining quota, the preview shows a clear error and the commit button is disabled (pre-flight budget; no partial sends).
 - [ ] **EMAIL-23**: When a date-override auto-cancel batch (AVAIL-06) would exceed remaining daily quota, the same pre-flight budget pattern applies — preview surfaces the conflict and commit is disabled until the next day or the cap is raised.
 - [x] **EMAIL-24**: A refused single send (e.g., a booking confirmation when the cap is hit) returns a clear error to the user-facing path that triggered it; no silent failure, no retry-spam.
 - [x] **EMAIL-25**: All quota refusals are logged with PII-free structured fields (`code: 'EMAIL_QUOTA_EXCEEDED'`, `account_id`, `sender_type`, `count`, `cap`); existing v1.4 PII-free observability discipline preserved.
@@ -102,19 +102,19 @@ Explicitly excluded from v1.6.
 | AVAIL-07 | Phase 32 | Complete |
 | AVAIL-08 | Phase 32 | Complete |
 | EMAIL-23 | Phase 32 | Complete |
-| PUSH-01 | Phase 33 | Pending |
-| PUSH-02 | Phase 33 | Pending |
-| PUSH-03 | Phase 33 | Pending |
-| PUSH-04 | Phase 33 | Pending |
-| PUSH-05 | Phase 33 | Pending |
-| PUSH-06 | Phase 33 | Pending |
-| PUSH-07 | Phase 33 | Pending |
-| PUSH-08 | Phase 33 | Pending |
-| PUSH-09 | Phase 33 | Pending |
-| PUSH-10 | Phase 33 | Pending |
-| PUSH-11 | Phase 33 | Pending |
-| PUSH-12 | Phase 33 | Pending |
-| EMAIL-22 | Phase 33 | Pending |
+| PUSH-01 | Phase 33 | Complete |
+| PUSH-02 | Phase 33 | Complete |
+| PUSH-03 | Phase 33 | Complete |
+| PUSH-04 | Phase 33 | Complete |
+| PUSH-05 | Phase 33 | Complete |
+| PUSH-06 | Phase 33 | Complete |
+| PUSH-07 | Phase 33 | Complete |
+| PUSH-08 | Phase 33 | Complete |
+| PUSH-09 | Phase 33 | Complete |
+| PUSH-10 | Phase 33 | Complete |
+| PUSH-11 | Phase 33 | Complete |
+| PUSH-12 | Phase 33 | Complete |
+| EMAIL-22 | Phase 33 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 25 total (8 AVAIL + 12 PUSH + 5 EMAIL)
@@ -123,4 +123,4 @@ Explicitly excluded from v1.6.
 
 ---
 *Requirements defined: 2026-05-04*
-*Last updated: 2026-05-04 — traceability filled after roadmap creation (Phases 31-33).*
+*Last updated: 2026-05-06 — PUSH-01..PUSH-12 + EMAIL-22 marked Complete after Phase 33 verification passed. All 25 v1.6 requirements Complete.*

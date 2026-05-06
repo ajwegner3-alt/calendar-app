@@ -8,7 +8,7 @@
 - ✅ **v1.3 Bug Fixes + Polish** — Phases 22-24 (6 plans across 3 phases) — shipped 2026-05-02. Full archive: [`milestones/v1.3-ROADMAP.md`](./milestones/v1.3-ROADMAP.md).
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
-- 🚧 **v1.6 Day-of-Disruption Tools** — Phases 31-33 (in progress)
+- ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. All 25 v1.6 requirements Complete. Phase 33 verifier re-passed after PUSH-10 gap closed by orchestrator commit `2aa9177`.
 
 ## Phases
 
@@ -92,7 +92,7 @@ See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase 
 
 </details>
 
-### 🚧 v1.6 Day-of-Disruption Tools (Phases 31-33)
+### ✅ v1.6 Day-of-Disruption Tools (Phases 31-33) — shipped 2026-05-06
 
 **Milestone Goal:** Give owners two new operational levers for day-of disruption — partial-day unavailability via inverse date overrides and day-level pushback with smart cascade — while hardening the 200/day Gmail SMTP cap into a true refuse-send guard so pushback's higher email volume can't silently exceed it.
 
@@ -100,7 +100,7 @@ See [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md) for full phase 
 
 - [x] **Phase 31: Email Hard Cap Guard** — completed 2026-05-05 (3 plans, 10 commits; Andrew live verification approved)
 - [x] **Phase 32: Inverse Date Overrides** — completed 2026-05-05 (3 plans, 11 commits; Andrew live verification approved 8/8 scenarios)
-- [ ] **Phase 33: Day-Level Pushback Cascade** — New Pushback action on `/app/bookings`; anchor booking + delay dialog; smart cascade algorithm; optional reason field; owner confirmation preview with quota pre-flight check; reschedule lifecycle for all affected bookings; post-commit summary.
+- [x] **Phase 33: Day-Level Pushback Cascade** — completed 2026-05-06 (4 plans, 16 commits; Andrew live-verified all 8 scenarios; PUSH-10 gap closed by orchestrator commit `2aa9177`; verifier re-passed)
 
 ---
 
@@ -191,7 +191,7 @@ Plans:
 | 30 | v1.5 | 2 / 2 | ✅ Complete | 2026-05-05 |
 | 31 | v1.6 | 3 / 3 | ✅ Complete | 2026-05-05 |
 | 32 | v1.6 | 3 / 3 | ✅ Complete | 2026-05-05 |
-| 33 | v1.6 | 0 / 4 | In progress (planned) | - |
+| 33 | v1.6 | 4 / 4 | ✅ Complete | 2026-05-06 |
 
 ## Cumulative Stats
 
@@ -202,4 +202,4 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-05 — Phase 33 (Day-Level Pushback Cascade) planned: 4 plans across 4 sequential waves. Run `/gsd:execute-phase 33` to begin execution.*
+*Roadmap last updated: 2026-05-06 — Phase 33 (Day-Level Pushback Cascade) shipped and verified: 4 plans, 16 commits, all 8 human scenarios approved by Andrew, PUSH-10 closed by orchestrator commit `2aa9177`. v1.6 milestone complete — 3 phases, 10 plans, ~38 commits. Run `/gsd:complete-milestone` to archive v1.6.*

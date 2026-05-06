@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-05 — Phase 33 Plan 04 (Summary Rendering + Retry) complete + human-verified. Per-row Sent/Failed/Conflict/Stale/Skipped badges, retryPushbackEmailAction with fresh-token mint + quota guard, Close→router.refresh. All 8 live scenarios approved by Andrew. Phase 33 fully shipped. v1.6 ready for milestone close pending verifier.
+**Last updated:** 2026-05-06 — Phase 33 verifier returned human_needed for PUSH-10 reason-in-email; orchestrator closed gap in commit `2aa9177` (apology + Reason callout wired end-to-end through rescheduleBooking → sendRescheduleEmails → commitPushbackAction → retryPushbackEmailAction); 33-VERIFICATION.md updated to status: passed. v1.6 milestone complete and ready to archive.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-04 after `/gsd:new-milestone` for v
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.6 — Phase 33: Day-Level Pushback Cascade (Phases 31 + 32 now live as foundations)
+**Current focus:** v1.6 complete — all 3 phases (31, 32, 33) shipped and verified. Ready for `/gsd:complete-milestone` to archive v1.6.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`)
-**Phase:** 33 of 33 — Day-Level Pushback Cascade (COMPLETE — all 4 plans shipped + human-verified)
-**Plan:** 04 of 4 complete — Phase 33 closed (pending verifier)
-**Status:** Plan 33-04 finalized. Summary render + retryPushbackEmailAction + Close→router.refresh complete. All 8 live scenarios approved by Andrew. v1.6 ready for milestone close.
-**Last activity:** 2026-05-05 — Plan 33-04 executed (Tasks 1+2 committed: fe4bc89, 6e93dda; Task 3 human-verify approved). Phase 33 fully shipped.
+**Milestone:** v1.6 Day-of-Disruption Tools (started 2026-05-04 via `/gsd:new-milestone`) — COMPLETE
+**Phase:** 33 of 33 — Day-Level Pushback Cascade (COMPLETE — all 4 plans shipped + human-verified + verifier PASSED)
+**Plan:** 04 of 4 complete — Phase 33 closed and verified
+**Status:** Phase 33 verification PASSED. PUSH-10 gap closed by orchestrator in commit `2aa9177`. All 8 live scenarios approved by Andrew. v1.6 milestone complete — all phases (31, 32, 33) shipped and verified.
+**Last activity:** 2026-05-06 — Phase 33 verifier returned human_needed for PUSH-10; orchestrator closed gap in `2aa9177`; verification updated to passed. v1.6 ready for milestone archive.
 
 ## Cumulative project progress
 
@@ -29,7 +29,7 @@ v1.2 [X] NSI Brand Lock-Down + UI     (Phases 14-21, 22 plans, 91 commits, shipp
 v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shipped 2026-05-02 — same-day)
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
-v1.6 [.] Day-of-Disruption Tools      (Phases 31-33 — Phases 31 + 32 verified 2026-05-05; Phase 33 shipped + human-verified 2026-05-05 — pending verifier for milestone close)
+v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, ~38 commits, shipped 2026-05-06 — all phases verified; PUSH-10 closed in 2aa9177)
 ```
 
 **Total shipped:** 6 milestones, 32 phases, 128 plans, ~510 commits + Phase 31 (8 task commits + 3 metadata) + Plan 32-01 (3 task commits + 1 metadata) + Plan 32-03 (3 task commits + 1 metadata) + Plan 32-02 (2 task commits + 1 metadata = 3 new commits) = 22 new commits in v1.6 so far.
@@ -118,11 +118,14 @@ None. All 3 Phase 32 plans shipped and human-verified. Phase 32 verifier (`/gsd:
 
 ## Session Continuity
 
-**Last session:** 2026-05-05 — Plan 33-04 complete + human-verified. Tasks 1+2 committed (fe4bc89, 6e93dda). retryPushbackEmailAction (fresh-token mint + quota guard + sendOwner:false), summary render (per-row Sent/Failed/Conflict/Stale/Skipped badges + RetryEmailButton on email_failed rows + Close→router.refresh). All 8 live scenarios approved by Andrew. Phase 33 fully shipped.
+**Last session:** 2026-05-06 — Phase 33 verifier returned human_needed for PUSH-10 reason-in-email. Orchestrator closed gap in commit `2aa9177`: reason threaded end-to-end through rescheduleBooking + sendRescheduleEmails + commitPushbackAction + retryPushbackEmailAction; booker template renders apology + "Reason:" callout when actor='owner' && reason non-empty. 33-VERIFICATION.md updated to status: passed. REQUIREMENTS.md PUSH-01..12 + EMAIL-22 → Complete. ROADMAP.md Phase 33 + v1.6 milestone marked complete. STATE.md updated.
 
-**Stopped at:** Phase 33 complete. Run `/gsd:verify-phase 33` for Phase 33 verifier, then `/gsd:close-milestone v1.6` for milestone close.
+**Stopped at:** Phase 33 complete + verified. v1.6 milestone complete.
 
-**Next session:** Phase 33 verifier + v1.6 milestone close. No code changes expected unless verifier surfaces regressions.
+**Next session:** Run `/gsd:complete-milestone` to archive v1.6 into MILESTONES.md and create v1.7 milestone entry if applicable.
+
+**Phase 33 cumulative commits (16):**
+`89b10b1`, `760a345`, `86192c6`, `e241a0d`, `9020fe5`, `9220802`, `bba0e18`, `b78fb67`, `5c96a9c`, `f31b064`, `18577de`, `97e2601`, `fe4bc89`, `6e93dda`, `e04ede8`, `2aa9177`
 
 **Plan 31-01 commits:**
 - `ab3ceb2` — feat(31-01): add Phase 31 email_send_log + bookings migrations
