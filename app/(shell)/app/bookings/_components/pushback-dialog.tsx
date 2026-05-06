@@ -17,6 +17,7 @@
  */
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -35,6 +36,7 @@ import {
   getBookingsForPushbackAction,
   previewPushbackAction,
   commitPushbackAction,
+  retryPushbackEmailAction,
   type CommitPushbackResultRow,
 } from "../_lib/actions-pushback";
 import type { PushbackBooking } from "../_lib/queries";
@@ -136,6 +138,108 @@ function CascadeBadge({ status }: { status: CascadeStatus }) {
   );
 }
 
+// ─── StatusBadge ──────────────────────────────────────────────────────────────
+
+/**
+ * Colored badge for each commit result row status (Plan 33-04 summary state).
+ *   sent         → green  (DB updated + email sent)
+ *   email_failed → red    (DB updated, email did NOT send — retryable)
+ *   slot_taken   → orange (DB rejected: time slot already taken — NOT retryable)
+ *   not_active   → orange (DB rejected: booking cancelled/rescheduled — NOT retryable)
+ *   skipped      → slate  (ABSORBED booking; no commit attempted)
+ *
+ * RESEARCH.md Risk 7: slot_taken / not_active are visually distinct from
+ * email_failed and DO NOT get a Retry button. These are DB failures — the
+ * booking was NOT updated, so there is nothing to retry via email.
+ */
+function StatusBadge({ status }: { status: CommitPushbackResultRow["status"] }) {
+  switch (status) {
+    case "sent":
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700 shrink-0">
+          Sent
+        </span>
+      );
+    case "email_failed":
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-700 shrink-0">
+          Failed
+        </span>
+      );
+    case "slot_taken":
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded bg-orange-100 text-orange-700 shrink-0">
+          Conflict
+        </span>
+      );
+    case "not_active":
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded bg-orange-100 text-orange-700 shrink-0">
+          Stale
+        </span>
+      );
+    case "skipped":
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded bg-slate-100 text-slate-600 shrink-0">
+          Skipped
+        </span>
+      );
+  }
+}
+
+// ─── RetryEmailButton ─────────────────────────────────────────────────────────
+
+/**
+ * Per-row retry button — rendered ONLY on email_failed rows (RESEARCH.md Risk 7).
+ * Calls retryPushbackEmailAction; on success mutates the row badge to Sent in place.
+ * Quota-exhausted retry surfaces a distinct toast; badge stays Failed.
+ */
+function RetryEmailButton({
+  row,
+  accountId,
+  reason,
+  onSuccess,
+}: {
+  row: CommitPushbackResultRow;
+  accountId: string;
+  reason: string;
+  onSuccess: (bookingId: string) => void;
+}) {
+  const [pending, startRetryTransition] = useTransition();
+
+  function handleRetry() {
+    startRetryTransition(async () => {
+      const result = await retryPushbackEmailAction({
+        accountId,
+        bookingId: row.booking_id,
+        oldStartAt: row.old_start_at,
+        reason: reason || undefined,
+      });
+
+      if (result.ok) {
+        onSuccess(row.booking_id);
+        toast.success(`Email sent to ${firstNameOf(row.booker_name)}`);
+        return;
+      }
+
+      if ("quotaError" in result && result.quotaError) {
+        toast.error(
+          `Quota exhausted (${result.remaining} remaining). Try again tomorrow.`,
+        );
+        return;
+      }
+
+      toast.error("error" in result ? result.error : "Retry failed");
+    });
+  }
+
+  return (
+    <Button size="sm" variant="outline" disabled={pending} onClick={handleRetry}>
+      {pending ? "Retrying…" : "Retry email"}
+    </Button>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function PushbackDialog({
@@ -145,6 +249,7 @@ export function PushbackDialog({
   accountTimezone,
   initialDate,
 }: PushbackDialogProps) {
+  const router = useRouter();
   const [state, setState] = useState<PushbackDialogState>("editing");
   const [date, setDate] = useState(initialDate);
   const [bookings, setBookings] = useState<PushbackBooking[]>([]);
@@ -342,6 +447,19 @@ export function PushbackDialog({
     });
   }
 
+  // ── markRowSent ───────────────────────────────────────────────────────────────
+  // Mutates a single email_failed row to 'sent' in place after a successful retry.
+  // Called by RetryEmailButton.onSuccess — no re-fetch needed, badge flips immediately.
+  function markRowSent(bookingId: string) {
+    setCommitRows((prev) =>
+      prev.map((r) =>
+        r.booking_id === bookingId
+          ? { ...r, status: "sent" as const, error_message: undefined }
+          : r,
+      ),
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -457,19 +575,82 @@ export function PushbackDialog({
           </div>
         )}
 
-        {/* ── Summary state — 33-04 will render per-row Sent/Failed/Skipped badges ── */}
+        {/* ── Summary state — per-row Sent/Failed/Conflict/Stale/Skipped badges ── */}
         {state === "summary" && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
-              Pushback complete &middot;{" "}
-              {commitRows.filter((r) => r.status === "sent").length}/
-              {commitRows.filter((r) => r.status !== "skipped").length} sent
-            </p>
-            {/* 33-04 will replace this debug dump with styled per-row badges
-                and retry buttons for email_failed rows. */}
-            <pre className="text-xs text-muted-foreground overflow-auto max-h-64 rounded border p-2 bg-muted/40">
-              {JSON.stringify(commitRows, null, 2)}
-            </pre>
+          <div className="space-y-3">
+            {/* Summary header: aggregate counts */}
+            {(() => {
+              const sent = commitRows.filter((r) => r.status === "sent").length;
+              const failed = commitRows.filter(
+                (r) => r.status === "email_failed",
+              ).length;
+              const conflict = commitRows.filter(
+                (r) => r.status === "slot_taken" || r.status === "not_active",
+              ).length;
+              const skipped = commitRows.filter(
+                (r) => r.status === "skipped",
+              ).length;
+              return (
+                <p className="text-sm">
+                  <strong>Pushback complete.</strong>{" "}
+                  {sent} sent
+                  {failed > 0 && `, ${failed} failed`}
+                  {conflict > 0 &&
+                    `, ${conflict} conflict${conflict === 1 ? "" : "s"}`}
+                  {skipped > 0 && `, ${skipped} skipped`}.
+                </p>
+              );
+            })()}
+
+            {/* Per-row list with status badges */}
+            <ul className="divide-y rounded border max-h-96 overflow-y-auto">
+              {commitRows.map((row) => (
+                <li
+                  key={row.booking_id}
+                  className="flex items-center gap-3 px-3 py-2"
+                >
+                  <StatusBadge status={row.status} />
+                  <span className="text-sm font-medium">
+                    {firstNameOf(row.booker_name)}
+                  </span>
+                  <span className="text-sm font-mono text-muted-foreground">
+                    {formatLocalTime(row.old_start_at, accountTimezone)}
+                    {row.new_start_at && (
+                      <>
+                        {" → "}
+                        <span className="text-foreground font-semibold">
+                          {formatLocalTime(row.new_start_at, accountTimezone)}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  {/* Retry button: email_failed rows ONLY (RESEARCH.md Risk 7).
+                      slot_taken / not_active = DB failure → no retry available. */}
+                  {row.status === "email_failed" && (
+                    <div className="ml-auto">
+                      <RetryEmailButton
+                        row={row}
+                        accountId={accountId}
+                        reason={reason}
+                        onSuccess={markRowSent}
+                      />
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {/* Footer note for conflict/stale rows */}
+            {commitRows.some(
+              (r) => r.status === "slot_taken" || r.status === "not_active",
+            ) && (
+              <p className="text-xs text-muted-foreground">
+                Conflict / stale rows could not be rescheduled (their new time
+                was taken or the booking changed). These bookings remain at
+                their original times — manually reschedule them from the
+                bookings list.
+              </p>
+            )}
           </div>
         )}
 
@@ -506,7 +687,14 @@ export function PushbackDialog({
           )}
 
           {state === "summary" && (
-            <Button onClick={() => onOpenChange(false)}>Close</Button>
+            <Button
+              onClick={() => {
+                router.refresh(); // refresh bookings page so new times are visible
+                onOpenChange(false);
+              }}
+            >
+              Close
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
