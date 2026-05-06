@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 34 Plan 03 complete. Google OAuth front door: initiateGoogleOAuthAction + GoogleOAuthButton on forms + /auth/google-callback handler.
+**Last updated:** 2026-05-06 — Phase 34 Plan 04 complete. Settings Gmail panel + optional onboarding connect-gmail step + post-link toast. Phase 34 fully complete.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Plans 01-03 complete; Plan 04 next.
+**Current focus:** v1.7 Phase 34 COMPLETE. Next: Phase 35 — Gmail Send (per-account transactional email).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
-**Phase:** 34 — Google OAuth Signup + Credential Capture (first v1.7 phase)
-**Plan:** 03 of ~4 — complete
-**Status:** Plans 01-03 complete. Plan 04 pending.
-**Last activity:** 2026-05-06 — Completed 34-03-PLAN.md (OAuth front door: server actions + form UI + callback handler)
+**Phase:** 34 — Google OAuth Signup + Credential Capture — COMPLETE
+**Plan:** 04 of 4 — complete
+**Status:** Phase 34 fully complete. Phase 35 next.
+**Last activity:** 2026-05-06 — Completed 34-04-PLAN.md (settings Gmail panel + onboarding connect-gmail + link toast)
 
-Progress (Phase 34): ███░ 3/4 plans complete
+Progress (Phase 34): ████ 4/4 plans complete
 
 ## Cumulative project progress
 
@@ -32,10 +32,10 @@ v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shippe
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipped 2026-05-06 — ~2 days)
-v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in planning)
+v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in progress: Phase 34 done)
 ```
 
-**Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases, 138 plans, ~563 commits
+**Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases completed, 138+ plans, ~570 commits
 
 ## Accumulated Context
 
@@ -46,9 +46,12 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **Lazy env var read in encryption utils (Phase 34, Plan 02)** — `getKey()` reads `GMAIL_TOKEN_ENCRYPTION_KEY` inside the function body, not at module top level. Required for test isolation (beforeEach can modify process.env). Apply same pattern to any new env-var-gated server utility.
 - **Google OAuth HTTP helpers fail-safe return (Phase 34, Plan 02)** — `fetchGoogleGrantedScopes` and `revokeGoogleRefreshToken` return `null`/`false` on any network error, never throw. Callers branch on return value.
 - **GoogleOAuthButton is NSI-color-locked (Phase 34, Plan 02)** — Google brand guidelines prohibit NSI colors. Component uses raw `<button>` (not `ui/button`). DO NOT apply brand theme to this component in any future plan.
-- **useSearchParams-in-Suspense pattern (Phase 34, Plan 03)** — Any client component using `useSearchParams()` must isolate that hook in a child component wrapped in `<Suspense fallback={null}>`. Next.js 16 prerender fails with CSR bailout error otherwise. Applied in signup-form.tsx and login-form.tsx.
+- **useSearchParams-in-Suspense pattern (Phase 34, Plans 03+)** — Any client component using `useSearchParams()` must isolate that hook in a child component wrapped in `<Suspense fallback={null}>`. Next.js 16 prerender fails with CSR bailout error otherwise. Applied in signup-form.tsx, login-form.tsx, gmail-status-panel.tsx, google-link-toast.tsx.
 - **Server-action OAuth init (Phase 34, Plan 03)** — `<form action={initiateGoogleOAuthAction}><Button type="submit">` — clean progressive enhancement, no `useTransition` needed. Combined scope string is a single space-delimited string, NOT an array.
 - **Partial-grant detection via tokeninfo endpoint (Phase 34, Plan 03)** — Use Google tokeninfo endpoint (authoritative) to detect whether gmail.send was actually granted. Do NOT use heuristic scope string inspection. Only persist credentials when gmail.send confirmed granted.
+- **Server action cross-segment reuse (Phase 34, Plan 04)** — `connectGmailAction` defined in `app/(shell)/app/settings/gmail/_lib/actions.ts` is imported by onboarding's `connect-gmail-card.tsx`. App Router supports cross-route-segment server action imports. Do NOT duplicate linkIdentity logic.
+- **Conditional unlinkIdentity (Phase 34, Plan 04)** — `disconnectGmailAction` only calls `supabase.auth.unlinkIdentity` when user has 2+ identities (RESEARCH §Pitfall 6). Google-only users keep their `auth.identities` row after disconnect — Phase 35 reads `account_oauth_credentials`, not auth.identities.
+- **Disconnect revocation is best-effort (Phase 34, Plan 04)** — `revokeGoogleRefreshToken` failure is caught and logged; does NOT block the credential row deletion. The user-visible promise is "credentials gone", not "Google session revoked".
 
 ### Patterns established / locked through v1.6
 
@@ -76,11 +79,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — Phase 34 Plan 03 executed (OAuth front door).
+**Last session:** 2026-05-06 — Phase 34 Plans 01-04 executed. Phase 34 complete.
 
-**Stopped at:** Completed 34-03-PLAN.md. Commits: e3a7dfb (initiateGoogleOAuthAction), c816e8c (form UI), 66f47f0 (callback route).
+**Stopped at:** Completed 34-04-PLAN.md. Commits: c9f2312 (settings Gmail panel), f0da49e (onboarding connect-gmail), 03c0ebd (google-link toast).
 
-**Next session:** Execute Phase 34 Plan 04 — Settings panel: Google OAuth disconnect + reconnect + /app?google_linked=1 banner UI + /onboarding?gmail_skipped=1 step.
+**Next session:** Phase 35 — Gmail Send (per-account transactional email using stored refresh tokens from Phase 34).
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
@@ -89,6 +92,7 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-01-SUMMARY.md` — Plan 01 complete
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-02-SUMMARY.md` — Plan 02 complete
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-03-SUMMARY.md` — Plan 03 complete
+- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-04-SUMMARY.md` — Plan 04 complete
 - `lib/oauth/encrypt.ts` — AES-256-GCM encrypt/decrypt/generateKey (e09f019)
 - `lib/oauth/google.ts` — fetchGoogleGrantedScopes, revokeGoogleRefreshToken, hasGmailSendScope (f639f0c)
 - `components/google-oauth-button.tsx` — branded Google button (e427e52)
@@ -97,5 +101,7 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 - `app/(auth)/app/signup/signup-form.tsx` — GoogleOAuthButton first + divider + error alerts (c816e8c)
 - `app/(auth)/app/login/login-form.tsx` — GoogleOAuthButton first + divider + error alerts (c816e8c)
 - `app/auth/google-callback/route.ts` — PKCE exchange + token capture + routing (66f47f0)
-
-**Note for Plan 04:** `/app?google_linked=1` redirect is wired but the banner UI is NOT implemented. `/onboarding?gmail_skipped=1` param is wired but the "Connect Gmail" onboarding step is NOT implemented. Plan 04 owns both.
+- `app/(shell)/app/settings/gmail/_lib/actions.ts` — connectGmailAction + disconnectGmailAction (c9f2312)
+- `app/(shell)/app/settings/gmail/page.tsx` — settings Gmail page (c9f2312)
+- `app/onboarding/connect-gmail/page.tsx` — optional connect-gmail onboarding step (f0da49e)
+- `app/(shell)/app/_components/google-link-toast.tsx` — post-link banner toast (03c0ebd)
