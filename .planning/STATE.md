@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 34 Plan 01 complete. account_oauth_credentials schema + config.toml enable_manual_linking.
+**Last updated:** 2026-05-06 — Phase 34 Plan 02 complete. AES-256-GCM encryption util + Google HTTP helpers + branded OAuth button.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Plan 01 complete (schema + config); Plans 02-04 next.
+**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Plans 01 + 02 complete; Plans 03-04 next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
 **Phase:** 34 — Google OAuth Signup + Credential Capture (first v1.7 phase)
-**Plan:** 01 of ~4 — complete
-**Status:** Plan 01 complete. Plans 02-04 pending.
-**Last activity:** 2026-05-06 — Completed 34-01-PLAN.md (schema foundation + config.toml)
+**Plan:** 02 of ~4 — complete
+**Status:** Plans 01-02 complete. Plans 03-04 pending.
+**Last activity:** 2026-05-06 — Completed 34-02-PLAN.md (OAuth primitives: encryption util + HTTP helpers + branded button)
 
-Progress (Phase 34): █░░░ 1/4 plans complete
+Progress (Phase 34): ██░░ 2/4 plans complete
 
 ## Cumulative project progress
 
@@ -42,7 +42,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 ### Patterns established in v1.7 (Phase 34+)
 
 - **Admin-client-only writes (Phase 34, Plan 01)** — `account_oauth_credentials` has no INSERT/UPDATE/DELETE RLS. All writes must use the service-role Supabase client in server-side API routes, preventing browser-side credential manipulation.
-- **AES-256-GCM encrypted blob format** — `iv:authTag:ciphertext` (all lowercase hex, 12-byte IV, 16-byte auth tag). Canonical format documented in migration comment; Plan 34-02 produces it, Phase 35 consumes it.
+- **AES-256-GCM encrypted blob format (Phase 34, Plan 02)** — `iv:authTag:ciphertext` (all lowercase hex, 12-byte IV, 16-byte auth tag). Produced by `lib/oauth/encrypt.ts`; Phase 35 consumes via `decryptToken`.
+- **Lazy env var read in encryption utils (Phase 34, Plan 02)** — `getKey()` reads `GMAIL_TOKEN_ENCRYPTION_KEY` inside the function body, not at module top level. Required for test isolation (beforeEach can modify process.env). Apply same pattern to any new env-var-gated server utility.
+- **Google OAuth HTTP helpers fail-safe return (Phase 34, Plan 02)** — `fetchGoogleGrantedScopes` and `revokeGoogleRefreshToken` return `null`/`false` on any network error, never throw. Callers branch on return value.
+- **GoogleOAuthButton is NSI-color-locked (Phase 34, Plan 02)** — Google brand guidelines prohibit NSI colors. Component uses raw `<button>` (not `ui/button`). DO NOT apply brand theme to this component in any future plan.
 
 ### Patterns established / locked through v1.6
 
@@ -69,18 +72,21 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — Phase 34 Plan 01 executed (schema + config.toml).
+**Last session:** 2026-05-06 — Phase 34 Plan 02 executed (OAuth primitives).
 
-**Stopped at:** Completed 34-01-PLAN.md. Commits: b214eb5 (migration), f490e7e (config.toml).
+**Stopped at:** Completed 34-02-PLAN.md. Commits: e09f019 (encrypt.ts + tests), f639f0c (google.ts), e427e52 (google-oauth-button.tsx).
 
-**Next session:** Execute Phase 34 Plan 02 — write API route that encrypts and stores the Google refresh token into account_oauth_credentials.
+**Next session:** Execute Phase 34 Plan 03 — Google OAuth callback route handler + initiateGoogleOAuthAction server action.
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
 - `.planning/STATE.md` — this file
 - `.planning/REQUIREMENTS.md` — all 30 v1.7 requirements with phase traceability filled
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-01-SUMMARY.md` — Plan 01 complete
-- `supabase/migrations/20260506120000_phase34_account_oauth_credentials.sql` — table schema (b214eb5)
-- `supabase/config.toml` — enable_manual_linking = true (f490e7e)
+- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-02-SUMMARY.md` — Plan 02 complete
+- `lib/oauth/encrypt.ts` — AES-256-GCM encrypt/decrypt/generateKey (e09f019)
+- `lib/oauth/google.ts` — fetchGoogleGrantedScopes, revokeGoogleRefreshToken, hasGmailSendScope (f639f0c)
+- `components/google-oauth-button.tsx` — branded Google button (e427e52)
+- `tests/oauth-encrypt.test.ts` — 5 encryption tests, all passing (e09f019)
 
-**Note:** Docker was not running during Plan 01 execution. Run `npx supabase db reset` to verify migration applies cleanly before testing Plan 02 locally.
+**Note:** Docker was not running during Plan 01 execution. Run `npx supabase db reset` to verify migration applies cleanly before testing Plan 03 locally. PREREQ-04 (GMAIL_TOKEN_ENCRYPTION_KEY in Vercel) must be set before Plan 03's callback route is deployed.
