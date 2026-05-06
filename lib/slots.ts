@@ -299,6 +299,38 @@ function slotConflictsWithBookings(
 }
 
 /**
+ * Phase 33 Plan 02 — End-of-day minute for a single local date.
+ *
+ * Returns the highest end_minute across all available windows for the date,
+ * which represents the latest time a booking can start to still fit inside
+ * the day's availability.
+ *
+ * Sentinel: 1440 (24*60) — returned when the day has no availability rules
+ * and no override that would close it. This matches CONTEXT.md OQ-5:
+ *   "no-rules days should never flag PAST_EOD on the pushback cascade,
+ *    because ad-hoc bookings on otherwise-closed days are allowed and the
+ *    owner shouldn't see alarming amber badges."
+ *
+ * Also returns 1440 for is_closed=true days (Phase 32 block-entire-day rows)
+ * because those days are blocked at the booking-creation layer; the cascade
+ * preview doesn't need to flag individual moved bookings as PAST_EOD on top.
+ *
+ * Inputs mirror windowsForDate() so the caller can pass the same pre-fetched
+ * arrays without extra queries.
+ */
+export function getEndOfDayMinute(
+  dateIsoYmd: string, // YYYY-MM-DD (local date in accountTimezone)
+  dayOfWeek: number, // 0..6
+  rules: AvailabilityRuleRow[],
+  overrides: DateOverrideRow[],
+): number {
+  const windows = windowsForDate(dateIsoYmd, dayOfWeek, rules, overrides);
+  // null = closed day per rules+overrides; per OQ-5 treat as no-constraint.
+  if (windows === null || windows.length === 0) return 24 * 60;
+  return Math.max(...windows.map((w) => w.end_minute));
+}
+
+/**
  * Pure slot-generation entry point. Plan 04-06's route handler is the only
  * production caller; tests call it directly with hand-crafted inputs.
  */
