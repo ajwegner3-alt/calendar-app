@@ -1,27 +1,23 @@
 "use client";
 
 /**
- * Phase 33 Plan 01 — PushbackDialog shell.
+ * Phase 33 — PushbackDialog.
  *
- * Implements the "editing" state fully:
- *   - Native HTML date input (today + future only)
- *   - Chronological bookings list with radio-column anchor selection
- *   - Delay number input + segmented [Min | Hr] toggle
- *   - Always-visible 280-char reason textarea
- *
- * States 2–5 render placeholder regions:
- *   - "preview-loading" — spinner placeholder for 33-02
- *   - "preview-ready"   — cascade preview region for 33-02
- *   - "committing"      — commit progress placeholder for 33-03
- *   - "summary"         — per-row result summary for 33-04
+ * Plan 33-01 built the editing state + 5-state shell.
+ * Plan 33-02 wires the real preview: handlePreview calls previewPushbackAction,
+ *   transitions editing → preview-loading → preview-ready, renders
+ *   MOVE/ABSORBED/PAST_EOD badges + quota indicator + verbatim Phase 31 error.
+ * Plan 33-03 will fill in handleConfirm (commit path).
+ * Plan 33-04 will render the summary state (per-row Sent/Failed/Skipped).
  *
  * Note: shadcn RadioGroup is not installed in this project. Anchor selection
  * uses accessible native <input type="radio"> with the same visual treatment
- * (radio-column layout, keyboard nav, screen-reader labels). This is a
- * deviation from the plan's RadioGroup reference — functionally identical.
+ * (radio-column layout, keyboard nav, screen-reader labels). Deviation logged
+ * in Plan 33-01 SUMMARY.md.
  */
 
 import { useState, useTransition, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -35,18 +31,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-import { getBookingsForPushbackAction } from "../_lib/actions-pushback";
+import {
+  getBookingsForPushbackAction,
+  previewPushbackAction,
+} from "../_lib/actions-pushback";
 import type { PushbackBooking } from "../_lib/queries";
+import type { CascadeRow, CascadeStatus } from "@/lib/bookings/pushback";
 
 // ─── State machine ────────────────────────────────────────────────────────────
 
 /**
  * Five-state machine for the pushback dialog lifecycle.
- *   editing         — owner is filling the form (this plan implements this)
- *   preview-loading — cascade preview is being computed (33-02)
- *   preview-ready   — cascade preview is shown; owner can Confirm (33-02)
- *   committing      — commit in flight (33-03)
- *   summary         — per-booking result summary (33-04)
+ *   editing         — owner is filling the form (Plan 33-01)
+ *   preview-loading — cascade preview is being computed (Plan 33-02)
+ *   preview-ready   — cascade preview is shown; owner can Confirm (Plan 33-02)
+ *   committing      — commit in flight (Plan 33-03)
+ *   summary         — per-booking result summary (Plan 33-04)
  */
 export type PushbackDialogState =
   | "editing"
@@ -98,6 +98,37 @@ function isValidDelay(s: string): boolean {
   return Number.isInteger(n) && n > 0;
 }
 
+// ─── CascadeBadge ─────────────────────────────────────────────────────────────
+
+/**
+ * Colored badge for each cascade row status.
+ *   MOVE     → blue (booking will be rescheduled)
+ *   ABSORBED → slate (gap absorbed the push; no change)
+ *   PAST_EOD → amber + warning icon (moved past end-of-day; does NOT block commit per PUSH-07)
+ */
+function CascadeBadge({ status }: { status: CascadeStatus }) {
+  if (status === "MOVE") {
+    return (
+      <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-700 shrink-0">
+        MOVE
+      </span>
+    );
+  }
+  if (status === "ABSORBED") {
+    return (
+      <span className="px-2 py-0.5 text-xs font-medium rounded bg-slate-100 text-slate-600 shrink-0">
+        ABSORBED
+      </span>
+    );
+  }
+  // PAST_EOD: amber + warning icon
+  return (
+    <span className="px-2 py-0.5 text-xs font-medium rounded bg-amber-100 text-amber-800 inline-flex items-center gap-1 shrink-0">
+      <span aria-hidden>&#9888;</span> PAST EOD
+    </span>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function PushbackDialog({
@@ -115,11 +146,16 @@ export function PushbackDialog({
   const [delayValue, setDelayValue] = useState<string>("15");
   const [delayUnit, setDelayUnit] = useState<DelayUnit>("min");
   const [reason, setReason] = useState("");
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+
+  // Preview state — populated by previewPushbackAction
+  const [previewRows, setPreviewRows] = useState<CascadeRow[]>([]);
+  const [movedCount, setMovedCount] = useState(0);
+  const [remainingQuota, setRemainingQuota] = useState(0);
+  const [quotaError, setQuotaError] = useState(false);
 
   // Re-seed state whenever the modal opens or initialDate prop changes.
-  // Pattern: setState-in-useEffect (React docs "reset state with a key prop"
-  // alternative — avoids full unmount/remount of dialog tree on each open,
+  // Pattern: setState-in-useEffect (avoids full unmount/remount of dialog tree
   // which would break exit animations). Matches override-modal.tsx line 116.
   useEffect(() => {
     if (!open) return;
@@ -130,6 +166,10 @@ export function PushbackDialog({
     setDelayUnit("min");
     setAnchorId(null);
     setBookings([]);
+    setPreviewRows([]);
+    setMovedCount(0);
+    setRemainingQuota(0);
+    setQuotaError(false);
   }, [open, initialDate]);
 
   // Fetch bookings whenever open state or date changes.
@@ -156,12 +196,51 @@ export function PushbackDialog({
   }, [open, date, accountId, accountTimezone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Today in account timezone (for date-picker min attribute — computed
-  // client-side here since this is a client component; the server page also
-  // computes it but doesn't need to pass it as a prop for the min constraint).
+  // client-side here since this is a client component).
   const todayLocal = todayInTz(accountTimezone);
 
   const canPreview =
     !!anchorId && isValidDelay(delayValue) && bookings.length > 0;
+
+  // ── handlePreview ────────────────────────────────────────────────────────────
+  // Replaces the Plan 33-01 stub. Calls previewPushbackAction and transitions
+  // editing → preview-loading → preview-ready (or back to editing on error).
+
+  function handlePreview() {
+    setState("preview-loading");
+    startTransition(async () => {
+      const delayMinutes =
+        delayUnit === "hr" ? Number(delayValue) * 60 : Number(delayValue);
+
+      const result = await previewPushbackAction({
+        accountId,
+        date,
+        accountTimezone,
+        anchorId: anchorId!, // canPreview guard ensures non-null
+        delayMinutes,
+        reason: reason || undefined,
+      });
+
+      if (!result.ok) {
+        toast.error(result.error);
+        setState("editing");
+        return;
+      }
+
+      setPreviewRows(result.rows);
+      setMovedCount(result.movedCount);
+      setRemainingQuota(result.remainingQuota);
+      setQuotaError(result.quotaError);
+      setState("preview-ready");
+    });
+  }
+
+  // ── handleConfirm ────────────────────────────────────────────────────────────
+  // Stub — Plan 33-03 will replace this with the real commitPushbackAction call.
+
+  async function handleConfirm() {
+    toast.info("Commit path lands in Plan 33-03");
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,17 +269,68 @@ export function PushbackDialog({
           />
         )}
 
-        {/* ── Preview-loading state — 33-02 will replace this stub ── */}
+        {/* ── Preview-loading state ── */}
         {state === "preview-loading" && (
           <div className="py-8 text-center text-sm text-muted-foreground">
             Computing preview…
           </div>
         )}
 
-        {/* ── Preview-ready state — 33-02 will render cascade rows here ── */}
+        {/* ── Preview-ready state — cascade rows + quota indicator ── */}
         {state === "preview-ready" && (
-          <div className="text-sm text-muted-foreground py-4">
-            {/* 33-02: render MOVE / ABSORBED / PAST_EOD badge rows + quota indicator */}
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {movedCount} booking{movedCount === 1 ? "" : "s"} will be moved.
+              {previewRows.length - movedCount > 0 &&
+                ` ${previewRows.length - movedCount} unaffected (gap absorbed).`}
+            </p>
+
+            {/* Chronological list with state badges */}
+            <ul className="divide-y rounded border max-h-80 overflow-y-auto">
+              {previewRows.map((row) => (
+                <li
+                  key={row.booking.id}
+                  className="flex items-center gap-3 px-3 py-2"
+                >
+                  <CascadeBadge status={row.status} />
+                  <span className="text-sm font-mono">
+                    {formatLocalTime(row.old_start_at, accountTimezone)}
+                    {row.new_start_at && (
+                      <>
+                        {" → "}
+                        <span className="font-semibold">
+                          {formatLocalTime(row.new_start_at, accountTimezone)}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {row.booking.booker_first_name}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                    {row.booking.duration_minutes}min
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Footer: quota indicator + verbatim Phase 31 inline error markup */}
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-sm">
+                Sending {movedCount} email{movedCount === 1 ? "" : "s"} &middot;{" "}
+                {remainingQuota} remaining today
+              </p>
+              {/* VERBATIM Phase 31 quota error markup — matches override-modal.tsx
+                  lines 426-432. Class, role, and copy are character-for-character
+                  identical. Do NOT paraphrase. */}
+              {quotaError && (
+                <p className="text-sm text-red-600" role="alert">
+                  {movedCount} email{movedCount === 1 ? "" : "s"} needed,{" "}
+                  {remainingQuota} remaining today. Quota resets at UTC midnight.
+                  Wait until tomorrow or contact bookers manually.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -224,23 +354,33 @@ export function PushbackDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button
-                disabled={!canPreview}
-                onClick={() => {
-                  // 33-02 will replace this stub with:
-                  //   setState("preview-loading");
-                  //   startTransition(async () => {
-                  //     const result = await previewPushbackAction({ ... });
-                  //     ...setState("preview-ready");
-                  //   });
-                  setState("preview-ready");
-                }}
-              >
-                Preview
+              <Button disabled={!canPreview || isPending} onClick={handlePreview}>
+                {isPending ? "Loading…" : "Preview"}
               </Button>
             </>
           )}
-          {/* 33-02 / 33-03 / 33-04: footer buttons for other states go here */}
+
+          {state === "preview-ready" && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setState("editing")}
+                disabled={isPending}
+              >
+                Back
+              </Button>
+              <Button
+                disabled={quotaError || movedCount === 0 || isPending}
+                onClick={handleConfirm}
+              >
+                {isPending
+                  ? "Committing…"
+                  : `Pushback ${movedCount} booking${movedCount === 1 ? "" : "s"}`}
+              </Button>
+            </>
+          )}
+
+          {/* 33-03 / 33-04: footer buttons for committing and summary states */}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -333,7 +473,7 @@ function EditingForm({
                   className="shrink-0 accent-primary"
                 />
                 <span className="text-sm font-mono w-32 shrink-0">
-                  {formatLocalTime(b.start_at, accountTimezone)} →{" "}
+                  {formatLocalTime(b.start_at, accountTimezone)} &rarr;{" "}
                   {formatLocalTime(b.end_at, accountTimezone)}
                 </span>
                 <span className="text-sm font-medium">{b.booker_first_name}</span>
