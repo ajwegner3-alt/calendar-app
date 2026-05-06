@@ -1,391 +1,360 @@
-# Stack Research — v1.5 Buffer Fix + Audience Rebrand + Booker Redesign
+# Stack Research — v1.7 Auth Expansion + Per-Account Email
 
-**Domain:** Multi-tenant Calendly-style booking tool for service-based businesses
-**Researched:** 2026-05-03
-**Confidence:** HIGH (all findings verified against live source files; no training-data assertions)
-
----
-
-## Verdict: Zero New npm Packages Required
-
-All three v1.5 features are implementable with the existing installed stack. No new
-dependencies needed. This is confirmed by reading every touch file listed below.
+**Domain:** Multi-tenant Calendly-style booking app (Next.js 16 / Supabase / Vercel)
+**Researched:** 2026-05-06
+**Confidence:** HIGH for package selections; MEDIUM for Google OAuth verification timeline; HIGH for architecture patterns
 
 ---
 
-## Feature 1: Per-Event-Type Post-Event Buffer (BUFFER-01)
+## Executive Summary
 
-### Schema Situation — Critical Discovery
+v1.7 needs four stack additions on top of the existing codebase:
 
-The initial migration (`supabase/migrations/20260419120000_initial_schema.sql`, lines 35-36)
-created two columns on `event_types` that have **never been wired to the slot engine**:
+1. **`googleapis` npm package** — for Gmail OAuth2 send (nodemailer already installed; googleapis provides the OAuth2 client that issues access tokens from stored refresh tokens)
+2. **`resend` npm package** — for the NSI-owned Resend backend (upgraded accounts)
+3. **`knip` devDependency** — for the dead-code audit phase
+4. **`account_gmail_credentials` Postgres table** — for storing encrypted per-account Gmail OAuth tokens (no npm package; pure schema addition)
+
+Everything else — Next.js, Supabase Auth, nodemailer, quota-guard, email-sender — stays as-is. The email-sender abstraction (`EmailClient` interface + `createEmailClient` factory) is already forward-compatible; v1.7 adds two new provider variants (`gmail-oauth` and `resend`) without touching callers.
+
+---
+
+## 1. Google OAuth Signup with Combined `gmail.send` Scope
+
+### How Supabase + Google OAuth Works
+
+Supabase's Google provider does **not** store the `provider_refresh_token` in any table. The token is available only in the session object immediately after `exchangeCodeForSession()` in the PKCE callback. **You must extract and persist it yourself** in the `/auth/confirm` route handler (the one this app already uses at `app/auth/confirm/route.ts`).
+
+### Scope Configuration
+
+Pass additional scopes in `signInWithOAuth` via the `options.scopes` field (space-separated, NOT `queryParams.scope` — that syntax is wrong and silently drops the extra scopes):
+
+```typescript
+await supabase.auth.signInWithOAuth({
+  provider: "google",
+  options: {
+    redirectTo: `${origin}/auth/confirm?next=/onboarding`,
+    scopes: "openid email profile https://www.googleapis.com/auth/gmail.send",
+    queryParams: {
+      access_type: "offline",   // required to receive a refresh_token
+      prompt: "consent",         // forces consent screen even for returning users
+    },
+  },
+});
+```
+
+`access_type: "offline"` + `prompt: "consent"` are both required. Without `prompt: "consent"`, Google does not return a refresh token for returning users (they already granted access; Google skips the screen and returns no refresh token). Without `access_type: "offline"`, no refresh token is issued at all.
+
+### One Consent Screen, Not Two
+
+Users see **one consent screen** that lists all requested scopes together. The screen shows `openid + email + profile + gmail.send` in a single flow. There is no second prompt.
+
+### The 100-User Cap Warning
+
+`gmail.send` is a **sensitive scope**. Until the Google Cloud project completes OAuth App Verification, the app is capped at **100 total users who can grant permission** (cap is lifetime, not resettable). During that cap period, users see an "unverified app" warning screen before the consent screen.
+
+**Implication for v1.7:** Andrew's NSI account plus a handful of test accounts is well under 100. The cap is not a blocker for initial rollout. Google verification (3-5 business days, requires a demo video) should be started during or shortly after v1.7 ships.
+
+### Token Extraction in the Callback
+
+The `/auth/confirm` route already exchanges the code for a session. Add token persistence there:
+
+```typescript
+const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+const refreshToken = data?.session?.provider_refresh_token;
+const providerEmail = data?.session?.user?.email;
+// INSERT into account_gmail_credentials
+```
+
+**Important:** `provider_refresh_token` is only present on the initial OAuth grant. Subsequent logins where the user has already granted access do NOT include a refresh token (Google only issues it once). The `prompt: "consent"` param in the `signInWithOAuth` call forces re-consent and a fresh refresh token — critical if the token has been revoked.
+
+---
+
+## 2. Magic-Link Login
+
+### Implementation
+
+```typescript
+await supabase.auth.signInWithOtp({
+  email: parsed.data.email,
+  options: {
+    shouldCreateUser: false,           // login only — no new account creation
+    emailRedirectTo: `${origin}/auth/confirm?next=/app`,
+  },
+});
+```
+
+`shouldCreateUser: false` is the canonical "login-only magic link" pattern. If the email does not exist in `auth.users`, Supabase does NOT send an email, but the API returns no error — it silently succeeds. This is intentional enumeration-safety behavior (same pattern as this app's existing password signup: always redirect, never distinguish).
+
+### Rate Limiting
+
+Supabase applies its own built-in rate limit: one OTP request per email per 60 seconds (configurable in the Auth settings in the Supabase dashboard). The app's existing `rate_limit_events` Postgres table + `checkAuthRateLimit` can add an additional IP-level guard keyed as `auth:magic-link:${ip}` — no new infrastructure needed.
+
+### No New npm Package Required
+
+`signInWithOtp` is part of `@supabase/supabase-js` already installed. The existing auth route structure (`app/(auth)/app/login/`) and `/auth/confirm` handler handle the token verification flow unchanged.
+
+---
+
+## 3. Per-Account Gmail OAuth Send
+
+### Recommended Approach: Nodemailer with OAuth2 (not googleapis `gmail.users.messages.send`)
+
+**Use nodemailer's built-in OAuth2 transport**, not the `googleapis` SDK's REST send. Reasons:
+
+- nodemailer is already installed (`^8.0.6`)
+- The existing `EmailClient` interface and `createGmailClient` factory are the callsite abstraction; adding a `gmail-oauth` provider variant is additive, not a rewrite
+- nodemailer's OAuth2 transport handles access-token refresh automatically — it calls the Google token endpoint with the stored `refreshToken` and caches the resulting `accessToken` for the transporter's lifetime (one per Vercel Lambda invocation)
+- `gmail.users.messages.send` requires manually encoding the full RFC 2822 MIME message as base64url, handling `.ics` attachments, `Content-Type: multipart/mixed`, etc. nodemailer already does all of this
+- Both approaches need the same `googleapis` package for the OAuth2 client that fetches access tokens
+
+**The `googleapis` package is still needed** because nodemailer's built-in OAuth2 needs `clientId`, `clientSecret`, and `refreshToken` — you provide those, and nodemailer handles calling `https://oauth2.googleapis.com/token` itself. You do NOT need to call `googleapis` for token refresh; nodemailer does it internally.
+
+**Actually:** nodemailer's OAuth2 transport calls Google's token endpoint directly without needing the `googleapis` package at all. `googleapis` is only needed if you use the `google.auth.OAuth2` client explicitly. Since nodemailer handles refresh internally, you do NOT need to add `googleapis` to the dependency tree. This is simpler.
+
+**Revised verdict: No new npm package needed for the Gmail OAuth send path.** nodemailer + stored refresh token is sufficient.
+
+### New Provider Variant: `gmail-oauth`
+
+Add `lib/email-sender/providers/gmail-oauth.ts` alongside the existing `gmail.ts`. It accepts `{ user, clientId, clientSecret, refreshToken }` and creates a nodemailer transporter with `auth: { type: "OAuth2", ... }`. The existing `EmailClientConfig` type needs two new optional fields:
+
+```typescript
+// Add to EmailClientConfig (types.ts):
+clientId?: string;       // Google OAuth2 client ID
+clientSecret?: string;   // Google OAuth2 client secret
+refreshToken?: string;   // Per-account Gmail refresh token
+```
+
+Add `"gmail-oauth"` to the `EmailProvider` union and a case in `createEmailClient`.
+
+### Refresh Token Expiry and Revocation
+
+Nodemailer's OAuth2 transport auto-refreshes the access token each time it's needed (access tokens expire in 1 hour). However, the **refresh token itself** can be revoked (user revokes app in Google account settings, or the project's OAuth consent screen changes). When revocation happens:
+
+- nodemailer throws with `EOAUTH2` code / "invalid_grant" message
+- The caller should catch this, mark the account's credentials as `revoked_at = now()`, and surface an in-app reconnection prompt
+
+Add a `revoked_at` column to `account_gmail_credentials` (see schema below). When a send fails with `invalid_grant`, set `revoked_at` and return a typed error so the owner UI can show a "Reconnect Gmail" banner.
+
+### Token Storage Schema
+
+New table in Supabase Postgres (applied via the locked `echo | npx supabase db query --linked -f` pattern):
 
 ```sql
-buffer_before_minutes  int not null default 0 check (buffer_before_minutes >= 0),
-buffer_after_minutes   int not null default 0 check (buffer_after_minutes >= 0),
+-- Migration: v17_account_gmail_credentials.sql
+CREATE TABLE account_gmail_credentials (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id      uuid        NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  gmail_address   text        NOT NULL,           -- the connected Gmail address
+  refresh_token   text        NOT NULL,           -- encrypted (see below)
+  access_token    text,                           -- cached; nullable; short-lived
+  token_expiry    timestamptz,                    -- when access_token expires
+  revoked_at      timestamptz,                    -- set on invalid_grant error
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (account_id)  -- one Gmail connection per account for v1.7
+);
+
+-- RLS: owner can read/update their own row; no anon access
+ALTER TABLE account_gmail_credentials ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "owner_select_own_gmail_creds"
+  ON account_gmail_credentials FOR SELECT
+  TO authenticated
+  USING (account_id IN (SELECT id FROM accounts WHERE owner_user_id = auth.uid()));
+
+CREATE POLICY "owner_update_own_gmail_creds"
+  ON account_gmail_credentials FOR UPDATE
+  TO authenticated
+  USING (account_id IN (SELECT id FROM accounts WHERE owner_user_id = auth.uid()))
+  WITH CHECK (account_id IN (SELECT id FROM accounts WHERE owner_user_id = auth.uid()));
 ```
 
-The Phase 4 availability-settings migration (`20260425120000_account_availability_settings.sql`)
-added `accounts.buffer_minutes` as an account-scoped overlay and that is what the engine reads
-today (`lib/slots.ts:277` passes `account.buffer_minutes` to `slotConflictsWithBookings`).
+**Encryption decision:** Store `refresh_token` using Supabase's `pgsodium` extension (already available in all Supabase projects) via `pgsodium.crypto_aead_det_encrypt`. This provides at-rest encryption with a key stored in Supabase's key vault — not visible in plaintext even to someone with a database dump. The admin client (service-role key) performs the encrypt/decrypt. The app never stores the raw refresh token in an env var or application memory beyond the callback request lifetime.
 
-**Implication for v1.5:** `event_types.buffer_after_minutes` already exists in production with
-the correct semantics (post-event buffer). Two paths exist for the migration:
+Alternative if `pgsodium` integration is complex: store the token encrypted with a 32-byte secret (`GMAIL_TOKEN_ENCRYPTION_KEY` env var) using Node.js `crypto.createCipheriv('aes-256-gcm')`. This is simpler to implement, less integrated. For v1.7 scale (single NSI account + a few test accounts), either approach is fine. **Recommendation: Use AES-256-GCM with an env var key for v1.7 (simpler, no pgsodium learning curve); upgrade to pgsodium if the tool goes multi-tenant at scale.**
 
-**Path A — Wire `buffer_after_minutes` (existing column, no ADD COLUMN needed):**
-- Skip the ADD COLUMN migration entirely.
-- Migration scope: `UPDATE event_types SET buffer_after_minutes = (SELECT buffer_minutes FROM accounts WHERE accounts.id = event_types.account_id)` to backfill from account values, then DROP `accounts.buffer_minutes`.
-- The dead `buffer_before_minutes` column can remain (DEFAULT 0, no code reads it) or be dropped alongside `buffer_minutes` in the same DROP migration.
+---
 
-**Path B — Add `post_buffer_minutes` per spec name (new column):**
-- Adds an ADD COLUMN migration before backfill + DROP.
-- Cleaner semantic name; avoids adjacency confusion with the dead `buffer_before_minutes` column.
-- `ALTER TABLE event_types ADD COLUMN IF NOT EXISTS post_buffer_minutes integer NOT NULL DEFAULT 0 CHECK (post_buffer_minutes >= 0);` is a single idempotent statement.
+## 4. Resend SDK
 
-**Recommendation: Path A.** `buffer_after_minutes` is semantically correct for post-only buffer
-semantics, already present in production (no ADD COLUMN risk), and already declared in the
-`EventTypeRow` TypeScript type (`app/(shell)/app/event-types/_lib/types.ts:43-44`). This reduces
-v1.5 migration surface to one migration file instead of two.
+### Package
 
-### Migration Apply Path (LOCKED FOR THIS REPO)
+```
+resend   ^4.x (latest stable as of 2026-05: verify exact version at install time)
+```
 
-Per `PROJECT.md §200` and the v1.2 Phase 21 precedent: `supabase db push --linked` is broken in
-this repo (orphan timestamps in remote migration tracking table). The canonical apply command for
-every migration:
+The npm registry shows `6.x` as latest. The major version bump from 4→6 changed the API surface. **Verify the installed version's API against the official docs at install time** — do not trust training data here. The core `resend.emails.send()` shape has been stable, but constructor and TypeScript types have changed across major versions.
+
+### API Surface (verified against resend.com/docs as of 2026-05)
+
+```typescript
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+await resend.emails.send({
+  from: "NSI Booking <booking@northstarintegrations.com>",  // verified domain required
+  to: "recipient@example.com",
+  subject: "Your booking confirmation",
+  html: "<p>...</p>",
+  text: "...",               // auto-generated from html if omitted
+  attachments: [
+    {
+      filename: "booking.ics",
+      content: icsBuffer,    // Buffer or base64 string
+      // content_type omitted — Resend derives from filename extension
+    },
+  ],
+});
+```
+
+`.ics` files are not explicitly listed as supported in Resend's docs, but the attachment API accepts any `Buffer` with a `filename`. The MIME type is derived from the filename extension. Standard practice (SendGrid, Postmark, Nodemailer all support `.ics` this way) means it works — but verify in a Phase QA step by actually sending a test booking via the Resend path and confirming the `.ics` attaches and imports correctly.
+
+### Pricing (as of 2026-05)
+
+| Tier | Monthly emails | Cost | Daily limit |
+|------|---------------|------|-------------|
+| Free | 3,000/month | $0 | 100/day |
+| Pro | 50,000/month | ~$20 | No daily limit |
+
+For the "NSI-owned Resend backend for upgraded accounts" model in v1.7: Andrew pays ~$20/month for the Pro tier and bills upgraded customers above that. The 100/day free tier limit conflicts with the app's 200/day Gmail cap concept — use the Pro tier for any production use.
+
+### Integration with Existing Email Sender
+
+Add `lib/email-sender/providers/resend.ts` as a new provider. The existing `EmailClientConfig` needs:
+
+```typescript
+// Add to EmailClientConfig:
+apiKey?: string;    // Resend API key (required if provider = "resend")
+```
+
+Add `"resend"` to `EmailProvider` union and a case in `createEmailClient`. The `EmailOptions` interface (with `attachments`) maps 1:1 to the Resend API shape — no adapter gymnastics.
+
+### Routing Logic
+
+The send path will route per account:
+
+```
+account has valid gmail_credentials AND not revoked → use gmail-oauth provider
+account is flagged as "resend_upgraded" → use resend provider
+account has no credentials OR revoked → refuse send (quota/credential error)
+```
+
+This routing lives in the booking-side email orchestrators, not in the email-sender library itself. The email-sender library stays dumb (pass config, get result). The orchestrators look up account credentials and call `createEmailClient({ provider: "gmail-oauth", refreshToken: ... })` or `createEmailClient({ provider: "resend", apiKey: ... })`.
+
+---
+
+## 5. Dead-Code Analysis: knip
+
+### Recommendation: knip (devDependency, audit-only mode)
+
+**Do not use ts-prune** — archived, recommends migrating to knip.
+**Do not use ts-unused-exports** — not maintained, narrower scope.
+
+knip is the canonical TypeScript dead-code tool as of 2026. It:
+- Has a built-in Next.js plugin (auto-activates when `"next"` is in dependencies) that understands App Router conventions — it will not falsely flag `page.tsx`, `layout.tsx`, `route.ts` as "unused" just because they have no TypeScript imports
+- Reports unused files, unused exports, unused dependencies, unused devDependencies — in one run
+- Has a `--reporter json` output mode that produces a machine-readable list for the "audit then approve" workflow
+- Does NOT auto-modify files unless `--fix` is explicitly passed — running `knip` alone is always read-only/report-only
+- Vercel used knip to delete ~300k lines of code from their codebase
+
+### The Audit-Then-Approve Workflow
 
 ```bash
-echo | npx supabase db query --linked -f supabase/migrations/<TIMESTAMP>_<name>.sql
+# 1. Install (devDependency only — never ships to production)
+npm install -D knip
+
+# 2. Report mode — read-only, produces list to stdout
+npx knip --reporter json > .planning/research/dead-code-report.json
+
+# 3. Andrew reviews dead-code-report.json line by line
+# 4. Per-item removal plan created (what to remove, what to keep/ignore)
+# 5. Surgical removals executed one at a time with Andrew sign-off
 ```
 
-The `echo |` pipe satisfies the interactive stdin prompt the CLI issues without it. The `-f` flag
-runs the file; wrap multi-statement migrations in `BEGIN/COMMIT` for atomicity (the CLI does not
-wrap automatically). This path was used successfully for every migration from v1.1 through v1.4
-including the Phase 21 DROP.
+**Configuration:** knip detects Next.js automatically. A minimal `knip.json` at the project root may be needed to mark certain files as entry points if the Next.js plugin doesn't catch everything (e.g., the vendored `lib/email-sender/` is imported as an alias — may need `entry: ["lib/email-sender/index.ts"]`).
 
-### Two-Step DROP Deploy Protocol (CP-03)
+---
 
-Established in v1.2 Phase 21 for dropping `accounts.sidebar_color`, `background_color`,
-`background_shade`, `chrome_tint_intensity`. The same protocol applies to `accounts.buffer_minutes`.
+## New npm Dependencies Summary
 
-**Step 1 — Code stop-reading commit:**
-Remove all reads of `accounts.buffer_minutes` from TypeScript. Wire the slot engine to
-`event_types.buffer_after_minutes`. Run `tsc --noEmit` and `grep -r buffer_minutes app/ lib/`
-to confirm zero remaining references. Deploy to Vercel. Do NOT drop the column yet.
+| Package | Type | Version | Purpose | Add? |
+|---------|------|---------|---------|------|
+| `resend` | dependency | latest `^x.x.x` | NSI Resend backend for upgraded accounts | YES |
+| `knip` | devDependency | latest `^x.x.x` | Dead-code audit — report-only mode | YES |
+| `googleapis` | — | — | NOT needed; nodemailer handles OAuth2 token refresh internally | NO |
 
-**Drain window — minimum 30 minutes:**
-Stale Vercel function instances can hold in-flight requests against old code. Dropping the column
-while old instances are alive causes 500s. In v1.2, the drain ran 772 minutes (overnight); 30
-minutes is the enforced minimum. Hold the DROP migration file local (do not push) during this window.
+**Nothing else is needed.** nodemailer is already installed (`^8.0.6`) and supports OAuth2 natively without additional packages.
 
-**Step 2 — DROP migration:**
-After drain, apply:
+### Install Commands
 
 ```bash
-echo | npx supabase db query --linked -f supabase/migrations/<TIMESTAMP>_drop_accounts_buffer_minutes.sql
+# Production dependency
+npm install resend
+
+# Dev dependency (never ships)
+npm install -D knip
 ```
-
-Migration template (matches Phase 21 pattern — atomic, IF EXISTS guarded, RAISE NOTICE header):
-
-```sql
-BEGIN;
-  DO $$ BEGIN RAISE NOTICE 'v1.5 DROP migration: accounts.buffer_minutes'; END $$;
-  ALTER TABLE accounts DROP COLUMN IF EXISTS buffer_minutes;
-COMMIT;
-```
-
-**Author a `.SKIP` rollback artifact** per CP-03 convention:
-`<TIMESTAMP+1>_readd_accounts_buffer_minutes.sql.SKIP`
-
-**Pre-flight gate before Step 2:** run
-`grep -rn "buffer_minutes" app/ lib/ --include="*.ts" --include="*.tsx"`
-and confirm zero matches (excluding migration files and test files that only reference the name in
-comments). Zero live references is the required gate condition.
-
-### Engine Touch Sites — Complete Map
-
-Every file that reads `accounts.buffer_minutes` today and must be updated:
-
-| File | Line(s) | Change Required |
-|------|---------|----------------|
-| `app/api/slots/route.ts:89` | `event_types` SELECT | Add `buffer_after_minutes` to the column list |
-| `app/api/slots/route.ts:121` | `accounts` SELECT | Remove `buffer_minutes` from the column string |
-| `app/api/slots/route.ts:160` | `AccountSettings` construction | Replace `buffer_minutes: accountRes.data.buffer_minutes` with value from `eventType.buffer_after_minutes` |
-| `lib/slots.types.ts:15` | `AccountSettings.buffer_minutes` field | Move the field out of `AccountSettings` or rename it; see note below |
-| `lib/slots.ts:277` | `account.buffer_minutes` passed to `slotConflictsWithBookings` | Read from the event-type value instead |
-| `app/(shell)/app/availability/_components/settings-panel.tsx:15,25,48,75,84` | `buffer_minutes` field | Remove the buffer control from the availability panel (it no longer applies account-wide) |
-| `app/(shell)/app/availability/_lib/actions.ts:64` | Server Action upsert payload | Remove `buffer_minutes` from the UPDATE payload |
-| `app/(shell)/app/availability/_lib/queries.ts:53` | SELECT string | Remove `buffer_minutes` from the accounts query |
-| `app/(shell)/app/availability/_lib/schema.ts:135` | Zod schema | Remove `buffer_minutes` field |
-| `app/(shell)/app/availability/_lib/types.ts:24` | TypeScript type | Remove `buffer_minutes` field |
-| `app/(shell)/app/availability/page.tsx:50` | Page state construction | Remove `buffer_minutes` from initial state |
-
-**Note on `AccountSettings` interface:** `buffer_minutes` is currently declared on
-`AccountSettings` (the account row shape in `lib/slots.types.ts`). After the migration, the
-buffer belongs to the event type, not the account. The cleanest approach: add a new field
-`postBufferMinutes: number` to `SlotInput` directly and pass it from the route handler
-(`eventType.buffer_after_minutes`). This keeps `AccountSettings` as a pure account-row shape.
-Alternatively, rename `AccountSettings.buffer_minutes` to `buffer_minutes: 0` as a dead zero
-while the engine reads from the new `SlotInput` field. Either way, `slotConflictsWithBookings`
-signature at `lib/slots.ts:203` receives the value as its `bufferMinutes` parameter unchanged.
-
-**Owner-facing UI addition:** Add a `buffer_after_minutes` (or `post_buffer_minutes`) number
-input to the event-type form (`app/(shell)/app/event-types/_components/event-type-form.tsx`).
-The `EventTypeRow` type (`app/(shell)/app/event-types/_lib/types.ts:43-44`) already declares
-`buffer_after_minutes: number` — the form simply never rendered a control for it. The actions
-and queries for the event-type edit page (`app/(shell)/app/event-types/[id]/edit/`) already
-SELECT `buffer_after_minutes` (confirmed at line 18 of edit `page.tsx`).
-
-**Test touch sites:** Existing slot tests pass `buffer_minutes` on the `account` object in
-`SlotInput`. Search `tests/slots*.test.ts` for `buffer_minutes` and update to the new field
-location after the type change.
-
-### Migration Timestamps
-
-| Migration | Suggested Timestamp |
-|-----------|-------------------|
-| Backfill update (Path A) — can be inline in the DROP file or separate | `20260503130000` |
-| DROP `accounts.buffer_minutes` (held local during drain) | `20260503130001` |
-| Rollback `.SKIP` artifact | `20260503130002_readd_accounts_buffer_minutes.sql.SKIP` |
-| ADD COLUMN `post_buffer_minutes` (Path B only, runs before backfill) | `20260503125900` |
 
 ---
 
-## Feature 2: Audience Rebrand (Contractors → Service-Based Businesses)
+## Schema Additions Summary
 
-### Identifier Rename Scope — Smaller Than Expected
+| Migration | Table | Columns | Purpose |
+|-----------|-------|---------|---------|
+| `v17_account_gmail_credentials.sql` | `account_gmail_credentials` | `id, account_id, gmail_address, refresh_token, access_token, token_expiry, revoked_at, created_at, updated_at` | Per-account Gmail OAuth tokens |
+| `v17_email_send_log_categories.sql` (CHECK extension) | `email_send_log` | extend `category` CHECK to add `"resend-upgrade"` | Track Resend-routed sends through quota guard |
+| `v17_accounts_resend_flag.sql` | `accounts` | `resend_upgraded boolean NOT NULL DEFAULT false` | Flag which accounts route via Resend |
 
-A grep of all `.ts` and `.tsx` files for `tradeContractor`, `TradeContractor`, `serviceBusiness`,
-and `ServiceBusiness` returns **zero matches**. No camelCase or PascalCase internal identifiers
-using these terms exist in the TypeScript codebase. The PROJECT.md requirement to rename
-`tradeContractor*` / `contractor*` → `serviceBusiness*` applies to identifiers that may be
-introduced during v1.5 (e.g. for the buffer form field or new event-type schema constants), not
-to existing ones.
-
-**Runtime copy touch sites (`.ts`/`.tsx` files):**
-
-| File | Line | Content | Scope |
-|------|------|---------|-------|
-| `app/(auth)/_components/auth-hero.tsx:21` | Default `subtext` prop | `"A multi-tenant scheduling tool built for trade contractors..."` | Owner-facing (login/signup page) |
-| `app/(auth)/_components/auth-hero.tsx:42` | Static copy | `"Built for trade contractors, by NSI in Omaha."` | Owner-facing (login/signup page) |
-| `app/[account]/[event-slug]/_components/booking-form.tsx:138` | Comment only | `// leak that the contractor has another appointment` | Code comment, not user-visible |
-
-**Public booking surfaces:** The only `.ts`/`.tsx` match in the public booking path is the code
-comment at `booking-form.tsx:138`. No user-visible copy on any public surface uses "contractor."
-The booker-facing 409 error message at line 139 already reads "That time is no longer available"
-— generic and correct, no change needed.
-
-**Transactional email templates:** A grep of `lib/email/` for `contractor` returns zero matches.
-All 6 email templates are contractor-copy-free.
-
-**Documentation touch sites:**
-
-| File | Lines | Content |
-|------|-------|---------|
-| `README.md:3` | 1 line | `"for trade contractors (plumbers, HVAC, roofers, electricians)"` |
-| `FUTURE_DIRECTIONS.md:62` | 1 line | Incidental mention in SMTP description |
-| `FUTURE_DIRECTIONS.md:226` | 1 line | Incidental mention in slug-redirect context |
-| `FUTURE_DIRECTIONS.md:232` | 1 line | Incidental mention in onboarding template context |
-
-**Rename strategy:** IDE find-and-replace across the `app/` tree is sufficient. No AST tooling
-(ts-morph, jscodeshift) is needed because:
-1. Zero camelCase/PascalCase `contractor*` identifiers exist to rename.
-2. All touch sites are string literals or prose comments.
-3. The total is 6 touch sites across 5 files.
-
-**Any new identifiers added in v1.5** (e.g. a constant for the buffer field label, a new schema
-type) should use `serviceBusiness*` naming convention from the start.
-
-**Touch-site count summary:**
-
-| Category | Count | Files |
-|----------|-------|-------|
-| User-visible runtime copy | 2 | `auth-hero.tsx` |
-| Code comments | 1 | `booking-form.tsx` |
-| Documentation prose | 3 | `README.md`, `FUTURE_DIRECTIONS.md` |
-| **Total** | **6** | **5 files** |
+All applied via locked pattern: `echo | npx supabase db query --linked -f supabase/migrations/<file>.sql`
 
 ---
 
-## Feature 3: Public Booker 3-Column Desktop Layout
-
-### Current Layout Architecture
-
-The booker is two client components with nested grids:
-
-**`booking-shell.tsx`** is the outer container. It holds all interaction state and renders:
-```html
-<div class="grid gap-8 p-6 lg:grid-cols-[1fr_320px]">
-  <!-- Left: SlotPicker (has its own internal 2-col grid) -->
-  <!-- Right: BookingForm (320px fixed) -->
-</div>
-```
-
-**`slot-picker.tsx`** renders its own internal grid:
-```html
-<div class="grid gap-6 lg:grid-cols-2">
-  <!-- Left: Calendar -->
-  <!-- Right: slot time buttons -->
-</div>
-```
-
-On desktop, the effective layout is `[[calendar | slot-times] | form]` — two nested grid contexts,
-with the calendar and slot-time list sharing a 2-col grid inside the left panel of an outer 2-col
-grid. The symptom ("calendar far-right, text chaotic") is a consequence of this nesting and the
-`1fr_320px` split leaving a wide left panel where the inner 2-col grid distributes unevenly.
-
-### Target Layout
-
-Three flat columns at `lg:` breakpoint: **Calendar LEFT — Slot times MIDDLE — Form RIGHT.**
-Form hidden (but layout-present) until slot selected; revealed in-place with no layout shift.
-Mobile: single column stack (Calendar → Times → Form).
-
-### Recommended Approach: Flatten to One Grid Context in `booking-shell.tsx`
-
-**Flatten the nested grid.** The `booking-shell.tsx` outer `div` becomes the single 3-column
-grid owner. `slot-picker.tsx` loses its internal `lg:grid-cols-2` and exposes the Calendar and
-slot-time list as two separately placeable blocks. `booking-shell.tsx` controls all three columns.
-
-**Grid declaration:**
-
-```tsx
-<div className="grid gap-6 lg:grid-cols-[auto_1fr_320px]">
-  {/* Col 1: Calendar — auto width (≈280px natural width of shadcn Calendar) */}
-  {/* Col 2: Slot time list — takes remaining space */}
-  {/* Col 3: Form — fixed 320px */}
-</div>
-```
-
-`auto` for the calendar column lets `shadcn/ui Calendar` size to its intrinsic width (~280px)
-without over-allocating whitespace. `1fr` for the slot list adapts to remaining card width.
-`320px` for the form matches the existing shell convention. Alternative: `lg:grid-cols-3` (equal
-thirds) — simpler but gives the calendar more horizontal room than it uses. `[auto_1fr_320px]`
-is tighter and more intentional.
-
-**Tailwind v4 bracket syntax** (`lg:grid-cols-[auto_1fr_320px]`) is first-class and JIT-compiled.
-The codebase already uses `lg:grid-cols-[1fr_320px]` in `booking-shell.tsx:77` — same syntax,
-same behavior. No `tailwind.config.*` change needed.
-
-**Mobile breakpoint convention:** The codebase uses `lg:` exclusively for layout breakpoints
-(`lg:grid-cols-2`, `lg:border-l`, `lg:pt-0`, `lg:pl-6` in `booking-shell.tsx`; `lg:flex` in
-`auth-hero.tsx`; `lg:grid-cols-2` in `slot-picker.tsx`). Use `lg:` (1024px) for the 3-column
-breakpoint. Do not introduce a `md:` grid column variant — it would break codebase convention.
-
-### Form Reveal With No Layout Shift
-
-The form column must occupy its 320px slot at all times so the 3-column grid does not collapse
-to 2-column when the form is hidden. Conditional rendering (`{selectedSlot && <BookingForm />}`)
-removes the element from the DOM and collapses the column — this causes layout shift.
-
-**Correct pattern using Tailwind `invisible`:**
-
-```tsx
-<aside className={selectedSlot ? "" : "invisible pointer-events-none"}>
-  <BookingForm
-    key={selectedSlot?.start_at ?? "none"}
-    ...
-  />
-</aside>
-```
-
-`invisible` sets `visibility: hidden` — the element participates in layout (holds its column
-width and height), is not painted, and receives no pointer events. The `pointer-events-none` is
-belt-and-suspenders to prevent keyboard/tab focus reaching a visually hidden form. The `key` prop
-forces a remount when a new slot is selected, resetting form state cleanly.
-
-`BookingForm` must always be mounted for this to work. Its internal RHF `useForm` initializes
-from props on mount; a fresh `key` on slot change is the standard pattern for resetting RHF state.
-
-**Precedent in this codebase:** `app/(auth)/_components/auth-hero.tsx:24` uses
-`hidden lg:flex lg:flex-col` (display-based hide/show) for the auth layout. The booker case
-requires `invisible` instead of `hidden` because we need the column to occupy layout space even
-when not visible.
-
-### SlotPicker Refactor Strategy
-
-Three options for splitting the current monolithic `SlotPicker` into two separately placeable
-blocks:
-
-| Option | Description | Recommendation |
-|--------|-------------|---------------|
-| A — Render props | `SlotPicker` accepts `renderCalendar` and `renderSlots` props; caller places them separately | Adds indirection for no gain |
-| B — Two components (`SlotCalendar` + `SlotList`) | Shared state via context or props | Context overhead for simple state |
-| C — Lift state to `BookingShell` | Move slots fetch, loading, fetchError, slotsByDate up to `BookingShell`; delete `slot-picker.tsx` | **Recommended** |
-
-**Option C is recommended.** `BookingShell` already owns `selectedDate`, `selectedSlot`,
-`refetchKey`, `showRaceLoser`, `raceLoserMessage`. Adding `slots`, `loading`, `fetchError` is
-natural — it is the same state layer. The fetch logic in `slot-picker.tsx` is a single `useEffect`
-with one `fetch()` call; lifting it adds ~20 lines to `booking-shell.tsx` and removes one
-component file entirely. The Calendar and slot-time list then render as inline JSX in their
-respective grid column positions.
-
-### shadcn Components — Sufficiency Check
-
-All components needed for the redesign are already installed and used in the current booker:
-
-| Component | Current location | Status |
-|-----------|-----------------|--------|
-| `Calendar` (shadcn/ui) | `slot-picker.tsx` | Sufficient; no changes to component |
-| `Button` | `booking-form.tsx` | Sufficient |
-| `Input`, `Label`, `Textarea` | `booking-form.tsx` | Sufficient |
-| `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` | `booking-form.tsx` | Sufficient |
-
-No new shadcn components required. The redesign is a grid restructure + visibility toggle.
-
-### Mobile Stack
-
-Below `lg:` (i.e. `< 1024px`): no `grid-cols-*` applied = single column. DOM order determines
-visual order. Required order: Calendar → Slot times → Form. This is the natural DOM order when
-the three blocks are placed in order inside the single grid `div`. No additional ordering
-classes needed.
-
-The existing `justify-self-center` on the `Calendar` component (added in v1.3 PUB-13 for mobile
-centering, per project memory) should be preserved. In a single-column grid on mobile, it will
-continue to center the calendar correctly.
-
----
-
-## What NOT to Use
+## What NOT to Add
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `supabase db push --linked` | Broken in this repo (orphan timestamps in remote tracking table) | `echo \| npx supabase db query --linked -f <file>` |
-| `md:grid-cols-*` for booker layout | Breaks codebase `lg:`-only breakpoint convention | `lg:grid-cols-[auto_1fr_320px]` |
-| `{selectedSlot && <BookingForm />}` conditional render | Collapses form column on hide, causing layout shift | Always-mounted `<BookingForm key={...}>` inside `invisible` wrapper |
-| `hidden` class on form column | Removes from layout flow, same shift problem as above | `invisible pointer-events-none` |
-| `bg-[${color}]` dynamic Tailwind (MP-04) | Purged at build time; not regenerated at runtime | Inline `style={{}}` for runtime color values — already the codebase pattern |
-| ts-morph / jscodeshift for identifier rename | Zero camelCase identifiers to rename; AST tooling is overhead for 6-touch-site text replacement | IDE find-and-replace |
-| DROP migration without 30-min drain | Stale Vercel instances still reading the column → 500 errors | CP-03 two-step protocol: code deploy first, drain, then DROP |
+| `googleapis` npm package | nodemailer handles OAuth2 token refresh without it; adding it adds 2MB+ of dependencies for zero benefit | nodemailer's built-in OAuth2 transport |
+| Second Supabase Auth provider (e.g., GitHub) | Scope creep; adds complexity with no v1.7 value | Google OAuth only |
+| `@google-cloud/local-auth` | Desktop-only PKCE library, wrong runtime for Vercel serverless | nodemailer OAuth2 with stored refresh token |
+| Email queue / worker (Bull, BullMQ) | Over-engineered for current scale; v1.6 quota-guard is sufficient | Existing `checkAndConsumeQuota` + fail-closed |
+| Vault/secrets manager (Doppler, etc.) | Adds infra for a single env var; Vercel env vars are sufficient | `GMAIL_TOKEN_ENCRYPTION_KEY` env var + AES-256-GCM in app code |
+| `pgsodium` for token encryption | Requires pgsodium API learning curve and key management; overkill for v1.7 scale | AES-256-GCM with a Vercel env var secret |
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Basis |
+|------|------------|-------|
+| nodemailer OAuth2 transport (no googleapis needed) | HIGH | Official nodemailer docs verified |
+| Supabase `options.scopes` syntax (not `queryParams.scope`) | HIGH | GitHub discussion #30924 canonical fix confirmed |
+| `provider_refresh_token` only in callback session | HIGH | Official Supabase docs + community discussions confirmed |
+| 100-user cap for unverified sensitive scope | HIGH | Google official docs confirmed |
+| `prompt: "consent"` required for refresh token | HIGH | Supabase docs + Google OAuth docs confirmed |
+| knip read-only by default (no --fix = no writes) | HIGH | Documentation + tool behavior confirmed |
+| Resend attachment API accepts `.ics` Buffer | MEDIUM | API shape confirmed; `.ics` MIME not explicitly documented — verify in QA |
+| Resend npm package current major version | MEDIUM | npm shows 6.x as of search; verify exact version at install time |
+| AES-256-GCM encryption approach for refresh tokens | MEDIUM | Standard Node.js crypto practice; no codebase-specific verification |
+| Google OAuth verification timeline (3-5 business days) | MEDIUM | Google docs states this but timelines vary in practice |
 
 ---
 
 ## Sources
 
-All findings verified against live source files read on 2026-05-03 (HIGH confidence):
-
-| Source | What Was Verified |
-|--------|-------------------|
-| `supabase/migrations/20260419120000_initial_schema.sql:35-36` | `buffer_before_minutes`, `buffer_after_minutes` already on `event_types` since day 0 |
-| `supabase/migrations/20260425120000_account_availability_settings.sql` | `accounts.buffer_minutes` added Phase 4; this is what the engine reads today |
-| `lib/slots.ts:277` | `account.buffer_minutes` passed to `slotConflictsWithBookings` |
-| `lib/slots.types.ts:15` | `AccountSettings.buffer_minutes` field declaration |
-| `app/api/slots/route.ts:89,121,160` | Full buffer read chain in the slots API |
-| `app/(shell)/app/availability/_components/settings-panel.tsx:15,25,48,75,84` | All 5 UI touch sites for `buffer_minutes` |
-| `app/(shell)/app/availability/_lib/actions.ts:64` | Server Action writes `buffer_minutes` |
-| `app/(shell)/app/availability/_lib/queries.ts:53` | SELECT includes `buffer_minutes` |
-| `app/(shell)/app/availability/_lib/schema.ts:135` | Zod schema declares `buffer_minutes` |
-| `app/(shell)/app/availability/_lib/types.ts:24` | TypeScript type declares `buffer_minutes` |
-| `app/(shell)/app/availability/page.tsx:50` | Page state uses `buffer_minutes` |
-| `app/(shell)/app/event-types/_lib/types.ts:43-44` | `EventTypeRow` already has `buffer_before_minutes`, `buffer_after_minutes` |
-| `app/(shell)/app/event-types/[id]/edit/page.tsx:18` | Edit page SELECT already includes `buffer_after_minutes` |
-| `app/(auth)/_components/auth-hero.tsx:21,42` | 2 contractor copy touch sites |
-| `app/[account]/[event-slug]/_components/booking-form.tsx:138` | 1 contractor comment-only touch site |
-| `README.md:3`, `FUTURE_DIRECTIONS.md:62,226,232` | Documentation touch sites |
-| `app/[account]/[event-slug]/_components/booking-shell.tsx:77` | Current `lg:grid-cols-[1fr_320px]` outer grid |
-| `app/[account]/[event-slug]/_components/slot-picker.tsx:125` | Current `lg:grid-cols-2` inner grid |
-| `supabase/migrations/20260502034300_v12_drop_deprecated_branding_columns.sql` | CP-03 DROP migration template (Phase 21 precedent) |
-| `PROJECT.md §196-209` | Two-step DROP deploy protocol documentation |
+- Supabase Auth / Google OAuth docs — https://supabase.com/docs/guides/auth/social-login/auth-google
+- Supabase `signInWithOtp` / magic link docs — https://supabase.com/docs/guides/auth/auth-email-passwordless
+- GitHub discussion (correct scope syntax) — https://github.com/orgs/supabase/discussions/30924
+- GitHub discussion (provider_refresh_token storage) — https://github.com/orgs/supabase/discussions/22653
+- Nodemailer OAuth2 docs — https://nodemailer.com/smtp/oauth2
+- Google sensitive scope verification — https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification
+- Google unverified apps / 100-user cap — https://support.google.com/cloud/answer/7454865
+- Resend Node.js SDK docs — https://resend.com/docs/send-with-nodejs
+- Knip documentation — https://knip.dev/ and https://knip.dev/reference/plugins/next
+- Knip comparison page — https://knip.dev/explanations/comparison-and-migration
 
 ---
 
-*Stack research for: calendar-app v1.5 — Buffer Fix + Audience Rebrand + Booker Redesign*
-*Researched: 2026-05-03*
+*Stack research for: v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code*
+*Researched: 2026-05-06*

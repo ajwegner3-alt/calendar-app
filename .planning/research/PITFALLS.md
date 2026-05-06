@@ -1,489 +1,502 @@
-# Domain Pitfalls — v1.5: Buffer Fix + Audience Rebrand + Booker Redesign
+# Domain Pitfalls — v1.7
 
-**Domain:** Booking system — per-event-type buffer migration + copy rebrand + booker layout refactor
-**Researched:** 2026-05-03
-**Covers:** Three parallel feature tracks: BUFFER-01 migration, audience rebrand, 3-column booker
+**Domain:** Multi-tenant calendar/booking app — OAuth signup, per-account Gmail OAuth send, magic-link login, Resend upgrade backend, BOOKER polish, dead-code audit
+**Researched:** 2026-05-06
+**Confidence:** HIGH (derived from live codebase inspection + v1.0-v1.6 incident record)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, silent correctness failures, or 500 errors in production.
+### V17-CP-01: Partial OAuth Grant — gmail.send Denied, Profile Accepted
+
+**What goes wrong:**
+Google allows users to uncheck individual scopes on the OAuth consent screen. A user can grant `openid email profile` but deny `gmail.send`. The result is a valid Supabase auth session with an `auth.users` row and a stub `accounts` row provisioned by the trigger (v1.1 SECURITY DEFINER pattern), but no Gmail OAuth tokens stored. If the code proceeds to mark the account as "Gmail connected," every email send for that account will fail silently or throw an unhandled error. The owner will see a working dashboard but zero transactional emails reach their bookers.
+
+**Why it happens:**
+Google's consent screen lets users pick scopes individually. Most OAuth implementations check for the presence of an access token, not for the presence of all requested scopes in the granted token. A partially-granted token looks valid to most auth libraries.
+
+**How to avoid:**
+After the OAuth callback completes, inspect the granted scopes explicitly before writing any `gmail_refresh_token` to the `accounts` table. Use Google's token info endpoint or the `scope` field in the token response to verify `https://mail.google.com/` is present. If the scope is absent, mark the account's `email_provider` as `null` (not `gmail_oauth`), redirect to a "Connect Gmail to send emails" setup page, and surface a non-dismissable owner-facing banner. Never treat a partial-grant as a connected state. Gate: `gmail_refresh_token IS NOT NULL AND gmail_scope_verified = true` before any per-account email send.
+
+**Warning signs:**
+- Supabase logs show `auth.users` row created but `accounts.gmail_refresh_token` is null after OAuth flow
+- `email_send_log` shows zero rows for an account that completed OAuth signup
+- Owner reports "my clients never received confirmation emails"
+- Application log: `[EMAIL_QUOTA_EXCEEDED]` NOT firing but emails still not arriving (quota is not the issue — credentials are missing)
+
+**Phase to address:** OAuth signup phase (first phase implementing the combined-scope consent flow). The scope verification check must be written at the same time as the callback handler, not added later.
 
 ---
 
-### V15-CP-01: Schema mismatch — `event_types` already has `buffer_before_minutes` / `buffer_after_minutes`; new column naming must reconcile
+### V17-CP-02: Refresh Token Not Re-stored on Rotation
 
-**What goes wrong:** The v1.0 initial schema (`20260419120000_initial_schema.sql` lines 35-36) already created `event_types.buffer_before_minutes` and `event_types.buffer_after_minutes` as `int not null default 0`. Both columns exist in production RIGHT NOW. They were stubbed in v1.0 but never wired into the slot engine (Phase 4 lock: "account-wide settings win in v1, event_types columns ignored"). The PROJECT.md v1.5 scope names the new column `event_types.post_buffer_minutes` — a THIRD column name that does not match either existing column.
+**What goes wrong:**
+Google rotates refresh tokens when a new access token is granted (specifically: if the user re-grants consent, if the refresh token has been idle for 6 months, or if the account exceeds token limits). The old refresh token becomes invalid. If the code fetches a new access token using the current refresh token and does not persist the new refresh token returned in the response, the NEXT token refresh will fail. The account can send one more batch of emails (on the cached access token) then goes silent permanently — with no error surfaced until a booking event triggers a send and the refresh throws a 401.
 
-If the migration adds `event_types.post_buffer_minutes` without first deciding what to do with the existing `buffer_after_minutes` column, the codebase has two semantically overlapping columns for the same concept. The slot engine will read one; the UI form reads the other; silent divergence.
+**Why it happens:**
+Google's token refresh response includes a `refresh_token` field only sometimes (when rotation fires). Code that only reads `access_token` from the refresh response will silently discard the new refresh token. This is a common omission.
 
-**Detection:** Run `SELECT column_name FROM information_schema.columns WHERE table_name = 'event_types' AND column_name LIKE '%buffer%';` in Supabase SQL Editor. Verify which buffer columns currently exist. Read `app/(shell)/app/event-types/_lib/types.ts:43-44` — both `buffer_before_minutes` and `buffer_after_minutes` are in the TypeScript type and are selected by `app/(shell)/app/event-types/[id]/edit/page.tsx:18`.
+**How to avoid:**
+In the Gmail OAuth provider implementation (`lib/email-sender/providers/gmail-oauth.ts` when written): after every successful `https://oauth2.googleapis.com/token` call, check whether the response body includes a `refresh_token` field. If present, immediately overwrite `accounts.gmail_refresh_token` with the new value. Use the Supabase admin client (service role) for this write — it runs inside the send path which is already server-side. Log the rotation event (without logging the token value) for audit. Pattern: `if (tokenResponse.refresh_token) { await admin.from("accounts").update({ gmail_refresh_token: encrypt(tokenResponse.refresh_token) }).eq("id", accountId); }`
 
-**Prevention (Buffer migration phase):** Make an explicit naming decision BEFORE writing any migration SQL:
+**Warning signs:**
+- Intermittent `401 invalid_grant` errors on Gmail API calls, separated by ~6 months
+- Owner signs out and back in (re-grants consent) and emails start working again temporarily
+- Token rotation events absent from logs (means the re-store step is missing)
 
-- **Option A (recommended):** Repurpose `buffer_after_minutes` as the authoritative post-buffer. Migration backfills from `accounts.buffer_minutes`. DROP the duplicate concept `post_buffer_minutes` — avoid adding a third column. Rename the UI label to "Post-booking buffer (minutes)". This is zero new columns, one column repurposed, one column eventually dropped (`accounts.buffer_minutes`).
-- **Option B:** Add `event_types.post_buffer_minutes` explicitly, then DROP `buffer_after_minutes` to remove the redundant column. Two-migration sequence; more churn.
-
-Either way: the pre-flight plan must explicitly audit all three buffer column names and decide which one the engine will read before any migration runs.
-
-**Owner:** Buffer migration phase
-
----
-
-### V15-CP-02: Nullable column + NOT NULL DEFAULT race window — buffer column must be `NOT NULL DEFAULT 0`
-
-**What goes wrong:** If the new/repurposed buffer column is added without `NOT NULL DEFAULT 0` (or if an existing column is altered to nullable), `lib/slots.ts` receives `null` where it expects `number`. The `slotConflictsWithBookings` call at `slots.ts:277` passes `account.buffer_minutes` (type `number` per `AccountSettings.buffer_minutes`). Switching to per-event-type means the route handler at `api/slots/route.ts:89` must now also SELECT the buffer column from `event_types`. If that column is nullable, TypeScript requires an explicit null-coalesce (`?? 0`) everywhere. Forgetting even one results in `NaN` buffer math — slots computed with `addMinutes(slotStart, NaN)` return `Invalid Date`, silently dropping all slots for that event type.
-
-**Detection:** After any column addition/alteration: `SELECT id, post_buffer_minutes FROM event_types WHERE post_buffer_minutes IS NULL;` — zero rows expected. Also: `tsc --noEmit` with strict null checks must compile without `Object is possibly 'null'` on any buffer path.
-
-**Prevention (Buffer migration phase):**
-1. Migration must use `NOT NULL DEFAULT 0` for the buffer column (matching the existing constraint on `buffer_after_minutes`).
-2. Backfill step: `UPDATE event_types SET buffer_after_minutes = (SELECT buffer_minutes FROM accounts WHERE accounts.id = event_types.account_id)` — runs BEFORE any code reads the new column, inside the same migration transaction.
-3. `AccountSettings` interface in `lib/slots.types.ts` must change `buffer_minutes: number` to whatever new field name is chosen. TypeScript build catches any caller that forgets the rename.
-
-**Owner:** Buffer migration phase
+**Phase to address:** Per-account Gmail OAuth send phase — the re-store logic must be in the initial provider implementation, not a follow-up patch.
 
 ---
 
-### V15-CP-03: CP-03 two-step deploy required for `accounts.buffer_minutes` DROP — same protocol as v1.2 Phase 21
+### V17-CP-03: Bootstrap Problem — Cap-Hit Account Cannot Self-Email Andrew
 
-**What goes wrong:** `accounts.buffer_minutes` is currently read by deployed Vercel function instances in three places:
-1. `app/api/slots/route.ts:122` — SELECT from `accounts` includes `buffer_minutes`
-2. `app/(shell)/app/availability/_components/settings-panel.tsx` — renders the buffer input
-3. `app/(shell)/app/availability/_lib/actions.ts` — saves `buffer_minutes` via Server Action
+**What goes wrong:**
+The "Request upgrade" feature is designed to fire when an account hits the 200/day email cap. But at that moment, the account's own Gmail OAuth sender is exactly what is throttled. If the "Request upgrade" email is implemented by calling the per-account Gmail sender, the upgrade request will be silently dropped (QuotaExceededError) at the exact moment it is most needed. The cap-hit state breaks the escape hatch.
 
-Dropping the column the same deploy that stops reading it is safe ONLY if Vercel has drained ALL old function instances. Vercel can take up to 30 minutes to retire stale warm function containers after a deploy. If the DROP runs immediately after the code deploy, in-flight requests from stale instances that still SELECT `buffer_minutes` will receive a Postgres column-not-found error → 500 on ALL `/api/slots` calls during the drain window.
+**Why it happens:**
+The natural implementation is "send an email from the account's sender." The path of least resistance is to reuse the existing send infrastructure. But the quota guard in `lib/email-sender/quota-guard.ts` is keyed on the account's `email_send_log` day count, which is exactly what triggered the cap. Reusing that path means the upgrade request goes through `checkAndConsumeQuota()` → throws `QuotaExceededError` → upgrade request never arrives.
 
-**Precedent:** v1.2 Phase 21 (PROJECT.md line 198) applied this exact protocol for 4 deprecated `accounts` columns. The drain was satisfied by 772 minutes (overnight). The protocol:
-1. Deploy code that stops reading `accounts.buffer_minutes` (while the column still exists).
-2. Wait minimum 30 minutes.
-3. Apply DROP migration via `supabase db query --linked -f`.
+**How to avoid:**
+The "Request upgrade" notification to Andrew MUST be routed through the NSI-owned Resend account, bypassing the per-account Gmail sender and bypassing the per-account quota guard entirely. This is a separate code path with a separate email client. The implementation should be a dedicated server action: `requestUpgradeAction()` that calls an NSI Resend client (not the per-account Gmail OAuth client), has its own send infrastructure, and is explicitly excluded from the per-account `email_send_log` count. Treat it as infrastructure-tier, not product-tier. Never let it go through `checkAndConsumeQuota()` for the requester's account.
 
-**Detection:** Before the DROP migration, grep ALL callers of `buffer_minutes` from `accounts`:
-`grep -rn "buffer_minutes" app/ lib/` — every match must be dead code or already repointed to the new event-type column. Zero live reads from `accounts.buffer_minutes` = drain phase cleared.
+**Warning signs:**
+- `requestUpgradeAction` imports `checkAndConsumeQuota` or calls `sendEmail` from the default client
+- Test: mock the quota guard to return `count >= 200` and verify the upgrade email still sends
+- Manual test: hit the cap artificially (seed `email_send_log` with 200 rows) and click "Request upgrade"
 
-**Prevention (Buffer migration phase):** Plan the buffer work as THREE tasks, not two:
-- Task 1: ADD column to `event_types` + backfill (migration only, no code reads it yet)
-- Task 2: Code deploy — stop reading `accounts.buffer_minutes`, start reading `event_types.post_buffer_minutes` (or whichever column)
-- Task 3 (separate deploy, ≥30 min later): DROP `accounts.buffer_minutes`
-
-**Owner:** Buffer migration phase (schema drop sub-task)
+**Phase to address:** "Request upgrade" + Resend backend phase. The bootstrap constraint must be documented in the phase plan as a hard requirement before any code is written.
 
 ---
 
-### V15-CP-04: `slots.ts` / `slots.types.ts` caller contract change — every caller of `computeSlots` must update synchronously
+### V17-CP-04: Token Refresh Race on Concurrent Email Batch
 
-**What goes wrong:** `computeSlots` receives `SlotInput` which includes `account: AccountSettings`. `AccountSettings.buffer_minutes` (in `lib/slots.types.ts:15`) is what `slotConflictsWithBookings` reads at `slots.ts:277`. If the per-event-type buffer migrates into `SlotInput` as a top-level field (e.g., `postBufferMinutes: number`) rather than inside `account`, then:
+**What goes wrong:**
+The Phase 33 pushback cascade sends up to N emails in a `Promise.allSettled` batch from a single server action invocation. In v1.6, all emails go through one centralized Gmail SMTP account, so there is no refresh token. In v1.7, each account has its own Gmail OAuth refresh token. If the access token expires mid-batch, multiple parallel send attempts will simultaneously try to refresh it. Each refresh call will independently call `https://oauth2.googleapis.com/token`. Google may return different access tokens for each call, and may also rotate the refresh token at that moment. The second refresh wins the `UPDATE accounts SET gmail_refresh_token` write; the first's new refresh token is silently discarded. Result: a narrowed but real window where the refresh token is corrupted.
 
-1. `lib/slots.types.ts` must add the new field AND remove `buffer_minutes` from `AccountSettings` (or keep it as a deprecated 0-value for the drop window).
-2. `computeSlots` in `lib/slots.ts` must pass the new field to `slotConflictsWithBookings`.
-3. `app/api/slots/route.ts` must pass the new field when constructing `SlotInput`.
-4. All tests in `tests/slot-generation.test.ts` construct `SlotInput` directly — `baseAccount.buffer_minutes: 0` at line 32 and the buffer test at line 216 (`buffer_minutes: 15`) must be updated.
+**Why it happens:**
+Access tokens expire in 1 hour. A long-running batch (e.g., pushback cascade with 10 bookings, each requiring Gmail API calls) can span the expiry window. `Promise.allSettled` issues all calls without serialization.
 
-If ANY caller is missed and `buffer_minutes` is removed from `AccountSettings`, TypeScript `tsc --noEmit` will catch it. But if the interface keeps `buffer_minutes` as a type-compatible alias during the transition, test values that construct `baseAccount` with `buffer_minutes: 15` will silently pass the wrong value if the engine has already stopped reading that field.
+**How to avoid:**
+Implement token refresh as a singleton per invocation: before issuing the batch, eagerly refresh the access token once (if it expires within the next 5 minutes) and store the result. All sends in the batch share the pre-fetched access token. Only one refresh call fires per invocation. This is simpler than a per-call refresh with mutex and sufficient for v1.7 batch volumes. Implementation: `async function getOrRefreshAccessToken(accountId, currentRefreshToken): Promise<string>` called once at the top of any batch send function, result stored in a local variable, all `gmail.send()` calls in the batch use that variable.
 
-**Detection:** After the types change: `tsc --noEmit` — all callers must compile. Additionally, run the buffer-specific test (`account: { ...baseAccount, buffer_minutes: 15 }` at `tests/slot-generation.test.ts:216`) — if the engine stopped reading `buffer_minutes`, this test will pass but the buffer will not actually be applied, hiding the regression.
+**Warning signs:**
+- Intermittent `invalid_grant` errors on only some rows in a multi-row pushback summary
+- Two `UPDATE accounts SET gmail_refresh_token` DB writes within the same second for the same account
+- A refresh token that works when tested in isolation but fails in the next batch run
 
-**Prevention (Buffer migration phase):** When the slot engine switches from `account.buffer_minutes` to the new per-event-type field, immediately update BOTH the test at line 216 AND `baseAccount` at line 32 to use the new field name. Never leave a stale field in test fixtures even if TypeScript accepts it.
-
-**Owner:** Buffer migration phase
-
----
-
-### V15-CP-05: New buffer tests required — per-event divergence is an untested case
-
-**What goes wrong:** Current slot-generation tests at `tests/slot-generation.test.ts` use a single fixed `buffer_minutes` value on `baseAccount` for all event types in a test. After the per-event-type migration, two event types on the same account can have different buffer values. The existing test at line 216 (`buffer_minutes: 15`) only tests the buffer-applied case for one event type. No current test asserts:
-
-- Event type A has `buffer=0`, event type B has `buffer=15`, same account. A slot adjacent to an event-B booking should appear available to event-A bookings.
-- Two bookings from different event types with different buffers on the same day — the slot picker should show different availability for each.
-
-Without these tests, silent regressions in cross-event-type buffer interactions can slip to production.
-
-**Detection (before shipping):** `grep -n "buffer" tests/slot-generation.test.ts` — count test cases that vary buffer per-event-type. If zero, write them before shipping the buffer migration.
-
-**Prevention (Buffer migration phase):** Add two test cases to `slot-generation.test.ts`:
-1. Event-type buffer=0 — adjacent slot after a confirmed booking IS available.
-2. Event-type buffer=15 — adjacent slot IS hidden (matches current behavior for `nsi` account).
-
-Additionally: add a test for the divergence case (two event types, different buffers, same account, same confirmed booking on the timeline — verify each event type sees the correct availability independently).
-
-**Owner:** Buffer migration phase
+**Phase to address:** Per-account Gmail OAuth send phase — the batch-send function must use the pre-fetch pattern from the start.
 
 ---
 
-### V15-CP-06: Reschedule lib reads `accounts` join — verify no `buffer_minutes` reference is added during buffer refactor
+### V17-CP-05: Centralized-to-Per-Account Gmail Cutover — Flag-Day Breaks In-Flight Requests
 
-**What goes wrong:** `lib/bookings/reschedule.ts:110-113` joins `accounts` but currently does NOT select `buffer_minutes` (it only needs `name, slug, timezone, owner_email, logo_url, brand_primary` for email sending). The reschedule operation is an in-place UPDATE on `start_at`/`end_at` — it does not recompute slot availability and does not apply buffer. This is correct by design (buffer enforcement is the picker's job, not the reschedule path's job).
+**What goes wrong:**
+v1.6 and all prior versions use a single `GMAIL_USER` + `GMAIL_APP_PASSWORD` (centralized Gmail SMTP) as the email sender, instantiated once as `_defaultClient` in `lib/email-sender/index.ts`. v1.7 migrates to per-account Gmail OAuth. A flag-day cutover (one deploy that removes the old path and enables the new path simultaneously) creates a gap: any Vercel serverless function instance that began executing before the deploy completes (e.g., a pushback cascade mid-flight, or the cron reminder batch) is still holding a reference to the old SMTP client. The new code path requires per-account OAuth tokens that may not yet be stored for all accounts. Andrew's `nsi` account is the only production account; if his OAuth connection is not established before the cutover, ALL production email sends fail.
 
-Risk: during the buffer refactor, a developer may be tempted to add buffer validation to the reschedule path ("does the new slot clear the buffer for other bookings?"). If so, the reschedule lib would need to read `event_types.buffer_after_minutes`, and the existing SELECT would need updating. More dangerously, if the wrong field is added (`accounts.buffer_minutes` during the drain window), the reschedule path would fail after the DROP.
+**Why it happens:**
+Vercel does rolling deploys. Old function instances continue serving requests for up to ~30s after a deploy. The v1.5 CP-03 two-step deploy protocol exists for schema drops; the same discipline is needed for email infrastructure swaps.
 
-**Detection:** After the buffer migration phase is complete: `grep -n "buffer" lib/bookings/reschedule.ts` — should return ZERO matches. Any match is an unplanned addition.
+**How to avoid:**
+Use a strangler-fig / feature-flag pattern modeled on CP-03. Step 1: add the per-account Gmail OAuth client alongside the existing SMTP client. Add an `email_provider` column to `accounts` (`'gmail_smtp' | 'gmail_oauth' | 'resend'`, default `'gmail_smtp'`). All send paths read this column and route accordingly. Step 2: Andrew connects his NSI account's Gmail OAuth (testing on a preview branch). Step 3: flip `nsi.email_provider = 'gmail_oauth'`. Step 4: after verifying production emails flow correctly, set the default to `'gmail_oauth'` for new accounts. Step 5: only after all accounts are migrated, remove the `gmail_smtp` path. Never remove the old path in the same deploy that introduces the new one. The `_defaultClient` singleton in `index.ts` must remain valid throughout.
 
-**Prevention (Buffer migration phase):** The v1.5 scope defines buffer enforcement as a slot-picker (display layer) concern only — the DB EXCLUDE constraint enforces hard adjacency, buffer is cosmetic "extra breathing room" shown to the booker. Reschedule does not re-run `computeSlots`. Do NOT add buffer validation to `reschedule.ts`.
+**Warning signs:**
+- Deploy plan that removes `GMAIL_APP_PASSWORD` in the same commit that adds `gmail_refresh_token` reads
+- `getDefaultClient()` call sites not updated to accept a per-account override
+- No `email_provider` discriminator column in the migration
 
-**Owner:** Buffer migration phase
-
----
-
-### V15-CP-07: Rebrand grep misses JSX text nodes split across lines and template literals with expressions
-
-**What goes wrong:** Running `grep -rn "contractor"` catches:
-- `"trade contractors"` in a string literal
-- `contractor's` in template literal
-
-But does NOT catch:
-```tsx
-Built for trade {" "}
-contractors, by NSI.
-```
-Or:
-```tsx
-const copy = `Book an appointment with your ${
-  entityType  // renders as "contractor" at runtime
-}`;
-```
-
-JSX text split across a line break is one text node in the DOM but two lines in the file. A grep for "contractor" on the first line finds nothing on the second line. Template literals with interpolations may compute "contractor" from a variable that holds the string — grep on the variable name won't surface the rendered word.
-
-**Detection:** Use VSCode global search (not terminal grep) with the "Match case" ON and "Match whole word" OFF for "contractor" AND "Contractor" AND "trade". Review context manually — a hit on line N may be the continuation of a string that starts on line N-1.
-
-Additionally, verify the `.ics` summary fields in email templates. The `.ics` `SUMMARY:` and `DESCRIPTION:` lines in `lib/email/` are TypeScript template literals that compose event copy from account data. If any template hard-codes "contractor" in the fallback or label text, it will appear in calendar invites.
-
-**Prevention (Rebrand phase):**
-1. Run multi-line search: VSCode global search > Use regular expression > `contractor` (case-insensitive)
-2. Audit results by file type: `.tsx` (JSX text nodes), `.ts` (template literals), `.md` (docs)
-3. Separately audit any `.ics` builder files (`lib/email/`) for hard-coded "contractor" in SUMMARY/DESCRIPTION fallbacks
-
-**Owner:** Rebrand phase
+**Phase to address:** Per-account Gmail OAuth send phase. The phase plan must explicitly enumerate both deploy steps and require Andrew to manually connect NSI OAuth before Step 3.
 
 ---
 
-### V15-CP-08: Booker copy must NOT be rebranded — booker sees generic language; rebrand is owner-facing only
+### V17-CP-06: Refresh Token Stored Unencrypted in Supabase
 
-**What goes wrong:** The rebrand scope in PROJECT.md line 19 says "owner-facing copy + internal identifiers." The public booker already uses generic language ("Pick a time", "Book this time", "Name", "Email", etc.) that has nothing to do with the "trade contractors" framing. There is NO "contractor" copy in the booking form, the slot picker, the public shell, or the confirmed/cancelled/rescheduled pages — these surfaces are customer-facing and were always generic.
+**What goes wrong:**
+Gmail OAuth refresh tokens are long-lived credentials that grant `gmail.send` access to someone's Gmail account. Storing them as plain text in `accounts.gmail_refresh_token` means that any service-role key exposure, any Supabase RLS misconfiguration, or any SQL injection path gives an attacker the ability to send email as every account's Gmail address. This is a higher-privilege credential than a booking token or a session cookie — it does not expire on its own and grants access to the owner's real Gmail account.
 
-Risk: a developer doing a global "contractor" replace hits the single JSX comment in `booking-form.tsx:138` (`// leak that the contractor has another appointment.`) and either removes the comment or rewrites it. This is a developer-facing comment explaining the CROSS_EVENT_CONFLICT error message rationale. Rewriting it doesn't change behavior, but it's a code churn risk that can introduce mistakes.
+**Why it happens:**
+The convenience path (store as text, read as text) matches every other column in the `accounts` table. The schema doesn't enforce encryption. Developers default to plaintext unless explicitly required to do otherwise.
 
-Separately, `booking-form.tsx:138` uses the word "contractor" as part of an internal comment about data privacy reasoning, not as user-visible copy. This does NOT need rebranding — it's documenting why we use the generic copy "That time is no longer available."
+**How to avoid:**
+Encrypt refresh tokens at the application layer before writing to Supabase, using a server-side symmetric key (`GMAIL_REFRESH_TOKEN_ENCRYPTION_KEY` env var, 256-bit AES-GCM). Decrypt in the send path. Never store the plaintext token in Supabase. The encryption key must be a Vercel environment variable (not in the repo, not in `.env.local`). Use a dedicated `encryptToken(plain: string): string` / `decryptToken(cipher: string): string` utility in `lib/crypto.ts`. Column name: `gmail_refresh_token_encrypted` to make the encrypted nature self-documenting. Never log the plaintext token or the decrypted value.
 
-**Detection:** Before running any rebrand replacement, audit EVERY grep hit for "contractor" in its full file context. The `booking-form.tsx` hit is a comment; do not change it. The `auth-hero.tsx` hits are user-visible marketing copy and MUST be changed.
+**Warning signs:**
+- `accounts.gmail_refresh_token` column type is `text` without a `_encrypted` suffix
+- No `GMAIL_REFRESH_TOKEN_ENCRYPTION_KEY` in Vercel env vars
+- Send path calls `account.gmail_refresh_token` directly without a decryption step
 
-**Prevention (Rebrand phase):** Apply rebrand replacements file-by-file with manual review, NOT a bulk find-replace across the entire repo. Comments that use "contractor" as a conceptual term (not user-facing copy) should be left alone or updated to reflect the new internal mental model, not blindly text-replaced.
-
-**Owner:** Rebrand phase
-
----
-
-### V15-CP-09: `.planning/` archived milestone files reference "contractor" — decide whether to rewrite history
-
-**What goes wrong:** Archived `.planning/` files from v1.0–v1.4 (MILESTONES.md, v1.x-ROADMAP.md, phase SUMMARY files, v1.x-REQUIREMENTS.md) contain "trade contractors" throughout. Commits in git history also contain the old copy in commit messages and code comments.
-
-Options:
-1. **Leave history alone (recommended):** v1.5 rebrand applies to the live codebase and live documentation (README.md, FUTURE_DIRECTIONS.md, active `.planning/PROJECT.md`, `.planning/MILESTONES.md`). Archived phase files are historical records, not live copy — future milestone docs will use the new language naturally.
-2. **Rewrite history via `git filter-repo`:** Invasive, destroys commit hashes, invalidates GitHub PRs/issues. Not justified for a copy change.
-
-The risk of Option 2 is high: `git filter-repo` requires force-push to `main`, disrupts any collaborator's working trees, and creates a confusing "history doesn't match" situation in GitHub's file-change view.
-
-**Prevention (Rebrand phase):** Explicitly decide at planning time: scope the rebrand to `README.md`, `FUTURE_DIRECTIONS.md`, `app/**`, `lib/**`, and the ACTIVE `.planning/` files (PROJECT.md, MILESTONES.md) only. Document this decision in the phase plan so the verifier knows not to fail on archive files.
-
-**Owner:** Rebrand phase (planning task, day 1)
+**Phase to address:** Per-account Gmail OAuth send phase — the migration that adds the column must define it as the encrypted form from day one.
 
 ---
 
-### V15-CP-10: 3-column booker — Tailwind v4 CSS grid with 3 `auto` columns produces unexpected widths; reserve form column before pick
+### V17-CP-07: Token Revocation — Silent Email Failure After User Removes App
 
-**What goes wrong:** The current 2-column booker uses `grid lg:grid-cols-[1fr_320px]` (explicit 320px right column). In the new 3-column layout (calendar LEFT, times MIDDLE, form RIGHT), naively writing `grid lg:grid-cols-3` gives three equal-width columns. The calendar component has a minimum width of ~280px (determined by the shadcn Calendar's internal cell size and padding); the times list is variable-width (short labels like "9:00 AM"); the form is tall and has fixed-width inputs.
+**What goes wrong:**
+A Gmail account owner can visit `myaccount.google.com/permissions` and revoke the app's access at any time. After revocation, the stored refresh token is permanently invalid. The next email send that uses that token will receive a `401 invalid_grant` error. If the code treats this as a transient network error (logs and continues), all subsequent sends for that account silently fail. Booking confirmations, reminders, and cancellation emails stop arriving; the owner sees no error in-app.
 
-Two failure modes:
-1. **Auto-size failure:** `grid lg:grid-cols-[auto_auto_1fr]` gives the form column all remaining space, which is correct semantically, but the calendar and times columns collapse to their content width, which may be very narrow if Tailwind calculates "auto" as `min-content`.
-2. **Form-reveal layout shift:** If the form column has width `0` or `display: none` before slot pick and then appears, the layout reflows and the calendar/times columns shift left. This is jarring and violates the "no layout shift" requirement.
+**Why it happens:**
+A `401 invalid_grant` error looks like a network blip to generic error handlers. The distinction between "token expired" (retryable with the stored refresh token) and "token revoked" (requires re-authorization) is not obvious without reading Google's error response body.
 
-**Detection:** Test at the exact 1024px (`lg:`) breakpoint where the grid activates. Check at 1024px, 1280px, and 1440px. Inspect column widths with browser DevTools grid overlay. On reveal of the form column, record any layout shift via PerformanceObserver CLS metric or visual inspection.
+**How to avoid:**
+Parse Google's error response: `{ "error": "invalid_grant", "error_description": "Token has been expired or revoked" }`. On this specific error, do NOT retry — set `accounts.gmail_refresh_token_encrypted = NULL` and `accounts.email_provider = 'disconnected'` via admin client. Surface a non-dismissable in-app banner on the owner dashboard: "Your Gmail connection was revoked. Reconnect to resume sending emails." The fail-closed behavior from Phase 31 (refuse-send when credentials invalid) already applies; the new requirement is the in-app surfacing and the state update. Without the state update, every subsequent email attempt burns a network round-trip and logs an error before failing.
 
-**Prevention (Booker redesign phase):** Use a 3-column template that reserves the form column width regardless of reveal state:
-```css
-grid-template-columns: minmax(280px, auto) minmax(160px, auto) 320px
-```
-Or in Tailwind v4: `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]`
+**Warning signs:**
+- `invalid_grant` errors repeating indefinitely in logs for the same account
+- `email_send_log` showing successful quota consumption but no emails delivered
+- No `disconnected` state in `email_provider` enum
 
-The form column (320px fixed) is ALWAYS in the grid. When `selectedSlot` is null, render the form column as a placeholder (`<div aria-hidden="true" />` or a "Pick a time" hint) — this prevents layout shift on reveal. The form is revealed IN PLACE by swapping the placeholder for `<BookingForm />`, not by changing grid structure.
-
-**Owner:** Booker redesign phase
+**Phase to address:** Per-account Gmail OAuth send phase — the error handler for `invalid_grant` must be in the initial provider implementation.
 
 ---
 
-### V15-CP-11: Embed widget at narrow iframe widths — 3-column layout would scroll horizontally or break
+### V17-CP-08: Scope Upgrade Flow for Existing Email/Password Accounts
 
-**What goes wrong:** The embed widget renders the booker at `/embed/[account]/[event-slug]` inside a parent site's iframe. The `widget.js` script resizes the iframe to fit content height via `nsi-booking:height` postMessage, but iframe WIDTH is controlled by the parent site's CSS. Many embed implementations set `width: 100%` on the iframe, which may produce widths as narrow as 320px on mobile or 480px on a narrow sidebar widget.
+**What goes wrong:**
+v1.7 adds Google OAuth as the signup method with combined `gmail.send` scope. But existing accounts (Andrew's `nsi` account, any v1.1 email/password signups) will need a separate "Connect Gmail" flow to obtain their OAuth tokens — they cannot use the new signup flow because they already have accounts. If no upgrade path is designed, these accounts are permanently stuck on SMTP or have no sender configured. Andrew's `nsi` account is the only real production account; if this path is not explicitly built, NSI has no email after the cutover (CP-05).
 
-At 480px, a 3-column grid with `minmax(280px,auto) + minmax(160px,auto) + 320px` = minimum 760px total — the iframe would overflow its container horizontally, creating a horizontal scrollbar on the parent site. The embed widget would be broken.
+**Why it happens:**
+OAuth "connect" flows are distinct from OAuth "signup" flows but share much of the same code. Teams build the signup path first and assume the connect path is identical, then discover that Supabase's `signInWithOAuth` creates a new user rather than linking to an existing session.
 
-**Detection:** Load the embed widget page at widths 320px, 480px, 768px, 1024px. Check for horizontal scroll or column overflow at each breakpoint. The embed widget uses `EmbedShell` in `app/embed/[account]/[event-slug]/` — verify it receives the same grid changes as the public booker or is explicitly excluded.
+**How to avoid:**
+Build a dedicated `/app/settings/email` page with a "Connect Gmail" button. The button calls `supabase.auth.linkIdentity({ provider: 'google', options: { scopes: 'gmail.send' } })` (NOT `signInWithOAuth`), which links the Google identity to the existing Supabase user without creating a new account. The callback handler extracts the OAuth tokens from the provider token payload and stores the encrypted refresh token on the existing `accounts` row. Test explicitly with Andrew's `nsi` account on a preview branch before any production change.
 
-**Prevention (Booker redesign phase):** The 3-column layout must apply ONLY to the public hosted page (`/[account]/[event-slug]`), not the embed widget. The embed widget must remain responsive (stack vertically). Implement via:
-1. Keep `BookingShell` as the shared logic component.
-2. Pass a `variant="embed"` prop OR use a separate component for the embed path.
-3. The `lg:` breakpoint guard on the grid is appropriate for the hosted page (users on desktops); the embed must always stack.
+**Warning signs:**
+- No `/app/settings/email` or equivalent route in the v1.7 plan
+- Upgrade path uses `signInWithOAuth` (creates new user) instead of `linkIdentity` (links to existing)
+- Andrew's account is not mentioned in the manual QA checklist for this phase
 
-Document this decision explicitly in the phase plan. If the same `BookingShell` component is used for both paths, the `lg:grid-cols-3` class must be absent on the embed render path.
+**Phase to address:** OAuth signup phase (or a dedicated sub-phase for existing-account Gmail connect). This cannot be deferred — Andrew's account must be connected before the cutover.
 
-**Owner:** Booker redesign phase
+---
+
+### V17-CP-09: quota-guard Counts Against Wrong Account After Sender Refactor
+
+**What goes wrong:**
+The current `checkAndConsumeQuota()` in `lib/email-sender/quota-guard.ts` inserts into `email_send_log` with only a `category` field — no `account_id`. `getDailySendCount()` counts ALL rows in the table for the current UTC day, regardless of account. This is correct for the current single-sender model (one centralized Gmail = one shared cap). After the migration to per-account senders, each account has its own 200/day cap. If the quota guard is not refactored to be per-account-aware, a flood of sends from account A will count against account B's quota, and the cap will behave as a global cap across all accounts rather than per-account cap.
+
+**Why it happens:**
+The existing implementation was designed for a single shared sender. When adding multi-tenant, developers may update the send path but overlook the quota counting logic, especially since `checkAndConsumeQuota` is a shared utility that multiple paths call.
+
+**How to avoid:**
+Before writing any per-account send code, refactor `email_send_log` to include an `account_id` column (nullable for signup-side sends that predate account creation). Update `checkAndConsumeQuota(category, accountId)` to accept `accountId` and filter `getDailySendCount` by `account_id`. Update `getRemainingDailyQuota(accountId)` similarly. Update all 7 call sites (grep `checkAndConsumeQuota` and `getRemainingDailyQuota` for all callers). The `email_send_log` migration must run before any per-account send code is deployed. Verify by running two accounts simultaneously and confirming each has its own count.
+
+**Warning signs:**
+- `email_send_log` schema lacks `account_id` column
+- `getDailySendCount()` has no WHERE filter on account_id
+- `checkAndConsumeQuota` signature does not accept accountId parameter
+
+**Phase to address:** Per-account Gmail OAuth send phase, as the first task — the quota guard refactor is a prerequisite for per-account send, not a follow-up.
+
+---
+
+### V17-CP-10: Magic-Link Login Email Enumeration
+
+**What goes wrong:**
+If the magic-link request handler returns different responses for "email address exists" vs "email address does not exist," an attacker can enumerate which email addresses have accounts by watching the response. This violates GDPR-adjacent privacy norms and leaks account existence. The risk is lower for a booking tool than for a financial service, but for a multi-tenant product where owners are real businesses, leaking "this business uses this booking tool" is a credible concern.
+
+**Why it happens:**
+The naive implementation calls Supabase's magic link API and returns its response verbatim. Supabase's `signInWithOtp` does not throw for unknown emails by default (it just sends nothing), but the distinction may surface in error handling.
+
+**How to avoid:**
+The UI response must always be: "If an account exists with that email address, a login link has been sent." This is the same message regardless of whether Supabase found the email. Do not branch on the response type or error code in the user-facing layer. Log the actual result server-side (for ops visibility) but never expose it to the client. Test: verify that POST with a known email and POST with an unknown email return identical HTTP status and response body.
+
+**Warning signs:**
+- UI shows "Email not found" for unknown addresses
+- Different HTTP status codes returned for known vs unknown emails
+- Supabase error code surfaced in the client response body
+
+**Phase to address:** Magic-link login phase — the response normalization must be in the initial handler, not added after.
+
+---
+
+### V17-CP-11: Resend DNS Not Verified Before "Request Upgrade" Feature Ships
+
+**What goes wrong:**
+NSI's Resend account requires domain verification (SPF/DKIM records for the sending domain, e.g., `nsi-booking.com` or `northstarintegrations.com`) before outbound email can be sent from a custom domain. If the "Request upgrade" feature ships before DNS is verified, all upgrade request emails will either be blocked by Resend or sent from a generic Resend-shared domain with poor deliverability. Andrew may not notice because the upgrade request is sent to his own inbox — but the first time a client sends one, it goes to spam.
+
+**Why it happens:**
+Resend DNS verification is a manual step in the Resend dashboard + DNS provider (Namecheap in Andrew's case). It is easy to defer as a "setup task" and easy to forget. DNS propagation takes 5-60 minutes; the dependency is invisible in code.
+
+**How to avoid:**
+Make DNS verification a hard prerequisite gate in the phase plan for "Request upgrade + Resend backend." The phase must have a manual checkpoint: "Verify SPF/DKIM in Resend dashboard shows 'Verified'" before any Resend send code is deployed to production. The checkpoint must include sending a test email to a throwaway address and confirming delivery + headers (check for `dkim=pass` in received headers). Do not deploy Resend send code until the domain is verified.
+
+**Warning signs:**
+- Resend dashboard shows domain status "Pending"
+- Phase plan has no manual DNS verification checkpoint
+- Code deployment and DNS setup in the same phase task
+
+**Phase to address:** Resend backend phase — the DNS setup must be Task 1 and a manual checkpoint before any code task.
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause wrong behavior, UX regressions, or tech debt — fixable without schema changes or rewrites.
+### V17-MP-01: Multi-Google-Account Confusion — Personal vs Workspace Gmail
+
+**What goes wrong:**
+An owner signs up with their personal `@gmail.com` address but their business uses a Google Workspace account (`name@businessdomain.com`). Booking emails will come from their personal Gmail. This is brand-inconsistent and may confuse bookers. In the reverse case, the owner signs in with their Workspace account but their business email is different — the From address on booking emails becomes their corporate IT-managed email, which may be actively monitored or have stricter policies.
+
+**Prevention:** Surface the authenticated Gmail address ("You will send emails from: you@gmail.com") explicitly on the connect screen before the owner completes OAuth, and repeat it on the Settings page. Allow re-linking. Do not assume "the OAuth email" is "the desired sending address."
+
+**Phase to address:** OAuth signup phase — the confirmation UI must show the From address before token storage.
 
 ---
 
-### V15-MP-01: `AccountSettings` type narrowing — removing `buffer_minutes` field breaks compile for `settings-panel` action
+### V17-MP-02: Cross-Device Magic-Link — Link Clicked in Different Browser
 
-**What goes wrong:** `app/(shell)/app/availability/_lib/actions.ts` calls `saveAccountSettingsAction` with a `buffer_minutes` field (confirmed by `settings-panel.tsx:24`). If `AccountSettings` in `lib/slots.types.ts` is modified to remove `buffer_minutes` during the buffer refactor, and the availability settings action was not simultaneously updated to remove the buffer input from the form, TypeScript will produce a type error in the action file. This is caught at build time — not a runtime issue — but it can block deployment if not addressed synchronously.
+**What goes wrong:**
+Supabase magic links are single-use and tied to the browser session that initiated the request in some configurations. A user who requests a magic link on their phone and opens it on their laptop (or in a different browser) may get an error or be redirected without a session. This is more common than expected because email clients open links in their own embedded browsers.
 
-**Detection:** After removing `buffer_minutes` from `AccountSettings`: `tsc --noEmit` will surface the mismatch. Also manually check `app/(shell)/app/availability/_lib/actions.ts` and `settings-panel.tsx` for any `buffer_minutes` field in the form state or save payload.
+**Prevention:** Test cross-device and cross-browser explicitly in the manual QA phase. Supabase's PKCE flow for magic links requires the link to complete in the same browser session that initiated the request. If that constraint is too restrictive, use the `flowType: 'pkce'` setting explicitly and document the behavior ("Link must be opened in the same browser where you requested it"). Surface a clear error message, not a blank redirect, if the link is used in the wrong context.
 
-**Prevention (Buffer migration phase):** The settings panel UI for buffer must be removed (or moved to the event-type form) as part of the same code deploy that stops reading `accounts.buffer_minutes`. Do not leave a buffer input in the availability settings form that now saves a column the code no longer reads.
-
-**Owner:** Buffer migration phase
-
----
-
-### V15-MP-02: Backfill ordering — migrate must ADD column + backfill in same transaction BEFORE code reads new column
-
-**What goes wrong:** A common migration ordering mistake:
-1. Deploy code that reads `event_types.post_buffer_minutes` (new column).
-2. Apply migration that adds the column (with backfill).
-
-If step 1 runs first, the new code hits a deployed Postgres schema that doesn't have the column yet → `column "post_buffer_minutes" does not exist` → 500 on ALL `/api/slots` requests until the migration runs. This is a production outage window.
-
-**Detection:** The correct order is: migration first (column added, data backfilled), THEN code deploy. Verify the git commit sequence: the migration SQL file must be committed and applied BEFORE the code change that reads the new field.
-
-**Prevention (Buffer migration phase):** Task ordering is:
-1. Write + apply the ADD COLUMN + backfill migration (database first)
-2. Verify the new column contains the correct backfilled values (`SELECT COUNT(*) FROM event_types WHERE post_buffer_minutes IS NULL;` → 0)
-3. Then deploy code that reads the new column
-4. Then (≥30 min later) apply the DROP COLUMN migration for `accounts.buffer_minutes`
-
-This matches the v1.2 CP-03 pattern exactly.
-
-**Owner:** Buffer migration phase
+**Phase to address:** Magic-link login phase — cross-device behavior must be in the manual QA checklist.
 
 ---
 
-### V15-MP-03: Rebrand identifier rename — `tradeContractor*` / `contractor*` JS identifiers may not exist
+### V17-MP-03: Refresh Token Expiry Mid-Cron — Reminder Batch Silently Drops Emails
 
-**What goes wrong:** PROJECT.md line 29 specifies "Rename internal identifiers (tradeContractor* / contractor* → serviceBusiness*)". A grep for these specific identifier patterns in the codebase (`grep -rn "tradeContractor\|contractorType"`) will likely return zero matches — the current codebase was built with generic names (`account`, `AccountSummary`, `AccountSettings`, `eventType`, etc.). There are no `tradeContractor` TypeScript identifiers in the production code.
+**What goes wrong:**
+The cron reminder batch (`app/api/cron/send-reminders/route.ts`) currently iterates claimed bookings and calls `sendReminderBooker`. In v1.7, `sendReminderBooker` will need to fetch and potentially refresh a per-account OAuth token. If the token expires mid-batch and the refresh attempt fails (e.g., `invalid_grant` after revocation), the current error handler logs and continues — `remindersSent` increments for successful sends but subsequent sends for the same account fail silently. The per-account error must surface in the cron response body and trigger the revocation state update (see V17-CP-07).
 
-The "contractor" pattern in the codebase appears only as:
-- **String copy** in `auth-hero.tsx` (user-facing)
-- **Developer comments** in `booking-form.tsx` and planning files (not identifiers)
-- **Column names** in archived SQL migrations (not runtime code)
+**Prevention:** In the cron handler, distinguish `InvalidGrantError` (permanent, requires re-auth) from `TokenRefreshError` (transient, retry next tick) in the per-booking catch block. On `InvalidGrantError`, call the same revocation handler as V17-CP-07. Add `token_revoked` to the cron response counts alongside `reminders_sent` and `quota_refused`.
 
-Spending time searching for TypeScript identifiers that don't exist delays the actual work (copy changes).
-
-**Detection:** Run `grep -rn "tradeContractor\|contractorType\|contractorAccount" app/ lib/` before planning any identifier rename tasks. Confirm whether any such identifiers exist.
-
-**Prevention (Rebrand phase):** Scope the rebrand correctly from the start:
-- Copy changes (string literals, JSX text): `auth-hero.tsx`, `README.md`, `FUTURE_DIRECTIONS.md`
-- No TypeScript identifier renames needed (identifiers are already generic)
-- No SQL column renames needed (no `contractor_*` column names in schema)
-
-If the identifier rename scope is empty, remove it from the plan rather than spending a task searching for patterns that don't exist.
-
-**Owner:** Rebrand phase (scoping task)
+**Phase to address:** Per-account Gmail OAuth send phase — the cron handler must be updated in the same phase as the sender refactor.
 
 ---
 
-### V15-MP-04: Timezone hint placement in 3-column layout — currently rendered INSIDE `SlotPicker` at the top of the left panel
+### V17-MP-04: Animated Slide-In Delays BookingForm Mount Past Turnstile Token Window
 
-**What goes wrong:** In the current 2-column layout (`booking-shell.tsx:77`), the `SlotPicker` component renders the timezone hint `"Times shown in {bookerTimezone}"` at line 122 of `slot-picker.tsx` as the first element in the slot picker JSX, above the `grid lg:grid-cols-2` calendar/times grid. This places the timezone hint at the top-left of the slot picker panel.
+**What goes wrong:**
+V15-MP-05 established the invariant: `BookingForm` is NOT mounted until a slot is selected (placeholder `<div>` replaces it). Turnstile tokens are valid for ~2 minutes from widget mount. BOOKER-06 adds an animated slide-in when the form column appears. If the animation is CSS-transition-based and triggered by a state change, the `BookingForm` mounts immediately when `selectedSlot` becomes non-null — the animation plays on the already-mounted component. This is fine. The risk is an implementation that mounts `BookingForm` *before* the slot is selected (e.g., to pre-render the form off-screen for a smoother animation), which would start the Turnstile token clock early. By the time the booker finishes picking a date and time and focuses on the form (30-90 seconds), the token is still valid. But on slow connections or thoughtful bookers, a 2-minute window shrinks.
 
-In the new 3-column layout, the timezone hint's position becomes ambiguous:
-- If left at the top of the calendar column (leftmost column), it's logically associated with the calendar but visually at the far left — users may not see it before picking a time in the middle column.
-- If moved above the entire 3-column grid (as a full-width banner), it applies to all three columns which is semantically correct (times in all columns are in the booker's timezone).
-- If moved into the times column header, it's close to the times list but may conflict with the times column heading.
+**Prevention:** Keep the V15-MP-05 lock: `BookingForm` mounts ONLY when `selectedSlot !== null`. The slide-in animation must be applied to the mounted form (CSS transform/opacity on mount), not to a pre-mounted hidden form. Use `data-state="entering"` + CSS `@keyframes` or a Framer Motion `AnimatePresence` around `{selectedSlot && <BookingForm ... />}`. Test that Turnstile `onSuccess` fires after the full animation completes and that submitting a form that appeared via animation succeeds.
 
-Forgetting to address this means the timezone hint renders in an unintuitive position in the redesigned layout.
+**Warning signs:**
+- `BookingForm` rendered in DOM before `selectedSlot` is non-null (check React DevTools)
+- `useEffect` in `BookingForm` has no `selectedSlot` dependency gate
+- Turnstile widget mounted outside the `selectedSlot &&` conditional
 
-**Detection:** After implementing the 3-column layout, check the timezone hint at desktop widths. It should be clearly visible BEFORE the user starts picking dates, not tucked above only one column.
-
-**Prevention (Booker redesign phase):** Move the timezone hint OUT of `SlotPicker` and into `BookingShell` as a full-width element ABOVE the 3-column grid. This mirrors the v1.3 PUB-14 fix where the timezone hint was hoisted above the `grid lg:grid-cols-2` wrapper as a full-width sibling.
-
-**Owner:** Booker redesign phase
+**Phase to address:** BOOKER-06/07 polish phase.
 
 ---
 
-### V15-MP-05: Turnstile widget inside the form column — verify it mounts correctly on dynamic reveal
+### V17-MP-05: Skeleton During Slot-Pick Ambiguity — Loading vs No-Input State
 
-**What goes wrong:** The `Turnstile` widget (Cloudflare) in `booking-form.tsx:242` uses `@marsidev/react-turnstile`. This widget initializes when its host element mounts in the DOM. In the current 2-column layout, the form is conditionally rendered: `{selectedSlot ? <BookingForm ... /> : <p>Pick a time...</p>}`. When `selectedSlot` becomes non-null, `<BookingForm>` mounts and Turnstile initializes.
+**What goes wrong:**
+BOOKER-07 adds a skeleton loader for the form column. The current booking-shell.tsx has two meaningful empty states for the form column: (1) `selectedSlot === null` (waiting for user input — show a placeholder), and (2) `selectedSlot !== null` but `loading === true` (rare: slot selected but slots are re-fetching after a race-loser refresh). If the skeleton renders for both states, a first-time visitor sees a skeleton before they have even picked a date, which implies "loading is happening" when in fact the app is waiting for them to act. This is a UX falsehood and trains the user to wait rather than interact.
 
-In the new 3-column layout with a reserved form column, there are two possible implementation patterns:
-1. **Conditional render (same as today):** `<BookingForm>` mounts on slot pick → Turnstile mounts fresh → no issue.
-2. **Always-mounted form, hidden via CSS:** `<BookingForm>` always in DOM, visibility toggled via CSS class → Turnstile renders immediately on page load, before the user has picked a slot. The user's Turnstile token may expire (2-minute validity by default) during slot selection, causing the form submission to fail with `TURNSTILE_VALIDATION_FAILED`.
+**Prevention:** Skeleton applies only to the form-column placeholder when `selectedSlot !== null AND loading`. The `selectedSlot === null` state must continue to show the "Pick a time on the left to continue" instructional text, never a skeleton. The distinction already exists in `booking-shell.tsx` line 255-268 — the conditional guards against this — but the BOOKER-07 implementation must not collapse the two states.
 
-**Detection:** Check the form implementation strategy. If `<BookingForm>` is always mounted, check Turnstile token expiry behavior. The `Turnstile` component's `ref.current?.getResponse()` returns an empty string after token expiry.
-
-**Prevention (Booker redesign phase):** Keep the conditional mount pattern from the current implementation. The form column placeholder (rendered when `selectedSlot` is null) is a `<div>` with a "Pick a time to continue" hint, NOT a mounted `<BookingForm>`. The `<BookingForm>` mounts only when `selectedSlot` is set — this preserves the correct Turnstile lifecycle and avoids token-expiry issues.
-
-**Owner:** Booker redesign phase
+**Phase to address:** BOOKER-06/07 polish phase.
 
 ---
 
-### V15-MP-06: Mobile stack ordering — 3-column desktop must stack as calendar → times → form on mobile, not form → calendar → times
+### V17-MP-06: BOOKER-06 Slide-In Breaks Zero-Layout-Shift Invariant
 
-**What goes wrong:** CSS grid on mobile (`flex-col` or single-column fallback) stacks DOM order top-to-bottom. If the 3-column DOM order is `[calendar] [times] [form]` (left-to-right on desktop), the mobile stack is naturally correct (calendar top, times middle, form bottom — user must pick date, then time, then fill form, which is the correct UX flow).
+**What goes wrong:**
+v1.5 established a zero-layout-shift invariant: the 3-column grid reserves 320px for the form column at all times (V15-MP-04 LOCK). An animated slide-in that uses width or height transitions (rather than transform/opacity) will cause layout shift during the transition, pushing the calendar and time columns sideways. This fails the invariant and produces a jarring visual.
 
-But if any CSS reordering (`order:` property or `flex-direction: column-reverse`) is applied to achieve a visual effect on desktop, the mobile order may be scrambled.
+**Prevention:** Animated transitions for the form column must use `transform: translateX()` and `opacity` only — not `width`, `height`, or `margin` changes. The 320px column is always present in the grid; the animation affects only the content inside the column, not the column itself. Verify with Chrome DevTools Layout Shift debugger (CLS = 0.0 after animation).
 
-**Detection:** At 375px viewport width, verify the rendered order is: calendar component first, time slot list second, booking form third. Use browser DevTools to check `order` CSS property on each grid child.
-
-**Prevention (Booker redesign phase):** Use natural DOM order (calendar → times → form) and let the CSS grid handle column placement on desktop via `grid-column` assignment if needed. Do NOT use CSS `order:` property to reorder visually — it creates an accessibility issue (keyboard tab order follows DOM order, not visual order).
-
-**Owner:** Booker redesign phase
+**Phase to address:** BOOKER-06/07 polish phase.
 
 ---
 
-### V15-MP-07: Form column scroll-into-view behavior — current 2-column triggers scroll on slot pick; 3-column must not
+### V17-MP-07: prefers-reduced-motion Not Respected for BOOKER-06
 
-**What goes wrong:** In the current `booking-shell.tsx`, there is no explicit `scrollIntoView` call when a slot is picked. However, on mobile the 2-column layout means the form appears BELOW the slot picker — users must scroll down to see the form after picking a time. In the 3-column layout, the form is always in the right column and already visible without scrolling.
+**What goes wrong:**
+CSS animations without a `prefers-reduced-motion: reduce` media query bypass the user's accessibility preference. Some users (vestibular disorders, motion sickness) have motion-reduction enabled at the OS level. Ignoring it is an accessibility failure and may cause discomfort.
 
-If any scroll-into-view behavior was added (either in the current codebase or as a planned v1.5 enhancement), it should NOT be applied in the 3-column layout — the form is already visible. Triggering scroll-to-form in the 3-column layout would cause a disorienting jump to the bottom of the page.
+**Prevention:** Wrap the BOOKER-06 animation in `@media (prefers-reduced-motion: no-preference) { ... }` so it only fires for users who have not requested reduced motion. The fallback (no animation) is already the current behavior — this is an additive change only. If using Framer Motion, set `transition={{ duration: 0 }}` when `window.matchMedia('(prefers-reduced-motion: reduce)').matches`.
 
-**Detection:** Search `grep -rn "scrollIntoView\|scroll" app/\[account\]/` — verify no scroll-to-form calls exist. If any scroll behavior is added as part of the mobile stack, add a breakpoint guard (`window.innerWidth < 1024 && formRef.current?.scrollIntoView()`).
-
-**Prevention (Booker redesign phase):** Do not add scroll-into-view for the 3-column desktop layout. For mobile (stacked), a scroll into view after slot pick is acceptable UX; guard it behind `window.innerWidth < 1024` or a responsive CSS scroll-margin.
-
-**Owner:** Booker redesign phase
+**Phase to address:** BOOKER-06/07 polish phase — the media query must be in the initial animation implementation.
 
 ---
 
-## Minor Pitfalls
+### V17-MP-08: Dead-Code Audit False Positives — Dynamic Imports and Middleware References
 
-Mistakes that are cosmetic or trivially fixable.
+**What goes wrong:**
+Static analysis tools report "unused" files that are actually referenced via `next/dynamic(() => import('./foo'))`, `import(process.env.SOME_MODULE)`, string-concatenated module paths, Next.js middleware (`middleware.ts` itself and any module it imports), or files referenced only by Vitest test setup (`tests/setup.ts` imports). Deleting any of these breaks production or CI silently.
 
----
+**Prevention:**
+1. Migration `.sql` files in `supabase/migrations/` must NEVER be deleted — they define the production schema history. Add an explicit rule to the audit: "SQL files are excluded from deletion candidates."
+2. Files imported only by `tests/` are dead to production but critical for CI. Treat test-only files as a separate category: "keep unless the test itself is being deleted."
+3. Run `next build` after each deletion batch (not just `tsc --noEmit`) — Next.js dead-code detection differs from TypeScript's.
+4. Grep for dynamic import patterns: `next/dynamic`, `import(`, `require(` with string literals that contain the file path.
+5. Per-item sign-off (already planned in v1.7 scope) is the correct gate. Never batch-delete without Andrew's explicit approval per file.
 
-### V15-mp-01: `README.md` and `FUTURE_DIRECTIONS.md` rebrand — these files are committed but not deployed; don't forget them
-
-**What goes wrong:** The rebrand primarily touches `app/` files but PROJECT.md explicitly calls out `README.md` and `FUTURE_DIRECTIONS.md`. These files are in the repo root and deployed as documentation. They contain "trade contractors" in the opening description. If the rebrand phase only touches `app/` and `lib/`, the repository's primary documentation still describes the product for "plumbers, HVAC, roofers, electricians" — confusing to new viewers who encounter the broader "service-based businesses" positioning everywhere else.
-
-**Detection:** After the rebrand phase: `grep -n "trade contractor\|plumber\|HVAC\|roofer\|electrician" README.md FUTURE_DIRECTIONS.md` — results should be zero or explicitly retained as historical examples.
-
-**Prevention (Rebrand phase):** Add `README.md` and `FUTURE_DIRECTIONS.md` to the explicit file list for the rebrand phase plan. Update the opening description and any audience-specific language.
-
-**Owner:** Rebrand phase
+**Phase to address:** Dead-code audit phase — the audit rules must be written before any mapper runs.
 
 ---
 
-### V15-mp-02: Slot-picker `lg:grid-cols-2` nested inside the 3-column grid — two grid levels must not conflict
+### V17-MP-09: TypeScript Drift During Sender Refactor — `EmailProvider` Type Narrowing
 
-**What goes wrong:** `slot-picker.tsx:125` contains `<div className="grid gap-6 lg:grid-cols-2">` — the calendar+times sub-grid inside the slot picker. In the new 3-column layout, the slot picker occupies TWO columns (calendar LEFT, times MIDDLE). If `SlotPicker` is restructured to NOT use its internal `lg:grid-cols-2` (because the parent grid handles column placement), the calendar and times list render as a single-column vertical stack inside both the calendar column and the times column — they'd both be full-width blocks in wrong columns.
+**What goes wrong:**
+`lib/email-sender/types.ts` currently defines `EmailProvider = "gmail"`. Adding `"gmail_oauth"` and `"resend"` to this union without updating all downstream `switch` exhaustiveness checks will cause TypeScript to pass `--noEmit` while runtime behavior falls into unhandled default branches. The existing `createEmailClient` factory has a `default: throw new Error(...)` branch — this is the runtime symptom. If a test mocks `provider: "gmail_oauth"` against the old type definition, `tsc` will report an error that looks like a test file issue, not a type system issue.
 
-The correct approach depends on the architecture decision:
-- **Option A (children of parent grid):** `SlotPicker` renders `<Calendar>` and the times `<ul>` as direct children of the 3-column parent grid. The parent grid places them in column 1 and column 2. `SlotPicker` no longer manages its own 2-column internal grid.
-- **Option B (slot picker unchanged):** `SlotPicker` keeps its internal `lg:grid-cols-2` and spans columns 1+2 of the parent grid via `col-span-2`. The form is column 3. This keeps `SlotPicker` as a self-contained component.
+**Prevention:** When adding new `EmailProvider` variants, update: (1) the `EmailProvider` type in `types.ts`, (2) the `switch` in `createEmailClient`, (3) the `EmailClientConfig` interface for provider-specific fields, and (4) the vitest.config.ts mock (`tests/__mocks__/email-sender.ts`) to handle the new provider. Do this in one commit to avoid a window where the type and the switch are out of sync. Use TypeScript's exhaustiveness pattern (`const _exhaustive: never = config.provider;`) in the default branch to make missed cases a compile error, not a runtime throw.
 
-**Detection:** After implementing the 3-column layout, inspect at 1024px width. Check that the calendar is visually in column 1, the times list in column 2, and the form in column 3 — not stacked.
+**Warning signs:**
+- `EmailProvider` type change and `createEmailClient` switch update in separate commits
+- `bookings-api.test.ts` (the lone failing test at v1.6) starts failing for new reasons — fixture mismatch is one symptom of type drift
 
-**Prevention (Booker redesign phase):** Choose Option B (simpler) unless the internal `lg:grid-cols-2` in `SlotPicker` causes issues. Update `BookingShell` to use `lg:grid-cols-[minmax(280px,auto)_minmax(160px,auto)_320px]` with `SlotPicker` spanning `col-span-2` via a wrapper div, and the form in column 3.
-
-**Owner:** Booker redesign phase
-
----
-
-### V15-mp-03: `PublicShell` glass pill extends full-width; the 3-column grid is content-area only — verify no bleed outside Card
-
-**What goes wrong:** `PublicShell` renders the glass header pill shell-wide (not inside the booking card). The booking content area is `<section className="mx-auto max-w-3xl px-6 pb-12 md:pb-20">`. If the 3-column grid exceeds `max-w-3xl` (e.g., at 1440px with a 320px form column + 280px calendar + 160px times = 760px minimum, which fits inside 3xl=768px), there's no bleed. But if the new layout needs `max-w-4xl` or `max-w-5xl` to give all 3 columns comfortable space, the `max-w` constraint must be updated consistently in `BookingShell` — not in `PublicShell`.
-
-**Detection:** At 1280px desktop width, verify the 3-column grid fits within the content card without horizontal overflow. Check `max-w-3xl` (768px) is sufficient or identify what the minimum comfortable width is for all three columns.
-
-**Prevention (Booker redesign phase):** If 3 columns need more than 768px, increase `max-w` in `BookingShell` only (`max-w-4xl` = 896px, `max-w-5xl` = 1024px). Do NOT touch `PublicShell` — it is used by all public surfaces (`/[account]` index page, `/[account]/[event-slug]`). A wider card on the booking page should be a `BookingShell`-specific class change.
-
-**Owner:** Booker redesign phase
+**Phase to address:** Per-account Gmail OAuth send phase — the type update is Task 1 before any provider implementation.
 
 ---
 
-## Cross-Feature Pitfalls
+### V17-MP-10: Per-Account Quota Count After Upgrade — Downgrade Cap State Unknown
 
-Risks that span two or more of the three v1.5 feature tracks.
+**What goes wrong:**
+An upgraded account (`email_provider = 'resend'`) no longer routes sends through the per-account Gmail sender, so its `email_send_log` rows may stop being written (or be written with `account_id = null`). If the account later downgrades back to Gmail, what is its cap state for today? If the quota guard uses the day's existing `email_send_log` count, it may show 0 (if Resend sends were not logged) even though the account sent 150 emails via Resend today. The account could then send another 200 via Gmail in the same UTC day, burning significantly more than the 200/day Gmail cap is meant to protect.
 
----
+**Prevention:** Continue writing rows to `email_send_log` for ALL send paths, including Resend sends for upgraded accounts. The log is an analytics and audit record, not just a cap enforcement mechanism. The `category` field already has the right shape; add `email_provider` as a column to `email_send_log` to distinguish the path. Cap enforcement for Gmail applies to `email_provider = 'gmail_oauth'` rows; Resend sends are not capped at 200/day but should still be logged.
 
-### V15-XF-01: Rebrand and buffer refactor touch the same files — consolidate or sequence to avoid merge conflicts
-
-**What goes wrong:** The buffer refactor modifies:
-- `lib/slots.ts` (reads `account.buffer_minutes` → new field)
-- `lib/slots.types.ts` (`AccountSettings.buffer_minutes` field)
-- `app/api/slots/route.ts` (SELECT columns from accounts and event_types)
-- `tests/slot-generation.test.ts` (buffer test values)
-- `app/(shell)/app/availability/_components/settings-panel.tsx` (remove buffer input)
-- `app/(shell)/app/availability/_lib/actions.ts` (remove buffer from save action)
-
-The rebrand also touches `app/(shell)/` files for owner-facing copy. If these two tracks are worked in parallel by the same developer switching between tasks, uncommitted changes in `slots.ts` or `api/slots/route.ts` can collide with rebrand search-and-replace operations (especially if the rebrand uses global replace tools that sweep all files).
-
-**Detection:** Verify before starting any task: `git status` shows a clean working tree. Never start a rebrand search-and-replace with uncommitted buffer changes in the working tree.
-
-**Prevention:** Execute the three tracks in sequence, not in parallel: Buffer migration → Rebrand → Booker redesign. Commit and deploy each track before starting the next. If parallel work is unavoidable, use separate git branches and merge after each track.
-
-**Owner:** Phase planning (sequencing decision)
+**Phase to address:** Resend backend phase — `email_send_log` schema update must accompany the Resend sender implementation.
 
 ---
 
-### V15-XF-02: Booker redesign ships AFTER rebrand — avoids rewriting booker copy twice
+### V17-MP-11: Vitest Alias Regex Exact-Match — New Email Provider Sub-Path Breaks Mock
 
-**What goes wrong:** If the booker redesign ships BEFORE the rebrand, the new 3-column layout is designed around the current generic copy ("Pick a time to continue", "Book this time", etc.). The rebrand then audits all owner-facing copy — the booker's copy is already generic and needs no change. No double-touch of booker copy.
+**What goes wrong:**
+Phase 32 (Plan 32-03) locked the vitest `resolve.alias` to an exact-match regex: `find: /^@\/lib\/email-sender$/`. This correctly intercepts `import { sendEmail } from "@/lib/email-sender"` but passes through `import { checkAndConsumeQuota } from "@/lib/email-sender/quota-guard"`. When v1.7 adds a new sub-path (e.g., `@/lib/email-sender/providers/gmail-oauth`), that sub-path is NOT intercepted by the mock. Tests that import a module which in turn imports `@/lib/email-sender/providers/gmail-oauth` will attempt to resolve the real provider — which imports `server-only` and may import `google-auth-library`, both of which would fail in the Vitest environment.
 
-But if the rebrand ships before the booker redesign and someone mistakenly "rebrands" the booker (adding "service-based businesses" copy to the public form), the booker redesign then must revert those changes. Confusion risk.
+**Prevention:** Before writing tests for the new OAuth provider, add a new alias entry in `vitest.config.ts` for `@/lib/email-sender/providers/gmail-oauth` (exact-match regex) mapping to a stub that returns a mock OAuth client. Follow the same pattern as the existing `email-sender` mock. Update `tests/__mocks__/` accordingly. Do NOT broaden the existing alias to a prefix match — the Phase 32 rationale for exact-match still applies.
 
-**Detection (non-issue if sequenced correctly):** The booker copy is already generic. A correctly-scoped rebrand will not touch it. The risk is human error in the rebrand phase.
-
-**Prevention:** Explicitly document in the rebrand phase plan: "The public booker, embed widget, confirmation/cancellation pages, and all customer-facing email copy are OUT OF SCOPE for the rebrand. These surfaces use generic language that is already audience-agnostic."
-
-**Owner:** Rebrand phase (scope guard in phase plan)
+**Phase to address:** Per-account Gmail OAuth send phase — test setup must be done before writing tests.
 
 ---
 
-### V15-XF-03: Buffer migration pre-flight uses V14-CP-06 pattern — add it as a hard gate before any schema change
+### V17-MP-12: Env Var Drift Between Dev / Preview / Production for New Credentials
 
-**What goes wrong:** The v1.4 CP-03 30-min drain protocol and the V14-CP-06 pre-flight diagnostic pattern are both required for the `accounts.buffer_minutes` DROP. The v1.4 PITFALLS.md established these as reusable patterns. v1.5 must apply them again for this DROP:
+**What goes wrong:**
+v1.7 introduces at minimum: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `GMAIL_REFRESH_TOKEN_ENCRYPTION_KEY`. If these are only set in production Vercel but not in preview environments, preview deploys will silently fall back to SMTP or throw on the first OAuth callback. If they are set in preview but not in `.env.local`, local `next dev` will crash on import. If `GMAIL_REFRESH_TOKEN_ENCRYPTION_KEY` differs between preview and production, tokens stored via preview testing will be un-decryptable in production.
 
-- **Pre-flight gate:** Before the ADD COLUMN + backfill migration, verify the `event_types` table's existing `buffer_before_minutes` / `buffer_after_minutes` columns don't contain non-zero values that should influence the backfill. If any event type had a custom `buffer_after_minutes` value set (unlikely but possible via direct DB edit), blindly backfilling from `accounts.buffer_minutes` would overwrite it.
-- **Drain gate:** Before the DROP `accounts.buffer_minutes` migration, all deployed code must be confirmed to NOT reference the column. 30-minute minimum drain.
+**Prevention:** Create a `.env.local.example` file (committed to repo, no actual values) enumerating all new env vars with comments. Add a startup check in the OAuth callback handler: `if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) throw new Error("[oauth] Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET")` that fails loudly at request time (not silently at send time). For `GMAIL_REFRESH_TOKEN_ENCRYPTION_KEY`, use the same key for both preview and production — or use separate keys with awareness that tokens are environment-specific. Document which env vars are per-environment vs shared in the phase plan.
 
-**Detection:** Pre-flight: `SELECT id, slug, buffer_after_minutes FROM event_types WHERE buffer_after_minutes <> 0;` — if any rows return, they were manually customized; decide whether to preserve or overwrite.
-
-**Prevention (Buffer migration phase):** Add both gates as mandatory checkpoints in the buffer phase plan, explicitly labeled as CP-06 (pre-flight diagnostic) and CP-03 (30-min drain). The plan must block on human verification at each gate.
-
-**Owner:** Buffer migration phase
+**Phase to address:** OAuth signup phase — the env var enumeration should be the first task in the phase plan.
 
 ---
 
-## Phase-Specific Summary
+### V17-MP-13: LD-07 Booker-Neutrality Violated by Resend "From" Address
 
-| Phase | Pitfall IDs | Risk Level | Notes |
-|-------|-------------|------------|-------|
-| Buffer migration (DB) | V15-CP-01, V15-CP-02, V15-CP-03, V15-MP-02, V15-XF-01, V15-XF-03 | CRITICAL | Pre-flight + drain gates are hard blockers; CP-01 naming decision must be made first |
-| Buffer migration (code) | V15-CP-04, V15-CP-05, V15-CP-06, V15-MP-01 | HIGH | Types-first pattern; update tests synchronously |
-| Rebrand | V15-CP-07, V15-CP-08, V15-CP-09, V15-MP-03, V15-XF-02 | MODERATE | Audit each hit manually; scope guard required |
-| Rebrand (identifiers) | V15-MP-03 | LOW | Identifier rename is likely a no-op; verify first |
-| Booker redesign | V15-CP-10, V15-CP-11, V15-MP-04, V15-MP-05, V15-MP-06, V15-MP-07 | HIGH | Embed isolation is critical; Turnstile mount pattern must be preserved |
-| Booker redesign (layout) | V15-mp-02, V15-mp-03 | LOW | Nested grid + max-w decisions; cosmetic impact only |
+**What goes wrong:**
+LD-07 (established v1.5 Phase 29-01) requires that booker-facing surfaces never reveal NSI branding or owner identity. The "Request upgrade" email goes FROM the owner TO Andrew — this is an owner-facing notification and LD-07 does not apply. But if any per-account Resend send (e.g., upgraded accounts' booking confirmations) uses `from: "North Star Integrations <nsi@northstarintegrations.com>"` instead of the owner's configured `from` name, bookers will see NSI branding instead of the business they booked with. This breaks the product's white-label promise.
+
+**Prevention:** Per-account Resend sends must use the same `from` name resolution as the current Gmail SMTP path: `${account.name} Booking <nsi-send@northstarintegrations.com>` or equivalent that surfaces the account name, not NSI. The From address domain will be NSI's (since NSI owns the Resend account), but the From name must be the contractor's business name. Test: book an appointment with an upgraded account; verify the From name in the booker's inbox is the business name, not "North Star Integrations."
+
+**Phase to address:** Resend backend phase.
+
+---
+
+## Technical Debt Patterns
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Store plain-text OAuth refresh tokens during development | Fast iteration | Security exposure in production | NEVER in production — must encrypt before any production deploy |
+| Skip per-account quota isolation during initial OAuth send | Simpler launch | Global quota misleads owners; one account flood affects all | Acceptable for single-tenant (nsi-only) window; must fix before second account goes live |
+| Use same encryption key across preview + production | No key management complexity | Cannot migrate tokens between environments | Acceptable if documented; not acceptable if preview tokens ever need to move to production |
+| Reuse `sendEmail()` default client for "Request upgrade" | One line of code | Bootstrap problem (V17-CP-03) — breaks at cap | NEVER — always use NSI Resend for upgrade requests |
+| Defer Resend DNS verification to "after we see if it works" | Faster start | First test email goes to spam; DNS takes time | NEVER — DNS must be pre-verified before any code ships |
+
+---
+
+## Integration Gotchas
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Google OAuth | Check only for `access_token` presence, not granted scopes | Read `token_response.scope`, verify `gmail.send` or `https://mail.google.com/` present |
+| Google OAuth | Discard `refresh_token` on rotation (only reads `access_token`) | Always check for `refresh_token` in response; persist if present |
+| Google OAuth | Call `signInWithOAuth` for existing-user Gmail connect | Use `supabase.auth.linkIdentity()` to link without creating duplicate user |
+| Supabase magic-link | Expose different responses for known vs unknown emails | Always return identical "check your email" response regardless |
+| Supabase magic-link | Assume PKCE flow works cross-device | Test explicitly; document single-browser requirement if PKCE is used |
+| Resend | Send from custom domain before DNS verified | Run DNS verification as Phase Task 1 with manual checkpoint |
+| Resend | Use `from: "NSI <nsi@nsi.com>"` for booker-facing sends | Use account name in From field; NSI domain in address only |
+| Vercel env vars | Add new vars to production only | Add to all environments: production + preview + local example |
+
+---
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Plaintext Gmail refresh token in Supabase `text` column | Service-role key exposure or RLS bypass grants gmail.send to attacker | AES-GCM encryption at application layer; column named `_encrypted` |
+| Email enumeration on magic-link request | Attacker discovers which businesses use the tool | Identical response body for known + unknown emails |
+| Upgrade request routed through per-account Gmail sender | Upgrade request fails silently at the moment it is needed | NSI Resend as dedicated upgrade-request infrastructure |
+| OAuth callback does not verify granted scopes | Account appears connected but sends nothing | Scope verification before any `gmail_refresh_token` write |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-Run this checklist before marking v1.5 complete:
+- [ ] **OAuth signup:** Verified that `gmail.send` scope is in the granted token (not just `openid email profile`) before marking account connected
+- [ ] **Per-account Gmail cutover:** Andrew's `nsi` account has OAuth tokens stored AND tested on preview before production cutover
+- [ ] **Quota guard:** `email_send_log` has `account_id` column and all 7 `checkAndConsumeQuota` call sites pass `accountId`
+- [ ] **Refresh token rotation:** `UPDATE accounts SET gmail_refresh_token_encrypted` called whenever Google returns a new `refresh_token` in the token response
+- [ ] **Token revocation handling:** `invalid_grant` error triggers `email_provider = 'disconnected'` state + in-app banner (not just a log line)
+- [ ] **Request upgrade bootstrap:** `requestUpgradeAction` uses NSI Resend client, NOT `checkAndConsumeQuota` for the requester's account
+- [ ] **Resend DNS:** Domain shows "Verified" in Resend dashboard before any Resend send code reaches production
+- [ ] **LD-07 on Resend:** Upgraded accounts' booker emails show business name in From field, not "North Star Integrations"
+- [ ] **BOOKER-06 V15-MP-05 lock:** `BookingForm` mounts only when `selectedSlot !== null` (no pre-render for animation)
+- [ ] **BOOKER-06 zero-layout-shift:** Animation uses `transform`/`opacity` only; grid column width unchanged during transition
+- [ ] **BOOKER-07 skeleton state:** Skeleton does NOT render when `selectedSlot === null` (show instructional text instead)
+- [ ] **Dead-code audit:** SQL migration files excluded from deletion candidates; test-only files in separate category
+- [ ] **Vitest aliases:** New `@/lib/email-sender/providers/gmail-oauth` sub-path has its own exact-match alias in `vitest.config.ts`
+- [ ] **Env vars:** All new vars enumerated in `.env.local.example`; startup check throws on missing critical vars
 
-- [ ] **Buffer column naming resolved:** Confirm exactly ONE buffer column exists on `event_types` (not both `buffer_after_minutes` AND a new `post_buffer_minutes`). `SELECT column_name FROM information_schema.columns WHERE table_name = 'event_types' AND column_name LIKE '%buffer%'` should return exactly the expected columns.
-- [ ] **`accounts.buffer_minutes` column DROPPED:** `SELECT column_name FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'buffer_minutes'` returns zero rows. CP-03 30-min drain verified before DROP was applied.
-- [ ] **Slot engine reads event-type buffer, NOT account buffer:** `grep -n "account.buffer_minutes" lib/slots.ts` returns zero matches. `grep -n "buffer" app/api/slots/route.ts` shows the new event-type column in the SELECT, not `accounts.buffer_minutes`.
-- [ ] **Per-event divergence test passes:** A test with event-type A buffer=0 and event-type B buffer=15 on the same account correctly shows different slot availability for each event type. `vitest run tests/slot-generation.test.ts` passes all buffer tests.
-- [ ] **Rebrand coverage confirmed:** `grep -rn "trade contractor\|Built for trade\|for trade contractors" app/ lib/ README.md FUTURE_DIRECTIONS.md` returns zero matches. `grep -rn "contractor" app/ lib/` returns only the `booking-form.tsx:138` developer comment (intentionally left) and zero user-facing copy.
-- [ ] **No booker copy rebranded:** The public booker form (`app/[account]/[event-slug]/`), confirmation page, and cancellation page use only generic copy. No "service-based businesses" language appears on customer-facing surfaces.
-- [ ] **3-column desktop layout renders without horizontal overflow:** At 1024px, 1280px, and 1440px viewport widths, the booking card does not overflow its container. No horizontal scrollbar. Calendar, times, and form columns are all visible without scrolling.
-- [ ] **Embed widget is NOT 3-column:** Load `calendar-app-xi-smoky.vercel.app/embed/nsi/[any-event-slug]` — the embed renders in the stacked (single-column) layout at all tested widths (320px, 480px, 768px). No horizontal overflow.
-- [ ] **Turnstile mounts correctly after slot pick:** In the 3-column layout, select a date and time. The form column reveals with a valid Turnstile widget (not expired). Submit the form — the Turnstile token is accepted (HTTP 201 or 409 race, not 403 Turnstile-failed).
-- [ ] **No layout shift on form reveal:** In the 3-column layout, select a time slot. The calendar and times columns do NOT move horizontally during the form reveal. The CLS (Cumulative Layout Shift) during slot pick is zero or near-zero — visually confirmed by watching the calendar position while clicking a time.
+---
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| V17-CP-01 Partial OAuth grant | LOW | Set `email_provider = null`, show connect banner, user re-authorizes with full scopes |
+| V17-CP-02 Refresh token not re-stored | MEDIUM | User must re-authorize OAuth; all stored tokens that may have been rotated become invalid; run re-auth flow for all affected accounts |
+| V17-CP-03 Bootstrap problem | HIGH | Upgrade path is broken for all cap-hit accounts; requires hotfix deploy to route upgrade sends through Resend infrastructure |
+| V17-CP-05 Flag-day cutover failure | HIGH | Rollback to previous deploy; all emails stop for however long the broken deploy was live; recovery = revert + re-plan strangler-fig |
+| V17-CP-06 Unencrypted tokens | HIGH | Rotate all Gmail app permissions (owners visit Google account security page); generate new encryption key; re-auth all accounts; audit logs for any unauthorized access |
+| V17-CP-07 Token revocation silent | MEDIUM | Identify affected accounts via `invalid_grant` log scan; set `email_provider = 'disconnected'`; contact owners to re-authorize |
+| V17-CP-09 Wrong-account quota counting | MEDIUM | Backfill `email_send_log.account_id` from `booking_events` join; re-run quota counts per account |
+| V17-MP-11 Vitest alias breakage | LOW | Add missing alias entry in `vitest.config.ts`; re-run tests |
+| V17-MP-12 Env var drift | LOW | Add missing vars to Vercel environment settings; redeploy |
+
+---
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| V17-CP-01 Partial OAuth grant | OAuth signup | Test: deny `gmail.send` on consent screen; verify account shows "not connected" state |
+| V17-CP-02 Refresh token rotation | Per-account Gmail OAuth send | Test: mock Google token response with new `refresh_token`; verify DB updated |
+| V17-CP-03 Bootstrap problem | Request upgrade + Resend backend | Test: seed `email_send_log` to 200 rows; click upgrade button; verify email arrives via Resend |
+| V17-CP-04 Token refresh race | Per-account Gmail OAuth send | Test: mock access token expiry; send 3-email batch; verify single refresh call in logs |
+| V17-CP-05 Flag-day cutover | Per-account Gmail OAuth send | Manual checkpoint: Andrew connects NSI Gmail OAuth on preview; smoke-test booking confirmation before production cutover |
+| V17-CP-06 Unencrypted tokens | Per-account Gmail OAuth send (migration task) | Verify: `accounts.gmail_refresh_token_encrypted` column type; no plaintext column exists |
+| V17-CP-07 Token revocation | Per-account Gmail OAuth send | Test: mock `invalid_grant` response; verify `email_provider = 'disconnected'` + banner renders |
+| V17-CP-08 Existing-account upgrade | OAuth signup (or dedicated settings sub-phase) | Manual: Andrew connects NSI account via `/app/settings/email` using `linkIdentity` |
+| V17-CP-09 Quota wrong account | Per-account Gmail OAuth send (prerequisite task) | Test: two-account quota isolation test; account A at cap does not block account B |
+| V17-CP-10 Magic-link enumeration | Magic-link login | Test: POST known email + POST unknown email; verify identical response body + status |
+| V17-CP-11 Resend DNS not verified | Resend backend (Task 1) | Manual: Resend dashboard shows "Verified"; test email with dkim=pass in headers |
+| V17-MP-01 Personal vs Workspace Gmail | OAuth signup | UI: display From address before token storage; manual QA checklist item |
+| V17-MP-04 Turnstile token window | BOOKER-06/07 polish | Manual: inspect React DevTools — BookingForm absent from DOM before slot selected |
+| V17-MP-06 Layout shift from animation | BOOKER-06/07 polish | Lighthouse CLS = 0.0 after slot pick animation |
+| V17-MP-07 prefers-reduced-motion | BOOKER-06/07 polish | OS setting: enable reduced motion; verify no animation fires |
+| V17-MP-08 Dead-code false positives | Dead-code audit | Rule: SQL files excluded; test-only files separate category; `next build` after each batch |
+| V17-MP-09 TypeScript drift | Per-account Gmail OAuth send | Exhaustiveness check in `createEmailClient` default branch; `tsc --noEmit` clean |
+| V17-MP-11 Vitest alias regex | Per-account Gmail OAuth send | New provider sub-path has alias entry; `npm test` passes for provider tests |
+| V17-MP-12 Env var drift | OAuth signup (first task) | `.env.local.example` committed; startup check in callback handler |
+| V17-MP-13 LD-07 Resend From address | Resend backend | Manual: book with upgraded account; verify booker inbox shows business name in From |
+
+---
+
+## Sources
+
+- Live codebase inspection: `lib/email-sender/`, `lib/email-sender/quota-guard.ts`, `lib/email-sender/types.ts`, `app/api/cron/send-reminders/route.ts`, `app/[account]/[event-slug]/_components/booking-shell.tsx`, `vitest.config.ts`
+- Phase 33 SUMMARY files (33-01 through 33-04): ABORT-on-diverge, skipOwnerEmail/actor patterns, booker_name column incident, refresh token and cascade patterns
+- PROJECT.md Key Decisions section: CP-03 two-step deploy protocol, V15-MP-05 Turnstile lock, LD-07 booker-neutrality, Phase 31 quota-guard fail-closed contracts
+- Phase 32 decision: vitest resolve.alias exact-match regex (`find: /^@\/lib\/email-sender$/`)
+- Phase 33-02 incident: `booker_first_name` nonexistent column → "Plans must reference real DB columns — grep migrations before naming fields"
+
+---
+
+*Domain: Multi-tenant booking app — v1.7 Auth Expansion + Per-Account Email*
+*Researched: 2026-05-06*

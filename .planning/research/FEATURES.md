@@ -1,326 +1,333 @@
-# Feature Landscape: v1.5 Buffer Fix + Audience Rebrand + Booker Redesign
+# Feature Research
 
-**Domain:** Multi-tenant Calendly-style booking tool — service-based businesses
-**Researched:** 2026-05-03
-**Confidence:** HIGH for buffer behavior (leading-tool patterns confirmed, codebase inspected)
-           HIGH for rebrand surface map (derived directly from codebase surfaces)
-           MEDIUM for 3-column layout patterns (Cal.com open-source confirmed; Calendly/Acuity
-                  primary-source layout details limited by auth walls on help docs)
+**Domain:** Multi-tenant SaaS booking tool — Auth Expansion + Per-Account Email + Polish + Dead Code (v1.7)
+**Researched:** 2026-05-06
+**Confidence:** MEDIUM — competitor UX observations from public docs/help centers; Google OAuth scope behavior from official docs (HIGH); animation timing from Motion docs (MEDIUM); dead code tooling from Knip docs (HIGH)
 
 ---
 
-## State of the Codebase Entering v1.5
+## Feature Landscape
 
-### Buffer (what exists today)
+### Table Stakes (Users Expect These)
 
-- `accounts.buffer_minutes` — account-wide, applies symmetrically to ALL event types on the account
-- `event_types.buffer_before_minutes` and `event_types.buffer_after_minutes` — columns exist in
-  the initial schema (v1.0, `20260419120000_initial_schema.sql`, both `int not null default 0`),
-  but `computeSlots` in `lib/slots.ts` only reads `account.buffer_minutes`. These columns are
-  live in production, all zeroed, and unused.
-- `slotConflictsWithBookings` in `lib/slots.ts:203` applies the buffer symmetrically: extends the
-  candidate slot by `buffer_minutes` on each side before checking overlap.
-- The NSI production account has `buffer_minutes = 15`, which causes adjacent slots after any
-  booking (on any event type) to be hidden for 15 minutes.
-- v1.5 goal: replace account-wide `buffer_minutes` with per-event-type `post_buffer_minutes`
-  (mapped from existing `buffer_after_minutes`), drop `accounts.buffer_minutes` via CP-03 two-step.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Google "Sign in" button on /app/signup | Any SaaS in 2026 offers Google SSO; password-only signup feels dated | MEDIUM | Single OAuth consent screen combining profile + `gmail.send`; see "Partial Grant" section below |
+| Magic-link fallback on /app/login | Password-only login feels friction-heavy; "email me a link" is now the norm for low-frequency SaaS logins | LOW | Email-only field; separate link or tab on existing /app/login page, NOT a separate route |
+| 15-minute single-use magic-link tokens | Industry standard TTL (10–15 min); longer = security risk; shorter = email-delay UX failures | LOW | Must be invalidated on first use; defend against email prefetch bots by treating a failed prefetch as a re-request |
+| "Your Gmail connection expired, reconnect" inline alert | Any app storing OAuth tokens must handle token revocation gracefully; silent failure of email sends is unacceptable | MEDIUM | Detect `invalid_grant` on send attempt; mark account `gmail_status: 'needs_reauth'`; surface inline banner on owner dashboard + settings page |
+| "Connect Gmail" step in onboarding wizard | Calendly and Cal.com both surface calendar/email connect in onboarding, not buried in settings | MEDIUM | Must be skippable (graceful degradation); show clearly what permission is being requested: "send booking emails from your Gmail" |
+| Connection status indicator on settings page | Users who connected Gmail need to know if it's working; "last email sent" timestamp or simple "Connected / Disconnected" badge | LOW | Badge states: Connected (green), Needs reconnect (yellow/orange), Never connected (gray) |
+| Disconnect Gmail button | Users expect to be able to revoke the connection; GDPR / Google policy requires it | LOW | On disconnect: warn that booking emails will fail until reconnected; do NOT auto-fallback silently to centralized SMTP (centralized SMTP is being retired) |
+| Inline cap-hit warning at point of failure | When a send is refused due to 200/day cap, the owner needs to know immediately, not discover it from a booker complaint | LOW | Reuse existing `text-sm text-red-600 role="alert"` quota vocabulary from v1.6 Phase 31 |
+| "Request upgrade" button on cap-hit | Owner cannot self-serve beyond the cap; button must exist and be obvious | LOW | One-tap; auto-attaches account ID and current daily count; sends to Andrew |
+| Form column slide-in on slot pick | Calendly and Cal.com both animate the form column into view; users notice the jarring no-animation version | LOW | 200–250ms, `ease-out`; the reserved 320px column already exists (v1.5); this is a visibility transition, not a layout shift |
+| Skeleton placeholder in empty form column | The empty "Pick a time on the left" state looks unfinished; a subtle skeleton signals the column will become active | LOW | Show shape-only placeholder (no shimmer needed); resolves only to real form on slot pick, NOT on calendar load |
 
-### Booker layout (what exists today)
+### Differentiators (Competitive Advantage)
 
-`booking-shell.tsx` renders a single `rounded-2xl` card with:
-```
-grid gap-8 p-6 lg:grid-cols-[1fr_320px]
-```
-- LEFT column: `<SlotPicker>` — itself a 2-col sub-grid `lg:grid-cols-2` with calendar on the
-  left and time list on the right
-- RIGHT column (320px fixed): `<BookingForm>` — revealed only when `selectedSlot !== null`;
-  before pick, a single-line prompt "Pick a time on the left to continue." renders
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Single consent screen combining signup + gmail.send | Eliminates the separate "Go to Settings → Connect Gmail" step that Calendly requires post-signup; smoother new-user experience | HIGH | Only feasible if `gmail.send` is requested at signup OAuth; partial grant must be handled gracefully (see Anti-Features) |
+| "Connection healthy" last-send timestamp | Gives power-user owners confidence their email is actually flowing; differentiates from competitors that show only binary Connected/Disconnected | LOW | Store `gmail_last_sent_at` on account; render as "Last sent 3 hours ago" |
+| Upgrade path that preserves daily send count display | After upgrading to Resend backend, show the new higher cap (or "managed" indicator) rather than hiding the number; transparency builds trust | LOW | UI: "200 / 2,000 emails today" vs "Upgraded — managed send" |
+| "Retry failed rows" post-pushback pattern reused for email sends | v1.6 already built per-row retry (PUSH-12); applying same pattern to cap-hit scenarios gives consistent owner UX across all email failure modes | LOW | Reuse `retryPushbackEmailAction` pattern vocabulary |
+| Dead-code audit as a milestone (not a sprint) | Most tools accumulate dead code silently; surfacing it as a structured, Andrew-signed-off removal builds long-term codebase health | MEDIUM | Knip (not ts-prune — ts-prune is maintenance-only) is the right tool; per-item sign-off prevents accidental removal of intentionally kept code |
 
-This is effectively a 3-panel layout at lg: breakpoints: calendar / times / form — but the
-form RIGHT column exists at all sizes (no layout shift when slot is picked). The issue Andrew
-flagged is "calendar floated right, text chaotic" on the existing 2-column approach. The v1.5
-redesign explicitly names a **3-column** desktop layout: calendar LEFT, times MIDDLE, form RIGHT.
+### Anti-Features (Commonly Requested, Often Problematic)
 
-### Rebrand (what exists today)
-
-Product is branded as "trade contractors" across owner-facing copy and several internal
-identifiers (`tradeContractor*`, `contractor*` function/variable names). The rebrand to
-"service-based businesses" is a copy + identifier change, NOT a visual system change.
-
----
-
-## Table Stakes for v1.5
-
-Features that must ship for the 3 headline objectives to feel complete.
-
-### Feature 1: Per-Event-Type Post-Event Buffer
-
-| Attribute | Specification |
-|-----------|--------------|
-| Column | `event_types.buffer_after_minutes` (already exists, currently 0 everywhere) |
-| Migration | Backfill `buffer_after_minutes` from `accounts.buffer_minutes` on all event types; then DROP `accounts.buffer_minutes` via two-step CP-03 drain protocol |
-| Slot engine | `computeSlots` reads `event_types.buffer_after_minutes` instead of `account.buffer_minutes`; extends candidate slot END only (post-buffer, not symmetric) |
-| Owner UI location | Event type editor — "Advanced" or "Scheduling" section (mirrors leading tools: Calendly "Limits and buffers", Cal.com "Limits" tab, Acuity "Appointment types → Edit → Block off time after") |
-| UI copy | "Buffer after event" (matches leading-tool convention; "After" is standard; avoid "cool-down" or "padding" which are Acuity-specific) |
-| Units | Minutes only (all leading tools use minutes; no hours/minutes split needed in this range) |
-| Default | 0 (no buffer — clean default; leading tools all default to 0) |
-| Min | 0 (no buffer) |
-| Max | 360 (6 hours — matches Calendly's range; sufficient for any service vertical) |
-| Input type | `<input type="number" min="0" max="360" step="5">` — stepping by 5 matches common usage (0, 5, 10, 15, 30, 60) |
-| Validation | Zod: `z.coerce.number().int().min(0).max(360)` |
-| Buffer visibility to booker | NO — buffer is an owner-only scheduling constraint; it is never displayed in the booker UI. Available slots simply exclude the buffered window. This matches all leading tools: Calendly, Cal.com, Acuity, SavvyCal all hide buffer from invitees. |
-| Buffer affects displayed end time | NO — `end_at` stored in DB remains `start_at + duration_minutes` (the raw booking window). Buffer applies only at slot-generation time in `computeSlots`. Changing this would require a data migration and break the reschedule slot-freeing invariant. Anti-feature: do NOT store buffer in end_at. |
-| Buffer semantics | POST-event only. The v1.5 scope is `buffer_after_minutes`. `buffer_before_minutes` is also in the schema but is NOT wired up in v1.5 (pre-event buffer is a v1.6+ feature, see Anti-Features). |
-| Cross-event-type interaction | With the account-wide buffer gone, buffers now apply per-event-type. A 15-min buffer on "Consultation" will hide slots adjacent to a Consultation booking, but a "Phone Call" event type with 0 buffer can be booked adjacent to a "Consultation" if the constraint allows it. The Phase 27 EXCLUDE constraint (`event_type_id WITH <>`, `during WITH &&`) only blocks actual time-overlap, not buffer-extended overlap — this is correct and intentional. |
-
-### Feature 2: Audience Rebrand — Surface Map
-
-Surfaces that need copy changes (owner-facing, not seen by booker customers):
-
-| Surface | What Changes | What to Change To |
-|---------|-------------|-------------------|
-| `/signup` page hero text | "for trade contractors" copy | "for service-based businesses" or generic ("Schedule smarter") |
-| `/onboarding` wizard step 1-3 | Any "contractor" framing in headers/subtext | "your business", "your services", neutral |
-| Owner dashboard (`/app/home`) tagline or welcome text | Any "contractor" framing | Generic or "service business" framing |
-| Event type editor placeholders/labels | Any "job", "job site", "contractor" placeholder copy | Generic: "service", "appointment", "session" |
-| Settings pages (`/app/settings/*`) | Any "contractor" framing | Generic |
-| Marketing/README/FUTURE_DIRECTIONS.md | "trade contractors" in description | "service-based businesses" |
-| Internal identifiers (TypeScript) | `tradeContractor*`, `contractor*` variable/function names | `serviceBusiness*`, `serviceAccount*` (or generic if single-word is cleaner) |
-
-Surfaces that must NOT get audience copy (booker-facing — no audience language):
-
-| Surface | Why Untouched |
-|---------|--------------|
-| `/[account]/[event-slug]` booking page | Booker sees the contractor's brand, not NSI product copy |
-| `/[account]` account index | Same — booker-facing |
-| `/embed/[account]/[event-slug]` widget | Same — embedded in client websites |
-| Confirmation, reminder, cancel, reschedule emails | Booker-facing; NSI footer mark is already generic |
-| `confirmed/[booking-id]` page | Booker-facing |
-
-Does onboarding need to ASK what kind of business? NO — this is explicitly an anti-feature
-for v1.5. The onboarding wizard should stay generic (no industry dropdown). Reasons:
-1. Adding a segmentation question requires storing the answer, wiring analytics, and acting on
-   it to change the product behavior — none of which is in v1.5 scope.
-2. Generic copy ("your business", "your services") covers all verticals without a question.
-3. Calendly itself does NOT ask industry during signup — it asks for role/use case but keeps
-   the product UI identical regardless of answer.
-4. Industry segmentation is a v2+ growth/analytics feature, not a v1.5 copy change.
-
-### Feature 3: 3-Column Booker Layout (Desktop)
-
-**Pattern provenance:**
-- **Acuity Scheduling (confirmed MEDIUM):** "Monthly template displays a calendar on the LEFT,
-  with the times for the selected day on the RIGHT." — 2-column. Form appears AFTER date+time
-  selection (sequential steps, not simultaneous columns).
-- **Cal.com (confirmed HIGH):** Three view modes: MONTH_VIEW, WEEK_VIEW, COLUMN_VIEW.
-  COLUMN_VIEW is weeks displayed as date columns (days with available slots only), NOT a
-  calendar+times+form 3-column. Cal.com's booker enters a `selecting_date` state, then
-  `selecting_time`, then shows the form — sequential, not simultaneous. The "3-column" framing
-  in v1.5 is NSI's own design, not a direct copy of Cal.com.
-- **Calendly (confirmed MEDIUM):** Current redesign shows monthly calendar + daily slots on ONE
-  page ("choosing a day and time happens on the same page"). The form appears as a separate
-  step/page. Still 2-phase, not simultaneous-column.
-- **SavvyCal:** Calendar + time slots together; form as separate step.
-
-**Conclusion:** No leading tool ships a simultaneous calendar+times+form 3-column layout as
-default. The NSI v1.5 design is a genuine UX advancement — show the form column immediately
-(even empty/prompt state) to eliminate the layout shift users experience when picking a slot.
-
-**Recommended desktop layout (1024px+):**
-
-```
-+--------------------------------------------------+
-| Header: account name · event name · duration     |
-+--------------------------------------------------+
-|                                                  |
-|  CARD (max-w-5xl, rounded-2xl, border, bg-white) |
-|  +--------------+------------+------------------+|
-|  | CALENDAR     | TIMES      | FORM             ||
-|  | col 1        | col 2      | col 3            ||
-|  |              |            |                  ||
-|  | shadcn       | Slot list: | Before pick:     ||
-|  | Calendar     | 9:00 AM    | "Pick a time on  ||
-|  | component    | 9:30 AM    |  the left to     ||
-|  |              | 10:00 AM   |  continue."      ||
-|  | ~280px       | ~160px     | After pick:      ||
-|  |              |            | [Name field]     ||
-|  |              |            | [Email field]    ||
-|  |              |            | [Phone field]    ||
-|  |              |            | [Custom Qs]      ||
-|  |              |            | [Confirm button] ||
-|  +--------------+------------+------------------+|
-|                                                  |
-+--------------------------------------------------+
-
-Timezone hint: "Times shown in America/Chicago"
-(full-width sibling ABOVE the card, per PUB-14 pattern)
-```
-
-**Column widths at key breakpoints:**
-
-| Breakpoint | Total card | Calendar | Times | Form |
-|------------|-----------|---------|-------|------|
-| lg (1024px) | max-w-4xl (~896px) | ~280px (auto) | ~160px (fixed) | 1fr (remaining ~400px) |
-| xl (1280px) | max-w-5xl (~1024px) | ~280px (auto) | ~180px (fixed) | 1fr (remaining ~500px) |
-
-Tailwind implementation: `grid lg:grid-cols-[auto_180px_1fr]`
-- Column 1 (calendar): `auto` — shadcn Calendar has intrinsic width (~280px); let it size naturally
-- Column 2 (times): fixed `180px` — enough for "10:30 AM" + "2 spots left" badge
-- Column 3 (form): `1fr` — fills remaining space; form content is fluid
-
-**Mobile collapse order (stack vertically):**
-```
-1. Calendar (full width)
-2. Time slots (full width, appears after date pick)
-3. Form (full width, appears after slot pick)
-```
-No horizontal layout at mobile. Below `lg:` (1024px), the grid collapses to a single column
-and items stack in DOM order: calendar → times → form. This matches the Cal.com mobile pattern
-(progressive disclosure top-to-bottom) and preserves the current `justify-self-center` fix for
-the calendar on mobile.
-
-**Form-on-pick reveal: in-place with reserved space (NO layout shift):**
-
-Recommended approach: **Reserve the form column with a "Pick a time" prompt.** The form column
-is ALWAYS rendered in the DOM (a `<div>` with the full column width exists before slot pick).
-Before pick, it shows a placeholder text ("Pick a time on the left to continue."). After pick,
-`selectedSlot` becomes non-null and the `<BookingForm>` replaces the placeholder text **in-place**.
-
-This is the "no layout shift" implementation: the column width is locked by the grid template
-regardless of form content. The calendar and time columns do NOT reflow when the form appears.
-
-Rationale for in-place over modal: the booking flow is a contained card, not a full page.
-A modal would overlay the calendar/times the booker just used, breaking spatial context.
-Animated slide-in (CSS translate from right) is acceptable as an enhancement but not required
-for v1.5 — basic in-place swap is the table-stakes behavior.
-
-**Empty state for form column before slot pick:**
-Text only: "Pick a time on the left to continue." (current behavior from `booking-shell.tsx:102`)
-This is correct. Do NOT add a skeleton loader here — a skeleton implies content is loading;
-the form is not loading, it simply requires a slot selection to populate. A skeleton would
-be misleading UX.
-
-Do NOT add a timezone re-selector in the form column. The timezone hint lives above the card
-as a full-width sibling (PUB-14 pattern, already shipped in v1.3). Duplicating it in the form
-column creates confusion about which selector is authoritative.
-
-Do NOT render Turnstile (bot-protection widget) before slot pick. Current behavior: Turnstile
-renders inside `<BookingForm>`, which only mounts after `selectedSlot !== null`. This is correct
-— rendering Turnstile before slot pick wastes bot-protection tokens and clutters the empty
-form column. Preserve this behavior.
-
----
-
-## Differentiators (v1.6+, Do Not Build in v1.5)
-
-Features that would add competitive value but are out of scope for this milestone.
-
-| Feature | Value Proposition | Why Defer |
-|---------|------------------|-----------|
-| Pre-event buffer (`buffer_before_minutes`) | Prep time before appointment; useful for consultants who need to review notes | Schema column exists (`event_types.buffer_before_minutes`); wiring requires `computeSlots` changes similar to post-buffer but is a separate feature. No user request yet. |
-| Industry onboarding segmentation | Ask business type at signup, use to pre-populate event type templates | Requires schema column, analytics wiring, conditional UI. v1.5 scope is copy-only rebrand, not behavioral segmentation. |
-| Animated form slide-in | CSS translate-x transition when form column content appears | Visual polish only; adds CSS complexity; no correctness benefit. Worth adding in a polish pass. |
-| Buffer display for owner | Show "15 min buffer" badge on event type card in the owner list | Informational UI; low priority until owners actively request it. |
-| Timezone auto-detection confirmation | "We detected America/Chicago — is that right?" dialog | Current behavior (silent detection + "Times shown in X" text) is sufficient. Modal adds friction. |
-| Multiple reminder emails (24h + 1h) | Two reminders instead of one | Explicitly carried in PROJECT.md out-of-scope list. |
-| Per-event-type availability schedules | Different availability windows for different event types | Explicitly out of scope for all v1.x per PROJECT.md. |
-
----
-
-## Anti-Features (Explicitly NOT Building)
-
-Features to deliberately skip. Listing rationale prevents scope creep.
-
-| Anti-Feature | Why Not Build |
-|---|---|
-| Buffer affects displayed end-time in booker UI | `end_at` stores the raw booking window (`start_at + duration_minutes`). Displaying a buffer-extended end time to bookers would require either changing what `end_at` means (breaking the reschedule invariant and Phase 27 EXCLUDE constraint semantics) or computing a display-only extended end. No leading tool shows buffer to invitees — it is purely an owner scheduling aid. |
-| Pre-event buffer (`buffer_before_minutes`) in v1.5 | The v1.5 scope is explicitly post-event buffer only. Pre-buffer complicates the migration (how much of `accounts.buffer_minutes` is "before" vs "after"?) and has no user request. The `buffer_before_minutes` column exists in the schema at 0 for all rows — leave it at 0 for now. |
-| Industry/business-type question in onboarding | Adds schema, UX, and analytics requirements not in scope. Generic copy covers all verticals. |
-| Minimum scheduling notice in the buffer UI section | `min_notice_hours` (account-level) already handles minimum notice. Exposing it in the event-type editor is a separate feature. Do not combine with post-buffer to avoid confusion between "how soon can someone book" and "how long after an event is blocked." |
-| Timezone re-selector in form column | Timezone hint already lives above the card (PUB-14). Duplicating it inside the form column would create two competing selectors with unclear precedence. |
-| Captcha/Turnstile visible before slot pick | Current behavior correctly renders Turnstile only inside `<BookingForm>` (after slot pick). Changing this would burn bot-protection tokens on users who may not complete the form. |
-| Skeleton loader in empty form column | A skeleton implies loading state. The form column before slot pick is not loading anything — it is waiting for user input. A skeleton would be misleading. Use a plain text prompt instead. |
-| Layout shift on slot pick | The 3-column grid must reserve column 3 space at all times. Revealing the form by adding a column (which shifts columns 1 and 2 left) or inserting a DOM node that pushes content down violates the "no layout shift" requirement. |
-| Owner-facing "service type" badge or tag system | No design request, no user feedback. Premature categorization. |
-| Audience copy on booker-facing surfaces | The rebrand is OWNER-FACING only. Booking pages, embed widget, and transactional emails must stay brand-neutral (contractor's brand, not NSI product copy). |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Force gmail.send at signup — block account creation if denied | Seems simpler to ensure all accounts have Gmail connected | Google's granular consent (rolling out Jan 2026) allows users to grant profile but deny gmail.send; blocking account creation would break the signup funnel for any user who hesitates at the send permission | Allow signup with profile-only; prompt to connect Gmail in onboarding step; send fails gracefully with "reconnect Gmail" inline alert |
+| Re-prompt gmail.send on every login until granted | Feels like an easy nudge | Repeated permission nags are a Google OAuth violation ("Only request scopes your app needs at the time of the request"); Google can block apps that re-request already-denied scopes repeatedly | One prominent onboarding prompt + passive "Connect Gmail" card on settings page; never force a re-prompt after explicit denial |
+| Magic-link as the ONLY login method | Passwordless is simpler to maintain | Operators in low-email-reliability environments (Gmail spam filters, corporate email blocks) lose access entirely; existing password users expect their passwords to keep working | Magic-link as additional method alongside existing password login; "Use magic link instead" toggle/link on the login form |
+| Separate /login/magic-link page | Cleaner URL | Unnecessary route split; users expect a single /app/login page with both options; extra navigation adds friction | Add "Email me a sign-in link" inline below the password form on the existing login card |
+| Multi-use magic links (token valid for 30 min, multiple clicks) | Reduces "link expired" support tickets | Opens replay attack window; email client prefetchers (Outlook SafeLinks, Gmail, etc.) auto-click links on receipt, consuming single-use tokens silently | Issue a secondary token after detecting prefetch (user-agent / no-JS GET pattern); 15-min TTL with silent reissuance if prefetch detected |
+| "Unlimited" label for upgraded Resend accounts | Feels premium | Creates expectation of zero limits; Resend has its own per-day and per-month caps; support burden when owner hits Resend caps | Show higher cap number ("2,000/day") or "Managed plan — contact NSI for capacity"; never claim "unlimited" |
+| Status page for NSI Resend backend | Some SaaS products offer this | Way out of scope for v1.7; adds maintenance surface; Resend has its own status page | Link to Resend status page in upgrade confirmation email; no custom status page |
+| Dead-code removal as a big-bang single PR | Feels efficient | Single massive PR is un-reviewable; one false positive can delete a live path; Andrew cannot sign off on 200 items at once | Knip generates list → Andrew reviews and approves in batches → atomic per-item commits; one PR per logical group (e.g., all deprecated auth helpers, then all old booking utilities) |
+| Using ts-prune for dead-code audit | It exists and was once common | ts-prune is in maintenance mode as of 2023; does not understand Next.js App Router entry points, server actions, or route handlers | Use Knip — has a Next.js plugin that knows App Router layout/page/route/template patterns, middleware, and instrumentation; ~150 framework-aware plugins |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Buffer migration: backfill event_types.buffer_after_minutes from accounts.buffer_minutes]
-    └──required before──> [DROP accounts.buffer_minutes (CP-03 two-step)]
-    └──required before──> [Update computeSlots to read event_types.buffer_after_minutes]
-    └──required before──> [Update /api/slots route to pass event_types.buffer_after_minutes]
-    └──required before──> [Add buffer_after_minutes UI to event type editor]
+[Google OAuth signup]
+    └──requires──> [Supabase Auth Google provider enabled]
+    └──requires──> [Google Cloud project with gmail.send sensitive scope + verification]
+    └──yields───> [Gmail OAuth tokens stored in DB]
+                       └──enables──> [Per-account Gmail send]
 
-[3-column grid template change in booking-shell.tsx]
-    └──required before──> [Form column in-place reveal (already works, just add reserved space)]
-    └──does NOT affect──> [SlotPicker internals]
-    └──does NOT affect──> [BookingForm internals]
+[Per-account Gmail send]
+    └──requires──> [Gmail OAuth tokens stored in DB]
+    └──requires──> [Token refresh logic + invalid_grant detection]
+    └──replaces──> [Centralized Gmail SMTP (v1.0)]
+    └──yields───> [gmail_status field on accounts table]
+                       └──enables──> [Reconnect UX / inline alert]
 
-[Rebrand copy changes]
-    └──independent of buffer work]
-    └──independent of layout work]
-    └──touches same event-type editor as buffer UI → can batch]
+[Magic-link login]
+    └──requires──> [Supabase Auth magic link / OTP flow]
+    └──independent of──> [Google OAuth signup]
+
+[Cap-hit "Request upgrade" button]
+    └──requires──> [Existing 200/day quota guard (v1.6)]
+    └──requires──> [NSI Resend account + API key]
+    └──feeds───> [Upgraded account flag on accounts table]
+                     └──routes──> [NSI Resend backend for sends]
+
+[BOOKER-06 animated form slide-in]
+    └──requires──> [Existing 320px fixed form column (v1.5)]
+    └──independent of──> [BOOKER-07 skeleton]
+
+[BOOKER-07 skeleton loader]
+    └──requires──> [Form column conditional-mount pattern (v1.5)]
+    └──should not conflict with──> [BOOKER-06 animation]
+    └──note──> [Skeleton is for the NULL slot state; BOOKER-06 is the enter animation when slot IS selected — they fire at different lifecycle moments]
+
+[Dead-code audit]
+    └──requires──> [Knip installed + configured for Next.js App Router]
+    └──independent of──> [All other v1.7 features]
+    └──should run LAST──> [After all new code is written, to avoid auditing code still being added]
 ```
+
+### Dependency Notes
+
+- **Google OAuth signup requires Google Cloud project verification:** `gmail.send` is classified as a **sensitive scope**. An unverified app shows a "This app isn't verified" warning page where users must click "Advanced" then "Go to [app] (unsafe)" to proceed. During testing (app publishing status = "Testing"), refresh tokens expire after 7 days. Verification takes 3–5 business days. Plan for verification lead time before v1.7 ships to production users.
+
+- **Granular consent (partial grant) is live as of Jan 2026:** Google's new granular OAuth consent screen lets users grant profile-only and deny `gmail.send`. Apps must handle the partial grant case: create the account, surface the Gmail connect prompt in onboarding, do not block signup.
+
+- **Per-account Gmail send token lifecycle:** Google revokes refresh tokens on: (a) user changes password, (b) user removes app access in their Google account, (c) 6 months inactivity, (d) >100 live tokens per OAuth client (oldest silently revoked), (e) testing mode 7-day cap. Detect `invalid_grant` on every send attempt; mark `gmail_status = 'needs_reauth'`; do not retry silently.
+
+- **BOOKER-07 skeleton should NOT conflict with BOOKER-06:** The skeleton is the resting state of the empty form column (no slot selected). The BOOKER-06 slide-in animation fires when a slot IS picked — the skeleton exits and the BookingForm enters with the slide-in. These are sequential states, not competing animations. Prefer CSS Tailwind transitions over Framer Motion for this simple case (no Framer Motion dependency in the project currently).
 
 ---
 
-## Prioritization Matrix
+## MVP Definition for v1.7
+
+### Launch With
+
+- [ ] Google OAuth signup — basic profile scope only; gmail.send scope combined in same flow if Google project verification is complete, deferred to settings connect-step if not
+- [ ] Magic-link login added as option on existing /app/login card
+- [ ] Per-account Gmail OAuth send — connect in onboarding step 3+ and settings; `invalid_grant` detection + reconnect prompt
+- [ ] Cap-hit "Request upgrade" button — inline at quota refusal point; one-tap email to Andrew with account ID + daily count
+- [ ] NSI Resend backend routing for accounts with `upgraded: true` flag
+- [ ] BOOKER-06 animated form slide-in (200–250ms, ease-out, Tailwind CSS only)
+- [ ] BOOKER-07 skeleton in empty form column (shape-only, no shimmer needed for v1.7)
+- [ ] Dead-code audit pass (Knip report → Andrew sign-off → atomic removals)
+
+### Add After Validation (v1.x)
+
+- [ ] `gmail_last_sent_at` timestamp display — add after confirming per-account send is stable in production
+- [ ] Google Calendar read/write sync — separate OAuth scope from gmail.send; major feature surface for v1.8+
+- [ ] Upgrade tier with higher cap display ("2,000/day") — after first paid upgrade customer confirmed
+
+### Future Consideration (v2+)
+
+- [ ] Custom NSI status page for Resend backend
+- [ ] SAML/SSO for enterprise accounts
+- [ ] Multiple calendar integrations (Outlook, iCloud)
+
+---
+
+## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---------|-----------|---------------------|----------|
-| Per-event-type post-event buffer | HIGH (NSI production account has buffer_minutes=15; rebrand opens to verticals with varying buffer needs) | MEDIUM (migration + computeSlots + /api/slots route + event-type editor UI + tests) | P1 |
-| Drop accounts.buffer_minutes (CP-03) | MEDIUM (schema cleanup; prerequisite for correctness of per-event buffer) | LOW (follows migration; uses proven two-step drain protocol) | P1 |
-| Owner copy rebrand (contractors → service-based businesses) | MEDIUM (unlocks new customer segments; prevents awkward positioning) | LOW (copy-only across ~6-8 surfaces; no schema/API changes) | P1 |
-| Internal identifier rename | LOW (developer hygiene; no user-visible impact) | LOW (TypeScript rename refactor; no behavior change) | P2 |
-| 3-column grid layout (booking-shell.tsx) | HIGH (Andrew specifically flagged current layout as "chaotic") | LOW (CSS grid template change; existing form reveal logic unchanged) | P1 |
-| Form column reserved space (no layout shift) | MEDIUM (polish; prevents jarring reflow) | LOW (already reserved in current implementation — verify and lock) | P1 |
-| Mobile stacking order (calendar → times → form) | HIGH (mobile is primary surface for service business customers) | LOW (DOM order already correct; verify no CSS reorder) | P1 |
+|---------|------------|---------------------|----------|
+| Google OAuth signup | HIGH | HIGH (verification overhead) | P1 |
+| Per-account Gmail send | HIGH | HIGH (token lifecycle complexity) | P1 |
+| Magic-link login | MEDIUM | LOW | P1 |
+| Cap-hit Request upgrade button | HIGH | LOW | P1 |
+| NSI Resend backend routing | HIGH (for upgraded accounts) | MEDIUM | P1 |
+| Gmail reconnect alert + badge | HIGH | LOW | P1 |
+| BOOKER-06 animated slide-in | MEDIUM | LOW | P2 |
+| BOOKER-07 skeleton placeholder | LOW | LOW | P2 |
+| Dead-code audit | MEDIUM (maintainability) | MEDIUM (review overhead) | P2 |
+| `gmail_last_sent_at` display | LOW | LOW | P3 |
+
+**Priority key:**
+- P1: Required for v1.7 to deliver its stated goal
+- P2: Polish; ships in v1.7 if time allows, else v1.8
+- P3: Nice to have, future consideration
 
 ---
 
 ## Competitor Feature Analysis
 
-### Post-Event Buffer
+| Feature | Calendly | Cal.com | This App (v1.7 plan) |
+|---------|----------|---------|----------------------|
+| Google OAuth signup | Yes — profile scope; calendar connect is a separate post-signup step in Settings | Yes — profile scope at signup; Gmail send connect separate in settings | Combined signup + gmail.send in single consent if verified; partial-grant graceful fallback |
+| Magic-link login | No (password + Google SSO only) | Yes — "Email sign-in" link on login page alongside password and SSO | "Email me a sign-in link" on existing /app/login card |
+| Per-account email send | Calendly sends from `notifications@calendly.com`; Google Meet links in invites | Cal.com sends from `cal@...`; self-hosted instances can BYOE | Every account sends from their own Gmail; v1.0 centralized SMTP retired |
+| OAuth token expiry handling | Calendly shows "Calendar connection expired" banner; requires manual reconnect in Settings | Cal.com similar — inline error in settings; booking continues but without calendar sync | Detect `invalid_grant` on send; mark `needs_reauth`; surface inline banner on dashboard |
+| Cap-hit upgrade path | Calendly upgrades go to full plans with billing UI | Cal.com self-hosted has no cap path | Simple "Request upgrade" one-tap button; email to Andrew; manual white-glove upgrade |
+| Booking form animation | Column expands with a ~200ms fade-slide (CSS transition); form content fades in | Time list slides left; form column slides in from right (~250ms ease-out) | BOOKER-06: Tailwind CSS transition on the form column div; 200–250ms ease-out |
+| Skeleton loader in booker | Calendly shows shimmer skeleton for time-slot column while loading | Cal.com uses skeleton for entire booker during initial load | BOOKER-07: shape-only placeholder in form column when no slot selected |
+| Dead-code audit tooling | N/A (closed source) | Knip in CI (calcom/cal.com repo uses it) | Knip with Next.js App Router plugin; per-item Andrew sign-off; atomic commits |
 
-| Behavior | Calendly | Cal.com | Acuity Scheduling | SavvyCal | NSI v1.5 |
-|----------|---------|---------|------------------|---------|---------|
-| Scope | Per event type | Per event type ("Limits" tab) | Per appointment type | Per link (global or per-link) | Per event type |
-| UI section | "Limits and buffers" under "More options" | "Limits" tab in event editor | "Appointment types → Edit → Block off time after/before" | "Availability" section | Event type editor "Scheduling" or "Advanced" section |
-| UI label | "Buffer time" (before/after) | Not confirmed (documented as buffer_before/buffer_after in API) | "Padding" (block off time before/after) | "Buffer Before" / "Buffer After" | "Buffer after event" |
-| Units | Minutes | Minutes | Minutes | Minutes | Minutes |
-| Default | 0 | 0 | 0 | 0 | 0 (backfilled from accounts.buffer_minutes) |
-| Max | Not officially documented (360 reported in community) | Not confirmed | Not confirmed | Not confirmed | 360 (matches reported Calendly ceiling) |
-| Booker visibility | No | No | No | No | No |
-| End-time displayed | Raw end time only | Raw end time only | Raw end time only | Raw end time only | Raw end time only (buffer never in end_at) |
+---
 
-### Booker Layout
+## Detailed UX Notes Per Feature
 
-| Pattern | Calendly | Cal.com | Acuity (Monthly) | NSI v1.5 |
-|---------|---------|---------|-----------------|---------|
-| Desktop layout | Single page: calendar + daily slots together; form as separate step | MONTH_VIEW (sequential); COLUMN_VIEW = columns of days, not 3-panel | Calendar LEFT + times RIGHT (2-column); form as sequential step | 3-column: calendar LEFT + times MIDDLE + form RIGHT (simultaneous) |
-| Form reveal | New page/step after slot pick | New step after slot pick | Sequential step | In-place, no layout shift |
-| Mobile | Stacked, calendar-first | Stacked | Stacked | Stacked: calendar → times → form |
-| Empty form state | N/A (form not shown until after slot) | N/A | N/A | Plain text: "Pick a time to continue." |
+### Google OAuth signup + gmail.send
+
+**User sees (unverified app, during development/testing):**
+1. Standard "Sign in with Google" modal
+2. "This app isn't verified" warning page
+3. User must click "Advanced" → "Go to [appname] (unsafe)"
+4. Consent screen lists requested scopes including "Send email on your behalf"
+5. With granular consent (Jan 2026+): each scope is a checkbox; user can approve profile and skip gmail.send
+
+**User sees (verified app, production):**
+1. Standard consent screen with NSI branding
+2. Scope list shows "Send email on your behalf" — this IS visible but not alarming for verified apps
+3. No "unverified" interstitial
+
+**Partial grant handling (table stakes):**
+- Account created regardless of whether gmail.send was granted
+- Onboarding wizard shows "Connect Gmail for email notifications" step
+- Settings page shows "Gmail: Not connected — Connect" card
+- Owner dashboard shows `yellow` badge "Email not configured — connect Gmail to send booking emails"
+
+**Token expiry reconnect UX:**
+- On `invalid_grant` error: mark `accounts.gmail_status = 'needs_reauth'`
+- On next dashboard load: inline banner "Your Gmail connection expired. Reconnect to resume sending." with "Reconnect Gmail" button
+- Button re-initiates the same OAuth flow (incremental auth with `access_type=offline&prompt=consent`)
+- After reconnect: banner dismisses, status badge returns to green
+
+### Magic-link login
+
+**Standard pattern (verified by baytechconsulting source):**
+- 10–15 min TTL; single-use; invalidate on first click
+- Email-only field on a tab or section of /app/login (NOT a separate page)
+- "We sent you a link" confirmation shown immediately after submission; do not re-render the email field
+- If user requests a second link before first expires: invalidate the first, issue a new one (silent from user's perspective — they just get a fresh email)
+- Already-logged-in users hitting a magic link: redirect to /app/dashboard; do not error
+- Prefetch bot defense: implement using Supabase's built-in OTP/magic-link (it handles token verification); if GET pre-fetches the link, the single-use token is consumed silently — mitigate by using POST-to-verify pattern (link goes to a page that POSTs the token server-side, not auto-verified on GET)
+
+**Placement decision (table stakes):**
+- DO NOT create /app/login/magic-link as a separate route
+- Add "Sign in with email link instead" as a secondary action below the existing password form on /app/login
+- This keeps the existing password flow as default (existing users), magic-link as the opt-in path
+
+### Per-account Gmail OAuth send
+
+**Connect flow (onboarding):**
+1. After event type creation step: "Connect Gmail to send booking confirmation emails"
+2. Single "Connect Gmail" button → Google OAuth → return to onboarding
+3. On return: checkmark + "Connected as yourname@gmail.com"; continue button activates
+4. Skip option: "Skip for now — you can connect later in Settings"
+
+**Connect flow (settings page):**
+- Section: "Email sending" with current status badge
+- Connected: green badge + email address + "Last sent: 3 hours ago" + "Disconnect" button
+- Disconnected: orange badge + "Gmail not connected — booking emails will not send" + "Connect Gmail" button
+- Needs reauth: yellow badge + "Your Gmail connection expired" + "Reconnect" button
+
+**Disconnect behavior:**
+- Show confirm dialog: "Disconnecting Gmail will stop all booking email delivery until you reconnect. Existing bookings will not be affected but no future emails will send."
+- On confirm: revoke token on Google + clear stored tokens + set `gmail_status = 'disconnected'`
+- Do NOT silently fall back to any centralized SMTP — centralized SMTP is being retired in v1.7
+
+### Cap-hit "Request upgrade" flow
+
+**Point-of-failure UX (table stakes):**
+- Email send fails → existing quota refusal vocabulary already in place (`text-sm text-red-600 role="alert"`)
+- Append to existing quota error: "Daily limit reached. [Request upgrade →]" inline link/button
+- No separate upgrade page needed for v1.7
+
+**Request upgrade button behavior:**
+- Single click; no multi-step form needed
+- POST to server action that sends email to Andrew (via NSI Resend — NOT the owner's Gmail)
+- Email body: account ID, account email, current daily count, timestamp, account creation date
+- Owner sees: "Request sent. Andrew will contact you within 1 business day." toast
+- No second click possible for 24 hours (debounce to prevent accidental spam to Andrew)
+
+**Andrew's receive side:**
+- Email to Andrew's inbox via Resend
+- No Linear/in-app admin tool required for v1.7 — manual upgrade via DB flag `accounts.resend_upgraded = true`
+
+**After upgrade (NSI Resend backend):**
+- Account routes through Resend instead of Gmail OAuth
+- Daily count display changes from "200/day cap" to show Resend-tier limit or "Managed plan"
+- Owner settings shows "Email: Managed by NSI (Resend)" in place of Gmail connect section
+
+### BOOKER-06 animated form slide-in
+
+**What the existing code does (booking-shell.tsx line 255–269):**
+The form column Col 3 is a `<div>` that conditionally renders `<BookingForm>` or a plain text placeholder. No animation exists. Layout is already 320px fixed-width with no shift (v1.5 lock).
+
+**Target behavior:**
+- On slot pick: form column transitions from placeholder to active form
+- Animation: form slides in from right (~20px translateX) + fades in (opacity 0→1)
+- Duration: 200–250ms, `ease-out` (slows at end = feels like it "lands")
+- Implementation: Tailwind CSS `transition-all duration-200 ease-out` on the container + conditional translate class; NO Framer Motion dependency (no existing Framer Motion in project, avoid adding it for a 200ms transition)
+- Cal.com pattern: time list slides left, form slides in from right in ~250ms ease-out — this is the reference
+
+**When does it feel laggy?** Above 300ms users perceive it as slow. Below 150ms users miss it entirely. 200–250ms is the sweet spot confirmed by Motion docs and standard Material Design motion timing.
+
+**Turnstile guard:** The existing `key={selectedSlot.start_at}` forces BookingForm remount on slot change — this is intentional (RHF reset + Turnstile token refresh). The animation should be on the container div, not on BookingForm itself, so remounting BookingForm doesn't re-trigger the slide-in on every slot change. Animate the wrapper; let BookingForm mount fresh inside it.
+
+### BOOKER-07 skeleton loader for empty form column
+
+**When is it needed?**
+The empty form column currently shows: `"Pick a time on the left to continue."` — plain text. This feels like a dead zone. A skeleton signal communicates "content will appear here."
+
+**What the skeleton should look like:**
+- Shape matching approximate form layout: title bar ghost, 3 input field ghosts, submit button ghost
+- No shimmer animation needed for v1.7 (shimmer adds motion budget; shape alone is sufficient)
+- Should be visually subordinate — muted gray, not as visually loud as the active form
+- Disappears when a slot is selected (replaced by animated BOOKER-06 slide-in)
+
+**Does it conflict with BOOKER-06?**
+No, if implemented correctly:
+- Skeleton = state when `selectedSlot === null` (resting state)
+- BOOKER-06 slide-in = transition when `selectedSlot` changes from null to a value
+- These are mutually exclusive states; skeleton exits, form slides in
+
+**Competitor pattern (Cal.com):**
+Cal.com's embed uses a skeleton for the entire booker on initial load (before slots are fetched). They do NOT use a skeleton for the form column specifically — the form column is only shown after slot pick, and they slide it in directly. This app's pattern (reserving the 320px column in the 3-col grid at all times) is actually better for layout stability; a skeleton in that reserved column is purely a polish signal.
+
+**Implementation path:**
+Simple: replace the `<div className="text-sm text-muted-foreground">Pick a time...</div>` placeholder with a `<FormColumnSkeleton />` component. Pure Tailwind, no deps.
+
+### Dead-code audit
+
+**Standard tooling (HIGH confidence — Knip docs verified):**
+- Knip is the current standard; ts-prune is maintenance-only
+- Knip's Next.js plugin automatically detects App Router entry points: `app/**/page.tsx`, `app/**/layout.tsx`, `app/**/route.ts`, `app/**/template.tsx`, `app/**/loading.tsx`, `app/**/error.tsx`, `app/**/not-found.tsx`, `middleware.ts`, `instrumentation.ts`
+- Server actions: Knip follows imports; if a `'use server'` file is imported by a page/route, it's live. Orphaned server action files not imported anywhere will be flagged.
+- Test files: Knip treats test-runner entry points (Vitest config, test files) separately; exports used ONLY in tests are flagged as unused in source (this is intentional — they ARE unused in runtime code)
+
+**Recommended workflow:**
+1. Run `npx knip` to generate full report (unused files, unused exports, unused dependencies)
+2. Triage in three buckets: (a) safe to delete, (b) needs investigation, (c) intentionally kept (test helpers, future placeholders)
+3. Andrew reviews each item in bucket (a) and signs off
+4. Atomic commits per logical group — never one big-bang deletion PR
+5. For each ambiguous item (referenced in test setup but not in source): keep unless test coverage can be re-expressed without it
+
+**Known false-positive categories for this project:**
+- `slot-picker.tsx` — on disk per Andrew Option A (Plan 30-01 Rule 4); intentionally kept for future `<CalendarSlotPicker>` extraction; must be marked `// @knip-ignore` or added to Knip ignore list
+- Test mock helpers (`__mockSendCalls`, `__setTurnstileResult`) — referenced in test setup; correct Knip behavior to flag them; keep them, add to test-only ignore pattern
+- `02-VERIFICATION.md` and similar planning artifacts — not in Knip's scope (non-JS/TS); no action needed
 
 ---
 
 ## Sources
 
-- Cal.com Booker Atom docs: https://cal.com/docs/platform/atoms/booker (HIGH — official docs)
-- Cal.com v3.0 announcement: https://cal.com/blog/v-3-0 (MEDIUM — official blog)
-- Cal.com event settings guide: https://cal.com/blog/a-guide-to-cal-com-s-event-settings-and-features (MEDIUM — official blog, "Limits" tab confirmed)
-- Calendly buffer help: https://calendly.com/help/how-to-use-buffers (MEDIUM — official help, section name "Limits and buffers" confirmed, units = minutes)
-- Acuity buffer help: https://help.acuityscheduling.com/hc/en-us/articles/16676926857101 (LOW — 403 on direct fetch; confirmed via WebSearch summary: "Block off time before or after", per-appointment-type, minutes)
-- Acuity layout: search result quote "Monthly template displays a calendar on the left, with the times for the selected day on the right" (MEDIUM — sourced from SavvyCal's Acuity guide)
-- Calendly redesign layout: https://calendly.com/blog/new-scheduling-page-ui (MEDIUM — "choosing a day and time happens on the same page"; form is a separate step)
-- SavvyCal buffer: https://docs.savvycal.com/article/26-configuring-buffers (MEDIUM — "Buffer Before" / "Buffer After" per-link; minute units confirmed)
-- Codebase direct inspection: `lib/slots.ts`, `booking-shell.tsx`, `slot-picker.tsx`, `supabase/migrations/20260419120000_initial_schema.sql`, `supabase/migrations/20260425120000_account_availability_settings.sql` (HIGH — direct inspection, no inference)
+- [Gmail API OAuth scopes — Google for Developers](https://developers.google.com/workspace/gmail/api/auth/scopes) — `gmail.send` is a **sensitive scope** (HIGH confidence, official docs)
+- [Sensitive scope verification — Google for Developers](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification) — verification process, timeline, user cap for unverified apps (HIGH confidence, official docs)
+- [Granular OAuth consent — Google Workspace Updates](https://workspaceupdates.googleblog.com/2025/11/granular-oauth-consent-in-webapps.html) — partial grant behavior rolling out Jan 7, 2026; users can approve profile but deny gmail.send (HIGH confidence, official blog)
+- [Google invalid_grant causes and recovery — Nango Blog](https://nango.dev/blog/google-oauth-invalid-grant-token-has-been-expired-or-revoked/) — token revocation causes, reconnect UX recommendation (MEDIUM confidence, well-sourced technical article)
+- [Magic link UX and TTL best practices — BayTech Consulting 2025](https://www.baytechconsulting.com/blog/magic-links-ux-security-and-growth-impacts-for-saas-platforms-2025) — 10–15 min TTL, single-use, prefetch bot risk (MEDIUM confidence, secondary source, consistent with Supertokens docs)
+- [Knip — Next.js plugin reference](https://knip.dev/reference/plugins/next) — App Router entry point patterns (HIGH confidence, official Knip docs)
+- [Knip homepage](https://knip.dev/) — ts-prune is maintenance-mode; Knip is successor (HIGH confidence, official)
+- [Motion/Framer Motion transition docs](https://motion.dev/docs/react-transitions) — ease-out for enter animations; 200–300ms duration range (HIGH confidence, official Motion docs)
+- [Unverified apps — Google Cloud Console Help](https://support.google.com/cloud/answer/7454865?hl=en) — user warning screen behavior for unverified apps (HIGH confidence, official Google support)
+- [Skeleton screens vs spinners — NN/g](https://www.nngroup.com/articles/skeleton-screens/) — when to use skeleton vs spinner; dynamic content revealed by interaction should use skeleton for layout continuity (HIGH confidence, NN/g)
+- Cal.com open-source repo (public GitHub observation) — booking page states: `loading`, `selecting_date`, `selecting_time`; animation described in v2.1 release notes; skeleton for embed initial load (MEDIUM confidence, observed from public docs and issue tracker)
 
 ---
 
-*Feature research for: calendar-app v1.5 Buffer Fix + Audience Rebrand + Booker Redesign*
-*Researched: 2026-05-03*
+*Feature research for: NSI Booking Tool v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code*
+*Researched: 2026-05-06*
