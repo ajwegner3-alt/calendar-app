@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — v1.7 roadmap created. Phases 34-40 defined. 30/30 requirements mapped.
+**Last updated:** 2026-05-06 — Phase 34 Plan 01 complete. account_oauth_credentials schema + config.toml enable_manual_linking.
 
 ## Project Reference
 
@@ -8,17 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Roadmap created; ready to plan first phase.
+**Current focus:** v1.7 Phase 34 — Google OAuth Signup + Credential Capture. Plan 01 complete (schema + config); Plans 02-04 next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PLANNING
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
 **Phase:** 34 — Google OAuth Signup + Credential Capture (first v1.7 phase)
-**Plan:** —
-**Status:** Roadmap created. Ready to plan first phase.
-**Last activity:** 2026-05-06 — v1.7 roadmap written. ROADMAP.md, STATE.md, REQUIREMENTS.md traceability updated.
+**Plan:** 01 of ~4 — complete
+**Status:** Plan 01 complete. Plans 02-04 pending.
+**Last activity:** 2026-05-06 — Completed 34-01-PLAN.md (schema foundation + config.toml)
+
+Progress (Phase 34): █░░░ 1/4 plans complete
 
 ## Cumulative project progress
 
@@ -36,6 +38,11 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 **Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases, 138 plans, ~563 commits
 
 ## Accumulated Context
+
+### Patterns established in v1.7 (Phase 34+)
+
+- **Admin-client-only writes (Phase 34, Plan 01)** — `account_oauth_credentials` has no INSERT/UPDATE/DELETE RLS. All writes must use the service-role Supabase client in server-side API routes, preventing browser-side credential manipulation.
+- **AES-256-GCM encrypted blob format** — `iv:authTag:ciphertext` (all lowercase hex, 12-byte IV, 16-byte auth tag). Canonical format documented in migration comment; Plan 34-02 produces it, Phase 35 consumes it.
 
 ### Patterns established / locked through v1.6
 
@@ -62,13 +69,18 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — v1.7 roadmap created via `/gsd:new-milestone` flow.
+**Last session:** 2026-05-06 — Phase 34 Plan 01 executed (schema + config.toml).
 
-**Stopped at:** Roadmap creation complete. Files written: ROADMAP.md, STATE.md, REQUIREMENTS.md (traceability filled).
+**Stopped at:** Completed 34-01-PLAN.md. Commits: b214eb5 (migration), f490e7e (config.toml).
 
-**Next session:** Run `/gsd:plan-phase 34` to plan Phase 34 (Google OAuth Signup). Before starting: confirm PREREQ-01 and PREREQ-02 are in flight (Google Cloud Console + Supabase provider). PREREQ-04 env vars needed before first deploy.
+**Next session:** Execute Phase 34 Plan 02 — write API route that encrypts and stores the Google refresh token into account_oauth_credentials.
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
 - `.planning/STATE.md` — this file
 - `.planning/REQUIREMENTS.md` — all 30 v1.7 requirements with phase traceability filled
+- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-01-SUMMARY.md` — Plan 01 complete
+- `supabase/migrations/20260506120000_phase34_account_oauth_credentials.sql` — table schema (b214eb5)
+- `supabase/config.toml` — enable_manual_linking = true (f490e7e)
+
+**Note:** Docker was not running during Plan 01 execution. Run `npx supabase db reset` to verify migration applies cleanly before testing Plan 02 locally.
