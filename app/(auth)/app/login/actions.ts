@@ -60,3 +60,45 @@ export async function loginAction(
   revalidatePath("/", "layout");
   redirect("/app");
 }
+
+/**
+ * Server Action: initiate Google OAuth flow (Phase 34).
+ *
+ * Kicks off Supabase signInWithOAuth with combined scopes:
+ *   email + profile + gmail.send (single consent screen).
+ *
+ * access_type: "offline" — required for refresh_token issuance.
+ * prompt: "consent"      — required to RE-issue refresh_token even if user previously consented.
+ *
+ * redirect() throws NEXT_REDIRECT — keep outside try/catch.
+ */
+export async function initiateGoogleOAuthAction(): Promise<void> {
+  const h = await headers();
+  const origin =
+    h.get("origin") ??
+    h.get("referer")?.replace(/\/[^/]*$/, "") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000";
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/google-callback`,
+      scopes: "email profile https://www.googleapis.com/auth/gmail.send",
+      queryParams: {
+        access_type: "offline",  // required for refresh_token
+        prompt: "consent",       // required to RE-issue refresh_token even if user previously consented
+      },
+    },
+  });
+
+  if (error || !data.url) {
+    // No good error UX exists yet for OAuth init failures; log and bounce back to the page.
+    console.error("[initiateGoogleOAuthAction] init failed:", error?.message);
+    redirect("/app/login?google_error=init_failed");
+  }
+
+  // redirect() throws NEXT_REDIRECT — keep outside try/catch.
+  redirect(data.url);
+}
