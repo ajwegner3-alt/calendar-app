@@ -9,8 +9,13 @@ import {
   countMoved,
   type CascadeRow,
 } from "@/lib/bookings/pushback";
-import { getRemainingDailyQuota } from "@/lib/email-sender/quota-guard";
+import {
+  getRemainingDailyQuota,
+  QuotaExceededError,
+} from "@/lib/email-sender/quota-guard";
 import { rescheduleBooking } from "@/lib/bookings/reschedule";
+import { generateBookingTokens } from "@/lib/bookings/tokens";
+import { sendRescheduleEmails } from "@/lib/email/send-reschedule-emails";
 import { TZDate } from "@date-fns/tz";
 
 // ─── getBookingsForPushbackAction ────────────────────────────────────────────
@@ -412,4 +417,166 @@ export async function commitPushbackAction(
   revalidatePath("/app/bookings");
 
   return { ok: true, rows: results };
+}
+
+// ─── retryPushbackEmailAction ─────────────────────────────────────────────────
+// Plan 33-04: Re-send a single reschedule email for a booking whose DB UPDATE
+// succeeded during commitPushbackAction but whose email leg failed (status
+// === 'email_failed'). The booking is already at its new time — only the email
+// needs to be re-sent.
+//
+// Token pattern: mirrors sendReminderForBookingAction (actions.ts) — fresh raw
+// tokens are minted and their hashes persisted to the booking, invalidating any
+// older links in the booker's inbox.
+//
+// Quota: sendRescheduleEmails calls checkAndConsumeQuota internally and throws
+// QuotaExceededError if at cap. Caught here and mapped to { ok: false, quotaError }.
+//
+// LD-07 lock: sendOwner=false — booker leg only; owner already knows via the
+// in-dialog summary.
+
+export interface RetryPushbackEmailInput {
+  accountId: string;
+  bookingId: string;
+  /** From CommitPushbackResultRow.old_start_at — needed for the "Was:" field in
+   *  the email. The booking.start_at is now the NEW time after the commit. */
+  oldStartAt: string;
+  reason?: string; // same reason text used in the original batch (informational)
+}
+
+export type RetryPushbackEmailResult =
+  | { ok: true }
+  | { ok: false; quotaError: true; remaining: number }
+  | { ok: false; error: string };
+
+export async function retryPushbackEmailAction(
+  input: RetryPushbackEmailInput,
+): Promise<RetryPushbackEmailResult> {
+  const supabase = await createClient();
+
+  // ── 1. AUTH ──────────────────────────────────────────────────────────────────
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Unauthorized" };
+
+  // ── 2. OWNERSHIP + account fields for email ──────────────────────────────────
+  // Fetch account row including all fields needed for sendRescheduleEmails branding.
+  const { data: account } = await supabase
+    .from("accounts")
+    .select(
+      "id, owner_user_id, slug, name, timezone, owner_email, logo_url, brand_primary",
+    )
+    .eq("id", input.accountId)
+    .single();
+  if (account?.owner_user_id !== user.id)
+    return { ok: false, error: "Unauthorized" };
+
+  // ── 3. QUOTA PRE-FLIGHT ───────────────────────────────────────────────────────
+  // Pre-flight check to return a friendly error before attempting the send.
+  // sendRescheduleEmails also guards internally via checkAndConsumeQuota.
+  const remaining = await getRemainingDailyQuota();
+  if (remaining < 1) return { ok: false, quotaError: true, remaining };
+
+  // ── 4. FETCH BOOKING (current state — start_at is now the NEW time) ───────────
+  const { data: bookingRaw, error: fetchErr } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id, account_id, status,
+      start_at, end_at,
+      booker_name, booker_email, booker_timezone,
+      event_types!inner ( id, name, description, duration_minutes )
+    `,
+    )
+    .eq("id", input.bookingId)
+    .eq("account_id", input.accountId)
+    .single();
+
+  if (fetchErr || !bookingRaw)
+    return { ok: false, error: "Booking not found" };
+  if (bookingRaw.status !== "confirmed")
+    return { ok: false, error: "Booking is not confirmed" };
+
+  // Normalize event_types join cardinality (Supabase can return object or array).
+  const etRaw = bookingRaw.event_types as unknown;
+  const et = (Array.isArray(etRaw) ? etRaw[0] : etRaw) as {
+    id: string;
+    name: string;
+    description: string | null;
+    duration_minutes: number;
+  };
+
+  // ── 5. MINT FRESH TOKENS ──────────────────────────────────────────────────────
+  // Matches Phase 8 cron + sendReminderForBookingAction precedent.
+  // Invalidates any older raw cancel/reschedule links in the booker's inbox.
+  const { rawCancel, rawReschedule, hashCancel, hashReschedule } =
+    await generateBookingTokens();
+
+  const { error: updateErr } = await supabase
+    .from("bookings")
+    .update({
+      cancel_token_hash: hashCancel,
+      reschedule_token_hash: hashReschedule,
+    })
+    .eq("id", bookingRaw.id);
+  if (updateErr)
+    return {
+      ok: false,
+      error: "Failed to refresh tokens: " + updateErr.message,
+    };
+
+  // ── 6. SEND BOOKER EMAIL ONLY ─────────────────────────────────────────────────
+  // sendOwner=false: LD-07 booker-neutrality + owner already knows via in-dialog summary.
+  // oldStartAt from input: booking.start_at is now the NEW time after the batch commit.
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : "http://localhost:3000");
+
+  try {
+    await sendRescheduleEmails({
+      booking: {
+        id: bookingRaw.id,
+        start_at: bookingRaw.start_at,   // NEW time (already committed)
+        end_at: bookingRaw.end_at,
+        booker_name: bookingRaw.booker_name,
+        booker_email: bookingRaw.booker_email,
+        booker_timezone: bookingRaw.booker_timezone,
+      },
+      eventType: {
+        name: et.name,
+        description: et.description,
+        duration_minutes: et.duration_minutes,
+      },
+      account: {
+        id: account.id,
+        name: account.name,
+        slug: account.slug,
+        timezone: account.timezone,
+        owner_email: account.owner_email,
+        logo_url: account.logo_url,
+        brand_primary: account.brand_primary,
+      },
+      oldStartAt: input.oldStartAt,       // original pre-commit time for "Was:" line
+      oldEndAt: input.oldStartAt,         // oldEndAt only used by owner leg (sendOwner=false skips it)
+      rawCancelToken: rawCancel,
+      rawRescheduleToken: rawReschedule,
+      appUrl,
+      sendOwner: false,
+    });
+  } catch (e) {
+    if (e instanceof QuotaExceededError) {
+      const currentRemaining = await getRemainingDailyQuota();
+      return { ok: false, quotaError: true, remaining: currentRemaining };
+    }
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Email send failed",
+    };
+  }
+
+  revalidatePath("/app/bookings");
+  return { ok: true };
 }
