@@ -257,6 +257,8 @@ export async function sendReminderForBookingAction(
       rawCancelToken,
       rawRescheduleToken,
       appUrl,
+      // Phase 35: per-account Gmail OAuth sender factory
+      accountId: account.id,
     });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

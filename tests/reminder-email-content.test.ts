@@ -1,8 +1,7 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { sendReminderBooker, type SendReminderBookerArgs } from "@/lib/email/send-reminder-booker";
-import { __mockSendCalls, __resetMockSendCalls } from "@/lib/email-sender";
 
 /**
  * Plan 08-04 Task 1 Step C — content-quality automated guard for EMAIL-08.
@@ -10,6 +9,10 @@ import { __mockSendCalls, __resetMockSendCalls } from "@/lib/email-sender";
  * Catches obvious content regressions in CI so the manual mail-tester run
  * (Plan 08-08 manual checkpoint) only needs to evaluate fundamentals like
  * SPF/DKIM, not "did we accidentally ship broken hrefs?".
+ *
+ * Phase 35 update: migrated from __mockSendCalls singleton to vi.mock of
+ * @/lib/email-sender/account-sender so getSenderForAccount returns a stub
+ * EmailClient whose .send() is a vi.fn() spy.
  *
  * Assertions per RESEARCH §Warning 9:
  *   - Every href is either https://... or starts with /  (no undefined / empty)
@@ -20,6 +23,38 @@ import { __mockSendCalls, __resetMockSendCalls } from "@/lib/email-sender";
  *     (no spammy "REMINDER: BOOK YOUR ..." style)
  *   - All toggle blocks correctly omit content when their flag is false
  */
+
+// ---------------------------------------------------------------------------
+// Mock @/lib/email-sender/account-sender BEFORE importing the senders.
+// ---------------------------------------------------------------------------
+const mockSendFn = vi.fn().mockResolvedValue({ success: true, messageId: "mock-test" });
+
+vi.mock("@/lib/email-sender/account-sender", () => ({
+  REFUSED_SEND_ERROR_PREFIX: "oauth_send_refused",
+  getSenderForAccount: vi.fn().mockResolvedValue({
+    provider: "gmail",
+    send: (...args: unknown[]) => mockSendFn(...args),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock @/lib/supabase/admin — quota-guard calls it internally.
+// ---------------------------------------------------------------------------
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: (_table: string) => ({
+      select: (_cols: string, _opts?: object) => ({
+        eq: (_col: string, _val: string) => ({
+          gte: (_col2: string, _val2: string) =>
+            Promise.resolve({ count: 0, error: null }),
+        }),
+        gte: (_col: string, _val: string) =>
+          Promise.resolve({ count: 0, error: null }),
+      }),
+      insert: (_row: object) => Promise.resolve({ error: null }),
+    }),
+  }),
+}));
 
 const baseArgs = (): SendReminderBookerArgs => ({
   booking: {
@@ -37,6 +72,8 @@ const baseArgs = (): SendReminderBookerArgs => ({
     location: "1234 Main Street\nOmaha, NE 68102",
   },
   account: {
+    /** Phase 35: id field required by quota-guard logQuotaRefusal. */
+    id: "ba8e712d-28b7-4071-b3d4-361fb6fb7a60",
     slug: "acme-plumbing",
     name: "Acme Plumbing",
     logo_url: "https://example.com/logo.png",
@@ -49,10 +86,12 @@ const baseArgs = (): SendReminderBookerArgs => ({
   rawCancelToken: "raw-cancel-token-1234567890abcdef",
   rawRescheduleToken: "raw-reschedule-token-1234567890abcdef",
   appUrl: "https://book.acme.example.com",
+  /** Phase 35: account UUID for per-account Gmail OAuth sender factory. */
+  accountId: "ba8e712d-28b7-4071-b3d4-361fb6fb7a60",
 });
 
 beforeEach(() => {
-  __resetMockSendCalls();
+  mockSendFn.mockClear();
 });
 
 /** Extract href values from anchor tags in an HTML string. */
@@ -75,8 +114,8 @@ describe("sendReminderBooker — content-quality guards (EMAIL-08)", () => {
   it("[#1] all toggles ON: hrefs are well-formed, text alt non-empty, logo present, subject not spammy", async () => {
     await sendReminderBooker(baseArgs());
 
-    expect(__mockSendCalls).toHaveLength(1);
-    const call = __mockSendCalls[0]!;
+    expect(mockSendFn).toHaveBeenCalledTimes(1);
+    const call = mockSendFn.mock.calls[0][0];
 
     // Subject template + non-spammy
     expect(call.subject).toMatch(/^Reminder: Plumbing Estimate tomorrow at /);
@@ -119,7 +158,7 @@ describe("sendReminderBooker — content-quality guards (EMAIL-08)", () => {
 
     await sendReminderBooker(args);
 
-    const html = String(__mockSendCalls[0]!.html ?? "");
+    const html = String(mockSendFn.mock.calls[0][0].html ?? "");
 
     // Location section omitted
     expect(html).not.toContain("Location:");
@@ -146,7 +185,7 @@ describe("sendReminderBooker — content-quality guards (EMAIL-08)", () => {
     // others stay true
 
     await sendReminderBooker(args);
-    const html = String(__mockSendCalls[0]!.html ?? "");
+    const html = String(mockSendFn.mock.calls[0][0].html ?? "");
 
     expect(html).not.toContain("Location:");
     expect(html).not.toContain("1234 Main Street");
@@ -160,7 +199,7 @@ describe("sendReminderBooker — content-quality guards (EMAIL-08)", () => {
     args.account.logo_url = null;
 
     await sendReminderBooker(args);
-    const html = String(__mockSendCalls[0]!.html ?? "");
+    const html = String(mockSendFn.mock.calls[0][0].html ?? "");
 
     expect(html).not.toContain("<img");
   });
@@ -170,7 +209,7 @@ describe("sendReminderBooker — content-quality guards (EMAIL-08)", () => {
     args.booking.answers = {};
 
     await sendReminderBooker(args);
-    const html = String(__mockSendCalls[0]!.html ?? "");
+    const html = String(mockSendFn.mock.calls[0][0].html ?? "");
 
     expect(html).not.toContain("Your answers:");
   });
@@ -180,7 +219,7 @@ describe("sendReminderBooker — content-quality guards (EMAIL-08)", () => {
     args.eventType.location = "   "; // whitespace only
 
     await sendReminderBooker(args);
-    const html = String(__mockSendCalls[0]!.html ?? "");
+    const html = String(mockSendFn.mock.calls[0][0].html ?? "");
 
     expect(html).not.toContain("Location:");
   });

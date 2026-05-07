@@ -335,6 +335,8 @@ export async function POST(req: NextRequest) {
       logo_url: account.logo_url ?? null,
       brand_primary: account.brand_primary ?? null,
     },
+    // Phase 35: per-account Gmail OAuth sender factory
+    accountId: account.id,
     rawCancelToken: tokens.rawCancel,
     rawRescheduleToken: tokens.rawReschedule,
     appUrl: resolveAppUrl(req),
@@ -471,6 +473,8 @@ export async function POST(req: NextRequest) {
             reminder_include_location: enrichedAccount.reminder_include_location,
             reminder_include_lifecycle_links: enrichedAccount.reminder_include_lifecycle_links,
           },
+          // Phase 35: per-account Gmail OAuth sender factory
+          accountId: account.id,
           rawCancelToken: rawCancel,
           rawRescheduleToken: rawReschedule,
           appUrl: reminderAppUrl,

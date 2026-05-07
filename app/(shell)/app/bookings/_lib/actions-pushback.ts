@@ -169,7 +169,7 @@ export async function previewPushbackAction(
   });
 
   const movedCount = countMoved(rows);
-  const remainingQuota = await getRemainingDailyQuota();
+  const remainingQuota = await getRemainingDailyQuota(input.accountId);
 
   return {
     ok: true,
@@ -254,7 +254,7 @@ export async function commitPushbackAction(
 
   // ── 2. HARD QUOTA PRE-FLIGHT (re-checked at commit time, not just at preview) ─
   // skipOwnerEmail=true → 1 booker email per moved booking → needed = count.
-  const remaining = await getRemainingDailyQuota();
+  const remaining = await getRemainingDailyQuota(input.accountId);
   const needed = input.movedBookings.length;
   if (needed > remaining) {
     return { ok: false, quotaError: true, needed, remaining };
@@ -469,7 +469,7 @@ export async function retryPushbackEmailAction(
   // ── 3. QUOTA PRE-FLIGHT ───────────────────────────────────────────────────────
   // Pre-flight check to return a friendly error before attempting the send.
   // sendRescheduleEmails also guards internally via checkAndConsumeQuota.
-  const remaining = await getRemainingDailyQuota();
+  const remaining = await getRemainingDailyQuota(input.accountId);
   if (remaining < 1) return { ok: false, quotaError: true, remaining };
 
   // ── 4. FETCH BOOKING (current state — start_at is now the NEW time) ───────────
@@ -562,10 +562,12 @@ export async function retryPushbackEmailAction(
       // PUSH-10: retry preserves the original batch's apology + reason callout.
       actor: "owner",
       reason: input.reason,
+      // Phase 35: per-account Gmail OAuth sender factory
+      accountId: input.accountId,
     });
   } catch (e) {
     if (e instanceof QuotaExceededError) {
-      const currentRemaining = await getRemainingDailyQuota();
+      const currentRemaining = await getRemainingDailyQuota(input.accountId);
       return { ok: false, quotaError: true, remaining: currentRemaining };
     }
     return {

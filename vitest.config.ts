@@ -42,6 +42,19 @@ export default defineConfig({
         find: /^@\/lib\/email-sender$/,
         replacement: path.resolve(__dirname, "tests/__mocks__/email-sender.ts"),
       },
+
+      // Account-sender mock — intercepts getSenderForAccount() used by all
+      // 5 leaf senders after the Phase 35 cutover. The stub EmailClient's
+      // .send() pushes to the same __mockSendCalls array as the email-sender
+      // mock above so existing integration tests (cancel-reschedule-api,
+      // reminder-cron, bookings-api) continue to work without modification.
+      //
+      // Pinned to exact specifier only (the real quota-guard/types sub-paths
+      // are NOT intercepted — same pattern as the email-sender alias above).
+      {
+        find: /^@\/lib\/email-sender\/account-sender$/,
+        replacement: path.resolve(__dirname, "tests/__mocks__/account-sender.ts"),
+      },
     ],
   },
   test: {

@@ -269,6 +269,8 @@ export async function GET(request: NextRequest) {
           reminder_include_location: c.accounts.reminder_include_location,
           reminder_include_lifecycle_links: c.accounts.reminder_include_lifecycle_links,
         },
+        // Phase 35: per-account Gmail OAuth sender factory
+        accountId: c.account_id,
         rawCancelToken: tokens.rawCancel,
         rawRescheduleToken: tokens.rawReschedule,
         appUrl,

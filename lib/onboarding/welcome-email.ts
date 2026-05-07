@@ -28,7 +28,10 @@ export async function sendWelcomeEmail(account: {
 }): Promise<void> {
   // Quota guard FIRST (per 10-04 contract — signup-side callers gate before send).
   try {
-    await checkAndConsumeQuota("signup-welcome");
+    // Nil UUID sentinel: no per-account context at welcome-email time (Phase 35).
+    // The email is sent on behalf of the system (singleton SMTP) until Phase 36
+    // migrates this path to per-account Gmail OAuth.
+    await checkAndConsumeQuota("signup-welcome", "00000000-0000-0000-0000-000000000000");
   } catch (e) {
     if (e instanceof QuotaExceededError) {
       console.error("[welcome-email] quota exceeded; skipping welcome", e.message);

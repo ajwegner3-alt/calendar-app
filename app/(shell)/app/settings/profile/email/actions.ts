@@ -58,9 +58,20 @@ export async function requestEmailChangeAction(
     return { formError: "Too many email-change attempts. Please wait an hour before trying again." };
   }
 
-  // 4. Quota guard — count against daily signup-class email budget
+  // 4. Quota guard — count against daily signup-class email budget.
+  // Fetch account ID for per-account quota isolation (Phase 35).
+  // Falls back to nil UUID if account row not found (defensive).
+  let emailChangeAccountId = "00000000-0000-0000-0000-000000000000";
+  {
+    const { data: acct } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("owner_user_id", uid)
+      .maybeSingle();
+    if (acct?.id) emailChangeAccountId = acct.id;
+  }
   try {
-    await checkAndConsumeQuota("email-change");
+    await checkAndConsumeQuota("email-change", emailChangeAccountId);
   } catch (e) {
     if (e instanceof QuotaExceededError) {
       return { formError: "Email changes are temporarily unavailable. Please try again tomorrow." };

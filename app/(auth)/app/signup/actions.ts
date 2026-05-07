@@ -64,7 +64,9 @@ export async function signUpAction(
   //    Unexpected errors (non-QuotaExceededError) are logged but do not block signup
   //    per the quota-guard contract (fail-open for unexpected DB errors).
   try {
-    await checkAndConsumeQuota("signup-verify");
+    // System-level send (no per-account context yet at signup time); uses nil UUID
+    // as the accountId sentinel so quota is tracked under the system bucket.
+    await checkAndConsumeQuota("signup-verify", "00000000-0000-0000-0000-000000000000");
   } catch (e) {
     if (e instanceof QuotaExceededError) {
       return {

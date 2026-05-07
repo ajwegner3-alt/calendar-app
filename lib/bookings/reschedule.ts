@@ -254,6 +254,8 @@ export async function rescheduleBooking(
       // a "Reason:" callout when actor='owner' && reason is non-empty.
       actor,
       reason,
+      // Phase 35: per-account Gmail OAuth sender factory
+      accountId: pre.account_id,
     });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

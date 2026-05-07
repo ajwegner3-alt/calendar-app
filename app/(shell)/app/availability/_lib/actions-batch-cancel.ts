@@ -249,7 +249,7 @@ export async function previewAffectedBookingsAction(
     return { ok: false, error: "Failed to load bookings. Please try again." };
   }
 
-  const remainingQuota = await getRemainingDailyQuota();
+  const remainingQuota = await getRemainingDailyQuota(accountId);
   return { ok: true, affected, remainingQuota };
 }
 
@@ -276,7 +276,7 @@ export async function commitInverseOverrideAction(
   // ── 3. HARD quota pre-flight (EMAIL-23) ──────────────────────────────────
   // skipOwnerEmail=true means each cancelBooking() sends exactly 1 email
   // (booker leg only). Therefore needed = affectedBookingIds.length.
-  const remaining = await getRemainingDailyQuota();
+  const remaining = await getRemainingDailyQuota(accountId);
   const needed = input.affectedBookingIds.length;
   if (needed > remaining) {
     // No DB writes, no sends. Editor UI surfaces "needed N, remaining M".

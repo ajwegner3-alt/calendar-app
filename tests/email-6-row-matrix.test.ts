@@ -7,18 +7,51 @@
  *   2. Include "Powered by" text in footer
  *   3. Per-sender: correct plain-text alt presence
  *
- * This gives EMAIL-12 closure at the code level. Live inbox inspection
- * (Gmail web pass) is documented in the SUMMARY and deferred to Phase 13 QA.
- * Live cross-client testing (Outlook desktop, Apple Mail iOS, Yahoo) is
- * deferred to v1.2 per CONTEXT.md lock.
+ * Phase 35 update: migrated from __mockSendCalls singleton to vi.mock of
+ * @/lib/email-sender/account-sender so getSenderForAccount returns a stub
+ * EmailClient whose .send() is a vi.fn() spy.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// ---------------------------------------------------------------------------
+// Mock @/lib/email-sender/account-sender BEFORE importing the senders.
+// The stub EmailClient's .send captures all EmailOptions for assertions.
+// ---------------------------------------------------------------------------
+const mockSendFn = vi.fn().mockResolvedValue({ success: true, messageId: "mock-test" });
+
+vi.mock("@/lib/email-sender/account-sender", () => ({
+  REFUSED_SEND_ERROR_PREFIX: "oauth_send_refused",
+  getSenderForAccount: vi.fn().mockResolvedValue({
+    provider: "gmail",
+    send: (...args: unknown[]) => mockSendFn(...args),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock @/lib/supabase/admin — quota-guard calls it internally; we don't want
+// real DB round-trips in these HTML-content tests.
+// ---------------------------------------------------------------------------
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: (_table: string) => ({
+      select: (_cols: string, _opts?: object) => ({
+        eq: (_col: string, _val: string) => ({
+          gte: (_col2: string, _val2: string) =>
+            Promise.resolve({ count: 0, error: null }),
+        }),
+        gte: (_col: string, _val: string) =>
+          Promise.resolve({ count: 0, error: null }),
+      }),
+      insert: (_row: object) => Promise.resolve({ error: null }),
+    }),
+  }),
+}));
+
 import { sendBookingConfirmation } from "@/lib/email/send-booking-confirmation";
 import { sendOwnerNotification } from "@/lib/email/send-owner-notification";
 import { sendCancelEmails } from "@/lib/email/send-cancel-emails";
 import { sendRescheduleEmails } from "@/lib/email/send-reschedule-emails";
 import { sendReminderBooker } from "@/lib/email/send-reminder-booker";
-import { __mockSendCalls, __resetMockSendCalls } from "@/lib/email-sender";
 
 // ─── Shared fixture data ────────────────────────────────────────────────────
 
@@ -44,7 +77,10 @@ const eventType = {
   location:         null,
 };
 
-/** Account with branded brand_primary — ensures header band uses non-default color (Phase 19 simplified interface) */
+/**
+ * Account with branded brand_primary — ensures header band uses non-default color.
+ * Phase 35: added `id` field required by quota-guard and Phase 31 logQuotaRefusal.
+ */
 const account = {
   id:           "ba8e712d-28b7-4071-b3d4-361fb6fb7a60",
   name:         "Acme Plumbing",
@@ -55,12 +91,15 @@ const account = {
   brand_primary: "#0A2540",
 };
 
+/** Phase 35: account UUID threaded to all sender calls. */
+const TEST_ACCOUNT_ID = account.id;
+
 const APP_URL = "https://book.acme.example.com";
 
 // ─── Helper ────────────────────────────────────────────────────────────────
 
 /** Assert a rendered HTML contains branded header band and NSI footer. */
-function assertBrandedEmail(html: string, opts: { expectPlainText?: boolean; callIndex?: number } = {}) {
+function assertBrandedEmail(html: string) {
   // Header band: table with bgcolor attribute (Outlook-safe pattern)
   expect(html).toMatch(/bgcolor="#[0-9A-Fa-f]{6}"/i);
   // Footer: "Powered by" text
@@ -70,7 +109,7 @@ function assertBrandedEmail(html: string, opts: { expectPlainText?: boolean; cal
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  __resetMockSendCalls();
+  mockSendFn.mockClear();
 });
 
 describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () => {
@@ -82,11 +121,12 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       rawCancelToken:     "raw-cancel-token-confirm",
       rawRescheduleToken: "raw-reschedule-token-confirm",
       appUrl: APP_URL,
+      accountId: TEST_ACCOUNT_ID,
     });
 
     // booker email is call[0]
-    expect(__mockSendCalls).toHaveLength(1);
-    const call = __mockSendCalls[0]!;
+    expect(mockSendFn).toHaveBeenCalledTimes(1);
+    const call = mockSendFn.mock.calls[0][0];
     const html = String(call.html ?? "");
 
     assertBrandedEmail(html);
@@ -94,7 +134,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
     // Correct background color in header
     expect(html).toContain("background-color:#0A2540");
 
-    // Body content unchanged (apostrophe is in static string so not HTML-escaped)
+    // Body content unchanged
     expect(html).toContain("You're booked.");
     expect(html).toContain("Alex Booker");
     expect(html).toContain("Plumbing Estimate");
@@ -110,10 +150,11 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       booking,
       eventType,
       account,
+      accountId: TEST_ACCOUNT_ID,
     });
 
-    expect(__mockSendCalls).toHaveLength(1);
-    const call = __mockSendCalls[0]!;
+    expect(mockSendFn).toHaveBeenCalledTimes(1);
+    const call = mockSendFn.mock.calls[0][0];
     const html = String(call.html ?? "");
 
     assertBrandedEmail(html);
@@ -132,13 +173,16 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       account,
       actor: "booker",
       appUrl: APP_URL,
+      accountId: TEST_ACCOUNT_ID,
     });
 
     // sendCancelEmails fires both booker + owner emails → 2 calls
-    expect(__mockSendCalls).toHaveLength(2);
+    expect(mockSendFn).toHaveBeenCalledTimes(2);
 
     // Find booker cancel (to: booker_email)
-    const bookerCall = __mockSendCalls.find((c) => c.to === booking.booker_email);
+    const bookerCall = mockSendFn.mock.calls.map((c) => c[0]).find(
+      (c) => c.to === booking.booker_email,
+    );
     expect(bookerCall).toBeDefined();
     const html = String(bookerCall!.html ?? "");
 
@@ -159,12 +203,15 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       account,
       actor: "booker",
       appUrl: APP_URL,
+      accountId: TEST_ACCOUNT_ID,
     });
 
-    expect(__mockSendCalls).toHaveLength(2);
+    expect(mockSendFn).toHaveBeenCalledTimes(2);
 
     // Find owner cancel (to: owner_email)
-    const ownerCall = __mockSendCalls.find((c) => c.to === account.owner_email);
+    const ownerCall = mockSendFn.mock.calls.map((c) => c[0]).find(
+      (c) => c.to === account.owner_email,
+    );
     expect(ownerCall).toBeDefined();
     const html = String(ownerCall!.html ?? "");
 
@@ -186,11 +233,14 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       rawCancelToken:     "raw-cancel-token-reschedule",
       rawRescheduleToken: "raw-reschedule-token-reschedule",
       appUrl: APP_URL,
+      accountId: TEST_ACCOUNT_ID,
     });
 
-    expect(__mockSendCalls).toHaveLength(2);
+    expect(mockSendFn).toHaveBeenCalledTimes(2);
 
-    const bookerCall = __mockSendCalls.find((c) => c.to === booking.booker_email);
+    const bookerCall = mockSendFn.mock.calls.map((c) => c[0]).find(
+      (c) => c.to === booking.booker_email,
+    );
     expect(bookerCall).toBeDefined();
     const html = String(bookerCall!.html ?? "");
 
@@ -217,11 +267,14 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       rawCancelToken:     "raw-cancel-token-reschedule-owner",
       rawRescheduleToken: "raw-reschedule-token-reschedule-owner",
       appUrl: APP_URL,
+      accountId: TEST_ACCOUNT_ID,
     });
 
-    expect(__mockSendCalls).toHaveLength(2);
+    expect(mockSendFn).toHaveBeenCalledTimes(2);
 
-    const ownerCall = __mockSendCalls.find((c) => c.to === account.owner_email);
+    const ownerCall = mockSendFn.mock.calls.map((c) => c[0]).find(
+      (c) => c.to === account.owner_email,
+    );
     expect(ownerCall).toBeDefined();
     const html = String(ownerCall!.html ?? "");
 
@@ -247,6 +300,7 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
         location:         null,
       },
       account: {
+        id:               account.id,
         slug:             account.slug,
         name:             account.name,
         logo_url:         account.logo_url,
@@ -259,10 +313,11 @@ describe("EMAIL-12: 6-row visual smoke matrix (code-level HTML assertions)", () 
       rawCancelToken:     "raw-cancel-token-reminder",
       rawRescheduleToken: "raw-reschedule-token-reminder",
       appUrl: APP_URL,
+      accountId: TEST_ACCOUNT_ID,
     });
 
-    expect(__mockSendCalls).toHaveLength(1);
-    const call = __mockSendCalls[0]!;
+    expect(mockSendFn).toHaveBeenCalledTimes(1);
+    const call = mockSendFn.mock.calls[0][0];
     const html = String(call.html ?? "");
 
     assertBrandedEmail(html);

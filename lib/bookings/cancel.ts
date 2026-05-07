@@ -202,6 +202,8 @@ export async function cancelBooking(
       // Phase 32 (AVAIL-06): batch-initiated cancels (e.g. inverse-override
       // commit) suppress the owner email leg to avoid N duplicate notifications.
       sendOwner: !skipOwnerEmail,
+      // Phase 35: per-account Gmail OAuth sender factory
+      accountId: pre.account_id,
     });
   } catch (err) {
     if (err instanceof QuotaExceededError) {
