@@ -127,12 +127,12 @@ Output: Migration applied to local Supabase, `quota-guard.ts` exports updated si
     Do NOT change the `EmailCategory` union, `QuotaExceededError`, `SIGNUP_DAILY_EMAIL_CAP`, or `logQuotaRefusal` signatures — those are stable.
   </action>
   <verify>
-    Run `npx tsc --noEmit` from the project root — must compile clean (no callers updated yet in this plan; expect type errors at every callsite — that is correct, those get fixed in Plan 04. Confirm only that `lib/email-sender/quota-guard.ts` itself has no type errors by running `npx tsc --noEmit lib/email-sender/quota-guard.ts` if possible, or grep the tsc output for non-quota-guard errors).
+    Run `npx tsc --noEmit 2>&1 | grep "quota-guard.ts"` to filter to only errors in the target file. Expected output: empty (no quota-guard.ts errors). Errors at the 7 callsites elsewhere in the repo are EXPECTED in this plan and are fixed in Plan 04 — they will appear in the unfiltered tsc output but the grep above filters them out so the executor only sees what is in scope for this task.
 
     Then update `tests/quota-guard.test.ts`: every existing call to `checkAndConsumeQuota("category")`, `getDailySendCount()`, `getRemainingDailyQuota()` must pass an `accountId` (use a constant test UUID like `"00000000-0000-0000-0000-000000000001"`). Run `npx vitest run tests/quota-guard.test.ts` — must be green.
   </verify>
   <done>
-    `lib/email-sender/quota-guard.ts` exports `getDailySendCount(accountId)`, `checkAndConsumeQuota(category, accountId)`, `getRemainingDailyQuota(accountId)`; the file itself type-checks; `tests/quota-guard.test.ts` passes with the new signatures. Callsite type errors elsewhere are expected and resolved in Plan 04.
+    `lib/email-sender/quota-guard.ts` exports `getDailySendCount(accountId)`, `checkAndConsumeQuota(category, accountId)`, `getRemainingDailyQuota(accountId)`; `npx tsc --noEmit 2>&1 | grep "quota-guard.ts"` returns no output (file itself type-checks); `tests/quota-guard.test.ts` passes with the new signatures. Callsite type errors elsewhere are expected and resolved in Plan 04.
   </done>
 </task>
 
@@ -142,7 +142,7 @@ Output: Migration applied to local Supabase, `quota-guard.ts` exports updated si
 - Migration applied: `email_send_log` has `account_id uuid` column + index.
 - `quota-guard.ts` filters and inserts by `account_id`.
 - `tests/quota-guard.test.ts` green with new signatures.
-- Repo-wide `npx tsc --noEmit` will fail at the 7 caller sites — that is expected and is fixed in Plan 04.
+- Repo-wide `npx tsc --noEmit` will fail at the 7 caller sites — that is expected and is fixed in Plan 04. The targeted check `npx tsc --noEmit 2>&1 | grep "quota-guard.ts"` must be empty.
 </verification>
 
 <success_criteria>

@@ -27,7 +27,7 @@
 - [x] **EMAIL-30**: Onboarding wizard includes a skippable "Connect Gmail" step
 - [x] **EMAIL-31**: `/app/settings` shows Gmail connection status (Connected / Needs reconnect / Never connected)
 - [ ] **EMAIL-32**: All 7 transactional email paths (booking-confirmation, owner-notification, reminder, cancel-booker, cancel-owner, reschedule-booker, reschedule-owner) route through `getSenderForAccount(accountId)` factory
-- [ ] **EMAIL-33**: Strangler-fig cutover: Andrew connects `nsi` Gmail OAuth on preview; production cutover flips `nsi.email_provider` to `gmail_oauth`; SMTP path + `GMAIL_APP_PASSWORD` removed in a separate deploy after Andrew confirms production sends working
+- [ ] **EMAIL-33**: Strangler-fig cutover: Andrew connects `nsi` Gmail OAuth on preview; the `getSenderForAccount` factory unconditionally prefers an OAuth credential when one exists, so the cutover for `nsi` is the act of connecting Gmail OAuth itself (no per-account routing flag needed at v1.7); SMTP path + `GMAIL_APP_PASSWORD` removed in a separate deploy after Andrew confirms production sends working. (`accounts.email_provider` column and runtime routing logic are introduced in Phase 36 when Resend becomes a second backend — at v1.7 there is only one backend selectable per account, so a discriminator column is not needed yet.)
 
 ### Upgrade Flow (Cap-Hit Request)
 
@@ -147,3 +147,4 @@ These block specific phases. Andrew action required before phase can ship.
 
 *Requirements defined: 2026-05-06*
 *Last updated: 2026-05-06 — traceability filled by roadmap creation. All 30 requirements mapped to Phases 34-40.*
+*EMAIL-33 amended 2026-05-06 — removed `nsi.email_provider` flip clause: the column does not exist at v1.7 (no migration adds it), and the `getSenderForAccount` factory is unconditional (always uses an OAuth credential when one exists), so cutover is the act of connecting Gmail OAuth itself. The `accounts.email_provider` column and runtime routing logic land in Phase 36 when Resend becomes a second backend.*
