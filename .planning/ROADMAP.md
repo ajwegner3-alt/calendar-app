@@ -158,7 +158,14 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 4. All 7 send paths (booking-confirmation, owner-notification, reminder, cancel-booker, cancel-owner, reschedule-booker, reschedule-owner) call `getSenderForAccount(accountId)` — zero direct `sendEmail()` singleton calls remain in production send code.
 5. `GMAIL_APP_PASSWORD` and the centralized SMTP path are removed in a separate deploy only after Andrew confirms production sends working via Gmail OAuth.
 
-**Plans:** TBD
+**Plans:** 7 plans in 6 waves
+- [ ] 35-00-PLAN.md — Vercel GOOGLE_CLIENT_ID/SECRET env var checklist (manual handoff, Wave 1)
+- [ ] 35-01-PLAN.md — Per-account quota: email_send_log.account_id migration + quota-guard signature update (Wave 2)
+- [ ] 35-02-PLAN.md — Google token exchange helper + Gmail OAuth nodemailer provider (Wave 2)
+- [ ] 35-03-PLAN.md — getSenderForAccount factory with invalid_grant → needs_reconnect handling (Wave 3)
+- [ ] 35-04-PLAN.md — Cutover: thread accountId through 7 transactional senders + outer callers (Wave 4)
+- [ ] 35-05-PLAN.md — Two-step deploy verification: Andrew dogfoods nsi connect on preview + production gates (Wave 5)
+- [ ] 35-06-PLAN.md — SMTP singleton + GMAIL_APP_PASSWORD removal commit (Wave 6, post-verification)
 
 ---
 
