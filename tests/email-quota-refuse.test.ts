@@ -20,6 +20,9 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// Phase 35: all quota helpers now require accountId
+const TEST_ACCOUNT_ID = "00000000-0000-0000-0000-000000000001";
+
 let _mockCount: number | null = 0;
 let _mockCountError: object | null = null;
 let _mockInsertError: object | null = null;
@@ -35,6 +38,10 @@ vi.mock("@/lib/supabase/admin", () => {
     createAdminClient: () => ({
       from: (_table: string) => ({
         select: (_cols: string, _opts?: object) => ({
+          eq: (_col: string, _val: string) => ({
+            gte: (_col2: string, _val2: string) =>
+              Promise.resolve({ count: _mockCount, error: _mockCountError }),
+          }),
           gte: (_col: string, _val: string) =>
             Promise.resolve({ count: _mockCount, error: _mockCountError }),
         }),
@@ -92,7 +99,7 @@ describe("Phase 31 — quota guard covers all 7 new email senders", () => {
   for (const cat of PHASE_31_CATEGORIES) {
     it(`refuses ${cat} when count is at cap`, async () => {
       setCountResult(SIGNUP_DAILY_EMAIL_CAP);
-      await expect(checkAndConsumeQuota(cat)).rejects.toBeInstanceOf(
+      await expect(checkAndConsumeQuota(cat, TEST_ACCOUNT_ID)).rejects.toBeInstanceOf(
         QuotaExceededError,
       );
     });
@@ -100,7 +107,7 @@ describe("Phase 31 — quota guard covers all 7 new email senders", () => {
     it(`allows ${cat} when below cap`, async () => {
       setCountResult(50);
       setInsertResult(null);
-      await expect(checkAndConsumeQuota(cat)).resolves.toBeUndefined();
+      await expect(checkAndConsumeQuota(cat, TEST_ACCOUNT_ID)).resolves.toBeUndefined();
     });
   }
 });
@@ -118,17 +125,17 @@ describe("getRemainingDailyQuota", () => {
 
   it("returns 200 when 0 sent today", async () => {
     setCountResult(0);
-    expect(await getRemainingDailyQuota()).toBe(200);
+    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(200);
   });
 
   it("returns 50 when 150 sent today", async () => {
     setCountResult(150);
-    expect(await getRemainingDailyQuota()).toBe(50);
+    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(50);
   });
 
   it("clamps to 0 when count exceeds cap", async () => {
     setCountResult(250);
-    expect(await getRemainingDailyQuota()).toBe(0);
+    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(0);
   });
 });
 
