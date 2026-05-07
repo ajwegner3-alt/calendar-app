@@ -6,6 +6,9 @@
  * Uses vi.mock("@/lib/supabase/admin") to stub the Supabase admin client
  * so no real DB calls are made.
  *
+ * Phase 35 (EMAIL-27): All helpers now require accountId.
+ * Tests updated to pass TEST_ACCOUNT_ID ("00000000-0000-0000-0000-000000000001").
+ *
  * Four cases:
  *   1. Below threshold (count < 80% of cap) — silently allows send and inserts row.
  *   2. At 80% threshold — allows send, inserts row, logs GMAIL_SMTP_QUOTA_APPROACHING.
@@ -18,6 +21,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // The mock factory returns a fluent builder that intercepts .from().select()
 // and .from().insert() chains. We expose `__setCountResult` and `__setInsertResult`
 // so individual tests can set what the DB returns.
+
+const TEST_ACCOUNT_ID = "00000000-0000-0000-0000-000000000001";
 
 let _mockCount: number | null = 0;
 let _mockCountError: object | null = null;
@@ -34,6 +39,10 @@ vi.mock("@/lib/supabase/admin", () => {
     createAdminClient: () => ({
       from: (_table: string) => ({
         select: (_cols: string, _opts?: object) => ({
+          eq: (_col: string, _val: string) => ({
+            gte: (_col2: string, _val2: string) =>
+              Promise.resolve({ count: _mockCount, error: _mockCountError }),
+          }),
           gte: (_col: string, _val: string) =>
             Promise.resolve({ count: _mockCount, error: _mockCountError }),
         }),
@@ -80,7 +89,7 @@ describe("quota-guard", () => {
     // count = 100, cap = 200, threshold = 160 → below warn threshold
     setCountResult(100);
 
-    await expect(checkAndConsumeQuota("signup-verify")).resolves.toBeUndefined();
+    await expect(checkAndConsumeQuota("signup-verify", TEST_ACCOUNT_ID)).resolves.toBeUndefined();
 
     // No QUOTA_APPROACHING log
     const warningCalls = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
@@ -93,7 +102,7 @@ describe("quota-guard", () => {
     // count = 160 = 80% of 200 → exactly at warn threshold
     setCountResult(160);
 
-    await expect(checkAndConsumeQuota("signup-welcome")).resolves.toBeUndefined();
+    await expect(checkAndConsumeQuota("signup-welcome", TEST_ACCOUNT_ID)).resolves.toBeUndefined();
 
     const warningCalls = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
       String(args[0]).includes("GMAIL_SMTP_QUOTA_APPROACHING"),
@@ -118,6 +127,10 @@ describe("quota-guard", () => {
       createAdminClient: () => ({
         from: (_table: string) => ({
           select: (_cols: string, _opts?: object) => ({
+            eq: (_col: string, _val: string) => ({
+              gte: (_col2: string, _val2: string) =>
+                Promise.resolve({ count: 200, error: null }),
+            }),
             gte: (_col: string, _val: string) =>
               Promise.resolve({ count: 200, error: null }),
           }),
@@ -126,7 +139,7 @@ describe("quota-guard", () => {
       }),
     }));
 
-    await expect(checkAndConsumeQuota("password-reset")).rejects.toBeInstanceOf(
+    await expect(checkAndConsumeQuota("password-reset", TEST_ACCOUNT_ID)).rejects.toBeInstanceOf(
       QuotaExceededError,
     );
 
@@ -134,7 +147,7 @@ describe("quota-guard", () => {
     // module in the same test. The throw path is validated — insert is not reached
     // because the throw happens BEFORE the insert call in the source.
     // Primary assertion: QuotaExceededError is thrown.
-    const err = await checkAndConsumeQuota("password-reset").catch((e) => e);
+    const err = await checkAndConsumeQuota("password-reset", TEST_ACCOUNT_ID).catch((e) => e);
     expect(err).toBeInstanceOf(QuotaExceededError);
     expect(err.count).toBe(200);
     expect(err.cap).toBe(SIGNUP_DAILY_EMAIL_CAP);
@@ -155,15 +168,16 @@ describe("quota-guard", () => {
     // new booking categories, not just signup.
     //
     // The warn block dedupes via a module-level `warnedDays` Set keyed by
-    // UTC-day. Test #2 above already cached "today", so we advance the
-    // system clock to a fresh UTC day before exercising the warn path here.
+    // UTC-day + accountId. Test #2 above already cached "today:TEST_ACCOUNT_ID",
+    // so we advance the system clock to a fresh UTC day before exercising the
+    // warn path here.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2099-12-31T12:00:00Z"));
     try {
       setCountResult(170); // 170 = 85% of 200, above the 80% threshold
 
       await expect(
-        checkAndConsumeQuota("booking-confirmation"),
+        checkAndConsumeQuota("booking-confirmation", TEST_ACCOUNT_ID),
       ).resolves.toBeUndefined();
 
       const warningCalls = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
@@ -181,11 +195,11 @@ describe("quota-guard", () => {
     setCountResult(null, { message: "connection refused", code: "PGRST" });
 
     // getDailySendCount should return 0 (fail-open)
-    const count = await getDailySendCount();
+    const count = await getDailySendCount(TEST_ACCOUNT_ID);
     expect(count).toBe(0);
 
     // checkAndConsumeQuota should also succeed (not throw)
-    await expect(checkAndConsumeQuota("email-change")).resolves.toBeUndefined();
+    await expect(checkAndConsumeQuota("email-change", TEST_ACCOUNT_ID)).resolves.toBeUndefined();
 
     // Should have logged the error
     const errorLogs = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
