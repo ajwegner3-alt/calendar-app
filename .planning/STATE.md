@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 34 Plan 04 complete. Settings Gmail panel + optional onboarding connect-gmail step + post-link toast. Phase 34 fully complete.
+**Last updated:** 2026-05-06 — Phase 34 fully complete (4 plans, 10 commits). Verifier returned 5/5 static PASS, status `human_needed` for live OAuth runtime (4 items pending PREREQ-01/02/04). Phase 34 requirements (AUTH-23/25/26/27, EMAIL-29/30/31) marked Complete.
 
 ## Project Reference
 
@@ -17,7 +17,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
 **Phase:** 34 — Google OAuth Signup + Credential Capture — COMPLETE
 **Plan:** 04 of 4 — complete
-**Status:** Phase 34 fully complete. Phase 35 next.
+**Status:** Phase 34 code complete (5/5 must-haves PASS static verification). Live OAuth runtime testing (4 items in 34-VERIFICATION.md `human_verification` section) deferred until Andrew completes PREREQ-01 (Google Cloud Console — 3-5 day verification window), PREREQ-02 (Supabase Google provider), PREREQ-04 (Vercel env vars). Phase 35 can begin in parallel (depends on the table + factory shape, not on live OAuth).
 **Last activity:** 2026-05-06 — Completed 34-04-PLAN.md (settings Gmail panel + onboarding connect-gmail + link toast)
 
 Progress (Phase 34): ████ 4/4 plans complete

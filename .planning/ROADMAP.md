@@ -134,10 +134,10 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 5. Gmail refresh tokens never appear in plaintext in any environment; `account_oauth_credentials` table stores only `refresh_token_encrypted`.
 
 **Plans:** 4 plans in 3 waves
-- [ ] 34-01-PLAN.md — DB migration (`account_oauth_credentials`) + supabase/config.toml `enable_manual_linking` (Wave 1)
-- [ ] 34-02-PLAN.md — Encryption util + Google HTTP helpers + branded GoogleOAuthButton (Wave 1)
-- [ ] 34-03-PLAN.md — `/auth/google-callback` route handler + signup/login Google buttons + actions (Wave 2)
-- [ ] 34-04-PLAN.md — Settings Gmail panel (connect/disconnect/status) + onboarding optional step + linked-banner toast (Wave 3)
+- [x] 34-01-PLAN.md — DB migration (`account_oauth_credentials`) + supabase/config.toml `enable_manual_linking` (Wave 1) — completed 2026-05-06
+- [x] 34-02-PLAN.md — Encryption util + Google HTTP helpers + branded GoogleOAuthButton (Wave 1) — completed 2026-05-06
+- [x] 34-03-PLAN.md — `/auth/google-callback` route handler + signup/login Google buttons + actions (Wave 2) — completed 2026-05-06
+- [x] 34-04-PLAN.md — Settings Gmail panel (connect/disconnect/status) + onboarding optional step + linked-banner toast (Wave 3) — completed 2026-05-06
 
 ---
 
@@ -263,7 +263,7 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28-30 | v1.5 | 6 / 6 | ✅ Shipped | 2026-05-05 |
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
-| 34 | v1.7 | 0 / 4 | Planned | - |
+| 34 | v1.7 | 4 / 4 | Code complete — live OAuth verification pending PREREQs | 2026-05-06 |
 | 35 | v1.7 | 0 / TBD | Not started | - |
 | 36 | v1.7 | 0 / TBD | Not started | - |
 | 37 | v1.7 | 0 / TBD | Not started | - |
@@ -281,4 +281,4 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 
 ---
 
-*Roadmap last updated: 2026-05-06 — v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code roadmap created. Phases 34-40 defined. Run `/gsd:plan-phase 34` to begin.*
+*Roadmap last updated: 2026-05-06 — Phase 34 (Google OAuth Signup + Credential Capture) code complete: 4 plans, 10 commits, 5/5 must-haves verified statically. Live OAuth verification pending Andrew completing PREREQ-01/02/04. Run `/gsd:plan-phase 35` for next phase (Per-Account Gmail OAuth Send).*

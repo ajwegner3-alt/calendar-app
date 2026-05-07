@@ -9,11 +9,11 @@
 
 ### Authentication
 
-- [ ] **AUTH-23**: User can sign up by clicking "Sign up with Google" on `/app/signup`; one consent screen requests `openid email profile` + `gmail.send` together
+- [x] **AUTH-23**: User can sign up by clicking "Sign up with Google" on `/app/signup`; one consent screen requests `openid email profile` + `gmail.send` together
 - [ ] **AUTH-24**: User can request a passwordless login email from the existing `/app/login` card (magic-link option, no separate route)
-- [ ] **AUTH-25**: When user denies `gmail.send` at the OAuth consent screen, the account is still created and the user is prompted to connect Gmail later (partial-grant handled gracefully)
-- [ ] **AUTH-26**: Existing email/password account holder can connect a Google Gmail from `/app/settings` via `linkIdentity()` — does NOT create a duplicate user
-- [ ] **AUTH-27**: User can disconnect their Gmail from `/app/settings`, which revokes the stored refresh token
+- [x] **AUTH-25**: When user denies `gmail.send` at the OAuth consent screen, the account is still created and the user is prompted to connect Gmail later (partial-grant handled gracefully)
+- [x] **AUTH-26**: Existing email/password account holder can connect a Google Gmail from `/app/settings` via `linkIdentity()` — does NOT create a duplicate user
+- [x] **AUTH-27**: User can disconnect their Gmail from `/app/settings`, which revokes the stored refresh token
 - [ ] **AUTH-28**: Magic-link requests rate-limited via `rate_limit_events` (3/hour per IP)
 - [ ] **AUTH-29**: Magic-link request returns identical HTTP response body for known and unknown emails (enumeration-safe)
 - [ ] **AUTH-30**: When user's Gmail refresh token is revoked (`invalid_grant`), an in-app banner prompts reconnect; subsequent email sends refuse-send fail-closed
@@ -23,9 +23,9 @@
 - [ ] **EMAIL-26**: Every account (including `nsi`) sends transactional emails via its own connected Gmail OAuth — the centralized Gmail SMTP path is retired in a separate post-cutover deploy
 - [ ] **EMAIL-27**: `email_send_log` table gains `account_id` column; `getDailySendCount()` and `checkAndConsumeQuota()` filter by account
 - [ ] **EMAIL-28**: 200/day Gmail cap is enforced per-account (not globally); two accounts can each independently hit their own cap
-- [ ] **EMAIL-29**: Gmail refresh tokens stored encrypted (AES-256-GCM) in a new `account_oauth_credentials` table; never plaintext in any environment
-- [ ] **EMAIL-30**: Onboarding wizard includes a skippable "Connect Gmail" step
-- [ ] **EMAIL-31**: `/app/settings` shows Gmail connection status (Connected / Needs reconnect / Never connected)
+- [x] **EMAIL-29**: Gmail refresh tokens stored encrypted (AES-256-GCM) in a new `account_oauth_credentials` table; never plaintext in any environment
+- [x] **EMAIL-30**: Onboarding wizard includes a skippable "Connect Gmail" step
+- [x] **EMAIL-31**: `/app/settings` shows Gmail connection status (Connected / Needs reconnect / Never connected)
 - [ ] **EMAIL-32**: All 7 transactional email paths (booking-confirmation, owner-notification, reminder, cancel-booker, cancel-owner, reschedule-booker, reschedule-owner) route through `getSenderForAccount(accountId)` factory
 - [ ] **EMAIL-33**: Strangler-fig cutover: Andrew connects `nsi` Gmail OAuth on preview; production cutover flips `nsi.email_provider` to `gmail_oauth`; SMTP path + `GMAIL_APP_PASSWORD` removed in a separate deploy after Andrew confirms production sends working
 
@@ -107,20 +107,20 @@ These block specific phases. Andrew action required before phase can ship.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-23 | Phase 34 | Pending |
+| AUTH-23 | Phase 34 | Complete |
 | AUTH-24 | Phase 38 | Pending |
-| AUTH-25 | Phase 34 | Pending |
-| AUTH-26 | Phase 34 | Pending |
-| AUTH-27 | Phase 34 | Pending |
+| AUTH-25 | Phase 34 | Complete |
+| AUTH-26 | Phase 34 | Complete |
+| AUTH-27 | Phase 34 | Complete |
 | AUTH-28 | Phase 38 | Pending |
 | AUTH-29 | Phase 38 | Pending |
 | AUTH-30 | Phase 35 | Pending |
 | EMAIL-26 | Phase 35 | Pending |
 | EMAIL-27 | Phase 35 | Pending |
 | EMAIL-28 | Phase 35 | Pending |
-| EMAIL-29 | Phase 34 | Pending |
-| EMAIL-30 | Phase 34 | Pending |
-| EMAIL-31 | Phase 34 | Pending |
+| EMAIL-29 | Phase 34 | Complete |
+| EMAIL-30 | Phase 34 | Complete |
+| EMAIL-31 | Phase 34 | Complete |
 | EMAIL-32 | Phase 35 | Pending |
 | EMAIL-33 | Phase 35 | Pending |
 | UPGRADE-01 | Phase 37 | Pending |
