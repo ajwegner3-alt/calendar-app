@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-06 — Phase 34 fully complete (4 plans, 10 commits). Verifier returned 5/5 static PASS, status `human_needed` for live OAuth runtime (4 items pending PREREQ-01/02/04). Phase 34 requirements (AUTH-23/25/26/27, EMAIL-29/30/31) marked Complete.
+**Last updated:** 2026-05-07 — Phase 35 Plan 01 complete. email_send_log.account_id column + per-account quota-guard signatures.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 34 COMPLETE. Next: Phase 35 — Gmail Send (per-account transactional email).
+**Current focus:** v1.7 Phase 35 IN PROGRESS. Plans 01 and 02 complete; Plan 03 (account-sender-factory) is next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
-**Phase:** 34 — Google OAuth Signup + Credential Capture — COMPLETE
-**Plan:** 04 of 4 — complete
-**Status:** Phase 34 code complete (5/5 must-haves PASS static verification). Live OAuth runtime testing (4 items in 34-VERIFICATION.md `human_verification` section) deferred until Andrew completes PREREQ-01 (Google Cloud Console — 3-5 day verification window), PREREQ-02 (Supabase Google provider), PREREQ-04 (Vercel env vars). Phase 35 can begin in parallel (depends on the table + factory shape, not on live OAuth).
-**Last activity:** 2026-05-06 — Completed 34-04-PLAN.md (settings Gmail panel + onboarding connect-gmail + link toast)
+**Phase:** 35 — Per-Account Gmail OAuth Send — In Progress
+**Plan:** 01 of 6 — complete (Plan 02 also complete per prior session)
+**Status:** Plans 00, 01, 02 complete. Plan 03 (account-sender-factory) is next.
+**Last activity:** 2026-05-07 — Completed 35-01-PLAN.md (email_send_log account_id column + per-account quota-guard)
 
-Progress (Phase 34): ████ 4/4 plans complete
+Progress (Phase 35): ██░░░░ 2/6 plans complete (Plans 00 + 01 + 02 = 3 of 6; Plan 00 was infra-only)
 
 ## Cumulative project progress
 
@@ -55,6 +55,8 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **fetchGoogleAccessToken lazy env-var read (Phase 35, Plan 02)** — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` read inside the function body. Same pattern as Phase 34 `getKey()`. Apply to all new env-var-gated server utilities.
 - **Gmail OAuth2 SMTP explicit form (Phase 35, Plan 02)** — `createGmailOAuthClient` uses `{ host: "smtp.gmail.com", port: 465, secure: true }` NOT `service: "gmail"` — some nodemailer versions require explicit form with `type: "OAuth2"`.
 - **Enforced From header in Gmail OAuth client (Phase 35, Plan 02)** — `createGmailOAuthClient` always sets `from = enforcedFrom` derived from `config.user`; `options.from` from callers is silently ignored. Gmail rejects OAuth2 sends where From != authenticated user.
+- **Per-account quota isolation (Phase 35, Plan 01)** — `email_send_log.account_id` + `.eq("account_id", accountId)` filter gives each account an independent 200/day cap. All three quota helpers (`getDailySendCount`, `checkAndConsumeQuota`, `getRemainingDailyQuota`) require `accountId: string`. Vitest supabase mocks must chain `.eq().gte()` to match the new query shape.
+- **Warn dedup key is per-account (Phase 35, Plan 01)** — `warnedDays` Set uses `${today}:${accountId}` key. Account A firing 80% threshold does not suppress Account B's warning.
 
 ### Patterns established / locked through v1.6
 
@@ -82,11 +84,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-06 — Phase 34 Plans 01-04 executed. Phase 34 complete.
+**Last session:** 2026-05-07 — Phase 35 Plans 00, 01, 02 executed.
 
-**Stopped at:** Completed 34-04-PLAN.md. Commits: c9f2312 (settings Gmail panel), f0da49e (onboarding connect-gmail), 03c0ebd (google-link toast).
+**Stopped at:** Completed 35-01-PLAN.md. Commits: 8fdee36 (migration), 4cb75ef (quota-guard), 5538c52 (test fix).
 
-**Next session:** Phase 35 — Gmail Send (per-account transactional email using stored refresh tokens from Phase 34).
+**Next session:** Phase 35 Plan 03 — account-sender-factory (getSenderForAccount).
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
