@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-07 — Phase 35 Plan 01 complete. email_send_log.account_id column + per-account quota-guard signatures.
+**Last updated:** 2026-05-07 — Phase 35 Plan 03 complete. getSenderForAccount factory + 9-branch test suite.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 35 IN PROGRESS. Plans 01 and 02 complete; Plan 03 (account-sender-factory) is next.
+**Current focus:** v1.7 Phase 35 IN PROGRESS. Plans 00, 01, 02, 03 complete; Plan 04 (cutover) is next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
 **Phase:** 35 — Per-Account Gmail OAuth Send — In Progress
-**Plan:** 01 of 6 — complete (Plan 02 also complete per prior session)
-**Status:** Plans 00, 01, 02 complete. Plan 03 (account-sender-factory) is next.
-**Last activity:** 2026-05-07 — Completed 35-01-PLAN.md (email_send_log account_id column + per-account quota-guard)
+**Plan:** 03 of 6 — complete
+**Status:** Plans 00, 01, 02, 03 complete. Plan 04 (cutover — wire 7 email paths) is next.
+**Last activity:** 2026-05-07 — Completed 35-03-PLAN.md (getSenderForAccount factory + 9-branch tests)
 
-Progress (Phase 35): ██░░░░ 2/6 plans complete (Plans 00 + 01 + 02 = 3 of 6; Plan 00 was infra-only)
+Progress (Phase 35): ███░░░ 3/6 plans complete (Plans 00 + 01 + 02 + 03)
 
 ## Cumulative project progress
 
@@ -57,6 +57,9 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **Enforced From header in Gmail OAuth client (Phase 35, Plan 02)** — `createGmailOAuthClient` always sets `from = enforcedFrom` derived from `config.user`; `options.from` from callers is silently ignored. Gmail rejects OAuth2 sends where From != authenticated user.
 - **Per-account quota isolation (Phase 35, Plan 01)** — `email_send_log.account_id` + `.eq("account_id", accountId)` filter gives each account an independent 200/day cap. All three quota helpers (`getDailySendCount`, `checkAndConsumeQuota`, `getRemainingDailyQuota`) require `accountId: string`. Vitest supabase mocks must chain `.eq().gte()` to match the new query shape.
 - **Warn dedup key is per-account (Phase 35, Plan 01)** — `warnedDays` Set uses `${today}:${accountId}` key. Account A firing 80% threshold does not suppress Account B's warning.
+- **getSenderForAccount fail-closed contract (Phase 35, Plan 03)** — factory never throws; every error path returns a `refusedSender` whose `.send()` resolves `{ success: false, error: "oauth_send_refused: ..." }`. Plan 04 callers branch on `result.success` only; no try/catch needed.
+- **invalid_grant is the only DB-write error path (Phase 35, Plan 03)** — only Google's authoritative revocation (`error: "invalid_grant"`) triggers `UPDATE account_oauth_credentials SET status='needs_reconnect'`. All other failures (network_error, decrypt failure, etc.) refuse silently without touching the DB.
+- **REFUSED_SEND_ERROR_PREFIX exported constant (Phase 35, Plan 03)** — `"oauth_send_refused"` exported from `lib/email-sender/account-sender.ts`. Plan 04 callers can match `result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)` to distinguish OAuth refusal from other send errors.
 
 ### Patterns established / locked through v1.6
 
@@ -84,11 +87,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-07 — Phase 35 Plans 00, 01, 02 executed.
+**Last session:** 2026-05-07 — Phase 35 Plan 03 executed.
 
-**Stopped at:** Completed 35-01-PLAN.md. Commits: 8fdee36 (migration), 4cb75ef (quota-guard), 5538c52 (test fix).
+**Stopped at:** Completed 35-03-PLAN.md. Commits: 3e1ba69 (factory), 8993ab4 (tests).
 
-**Next session:** Phase 35 Plan 03 — account-sender-factory (getSenderForAccount).
+**Next session:** Phase 35 Plan 04 — cutover (wire 7 transactional email paths to getSenderForAccount).
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
@@ -98,6 +101,7 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-02-SUMMARY.md` — Plan 02 complete
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-03-SUMMARY.md` — Plan 03 complete
 - `.planning/phases/34-google-oauth-signup-and-credential-capture/34-04-SUMMARY.md` — Plan 04 complete
+- `lib/email-sender/account-sender.ts` — getSenderForAccount factory + REFUSED_SEND_ERROR_PREFIX (3e1ba69)
 - `lib/oauth/encrypt.ts` — AES-256-GCM encrypt/decrypt/generateKey (e09f019)
 - `lib/oauth/google.ts` — fetchGoogleGrantedScopes, revokeGoogleRefreshToken, hasGmailSendScope (f639f0c)
 - `components/google-oauth-button.tsx` — branded Google button (e427e52)
