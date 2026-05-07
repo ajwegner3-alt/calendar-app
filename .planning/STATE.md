@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-07 — Phase 35 Plan 03 complete. getSenderForAccount factory + 9-branch test suite.
+**Last updated:** 2026-05-07 — Phase 35 Plan 04 complete. All 7 email paths cut over to getSenderForAccount factory.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 35 IN PROGRESS. Plans 00, 01, 02, 03 complete; Plan 04 (cutover) is next.
+**Current focus:** v1.7 Phase 35 IN PROGRESS. Plans 00, 01, 02, 03, 04 complete; Plan 05 (preview verification) is next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
 **Phase:** 35 — Per-Account Gmail OAuth Send — In Progress
-**Plan:** 03 of 6 — complete
-**Status:** Plans 00, 01, 02, 03 complete. Plan 04 (cutover — wire 7 email paths) is next.
-**Last activity:** 2026-05-07 — Completed 35-03-PLAN.md (getSenderForAccount factory + 9-branch tests)
+**Plan:** 04 of 6 — complete
+**Status:** Plans 00, 01, 02, 03, 04 complete. Plan 05 (preview verification — manual checkpoint) is next.
+**Last activity:** 2026-05-07 — Completed 35-04-PLAN.md (cut over all 7 email paths to getSenderForAccount)
 
-Progress (Phase 35): ███░░░ 3/6 plans complete (Plans 00 + 01 + 02 + 03)
+Progress (Phase 35): ████░░ 4/6 plans complete (Plans 00 + 01 + 02 + 03 + 04)
 
 ## Cumulative project progress
 
@@ -60,6 +60,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **getSenderForAccount fail-closed contract (Phase 35, Plan 03)** — factory never throws; every error path returns a `refusedSender` whose `.send()` resolves `{ success: false, error: "oauth_send_refused: ..." }`. Plan 04 callers branch on `result.success` only; no try/catch needed.
 - **invalid_grant is the only DB-write error path (Phase 35, Plan 03)** — only Google's authoritative revocation (`error: "invalid_grant"`) triggers `UPDATE account_oauth_credentials SET status='needs_reconnect'`. All other failures (network_error, decrypt failure, etc.) refuse silently without touching the DB.
 - **REFUSED_SEND_ERROR_PREFIX exported constant (Phase 35, Plan 03)** — `"oauth_send_refused"` exported from `lib/email-sender/account-sender.ts`. Plan 04 callers can match `result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)` to distinguish OAuth refusal from other send errors.
+- **getSenderForAccount is the only allowed EmailClient factory (Phase 35, Plan 04)** — zero `sendEmail()` singleton calls remain in `app/`, `lib/email/`, `lib/bookings/`. Grep guard: `grep -rn "import.*sendEmail|from \"@/lib/email-sender\"" app/ lib/ | grep -v welcome-email` → 0 results. `welcome-email.ts` is the sole remaining singleton user (Phase 36 migration target).
+- **OAuth refusal treated as confirmation soft-fail (Phase 35, Plan 04)** — `send-booking-emails.ts` checks `result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)` on the confirmation leg result; if true, same `confirmation_email_sent=false` flag path as `QuotaExceededError`. Booking succeeds regardless. Cancel/reschedule/reminder: refusal logged but not re-thrown (already committed); reminder re-throws so cron can count refused.
+- **Nil UUID sentinel for system-level sends (Phase 35, Plan 04)** — `signup/actions.ts` and `welcome-email.ts` pass `"00000000-0000-0000-0000-000000000000"` to `checkAndConsumeQuota`. No per-account context exists at these call sites. `email-change` action fetches the real accountId from DB.
+- **account-sender Vitest alias mock shares __mockSendCalls (Phase 35, Plan 04)** — `tests/__mocks__/account-sender.ts` imports from `@/lib/email-sender` (the aliased bare specifier, NOT the direct file path) so both the mock and the integration test files share the exact same module instance. vitest.config.ts alias: `find: /^@\/lib\/email-sender\/account-sender$/`.
 
 ### Patterns established / locked through v1.6
 
@@ -87,11 +91,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-07 — Phase 35 Plan 03 executed.
+**Last session:** 2026-05-07 — Phase 35 Plan 04 executed.
 
-**Stopped at:** Completed 35-03-PLAN.md. Commits: 3e1ba69 (factory), 8993ab4 (tests).
+**Stopped at:** Completed 35-04-PLAN.md. Commits: 75f19b1 (Task 1: 5 leaf senders + orchestrator), 33b78c3 (Task 2: outer callers + tests).
 
-**Next session:** Phase 35 Plan 04 — cutover (wire 7 transactional email paths to getSenderForAccount).
+**Next session:** Phase 35 Plan 05 — preview verification (manual checkpoint: deploy to preview, test real Gmail OAuth sends).
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
