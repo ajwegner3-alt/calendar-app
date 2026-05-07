@@ -2,7 +2,10 @@ import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { ICalCalendarMethod } from "ical-generator";
-import { sendEmail } from "@/lib/email-sender";
+import {
+  getSenderForAccount,
+  REFUSED_SEND_ERROR_PREFIX,
+} from "@/lib/email-sender/account-sender";
 import {
   checkAndConsumeQuota,
   QuotaExceededError,
@@ -78,6 +81,8 @@ export interface SendRescheduleEmailsArgs {
    * Brand-neutral copy: no owner identity surfaced (LD-07).
    */
   reason?: string;
+  /** Phase 35: account UUID for per-account Gmail OAuth sender factory. */
+  accountId: string;
 }
 
 /**
@@ -95,6 +100,9 @@ export interface SendRescheduleEmailsArgs {
  *
  * Plan 12-06: Migrated to renderEmailBrandedHeader (solid-color header band, CONTEXT lock).
  * Plan 12-06: Added text: stripHtml(html) to booker reschedule (EMAIL-10 extended).
+ *
+ * Phase 35: OAuth send refusal is treated like a non-quota non-fatal error —
+ * logged per-leg and not re-thrown (reschedule already committed; email is best-effort).
  */
 export async function sendRescheduleEmails(args: SendRescheduleEmailsArgs): Promise<void> {
   // Phase 33 (PUSH-09): batch-initiated reschedules suppress the owner leg.
@@ -130,7 +138,7 @@ export async function sendRescheduleEmails(args: SendRescheduleEmailsArgs): Prom
 }
 
 async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise<void> {
-  const { booking, eventType, account, oldStartAt, rawCancelToken, rawRescheduleToken, appUrl, actor, reason } = args;
+  const { booking, eventType, account, oldStartAt, rawCancelToken, rawRescheduleToken, appUrl, actor, reason, accountId } = args;
 
   // Booker-tz formatting for both old and new times
   const oldTz = new TZDate(new Date(oldStartAt), booking.booker_timezone);
@@ -226,7 +234,7 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
 
   // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
   try {
-    await checkAndConsumeQuota("reschedule-booker");
+    await checkAndConsumeQuota("reschedule-booker", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -239,9 +247,10 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
     throw err;
   }
 
-  // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.
-  await sendEmail({
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to:      booking.booker_email,
     subject: `Booking rescheduled: ${eventType.name}`,
     html,
@@ -254,10 +263,21 @@ async function sendBookerRescheduleEmail(args: SendRescheduleEmailsArgs): Promis
       },
     ],
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[reschedule-booker-email] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+    } else {
+      throw new Error(result.error ?? "send failed");
+    }
+  }
 }
 
 async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise<void> {
-  const { booking, eventType, account, oldStartAt } = args;
+  const { booking, eventType, account, oldStartAt, accountId } = args;
 
   if (!account.owner_email) {
     // No owner email seeded → silently skip (Phase 5 pattern)
@@ -331,7 +351,7 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
 
   // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
   try {
-    await checkAndConsumeQuota("reschedule-owner");
+    await checkAndConsumeQuota("reschedule-owner", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -344,9 +364,10 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
     throw err;
   }
 
-  // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.
-  await sendEmail({
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to:      account.owner_email,
     subject: `Booking rescheduled: ${booking.booker_name} — ${eventType.name} on ${subjectDate}`,
     html,
@@ -358,6 +379,17 @@ async function sendOwnerRescheduleEmail(args: SendRescheduleEmailsArgs): Promise
       },
     ],
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[reschedule-owner-email] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+    } else {
+      throw new Error(result.error ?? "send failed");
+    }
+  }
 }
 
 /** Escape HTML special characters in user-supplied strings before inserting into email HTML. */

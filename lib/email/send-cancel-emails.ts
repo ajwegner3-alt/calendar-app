@@ -2,7 +2,10 @@ import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { ICalCalendarMethod } from "ical-generator";
-import { sendEmail } from "@/lib/email-sender";
+import {
+  getSenderForAccount,
+  REFUSED_SEND_ERROR_PREFIX,
+} from "@/lib/email-sender/account-sender";
 import {
   checkAndConsumeQuota,
   QuotaExceededError,
@@ -67,6 +70,8 @@ export interface SendCancelEmailsArgs {
    * Default: true (owner leg fires; existing single-cancel callers unaffected).
    */
   sendOwner?: boolean;
+  /** Phase 35: account UUID for per-account Gmail OAuth sender factory. */
+  accountId: string;
 }
 
 /**
@@ -85,6 +90,9 @@ export interface SendCancelEmailsArgs {
  *
  * Both emails include METHOD:CANCEL .ics (same UID as original booking, SEQUENCE:1)
  * so any calendar that imported the original event removes it.
+ *
+ * Phase 35: OAuth send refusal is treated like a non-quota non-fatal error —
+ * logged and not re-thrown (cancel already committed; email is best-effort).
  */
 export async function sendCancelEmails(args: SendCancelEmailsArgs): Promise<void> {
   // Phase 32 (AVAIL-06): batch-initiated cancels suppress the owner leg.
@@ -119,7 +127,7 @@ export async function sendCancelEmails(args: SendCancelEmailsArgs): Promise<void
 }
 
 async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
-  const { booking, eventType, account, actor, reason, appUrl } = args;
+  const { booking, eventType, account, actor, reason, appUrl, accountId } = args;
 
   // Times rendered in BOOKER timezone (mirrors Phase 5 confirmation pattern)
   const startTz = new TZDate(new Date(booking.start_at), booking.booker_timezone);
@@ -202,7 +210,7 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
 
   // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
   try {
-    await checkAndConsumeQuota("cancel-booker");
+    await checkAndConsumeQuota("cancel-booker", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -215,9 +223,10 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
     throw err;
   }
 
-  // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.
-  await sendEmail({
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to:      booking.booker_email,
     subject: `Booking cancelled: ${eventType.name}`,
     html,
@@ -230,10 +239,21 @@ async function sendBookerCancelEmail(args: SendCancelEmailsArgs): Promise<void> 
       },
     ],
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[cancel-booker-email] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+    } else {
+      throw new Error(result.error ?? "send failed");
+    }
+  }
 }
 
 async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
-  const { booking, eventType, account, actor, reason } = args;
+  const { booking, eventType, account, actor, reason, accountId } = args;
 
   if (!account.owner_email) {
     // No owner email seeded → silently skip (Phase 5 pattern; email-sender doesn't crash)
@@ -315,7 +335,7 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
 
   // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
   try {
-    await checkAndConsumeQuota("cancel-owner");
+    await checkAndConsumeQuota("cancel-owner", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -328,9 +348,10 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
     throw err;
   }
 
-  // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP auth.
-  await sendEmail({
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to:      account.owner_email,
     subject: `Booking cancelled: ${booking.booker_name} — ${eventType.name} on ${subjectDate}`,
     html,
@@ -342,6 +363,17 @@ async function sendOwnerCancelEmail(args: SendCancelEmailsArgs): Promise<void> {
       },
     ],
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[cancel-owner-email] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+    } else {
+      throw new Error(result.error ?? "send failed");
+    }
+  }
 }
 
 /** Escape HTML special characters in user-supplied strings before inserting into email HTML. */

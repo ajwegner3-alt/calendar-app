@@ -1,7 +1,10 @@
 import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
-import { sendEmail } from "@/lib/email-sender";
+import {
+  getSenderForAccount,
+  REFUSED_SEND_ERROR_PREFIX,
+} from "@/lib/email-sender/account-sender";
 import {
   checkAndConsumeQuota,
   QuotaExceededError,
@@ -53,14 +56,20 @@ export interface SendBookingConfirmationArgs {
   /** Base URL for cancel/reschedule links.
    *  Source: process.env.NEXT_PUBLIC_APP_URL with fallback to the Vercel URL. */
   appUrl: string;
+  /** Phase 35: account UUID for per-account Gmail OAuth sender factory. */
+  accountId: string;
+}
+
+export interface SendBookingConfirmationResult {
+  success: boolean;
+  error?: string;
 }
 
 /**
  * Send the booker confirmation email with .ics calendar invite attachment.
  *
  * Subject:  "Booking confirmed: [event] on [date]"    (CONTEXT decision #8)
- * From:     Constructed by sendEmail singleton (GMAIL_FROM_NAME + GMAIL_USER)
- *           — DO NOT pass an explicit `from` field here (would break Gmail SMTP auth)
+ * From:     Owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
  * To:       booking.booker_email
  * Attach:   invite.ics with content-type "text/calendar; method=REQUEST"
  *
@@ -72,8 +81,8 @@ export interface SendBookingConfirmationArgs {
  */
 export async function sendBookingConfirmation(
   args: SendBookingConfirmationArgs,
-): Promise<void> {
-  const { booking, eventType, account, rawCancelToken, rawRescheduleToken, appUrl } = args;
+): Promise<SendBookingConfirmationResult> {
+  const { booking, eventType, account, rawCancelToken, rawRescheduleToken, appUrl, accountId } = args;
 
   // Format times in BOOKER timezone for the email body
   const startTz = new TZDate(new Date(booking.start_at), booking.booker_timezone);
@@ -156,7 +165,7 @@ export async function sendBookingConfirmation(
   // logQuotaRefusal is PII-free; re-throw so callers (sendBookingEmails) can
   // detect QuotaExceededError and apply save-and-flag semantics.
   try {
-    await checkAndConsumeQuota("booking-confirmation");
+    await checkAndConsumeQuota("booking-confirmation", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -169,10 +178,10 @@ export async function sendBookingConfirmation(
     throw err;
   }
 
-  // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` would break Gmail SMTP
-  // authentication (must equal the authenticated GMAIL_USER address).
-  await sendEmail({
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to:      booking.booker_email,
     subject: `Booking confirmed: ${eventType.name} on ${subjectDate}`,
     html,
@@ -187,6 +196,22 @@ export async function sendBookingConfirmation(
       },
     ],
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[booking-confirmation] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+    } else {
+      console.error("[booking-confirmation] send failed", {
+        account_id: accountId,
+        error: result.error,
+      });
+    }
+  }
+
+  return { success: result.success, error: result.error };
 }
 
 /** Escape HTML special characters in user-supplied strings before inserting into email HTML. */

@@ -7,6 +7,7 @@ import {
   sendOwnerNotification,
   type SendOwnerNotificationArgs,
 } from "@/lib/email/send-owner-notification";
+import { REFUSED_SEND_ERROR_PREFIX } from "@/lib/email-sender/account-sender";
 import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -14,8 +15,10 @@ export interface SendBookingEmailsArgs
   extends SendBookingConfirmationArgs {
   /** Arguments for the owner notification email.
    *  Overlaps with the confirmation args but kept separate so each sender
-   *  can evolve its interface independently. */
-  ownerArgs: SendOwnerNotificationArgs;
+   *  can evolve its interface independently.
+   *  accountId is inherited from SendBookingConfirmationArgs and injected
+   *  by the orchestrator — callers must NOT pass it in ownerArgs. */
+  ownerArgs: Omit<SendOwnerNotificationArgs, "accountId">;
 }
 
 /**
@@ -28,29 +31,46 @@ export interface SendBookingEmailsArgs
  * NEVER roll back or delay the booking confirmation to the user.
  *
  * Error handling:
- *   - Each leg's non-quota errors are caught and logged via console.error.
  *   - QuotaExceededError on EITHER leg → save-and-flag: UPDATE the booking
  *     row setting confirmation_email_sent=false (Phase 31 EMAIL-24). The
  *     held slot stays claimed; the booking row stays. Plan 31-03 surfaces
  *     the dashboard alert by reading this flag.
+ *   - Phase 35 OAuth refusal (result.error starts with REFUSED_SEND_ERROR_PREFIX)
+ *     on the confirmation leg → same save-and-flag semantics: booking succeeds,
+ *     confirmation_email_sent=false. Owner sees flag in dashboard alongside
+ *     the reconnect banner (CONTEXT decision: silent partial failure preferred
+ *     over surfacing errors to booker).
+ *   - Other non-quota errors are caught and logged via console.error.
  *
  * Caller pattern in route.ts:
  *   after(() => sendBookingEmails({ booking, eventType, account, ..., ownerArgs }));
+ *
+ * Phase 35: accountId is threaded from the booking route through both leaf senders.
+ * The orchestrator uses account.id (available in SendBookingConfirmationArgs) as
+ * the accountId for both legs (they're sending on behalf of the same account).
  */
 export async function sendBookingEmails(
   args: SendBookingEmailsArgs,
 ): Promise<void> {
   const { ownerArgs, ...confirmationArgs } = args;
   const bookingId = confirmationArgs.booking.id;
+  // accountId is already in confirmationArgs (SendBookingConfirmationArgs has accountId)
+  const accountId = confirmationArgs.accountId;
 
+  // Run both legs concurrently. The leaf senders now return structured results
+  // rather than throwing on OAuth/send failures (they only throw on QuotaExceededError).
   const [confResult, ownerResult] = await Promise.allSettled([
     sendBookingConfirmation(confirmationArgs),
-    sendOwnerNotification(ownerArgs),
+    sendOwnerNotification({ ...ownerArgs, accountId }),
   ]);
 
-  // Phase 31 (EMAIL-24): save-and-flag on booker confirmation refusal.
-  // If EITHER leg hit the quota, flag the booking row for the dashboard alert
-  // in Plan 31-03. The held slot is NOT released — booking stays committed.
+  // Determine whether the confirmation leg should flag the booking row.
+  // Flag on:
+  //   (a) QuotaExceededError throw from the confirmation leg (Phase 31 EMAIL-24)
+  //   (b) OAuth refusal return value from the confirmation leg (Phase 35)
+  let confirmationFlagged = false;
+
+  // (a) QuotaExceededError on EITHER leg → same save-and-flag as before
   const quotaHit =
     (confResult.status === "rejected" &&
       confResult.reason instanceof QuotaExceededError) ||
@@ -58,6 +78,26 @@ export async function sendBookingEmails(
       ownerResult.reason instanceof QuotaExceededError);
 
   if (quotaHit) {
+    confirmationFlagged = true;
+  }
+
+  // (b) OAuth send refused on the CONFIRMATION leg → flag the booking row.
+  // owner-notification refusal is logged but does NOT flag confirmation_email_sent
+  // (the booker's copy is what the flag tracks).
+  if (
+    !confirmationFlagged &&
+    confResult.status === "fulfilled" &&
+    !confResult.value.success &&
+    confResult.value.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)
+  ) {
+    confirmationFlagged = true;
+    console.error("[booking-emails] confirmation oauth_send_refused — flagging booking", {
+      booking_id: bookingId,
+      error: confResult.value.error,
+    });
+  }
+
+  if (confirmationFlagged) {
     const admin = createAdminClient();
     const { error: flagErr } = await admin
       .from("bookings")
@@ -72,7 +112,7 @@ export async function sendBookingEmails(
   }
 
   // Per-leg non-quota error logging (preserves the previous .catch() behavior
-  // for arbitrary SMTP failures so they remain visible in Vercel logs).
+  // for arbitrary send failures so they remain visible in Vercel logs).
   if (
     confResult.status === "rejected" &&
     !(confResult.reason instanceof QuotaExceededError)

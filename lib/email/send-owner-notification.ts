@@ -1,7 +1,10 @@
 import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
-import { sendEmail } from "@/lib/email-sender";
+import {
+  getSenderForAccount,
+  REFUSED_SEND_ERROR_PREFIX,
+} from "@/lib/email-sender/account-sender";
 import {
   checkAndConsumeQuota,
   QuotaExceededError,
@@ -41,14 +44,20 @@ export interface SendOwnerNotificationArgs {
   booking: BookingRecord;
   eventType: EventTypeRecord;
   account: AccountRecord;
+  /** Phase 35: account UUID for per-account Gmail OAuth sender factory. */
+  accountId: string;
+}
+
+export interface SendOwnerNotificationResult {
+  success: boolean;
+  error?: string;
 }
 
 /**
  * Send a booking notification email to the account owner.
  *
  * Subject:  "New booking: [booker name] — [event] on [date]"  (CONTEXT decision #8)
- * From:     Constructed by sendEmail singleton (GMAIL_FROM_NAME + GMAIL_USER)
- *           — DO NOT pass an explicit `from` field here (would break Gmail SMTP auth)
+ * From:     Owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
  * To:       account.owner_email
  * Reply-To: booking.booker_email  (CONTEXT decision #9 — owner hits Reply to contact booker)
  *
@@ -60,14 +69,14 @@ export interface SendOwnerNotificationArgs {
  */
 export async function sendOwnerNotification(
   args: SendOwnerNotificationArgs,
-): Promise<void> {
-  const { booking, eventType, account } = args;
+): Promise<SendOwnerNotificationResult> {
+  const { booking, eventType, account, accountId } = args;
 
   if (!account.owner_email) {
     console.warn(
       `[owner-notification] account.owner_email is null — skipping owner notification for booking ${booking.id}`,
     );
-    return;
+    return { success: true };
   }
 
   // Format times in OWNER timezone (not booker timezone)
@@ -149,7 +158,7 @@ ${answerEntries
   // Phase 31 (EMAIL-21): refuse-send fail-closed at the daily cap.
   // Re-throw so sendBookingEmails can apply save-and-flag semantics.
   try {
-    await checkAndConsumeQuota("owner-notification");
+    await checkAndConsumeQuota("owner-notification", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -162,15 +171,32 @@ ${answerEntries
     throw err;
   }
 
-  // DO NOT pass `from` — the sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. Passing `from` breaks Gmail SMTP auth.
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
   // DO pass `replyTo` = booker_email so Andrew can hit Reply to contact the booker directly.
-  await sendEmail({
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to:      account.owner_email,
     replyTo: booking.booker_email, // CONTEXT decision #9 — reply-to booker
     subject: `New booking: ${booking.booker_name} — ${eventType.name} on ${subjectDate}`,
     html,
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[owner-notification] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+    } else {
+      console.error("[owner-notification] send failed", {
+        account_id: accountId,
+        error: result.error,
+      });
+    }
+  }
+
+  return { success: result.success, error: result.error };
 }
 
 /** Escape HTML special characters in user-supplied strings before inserting into email HTML. */

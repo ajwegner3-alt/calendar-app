@@ -1,7 +1,10 @@
 import "server-only";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
-import { sendEmail } from "@/lib/email-sender";
+import {
+  getSenderForAccount,
+  REFUSED_SEND_ERROR_PREFIX,
+} from "@/lib/email-sender/account-sender";
 import {
   checkAndConsumeQuota,
   QuotaExceededError,
@@ -93,10 +96,12 @@ export interface SendReminderBookerArgs {
   /** Base URL for cancel/reschedule links. Match what the bookings route
    *  passes — typically resolveAppUrl(req). */
   appUrl: string;
+  /** Phase 35: account UUID for per-account Gmail OAuth sender factory. */
+  accountId: string;
 }
 
 export async function sendReminderBooker(args: SendReminderBookerArgs): Promise<void> {
-  const { booking, eventType, account, rawCancelToken, rawRescheduleToken, appUrl } = args;
+  const { booking, eventType, account, rawCancelToken, rawRescheduleToken, appUrl, accountId } = args;
 
   // Format times in BOOKER timezone (CONTEXT decision #7 — booker sees their clock)
   const startTz = new TZDate(new Date(booking.start_at), booking.booker_timezone);
@@ -205,7 +210,7 @@ ${segments.join("\n")}
   // Re-throw so the cron loop / immediate-send / manual-reminder action can
   // branch on QuotaExceededError (continue-on-refuse / surface to UI).
   try {
-    await checkAndConsumeQuota("reminder");
+    await checkAndConsumeQuota("reminder", accountId);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       logQuotaRefusal({
@@ -218,14 +223,32 @@ ${segments.join("\n")}
     throw err;
   }
 
-  // DO NOT pass `from` — sendEmail singleton constructs from GMAIL_FROM_NAME +
-  // GMAIL_USER. Passing `from` breaks Gmail SMTP auth (matches Phase 5 lock).
-  await sendEmail({
+  // Phase 35: use per-account OAuth sender factory.
+  // from is owned by the OAuth factory (must equal authenticated Gmail address); cannot be overridden.
+  const sender = await getSenderForAccount(accountId);
+  const result = await sender.send({
     to: booking.booker_email,
     subject,
     html,
     text,
   });
+
+  if (!result.success) {
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      console.error("[reminder-booker] OAuth send refused", {
+        account_id: accountId,
+        error: result.error,
+      });
+      // Re-throw as a recognizable error so cron/callers can count it as refused
+      throw new Error(result.error);
+    } else {
+      console.error("[reminder-booker] send failed", {
+        account_id: accountId,
+        error: result.error,
+      });
+      throw new Error(result.error ?? "send failed");
+    }
+  }
 }
 
 /** Escape HTML special characters in user-supplied strings before insertion into email HTML. */
