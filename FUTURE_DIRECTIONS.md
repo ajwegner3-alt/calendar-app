@@ -293,3 +293,65 @@ Source for each: `.planning/STATE.md` Session Continuity (2026-04-30) + plan SUM
 ---
 
 *v1 sign-off: Phase 9 Plan 09-03, 2026-04-27. v1.1 sign-off: Phase 13 marathon waiver + close-out, 2026-04-30 ("consider everything good. close out the milestone"). Future Claude Code sessions: read this file after CLAUDE.md, then proceed.*
+
+---
+
+## Phase 36: Resend Backend — Activation Steps (Deferred from Phase 36)
+
+Phase 36 shipped the **framework only** on 2026-05-08. The provider, factory routing, quota bypass, abuse warning, and dual-prefix orchestrator fix are all in place and unit-tested. To activate Resend for a real customer, the following steps are required:
+
+### PREREQ-03 — Resend account + NSI domain DNS
+
+1. Create a Resend account (free tier sufficient for verification; Pro tier ~$20/month for production volume).
+2. In Resend dashboard → Domains → Add `nsintegrations.com`.
+3. Resend will provide DNS records — add them in Namecheap DNS:
+   - **SPF**: TXT record (Resend value)
+   - **DKIM**: 3 CNAME records (Resend values)
+   - **DMARC** (recommended): TXT record `v=DMARC1; p=none; rua=mailto:...`
+4. Wait for Resend dashboard to show "Verified" for SPF + DKIM (typically minutes; can take up to 24h).
+5. From Resend dashboard → API Keys → Create API Key (production scope).
+
+### Vercel env var — RESEND_API_KEY
+
+1. Vercel → Project → Settings → Environment Variables.
+2. Add `RESEND_API_KEY` for both **Preview** and **Production** with the value from step 5 above.
+3. Redeploy (or trigger a new deploy for the change to take effect).
+
+### First-customer live integration test
+
+Before flipping a real customer to Resend, validate the path end-to-end:
+
+1. Pick a test account in Supabase (e.g. `nsi-test`).
+2. Run in Supabase SQL editor:
+   ```sql
+   UPDATE accounts SET email_provider = 'resend' WHERE slug = 'nsi-test';
+   ```
+3. Make a test booking against `https://booking.nsintegrations.com/nsi-test/...`.
+4. Verify in Resend dashboard → Logs that the send appears with HTTP 200.
+5. Verify the booker inbox: email arrives with display name matching the account's `name` field and `bookings@nsintegrations.com` in the envelope.
+6. Verify Gmail renders the `.ics` attachment as an inline RSVP card (Yes/Maybe/No buttons). If it does NOT, the `content_type: "text/calendar; method=REQUEST"` field is the lever — see RESEARCH §4 for the downgrade path.
+7. Reply to the email — confirm the reply goes to the account owner's address (via `Reply-To`), not to NSI.
+8. After confirming success, decide whether to keep the test account on Resend or flip back:
+   ```sql
+   UPDATE accounts SET email_provider = 'gmail' WHERE slug = 'nsi-test';
+   ```
+
+### Customer activation flow
+
+Once the live integration test passes, real customer activation is a one-line SQL update:
+
+```sql
+UPDATE accounts SET email_provider = 'resend' WHERE id = '...';
+```
+
+No code change, no redeploy. The factory routes immediately on the next send.
+
+### Suspension lever
+
+To suspend a Resend account (abuse, unpaid customer) without forcing them back to Gmail:
+
+```sql
+UPDATE accounts SET resend_status = 'suspended' WHERE id = '...';
+```
+
+All sends from that account refuse with `resend_send_refused: account_suspended` until you flip `resend_status` back to `'active'`.
