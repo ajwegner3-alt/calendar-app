@@ -229,9 +229,12 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 **Success Criteria** (what must be TRUE):
 1. On the existing `/app/login` card, a user can enter their email and request a magic-link login email without leaving the page or navigating to a separate route.
 2. Submitting a known email address and submitting an unknown email address return identical HTTP status codes and identical response body text — no enumeration leakage.
-3. More than 3 magic-link requests from the same IP within one hour are rejected (rate-limited via `rate_limit_events`); the 4th request returns an error, not a sent email.
+3. More than 5 magic-link requests from the same (IP, email) pair within one hour are silently throttled (rate-limited via `rate_limit_events`); throttled requests return the SAME success-shape response as real sends — no enumeration leakage and no throttle leakage.
 
-**Plans:** TBD
+**Plans:** 3 plans in 3 waves
+- [ ] 38-01-PLAN.md — Server action (requestMagicLinkAction) + magicLinkSchema + magicLink rate-limit config + ROADMAP/REQUIREMENTS reconciliation (Wave 1)
+- [ ] 38-02-PLAN.md — Login form Tabs (Password|Magic link) + MagicLinkSuccess client component with 30s resend countdown + page subtitle update (Wave 2)
+- [ ] 38-03-PLAN.md — supabase/config.toml otp_expiry → 900 + manual Supabase dashboard config (template + expiry) + live end-to-end preview verification (Wave 3, has checkpoints)
 
 ---
 
