@@ -39,6 +39,10 @@ vi.mock("@/lib/supabase/admin", () => {
       from: (_table: string) => ({
         select: (_cols: string, _opts?: object) => ({
           eq: (_col: string, _val: string) => ({
+            // Phase 36: accounts.email_provider lookup path — returns null so
+            // checkAndConsumeQuota falls through to the Gmail cap path (correct
+            // default behavior for all pre-Phase-36 test scenarios).
+            maybeSingle: () => Promise.resolve({ data: null, error: null }),
             gte: (_col2: string, _val2: string) =>
               Promise.resolve({ count: _mockCount, error: _mockCountError }),
           }),

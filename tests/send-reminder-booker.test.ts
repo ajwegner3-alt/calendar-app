@@ -46,6 +46,9 @@ vi.mock("@/lib/supabase/admin", () => ({
     from: (_table: string) => ({
       select: (_cols: string, _opts?: object) => ({
         eq: (_col: string, _val: string) => ({
+          // Phase 36: accounts.email_provider lookup needs maybeSingle.
+          // Returns data:null → falls through to Gmail cap path (correct default).
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
           gte: (_col2: string, _val2: string) =>
             Promise.resolve({ count: 0, error: null }),
         }),

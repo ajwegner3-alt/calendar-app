@@ -41,6 +41,13 @@ function resetState() {
 // ---------------------------------------------------------------------------
 vi.mock("@/lib/email-sender/account-sender", () => ({
   REFUSED_SEND_ERROR_PREFIX: "oauth_send_refused",
+  RESEND_REFUSED_SEND_ERROR_PREFIX: "resend_send_refused",
+  /** Phase 36 OQ-2 fix: mirror the real isRefusedSend so tests that rely on
+   *  confirmation_email_sent=false logic continue to work. */
+  isRefusedSend: (error?: string): boolean => {
+    if (!error) return false;
+    return error.startsWith("oauth_send_refused:") || error.startsWith("resend_send_refused:");
+  },
   getSenderForAccount: vi.fn().mockImplementation(async (_accountId: string) => ({
     provider: "gmail",
     send: async (opts: unknown) => {
@@ -58,6 +65,9 @@ vi.mock("@/lib/supabase/admin", () => ({
     from: (table: string) => ({
       select: (_cols: string, _opts?: object) => ({
         eq: (_col: string, _val: string) => ({
+          // Phase 36: accounts.email_provider lookup needs maybeSingle.
+          // Returns data:null → falls through to Gmail cap path (correct default).
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
           gte: (_col2: string, _val2: string) =>
             Promise.resolve({ count: 0, error: null }),
         }),
