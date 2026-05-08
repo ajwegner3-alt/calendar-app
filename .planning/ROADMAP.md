@@ -158,14 +158,20 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 4. All 7 send paths (booking-confirmation, owner-notification, reminder, cancel-booker, cancel-owner, reschedule-booker, reschedule-owner) call `getSenderForAccount(accountId)` — zero direct `sendEmail()` singleton calls remain in production send code.
 5. `GMAIL_APP_PASSWORD` and the centralized SMTP path are removed in a separate deploy only after Andrew confirms production sends working via Gmail OAuth.
 
-**Plans:** 7 plans in 6 waves
-- [ ] 35-00-PLAN.md — Vercel GOOGLE_CLIENT_ID/SECRET env var checklist (manual handoff, Wave 1)
-- [ ] 35-01-PLAN.md — Per-account quota: email_send_log.account_id migration + quota-guard signature update (Wave 2)
-- [ ] 35-02-PLAN.md — Google token exchange helper + Gmail OAuth nodemailer provider (Wave 2)
-- [ ] 35-03-PLAN.md — getSenderForAccount factory with invalid_grant → needs_reconnect handling (Wave 3)
-- [ ] 35-04-PLAN.md — Cutover: thread accountId through 7 transactional senders + outer callers (Wave 4)
-- [ ] 35-05-PLAN.md — Two-step deploy verification: Andrew dogfoods nsi connect on preview + production gates (Wave 5)
-- [ ] 35-06-PLAN.md — SMTP singleton + GMAIL_APP_PASSWORD removal commit (Wave 6, post-verification)
+**Plans:** 7 plans in 6 waves — all complete 2026-05-08
+- [x] 35-00-PLAN.md — Vercel GOOGLE_CLIENT_ID/SECRET env var checklist (manual handoff, Wave 1)
+- [x] 35-01-PLAN.md — Per-account quota: email_send_log.account_id migration + quota-guard signature update (Wave 2)
+- [x] 35-02-PLAN.md — Google token exchange helper + Gmail OAuth nodemailer provider (Wave 2)
+- [x] 35-03-PLAN.md — getSenderForAccount factory with invalid_grant → needs_reconnect handling (Wave 3)
+- [x] 35-04-PLAN.md — Cutover: thread accountId through 7 transactional senders + outer callers (Wave 4)
+- [x] 35-05-PLAN.md — Two-step deploy verification: Andrew dogfoods nsi connect on production + reconnect smoke (Wave 5)
+- [x] 35-06-PLAN.md — SMTP singleton + GMAIL_APP_PASSWORD removal commit (Wave 6, post-verification)
+
+**Architectural deviations during verification (both shipped to production):**
+- Direct-Google OAuth replaces Supabase `linkIdentity` for the Gmail-connect flow (commit `ab02a23`) — `linkIdentity` silently dropped `provider_refresh_token` under several conditions.
+- Gmail provider switched from SMTP+OAuth2 to Gmail REST API (commit `cb82b6f`) — `gmail.send` scope authorizes only the REST endpoint; SMTP relay needs the broader `https://mail.google.com/` scope, which we don't request.
+
+See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the full pivot post-mortem.
 
 ---
 
@@ -270,8 +276,8 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28-30 | v1.5 | 6 / 6 | ✅ Shipped | 2026-05-05 |
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
-| 34 | v1.7 | 4 / 4 | Code complete — connect path superseded by Phase 35 direct-OAuth (commit `ab02a23`); signup path still uses original `/auth/google-callback` | 2026-05-06 |
-| 35 | v1.7 | 5 / 7 | Code LIVE on production at `cb82b6f`; 2 verification items remain (quota isolation SQL + reconnect smoke) before Plan 06 (SMTP removal) ships. See `35-DEVIATION-DIRECT-OAUTH.md` for the architecture pivots. | - |
+| 34 | v1.7 | 4 / 4 | ✅ Code complete — connect path superseded by Phase 35 direct-OAuth (commit `ab02a23`); signup path still uses original `/auth/google-callback` | 2026-05-06 |
+| 35 | v1.7 | 7 / 7 | ✅ Shipped — verifier 5/5 PASS; SMTP singleton + `GMAIL_APP_PASSWORD` removed (commits `31db425`, `138cfb0`, `6aecfbb`). See `35-DEVIATION-DIRECT-OAUTH.md` for architecture pivots. | 2026-05-08 |
 | 36 | v1.7 | 0 / TBD | Not started | - |
 | 37 | v1.7 | 0 / TBD | Not started | - |
 | 38 | v1.7 | 0 / TBD | Not started | - |
@@ -288,4 +294,4 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 
 ---
 
-*Roadmap last updated: 2026-05-08 — Phase 35 code LIVE on production at commit `cb82b6f`. Two architectural deviations during Plan 35-05 verification: (1) Supabase `linkIdentity` replaced by direct-Google OAuth at `/auth/gmail-connect/callback` (silently dropped `provider_refresh_token`); (2) Gmail provider switched from SMTP/OAuth2 to Gmail REST API (`gmail.send` scope is REST-only — SMTP relay needs `https://mail.google.com/`, which we don't request). Live booking verified end-to-end at 2026-05-08 ~02:15 UTC. 2 verification items remain (quota isolation SQL seed + reconnect smoke) before Plan 06 (SMTP removal) ships. See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the canonical Phase 35 story.*
+*Roadmap last updated: 2026-05-08 — Phase 35 SHIPPED. Plan 35-05 verification completed (architectural quota isolation + reconnect-banner smoke); Plan 35-06 retired the SMTP singleton and `GMAIL_APP_PASSWORD` env var (commits `31db425` migrate-welcome-email, `138cfb0` delete-singleton, `6aecfbb` remove-env-vars, `e7984fe` plan-metadata). Verifier passed 5/5 must-haves. Phase 35 requirements (AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33) all marked Complete in REQUIREMENTS.md. v1.7 progress: Phases 34 + 35 of 7 shipped. Andrew manual cleanup pending: delete `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from Vercel (Preview + Production) — they are now inert, no redeploy required.*

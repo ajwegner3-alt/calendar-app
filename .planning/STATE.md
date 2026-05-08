@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 (late evening / next session) — Phase 35 Plan 06 complete. SMTP singleton + App Password provider deleted. welcome-email migrated to getSenderForAccount (Approach A). GMAIL_APP_PASSWORD removed from env files. Phase 35 is functionally complete — all 6 success criteria pass. Awaiting orchestrator verifier + ROADMAP/REQUIREMENTS update.
+**Last updated:** 2026-05-08 (next session) — **Phase 35 SHIPPED.** Plan 35-05 verification gates passed (architectural quota isolation + reconnect-banner DB smoke); Plan 35-06 retired SMTP singleton + `GMAIL_APP_PASSWORD`. Verifier passed 5/5 must-haves. AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33 marked Complete in REQUIREMENTS.md. Latest commits: `31db425` (welcome-email migrated to factory, Approach A), `138cfb0` (singleton + provider deleted), `6aecfbb` (env vars removed), `e7984fe` (plan-metadata).
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 35 — COMPLETE. All 6 plans done. SMTP path deleted. Production live on Gmail REST API OAuth. Orchestrator to run verifier + ROADMAP update, then Phase 36 (Resend migration for welcome email).
+**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Phase 35 fully shipped 2026-05-08. Andrew has one non-blocking manual cleanup item: delete `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from Vercel env vars (now inert; no redeploy required).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
-**Phase:** 35 — Per-Account Gmail OAuth Send — COMPLETE (all 6 plans done).
-**Plan:** 06 of 6 complete.
-**Status:** Production live at commit `6aecfbb`. SMTP singleton + providers/gmail.ts deleted. welcome-email migrated to getSenderForAccount. GMAIL_APP_PASSWORD removed from env files. All 6 Phase 35 success criteria pass. Awaiting verifier run + ROADMAP update from orchestrator.
-**Last activity:** 2026-05-08 — Plan 06 complete. Deleted SMTP App Password path; migrated welcome-email to getSenderForAccount (Approach A, accountId available at call site). Commits 31db425, 138cfb0, 6aecfbb.
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (2 of 7 phases shipped)
+**Phase:** 36 — Resend Backend for Upgraded Accounts — NOT STARTED. Blocked on PREREQ-03 (Andrew creates Resend account, verifies NSI domain via Namecheap DNS).
+**Plan:** Phase 35 closed; Phase 36 plans TBD (will be created via `/gsd:plan-phase 36` after PREREQ-03).
+**Status:** Phase 35 SHIPPED. Verifier passed 5/5. ROADMAP + REQUIREMENTS marked. SMTP path fully retired in source. Production live on Gmail REST API OAuth.
+**Last activity:** 2026-05-08 — Plan 35-06 executed; Phase 35 verifier wrote 35-VERIFICATION.md (status: passed); ROADMAP/STATE/REQUIREMENTS updated to mark phase complete.
 
-Progress (Phase 35): ██████ 6/6 plans complete (00-06 done + 2 architectural fixes shipped)
+Progress (Phase 35): ███████ 7/7 plans complete (00-06 + 2 architectural fixes shipped) — ✅ DONE
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -97,29 +97,42 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 35 Plans 05 verification gates passed (quota isolation architectural + reconnect banner smoke). Plan 06 executed: SMTP singleton deleted, welcome-email migrated to getSenderForAccount (Approach A), GMAIL_APP_PASSWORD removed from env files. Phase 35 complete.
+**Last session:** 2026-05-08 (orchestrator) — Plan 35-05 verification gates passed (architectural quota isolation via `.eq("account_id", accountId)` in `quota-guard.ts` + DB-flip reconnect-banner smoke); Plan 35-06 executed (welcome-email migrated to `getSenderForAccount` Approach A, SMTP singleton + `providers/gmail.ts` deleted, env vars removed); verifier ran and passed 5/5. Phase 35 fully shipped.
 
-**Stopped at:** Phase 35 complete. Commit `6aecfbb` is latest (Plan 06 Task 3). Awaiting orchestrator verifier + ROADMAP/REQUIREMENTS update before Phase 36.
+**Stopped at:** Phase 35 closed. Latest commit will be `docs(35): complete per-account-gmail-oauth-send phase` after orchestrator commits the metadata bundle. Phase 36 not yet started — blocked on PREREQ-03 (Andrew Resend account + NSI domain DNS verification).
 
 ## ▶ Next session — start here
 
-**Phase 35 is complete.** All 6 plans committed. Production live.
+**Phase 35 is shipped.** Two paths forward:
 
-### Step 1: Phase 35 verifier + roadmap update
+### Path A: Phase 36 (Resend backend) — preferred next phase
 
-Spawn `gsd-verifier` to write `.planning/phases/35-per-account-gmail-oauth-send/35-VERIFICATION.md`. Update `.planning/ROADMAP.md` Phase 35 status row. Update `.planning/REQUIREMENTS.md` to mark AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33 as Complete.
+Blocker: **PREREQ-03** — Andrew must:
+1. Create Resend account (~$20/month Pro tier)
+2. Add NSI domain DNS records (SPF, DKIM, DMARC) in Namecheap
+3. Verify domain in Resend dashboard (must show "Verified" for SPF + DKIM)
+4. Capture API key
+5. Add `RESEND_API_KEY` to Vercel env vars (Preview + Production)
 
-### Step 2: Andrew manual cleanup (non-blocking)
+Once PREREQ-03 is done, run `/gsd:discuss-phase 36` to gather context, then `/gsd:plan-phase 36` to create the plans.
+
+### Path B: Phase 38 (Magic-link login) or Phase 39 (BOOKER polish) — work in parallel
+
+Both have zero backend dependencies on Phase 36 — they can be planned and executed any time. Phase 38 needs no prereqs. Phase 39 is pure UI.
+
+### Andrew manual cleanup (non-blocking; can be done at any time)
 
 Delete from Vercel → Settings → Environment Variables:
-1. GMAIL_USER (Preview + Production)
-2. GMAIL_APP_PASSWORD (Preview + Production)
-3. GMAIL_FROM_NAME (Preview + Production)
-4. (Optional) Revoke App Password in Google Account → Security → App passwords
+1. `GMAIL_USER` (Preview + Production)
+2. `GMAIL_APP_PASSWORD` (Preview + Production)
+3. `GMAIL_FROM_NAME` (Preview + Production)
+4. (Optional) Revoke App Password in Google Account → Security → 2-Step Verification → App passwords → "calendar-app"
 
-### Step 3: Phase 36 — Resend migration
+These vars are now inert — code that read them has been deleted. No redeploy needed after cleanup.
 
-welcome-email already has accountId threading in place (Plan 06 Approach A). Phase 36 only needs to swap getSenderForAccount internals for a Resend provider.
+### Phase 36 prep notes (when PREREQ-03 done)
+
+welcome-email already has `accountId` threading in place (Plan 35-06 Approach A). Phase 36's design is to add a Resend provider implementation behind `getSenderForAccount`, keyed off `accounts.email_provider = 'resend'` (column does not yet exist — Phase 36 adds it).
 
 ### What's already in place — don't re-do
 
