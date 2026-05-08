@@ -7,7 +7,7 @@ import {
   sendOwnerNotification,
   type SendOwnerNotificationArgs,
 } from "@/lib/email/send-owner-notification";
-import { REFUSED_SEND_ERROR_PREFIX } from "@/lib/email-sender/account-sender";
+import { isRefusedSend } from "@/lib/email-sender/account-sender";
 import { QuotaExceededError } from "@/lib/email-sender/quota-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -35,7 +35,7 @@ export interface SendBookingEmailsArgs
  *     row setting confirmation_email_sent=false (Phase 31 EMAIL-24). The
  *     held slot stays claimed; the booking row stays. Plan 31-03 surfaces
  *     the dashboard alert by reading this flag.
- *   - Phase 35 OAuth refusal (result.error starts with REFUSED_SEND_ERROR_PREFIX)
+ *   - Phase 35 OAuth refusal OR Phase 36 Resend refusal (isRefusedSend)
  *     on the confirmation leg → same save-and-flag semantics: booking succeeds,
  *     confirmation_email_sent=false. Owner sees flag in dashboard alongside
  *     the reconnect banner (CONTEXT decision: silent partial failure preferred
@@ -81,17 +81,18 @@ export async function sendBookingEmails(
     confirmationFlagged = true;
   }
 
-  // (b) OAuth send refused on the CONFIRMATION leg → flag the booking row.
+  // (b) Phase 35 OAuth refusal OR Phase 36 Resend refusal (see isRefusedSend)
+  // — same save-and-flag semantics: booking succeeds, confirmation_email_sent=false.
   // owner-notification refusal is logged but does NOT flag confirmation_email_sent
   // (the booker's copy is what the flag tracks).
   if (
     !confirmationFlagged &&
     confResult.status === "fulfilled" &&
     !confResult.value.success &&
-    confResult.value.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)
+    isRefusedSend(confResult.value.error)
   ) {
     confirmationFlagged = true;
-    console.error("[booking-emails] confirmation oauth_send_refused — flagging booking", {
+    console.error("[booking-emails] confirmation send refused — flagging booking", {
       booking_id: bookingId,
       error: confResult.value.error,
     });
