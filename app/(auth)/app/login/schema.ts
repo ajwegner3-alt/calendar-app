@@ -6,3 +6,9 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const magicLinkSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+});
+
+export type MagicLinkInput = z.infer<typeof magicLinkSchema>;

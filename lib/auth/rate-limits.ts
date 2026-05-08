@@ -17,6 +17,7 @@ export const AUTH_RATE_LIMITS = {
   emailChange: { max: 3, windowMs: 60 * 60 * 1000 }, // 3 / hour / `${ip}:${uid}`
   // uid is fine here — user is authenticated; keying on uid prevents cross-device
   // bypass while tolerating shared IPs (e.g. office NAT).
+  magicLink: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 / hour / (IP+email)
 } as const;
 
 type AuthRouteKey = keyof typeof AUTH_RATE_LIMITS;
