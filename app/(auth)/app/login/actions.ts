@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { checkAuthRateLimit } from "@/lib/auth/rate-limits";
-import { loginSchema } from "./schema";
+import { loginSchema, magicLinkSchema } from "./schema";
 
 export type LoginState = {
   fieldErrors?: Partial<Record<"email" | "password", string[]>>;
@@ -101,4 +101,83 @@ export async function initiateGoogleOAuthAction(): Promise<void> {
 
   // redirect() throws NEXT_REDIRECT — keep outside try/catch.
   redirect(data.url);
+}
+
+export type MagicLinkState = {
+  success?: boolean;
+  formError?: string;
+  fieldErrors?: Partial<Record<"email", string[]>>;
+};
+
+/**
+ * Server Action: request a magic-link login email (AUTH-24).
+ *
+ * Login-only mode: shouldCreateUser:false. Supabase returns an error for unknown
+ * emails in this mode (GitHub supabase/auth#1547) — the error is logged
+ * server-side and NEVER surfaced to the client. This guarantees identical
+ * response bodies for known and unknown emails (AUTH-29 enumeration safety).
+ *
+ * Rate limit: 5 requests per (IP + email) per hour. On throttle the action
+ * returns the SAME { success: true } shape as a real send — silent rate-limit
+ * (CONTEXT lock; an attacker probing throttle status learns nothing).
+ *
+ * Landing target after click-through: /app (CONTEXT lock — no redirectTo
+ * honoring; /auth/confirm route already routes type=magiclink to `next`).
+ */
+export async function requestMagicLinkAction(
+  _prev: MagicLinkState,
+  formData: FormData,
+): Promise<MagicLinkState> {
+  // 1. Zod validate
+  const parsed = magicLinkSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const { email } = parsed.data;
+
+  // 2. Rate limit: 5 / hour / (IP + email). Silent throttle — same success
+  //    shape as a real send so attackers cannot distinguish.
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+
+  const rl = await checkAuthRateLimit("magicLink", `${ip}:${email}`);
+  if (!rl.allowed) {
+    return { success: true };
+  }
+
+  // 3. Send via Supabase. shouldCreateUser:false is CRITICAL — defaults to
+  //    true, which would silently auto-register every unknown email.
+  const supabase = await createClient();
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${origin}/auth/confirm?next=/app`,
+    },
+  });
+
+  // 4. True server error path — surface a generic message so the user knows
+  //    to retry. 4xx (including the unknown-email 400) is swallowed for
+  //    enumeration safety. Mirror loginAction's status-based gating (the
+  //    auth-js error.code is unreliable on credential errors per existing
+  //    pattern; gate on status only).
+  if (error && (!error.status || error.status >= 500)) {
+    console.error("[magic-link] signInWithOtp 5xx:", error.message);
+    return { formError: "Something went wrong. Please try again." };
+  }
+  if (error) {
+    // 4xx — log and swallow (enumeration safety; could be unknown email).
+    console.error(
+      "[magic-link] signInWithOtp swallowed (not returned to client):",
+      error.message,
+    );
+  }
+
+  // 5. Always return success for any non-5xx outcome.
+  return { success: true };
 }
