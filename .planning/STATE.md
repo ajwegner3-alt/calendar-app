@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 37 Plan 02 complete.** `requestUpgradeCore` + `requestUpgradeAction` server action implemented with direct createResendClient() send path (LD-05 quota bypass); 9-branch Vitest unit test suite all pass. Latest commits: `c897170` (action), `6e884e0` (tests).
+**Last updated:** 2026-05-08 — **Phase 37 Plan 03 complete. Phase 37 DONE.** `/app/settings/upgrade` server component + `UpgradeForm` client component shipped; all 4 UPGRADE criteria observable end-to-end. Latest commits: `bf0307a` (page.tsx), `9b5eca7` (upgrade-form.tsx).
 
 ## Project Reference
 
@@ -15,12 +15,12 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (3 of 7 phases shipped)
-**Phase:** 37 — Upgrade Flow + In-App Cap-Hit UI — IN PROGRESS
-**Plan:** 2 of 3 complete (schema + banner link done; requestUpgradeAction done; settings page pending)
-**Status:** Plan 02 committed. Plan 03 unblocked.
-**Last activity:** 2026-05-08 — Plan 37-02 executed; requestUpgradeCore + requestUpgradeAction implemented; 9 tests pass. Commits: `c897170`, `6e884e0`.
+**Phase:** 37 — Upgrade Flow + In-App Cap-Hit UI — COMPLETE
+**Plan:** 3 of 3 complete (migration + banner link; requestUpgradeAction; settings page + form — all done)
+**Status:** Phase 37 complete. Phase 38 (Magic-link login) or Phase 39 (Booker polish) unblocked.
+**Last activity:** 2026-05-08 — Plan 37-03 executed; /app/settings/upgrade page + UpgradeForm client component shipped. Commits: `bf0307a`, `9b5eca7`.
 
-Progress (Phase 37): ██████░░ 2/3 plans complete
+Progress (Phase 37): ████████ 3/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -80,6 +80,9 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: P
 - **Soft Resend abuse threshold (Phase 36, Plan 03)** — `RESEND_ABUSE_WARN_THRESHOLD = 5000`; `warnIfResendAbuseThresholdCrossed(accountId)` fire-and-forget; emits `console.warn("[RESEND_ABUSE_THRESHOLD_CROSSED]", {...})`. Never blocks. Per-account `${today}:${accountId}` dedup pattern (matches Phase 35 LD-12 precedent). Hard cap deferred until abuse observed in production.
 - **requestUpgradeAction uses createResendClient() directly — never getSenderForAccount() (Phase 37, Plan 02)** — The upgrade-request send MUST bypass the per-account quota guard (LD-05 bootstrap: works at cap-hit moment). `getSenderForAccount(accountId)` routes through `checkAndConsumeQuota()` and returns a refused sender when the account is at cap. Use `createResendClient(config)` directly for any send that must work regardless of account quota state.
 - **send-then-write DB ordering for timestamp updates (Phase 37, Plan 02)** — `last_upgrade_request_at` written to DB ONLY after `resendClient.send()` returns `{ success: true }`. A send failure leaves the column null so the user can retry immediately. Any new timestamp-gated rate-limit feature must follow this ordering to avoid locking users out when sends fail.
+- **Server-rendered locked-out countdown (Phase 37, Plan 03)** — Settings pages compute `lockedOut` (boolean) + `timeRemaining` (string | null) server-side and pass as props to the client form component. The client never recalculates or polls. No `setInterval`/`setTimeout`. User reloads the page to see an updated countdown. This avoids hydration mismatches and timer cleanup complexity. Apply to any future rate-limit UI where server-side computation is sufficient.
+- **getClaims() as the settings page auth pattern (Phase 37, Plan 03)** — All settings pages in `app/(shell)/app/settings/*/page.tsx` use `supabase.auth.getClaims()` (NOT `getUser()`). Each page handles its own auth guard (no shared settings layout). `redirect("/app/login")` on no claims; `redirect("/app/unlinked")` on no account row.
+- **account.id not forwarded to client form components (Phase 37, Plan 03)** — Server actions re-derive the account from the session via RLS-scoped query. Client props must not expose account IDs that a user could substitute. Pattern: pass only display values and gate flags (e.g., lockedOut, timeRemaining) as props.
 - **invocationCallOrder Vitest assertion for async ordering (Phase 37, Plan 02)** — `sendMock.mock.invocationCallOrder[0] < updateMock.mock.invocationCallOrder[0]` proves temporal ordering across async calls without artificial ordering constraints. Use this pattern for any test that must assert "A happened before B" where both A and B are vi.fn() mocks.
 - **Core/wrapper split with three injected clients (Phase 37, Plan 02)** — `requestUpgradeCore(args, { rlsClient, adminClient, resendClient })` extends the reminders two-client pattern by adding `resendClient: EmailClient` as a third injection point. Tests pass a structural `{ provider: "resend", send: vi.fn(...) }` mock. The wrapper builds all three real clients then delegates. Dynamic `revalidatePath` import in wrapper ensures core never touches `next/cache`.
 
@@ -109,24 +112,19 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 37, Plan 02 executed. `requestUpgradeCore` + `requestUpgradeAction` implemented with direct createResendClient() send path; 9-branch Vitest unit test suite all pass. Commits: `c897170` (action), `6e884e0` (tests).
+**Last session:** 2026-05-08 — Phase 37, Plan 03 executed. `/app/settings/upgrade` server page + `UpgradeForm` client component implemented; all 9 Plan 02 tests still pass; no new TS/lint errors. Commits: `bf0307a` (page.tsx), `9b5eca7` (upgrade-form.tsx).
 
-**Stopped at:** Phase 37, Plan 02 complete. Resume at Plan 03 (settings upgrade page at /app/settings/upgrade — server component page + upgrade-form client component, consumes requestUpgradeAction from Plan 02).
+**Stopped at:** Phase 37 complete (all 3 plans shipped). Resume at Phase 38 (Magic-link login) or Phase 39 (Booker polish) — both unblocked.
 
 **Resume file:** None
 
 ## ▶ Next session — start here
 
-**Phase 37 Plans 01 and 02 SHIPPED.** Migration + banner link + requestUpgradeAction all on main.
+**Phase 37 fully SHIPPED.** All 3 plans complete: migration + banner link (01), requestUpgradeAction (02), /app/settings/upgrade page + UpgradeForm (03).
 
-### Path A: Phase 37 Plan 03 (settings upgrade page) — next immediate step
+### Path A: Phase 38 (Magic-link login) — next recommended step
 
-Plan 03 builds `/app/settings/upgrade` page (server component + `_components/upgrade-form.tsx` client component). It:
-- Imports `requestUpgradeAction` from Plan 02 (`app/(shell)/app/settings/upgrade/_lib/actions.ts`)
-- Reads `last_upgrade_request_at` from the account row for server-rendered locked-out countdown
-- Follows the existing settings page pattern (profile/gmail/reminders pages)
-
-### Path B: Phase 38 (Magic-link login) or Phase 39 (BOOKER polish) — work in parallel
+### Path B: Phase 39 (BOOKER polish) — work in parallel
 
 Both have zero backend dependencies. Phase 38 needs no prereqs. Phase 39 is pure UI.
 
