@@ -71,6 +71,16 @@ export async function GET(request: NextRequest) {
     gmailGranted = hasGmailSendScope(grantedScopes);
   }
 
+  // [TEMP DIAG — Phase 35-05 troubleshooting] Log what we got from Google so we can
+  // tell why the persist branch is being skipped. Never logs the token itself.
+  console.log("[google-callback] DIAG", {
+    userId,
+    hasRefreshToken: !!providerRefreshToken,
+    hasAccessToken: !!providerAccessToken,
+    grantedScopesPreview: grantedScopes ? grantedScopes.slice(0, 200) : null,
+    gmailGranted,
+  });
+
   // Persist credential ONLY if we have a refresh token AND gmail.send was granted.
   // If gmail.send was denied, no point storing a token that can't send mail —
   // user must reconnect with full scope. Plan 04's settings flow handles reconnect.
