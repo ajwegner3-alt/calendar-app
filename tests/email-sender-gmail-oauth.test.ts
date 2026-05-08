@@ -1,30 +1,29 @@
 /**
  * Unit tests for createGmailOAuthClient (lib/email-sender/providers/gmail-oauth.ts).
  *
- * nodemailer.createTransport is mocked so no real SMTP connection is made.
- * Tests verify: provider identity, From enforcement (spoofing blocked),
- * sendMail call arguments, array-to recipients, and error handling.
+ * The provider posts to Gmail's REST API (gmail.users.messages.send) — global
+ * fetch is mocked so no real HTTP request is made. Tests verify: provider
+ * identity, From enforcement, raw message structure, base64url encoding,
+ * array-to recipients, error handling.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import nodemailer from "nodemailer";
 import { createGmailOAuthClient } from "@/lib/email-sender/providers/gmail-oauth";
 
-// Hoist the mock sendMail spy so we can control it per test.
-const mockSendMail = vi.fn();
+const mockFetch = vi.fn();
 
-vi.mock("nodemailer", () => ({
-  default: {
-    createTransport: vi.fn(() => ({
-      sendMail: mockSendMail,
-    })),
-  },
-}));
+beforeEach(() => {
+  mockFetch.mockReset();
+  vi.stubGlobal("fetch", mockFetch);
+});
+
+/** Decode the base64url 'raw' field back to RFC-822 source. */
+function decodeRaw(body: string): string {
+  const json = JSON.parse(body) as { raw: string };
+  const b64 = json.raw.replace(/-/g, "+").replace(/_/g, "/");
+  return Buffer.from(b64, "base64").toString("utf8");
+}
 
 describe("createGmailOAuthClient", () => {
-  beforeEach(() => {
-    mockSendMail.mockReset();
-  });
-
   it("returns an object with provider: 'gmail' and a send function", () => {
     const client = createGmailOAuthClient({
       user: "user@example.com",
@@ -35,8 +34,37 @@ describe("createGmailOAuthClient", () => {
     expect(typeof client.send).toBe("function");
   });
 
-  it("calls sendMail with from = 'user@example.com <user@example.com>' when no fromName", async () => {
-    mockSendMail.mockResolvedValue({ messageId: "<test-id@example.com>" });
+  it("posts to Gmail REST endpoint with bearer access token", async () => {
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ id: "msg-id-123" }), { status: 200 }),
+    );
+
+    const client = createGmailOAuthClient({
+      user: "user@example.com",
+      accessToken: "ya29.test",
+    });
+
+    const result = await client.send({
+      to: "recipient@example.com",
+      subject: "Test",
+      html: "<p>Hello</p>",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.messageId).toBe("msg-id-123");
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe(
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    );
+    expect(init.method).toBe("POST");
+    expect(init.headers.Authorization).toBe("Bearer ya29.test");
+  });
+
+  it("encodes the raw message with From = 'user <user@example.com>' when no fromName", async () => {
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ id: "x" }), { status: 200 }),
+    );
 
     const client = createGmailOAuthClient({
       user: "user@example.com",
@@ -49,13 +77,14 @@ describe("createGmailOAuthClient", () => {
       html: "<p>Hello</p>",
     });
 
-    expect(mockSendMail).toHaveBeenCalledOnce();
-    const callArgs = mockSendMail.mock.calls[0][0];
-    expect(callArgs.from).toBe("user@example.com <user@example.com>");
+    const rfc822 = decodeRaw(mockFetch.mock.calls[0][1].body);
+    expect(rfc822).toContain("From: user@example.com <user@example.com>");
   });
 
   it("uses fromName in From header when provided", async () => {
-    mockSendMail.mockResolvedValue({ messageId: "<test-id@example.com>" });
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ id: "x" }), { status: 200 }),
+    );
 
     const client = createGmailOAuthClient({
       user: "user@example.com",
@@ -69,12 +98,14 @@ describe("createGmailOAuthClient", () => {
       html: "<p>Hello</p>",
     });
 
-    const callArgs = mockSendMail.mock.calls[0][0];
-    expect(callArgs.from).toBe("NSI <user@example.com>");
+    const rfc822 = decodeRaw(mockFetch.mock.calls[0][1].body);
+    expect(rfc822).toContain("From: NSI <user@example.com>");
   });
 
   it("ignores options.from — enforces authenticated address (Pitfall 6)", async () => {
-    mockSendMail.mockResolvedValue({ messageId: "<test-id@example.com>" });
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ id: "x" }), { status: 200 }),
+    );
 
     const client = createGmailOAuthClient({
       user: "user@example.com",
@@ -85,17 +116,18 @@ describe("createGmailOAuthClient", () => {
       to: "recipient@example.com",
       subject: "Test",
       html: "<p>Hello</p>",
-      from: "spoof@evil.com", // Should be ignored
+      from: "spoof@evil.com",
     });
 
-    const callArgs = mockSendMail.mock.calls[0][0];
-    // The enforced from must be the authenticated user, not the caller-supplied from.
-    expect(callArgs.from).toBe("user@example.com <user@example.com>");
-    expect(callArgs.from).not.toContain("spoof@evil.com");
+    const rfc822 = decodeRaw(mockFetch.mock.calls[0][1].body);
+    expect(rfc822).toContain("From: user@example.com <user@example.com>");
+    expect(rfc822).not.toContain("spoof@evil.com");
   });
 
-  it("returns { success: false, error } when sendMail rejects — does not throw", async () => {
-    mockSendMail.mockRejectedValue(new Error("SMTP auth failed"));
+  it("returns { success: false, error } when Gmail returns 4xx — does not throw", async () => {
+    mockFetch.mockResolvedValue(
+      new Response("invalid_grant", { status: 401 }),
+    );
 
     const client = createGmailOAuthClient({
       user: "user@example.com",
@@ -109,11 +141,32 @@ describe("createGmailOAuthClient", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe("SMTP auth failed");
+    expect(result.error).toContain("gmail_api_401");
+    expect(result.error).toContain("invalid_grant");
+  });
+
+  it("returns { success: false, error } when fetch rejects — does not throw", async () => {
+    mockFetch.mockRejectedValue(new Error("network down"));
+
+    const client = createGmailOAuthClient({
+      user: "user@example.com",
+      accessToken: "ya29.test",
+    });
+
+    const result = await client.send({
+      to: "recipient@example.com",
+      subject: "Test",
+      html: "<p>Hello</p>",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("network down");
   });
 
   it("joins array 'to' recipients with ', '", async () => {
-    mockSendMail.mockResolvedValue({ messageId: "<test-id@example.com>" });
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ id: "x" }), { status: 200 }),
+    );
 
     const client = createGmailOAuthClient({
       user: "user@example.com",
@@ -126,7 +179,7 @@ describe("createGmailOAuthClient", () => {
       html: "<p>Hello</p>",
     });
 
-    const callArgs = mockSendMail.mock.calls[0][0];
-    expect(callArgs.to).toBe("a@example.com, b@example.com");
+    const rfc822 = decodeRaw(mockFetch.mock.calls[0][1].body);
+    expect(rfc822).toContain("To: a@example.com, b@example.com");
   });
 });
