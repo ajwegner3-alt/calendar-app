@@ -225,7 +225,11 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# Magic-link OTP expiry — 15 minutes. Phase 38 CONTEXT lock: success state UI says
+# "expires in 15 minutes" so the live setting must match. This affects ALL email
+# OTP flows (magic link, email-change), but not signup confirmations because
+# enable_confirmations = false elsewhere in this file.
+otp_expiry = 900
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
