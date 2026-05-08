@@ -30,6 +30,18 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const oauthError = searchParams.get("error");
+  const oauthErrorCode = searchParams.get("error_code");
+  const oauthErrorDesc = searchParams.get("error_description");
+
+  // [TEMP DIAG — Phase 35-05 troubleshooting] Log entry to /auth/google-callback
+  // with all error params and presence of code, so we can see every callback.
+  console.log("[google-callback] ENTRY", {
+    hasCode: !!code,
+    oauthError,
+    oauthErrorCode,
+    oauthErrorDesc,
+    url: request.url.replace(code ?? "__no_code__", "<redacted_code>"),
+  });
 
   // User clicked "Cancel" at Google consent screen.
   if (oauthError) {
