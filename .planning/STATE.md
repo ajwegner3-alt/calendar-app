@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 (next session) — **Phase 35 SHIPPED.** Plan 35-05 verification gates passed (architectural quota isolation + reconnect-banner DB smoke); Plan 35-06 retired SMTP singleton + `GMAIL_APP_PASSWORD`. Verifier passed 5/5 must-haves. AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33 marked Complete in REQUIREMENTS.md. Latest commits: `31db425` (welcome-email migrated to factory, Approach A), `138cfb0` (singleton + provider deleted), `6aecfbb` (env vars removed), `e7984fe` (plan-metadata).
+**Last updated:** 2026-05-08 — **Phase 36 Plan 01 complete.** Schema migration (`20260507120000_phase36_resend_provider.sql`) + `EmailProvider` union extension shipped. Wave 1 of Phase 36 done. Latest commits: `c3b0e0b` (migration), `a0fb2f3` (types union).
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Phase 35 fully shipped 2026-05-08. Andrew has one non-blocking manual cleanup item: delete `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from Vercel env vars (now inert; no redeploy required).
+**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Plan 01 (schema + types) complete 2026-05-08. Plans 02-03 next (Resend provider impl + factory routing). Blocked on PREREQ-03 for live Resend sends but plans can proceed with mocks.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (2 of 7 phases shipped)
-**Phase:** 36 — Resend Backend for Upgraded Accounts — NOT STARTED. Blocked on PREREQ-03 (Andrew creates Resend account, verifies NSI domain via Namecheap DNS).
-**Plan:** Phase 35 closed; Phase 36 plans TBD (will be created via `/gsd:plan-phase 36` after PREREQ-03).
-**Status:** Phase 35 SHIPPED. Verifier passed 5/5. ROADMAP + REQUIREMENTS marked. SMTP path fully retired in source. Production live on Gmail REST API OAuth.
-**Last activity:** 2026-05-08 — Plan 35-06 executed; Phase 35 verifier wrote 35-VERIFICATION.md (status: passed); ROADMAP/STATE/REQUIREMENTS updated to mark phase complete.
+**Phase:** 36 — Resend Backend for Upgraded Accounts — IN PROGRESS
+**Plan:** Plan 01 complete (schema + types). Next: Plan 02 (Resend provider implementation).
+**Status:** Wave 1 complete. Schema migration file created, EmailProvider union extended. Framework-only — migration NOT applied to hosted Supabase (deferred per PREREQ-03).
+**Last activity:** 2026-05-08 — Plan 36-01 executed; schema migration + type union shipped; SUMMARY.md written.
 
-Progress (Phase 35): ███████ 7/7 plans complete (00-06 + 2 architectural fixes shipped) — ✅ DONE
+Progress (Phase 36): █░░░░░░ 1/7 plans complete (01 done, 02-06 + verification pending)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -97,24 +97,31 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 (orchestrator) — Plan 35-05 verification gates passed (architectural quota isolation via `.eq("account_id", accountId)` in `quota-guard.ts` + DB-flip reconnect-banner smoke); Plan 35-06 executed (welcome-email migrated to `getSenderForAccount` Approach A, SMTP singleton + `providers/gmail.ts` deleted, env vars removed); verifier ran and passed 5/5. Phase 35 fully shipped.
+**Last session:** 2026-05-08 — Plan 36-01 executed (schema migration + EmailProvider union extension). Commits: `c3b0e0b` (migration), `a0fb2f3` (types union). tsc pre-existing test errors confirmed baseline — zero new errors introduced. Framework-only; migration deferred from hosted Supabase per PREREQ-03.
 
-**Stopped at:** Phase 35 closed. Latest commit will be `docs(35): complete per-account-gmail-oauth-send phase` after orchestrator commits the metadata bundle. Phase 36 not yet started — blocked on PREREQ-03 (Andrew Resend account + NSI domain DNS verification).
+**Stopped at:** Phase 36 Plan 01 complete. Plan 02 is next (Resend provider implementation). Plans 02-03 can be coded and mock-tested without PREREQ-03; live Resend sends blocked on PREREQ-03.
 
 ## ▶ Next session — start here
 
-**Phase 35 is shipped.** Two paths forward:
+**Phase 36 Plan 01 is shipped.** Wave 1 complete. Continue with Plan 02.
 
-### Path A: Phase 36 (Resend backend) — preferred next phase
+### Plan 02: Resend provider implementation (next)
 
-Blocker: **PREREQ-03** — Andrew must:
+Execute `36-02` — creates `lib/email-sender/providers/resend.ts` implementing the `EmailClient` interface using the Resend SDK. Can be coded and mock-tested without PREREQ-03.
+
+### Plan 03: Factory routing
+
+Execute `36-03` — extends `getSenderForAccount` to branch on `accounts.email_provider`. Reads the new columns added in Plan 01. Can be coded without PREREQ-03.
+
+### PREREQ-03 still blocking live Resend sends
+
+Andrew must (when ready):
 1. Create Resend account (~$20/month Pro tier)
 2. Add NSI domain DNS records (SPF, DKIM, DMARC) in Namecheap
 3. Verify domain in Resend dashboard (must show "Verified" for SPF + DKIM)
 4. Capture API key
 5. Add `RESEND_API_KEY` to Vercel env vars (Preview + Production)
-
-Once PREREQ-03 is done, run `/gsd:discuss-phase 36` to gather context, then `/gsd:plan-phase 36` to create the plans.
+6. Apply migration `20260507120000_phase36_resend_provider.sql` to hosted Supabase via `mcp__claude_ai_Supabase__apply_migration`
 
 ### Path B: Phase 38 (Magic-link login) or Phase 39 (BOOKER polish) — work in parallel
 
