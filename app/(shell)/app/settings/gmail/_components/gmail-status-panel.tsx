@@ -12,10 +12,32 @@ interface GmailStatusPanelProps {
   connectedAt?: string | null;
 }
 
+const CONNECT_ERROR_MESSAGES: Record<string, string> = {
+  cancelled: "You cancelled the Google sign-in. Try again to connect.",
+  missing_code: "The Google response was missing the authorization code. Try again.",
+  invalid_state: "Connection request expired or was tampered with. Try again.",
+  not_authenticated: "Your session expired. Sign in again, then reconnect.",
+  server_misconfigured:
+    "Server configuration error — Google credentials missing. Contact support.",
+  token_exchange:
+    "Google rejected the token exchange. Try revoking the app at myaccount.google.com/permissions, then retry.",
+  no_refresh_token:
+    "Google didn't issue a refresh token (likely a stale prior grant). Revoke this app at myaccount.google.com/permissions, then click Connect Gmail again.",
+  scope_denied:
+    "Send-on-your-behalf permission was denied. Click Connect Gmail again and approve all requested permissions.",
+  db_write: "Couldn't save the credential. Try again or contact support.",
+  encrypt: "Couldn't securely store the credential. Try again or contact support.",
+};
+
 /** Inner component that reads search params (must be inside Suspense per Next.js 16 pattern). */
 function GmailStatusPanelInner({ status, gmailAddress, connectedAt }: GmailStatusPanelProps) {
   const params = useSearchParams();
-  const hasConnectError = params.get("connect_error") === "1";
+  const connectError = params.get("connect_error");
+  const justConnected = params.get("connected") === "1";
+  const errorMessage = connectError
+    ? (CONNECT_ERROR_MESSAGES[connectError] ??
+       "Couldn't complete the Gmail connection. Please try again.")
+    : null;
 
   const connectedDate = connectedAt
     ? new Date(connectedAt).toLocaleDateString(undefined, {
@@ -27,11 +49,14 @@ function GmailStatusPanelInner({ status, gmailAddress, connectedAt }: GmailStatu
 
   return (
     <div className="space-y-4">
-      {hasConnectError && (
+      {errorMessage && (
         <Alert variant="destructive">
-          <AlertDescription>
-            Couldn&apos;t start the Gmail connection. Please try again.
-          </AlertDescription>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      {justConnected && status === "connected" && (
+        <Alert>
+          <AlertDescription>Gmail connected — you&apos;re all set.</AlertDescription>
         </Alert>
       )}
 

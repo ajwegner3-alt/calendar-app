@@ -5,43 +5,23 @@ import { encryptToken } from "@/lib/oauth/encrypt";
 import { fetchGoogleGrantedScopes, hasGmailSendScope } from "@/lib/oauth/google";
 
 /**
- * Google OAuth callback — Phase 34.
+ * Google OAuth callback for the Phase 34 signup/login flow (signInWithOAuth).
  *
- * Handles BOTH new-signup (signInWithOAuth) and identity-link (linkIdentity) callbacks.
- * Supabase's session.provider_refresh_token is available ONLY in the response from
- * exchangeCodeForSession — we MUST capture and encrypt it here, in this request.
+ * Phase 35 split the Gmail "connect" flow off this route — that path now lives
+ * at /auth/gmail-connect/callback and exchanges the code with Google directly,
+ * which guarantees provider_refresh_token capture. This route remains for the
+ * Supabase signInWithOAuth flow used by /app/signup and /app/login (where the
+ * goal is to create or sign-in the auth.users row, not to capture Gmail send
+ * credentials reliably).
  *
- * Routing decisions:
- *   - User denied at consent screen (?error param)          -> /app/signup?google_error=access_denied
- *   - Missing code param                                     -> /auth/auth-error?reason=missing_code
- *   - Exchange failure                                       -> /auth/auth-error?reason=...
- *   - New user (no completed onboarding) + gmail.send GRANTED -> /onboarding
- *   - New user + gmail.send DENIED                           -> /onboarding?gmail_skipped=1
- *   - Existing user (onboarding_complete = true), linking   -> /app?google_linked=1
- *
- * Refresh token is encrypted with AES-256-GCM (Plan 02) and upserted into
- * account_oauth_credentials via the service-role admin client (RLS bypassed —
- * SELECT-only policy intentionally; Plan 01 design).
- *
- * SECURITY: The raw refresh token MUST NEVER appear in any log or console output.
- * The catch block below intentionally logs only the error object, never the token variable.
+ * If the signup flow happens to capture provider_refresh_token from Supabase's
+ * session, we still upsert it as a convenience — but the user can always
+ * re-run the dedicated Connect Gmail flow from /app/settings/gmail.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const oauthError = searchParams.get("error");
-  const oauthErrorCode = searchParams.get("error_code");
-  const oauthErrorDesc = searchParams.get("error_description");
-
-  // [TEMP DIAG — Phase 35-05 troubleshooting] Log entry to /auth/google-callback
-  // with all error params and presence of code, so we can see every callback.
-  console.log("[google-callback] ENTRY", {
-    hasCode: !!code,
-    oauthError,
-    oauthErrorCode,
-    oauthErrorDesc,
-    url: request.url.replace(code ?? "__no_code__", "<redacted_code>"),
-  });
 
   // User clicked "Cancel" at Google consent screen.
   if (oauthError) {
@@ -81,36 +61,6 @@ export async function GET(request: NextRequest) {
   if (providerAccessToken) {
     grantedScopes = await fetchGoogleGrantedScopes(providerAccessToken);
     gmailGranted = hasGmailSendScope(grantedScopes);
-  }
-
-  // [TEMP DIAG — Phase 35-05 troubleshooting] Log what we got from Google so we can
-  // tell why the persist branch is being skipped. Never logs the token itself.
-  console.log("[google-callback] DIAG", {
-    userId,
-    hasRefreshToken: !!providerRefreshToken,
-    hasAccessToken: !!providerAccessToken,
-    grantedScopesPreview: grantedScopes ? grantedScopes.slice(0, 200) : null,
-    gmailGranted,
-  });
-  // Also write to a debug table so the orchestrator can read it via SQL when
-  // Vercel log streaming is unreliable.
-  try {
-    const dbg = createAdminClient();
-    await dbg.from("_oauth_debug").insert({
-      context: "google-callback",
-      data: {
-        userId,
-        hasRefreshToken: !!providerRefreshToken,
-        hasAccessToken: !!providerAccessToken,
-        grantedScopes,
-        gmailGranted,
-        sessionShape: data.session
-          ? Object.keys(data.session)
-          : null,
-      },
-    });
-  } catch (e) {
-    console.error("[google-callback] debug-insert failed:", e);
   }
 
   // Persist credential ONLY if we have a refresh token AND gmail.send was granted.
