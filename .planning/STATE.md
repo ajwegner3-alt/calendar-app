@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 37 Plan 01 complete.** Added `accounts.last_upgrade_request_at timestamptz` migration + "Request upgrade" Link appended to cap-hit banner. Latest commits: `1eb0850` (migration), `ab285ba` (banner link).
+**Last updated:** 2026-05-08 — **Phase 37 Plan 02 complete.** `requestUpgradeCore` + `requestUpgradeAction` server action implemented with direct createResendClient() send path (LD-05 quota bypass); 9-branch Vitest unit test suite all pass. Latest commits: `c897170` (action), `6e884e0` (tests).
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 37 (upgrade flow + cap-hit UI) — Plan 01 complete. Plans 02 (requestUpgradeAction) and 03 (settings upgrade page) are next.
+**Current focus:** v1.7 Phase 37 (upgrade flow + cap-hit UI) — Plans 01 and 02 complete. Plan 03 (settings upgrade page at /app/settings/upgrade) is next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (3 of 7 phases shipped)
 **Phase:** 37 — Upgrade Flow + In-App Cap-Hit UI — IN PROGRESS
-**Plan:** 1 of 3 complete (schema + banner link done; requestUpgradeAction and settings page pending)
-**Status:** Plan 01 committed. Plans 02 and 03 unblocked.
-**Last activity:** 2026-05-08 — Plan 37-01 executed; migration created; banner link appended. Commits: `1eb0850`, `ab285ba`.
+**Plan:** 2 of 3 complete (schema + banner link done; requestUpgradeAction done; settings page pending)
+**Status:** Plan 02 committed. Plan 03 unblocked.
+**Last activity:** 2026-05-08 — Plan 37-02 executed; requestUpgradeCore + requestUpgradeAction implemented; 9 tests pass. Commits: `c897170`, `6e884e0`.
 
-Progress (Phase 37): ███░░░░ 1/3 plans complete
+Progress (Phase 37): ██████░░ 2/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -78,6 +78,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: P
 - **OQ-1 centralized in checkAndConsumeQuota (Phase 36, Plan 03)** — Resend cap bypass is inside `checkAndConsumeQuota` via an internal `accounts.email_provider` SELECT — zero leaf-caller changes. `maybeSingle()` returns `null` for nil-UUID sentinel → falls through to Gmail path (correct for system-level sends). All test mocks for `checkAndConsumeQuota` must add `maybeSingle: () => Promise.resolve({ data: null, error: null })` to the `.eq()` chain.
 - **isRefusedSend shared helper (Phase 36, Plan 03)** — `export function isRefusedSend(error?: string)` in `lib/email-sender/account-sender.ts` covers both `oauth_send_refused:` and `resend_send_refused:` prefixes. Use `isRefusedSend(error)` everywhere — never `startsWith(REFUSED_SEND_ERROR_PREFIX)` directly. Future providers only need to update this one helper. Mock in `tests/__mocks__/account-sender.ts` mirrors the real implementation.
 - **Soft Resend abuse threshold (Phase 36, Plan 03)** — `RESEND_ABUSE_WARN_THRESHOLD = 5000`; `warnIfResendAbuseThresholdCrossed(accountId)` fire-and-forget; emits `console.warn("[RESEND_ABUSE_THRESHOLD_CROSSED]", {...})`. Never blocks. Per-account `${today}:${accountId}` dedup pattern (matches Phase 35 LD-12 precedent). Hard cap deferred until abuse observed in production.
+- **requestUpgradeAction uses createResendClient() directly — never getSenderForAccount() (Phase 37, Plan 02)** — The upgrade-request send MUST bypass the per-account quota guard (LD-05 bootstrap: works at cap-hit moment). `getSenderForAccount(accountId)` routes through `checkAndConsumeQuota()` and returns a refused sender when the account is at cap. Use `createResendClient(config)` directly for any send that must work regardless of account quota state.
+- **send-then-write DB ordering for timestamp updates (Phase 37, Plan 02)** — `last_upgrade_request_at` written to DB ONLY after `resendClient.send()` returns `{ success: true }`. A send failure leaves the column null so the user can retry immediately. Any new timestamp-gated rate-limit feature must follow this ordering to avoid locking users out when sends fail.
+- **invocationCallOrder Vitest assertion for async ordering (Phase 37, Plan 02)** — `sendMock.mock.invocationCallOrder[0] < updateMock.mock.invocationCallOrder[0]` proves temporal ordering across async calls without artificial ordering constraints. Use this pattern for any test that must assert "A happened before B" where both A and B are vi.fn() mocks.
+- **Core/wrapper split with three injected clients (Phase 37, Plan 02)** — `requestUpgradeCore(args, { rlsClient, adminClient, resendClient })` extends the reminders two-client pattern by adding `resendClient: EmailClient` as a third injection point. Tests pass a structural `{ provider: "resend", send: vi.fn(...) }` mock. The wrapper builds all three real clients then delegates. Dynamic `revalidatePath` import in wrapper ensures core never touches `next/cache`.
 
 ### Patterns established / locked through v1.6
 
@@ -105,21 +109,22 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 37, Plan 01 executed. Migration `20260508120000_phase37_last_upgrade_request_at.sql` created; `UnsentConfirmationsBanner` appended Request upgrade Link. Commits: `1eb0850`, `ab285ba`.
+**Last session:** 2026-05-08 — Phase 37, Plan 02 executed. `requestUpgradeCore` + `requestUpgradeAction` implemented with direct createResendClient() send path; 9-branch Vitest unit test suite all pass. Commits: `c897170` (action), `6e884e0` (tests).
 
-**Stopped at:** Phase 37, Plan 01 complete. Resume at Plan 02 (requestUpgradeAction — reads/writes last_upgrade_request_at, sends upgrade-request email via Resend bypass) or Plan 03 (settings upgrade page at /app/settings/upgrade).
+**Stopped at:** Phase 37, Plan 02 complete. Resume at Plan 03 (settings upgrade page at /app/settings/upgrade — server component page + upgrade-form client component, consumes requestUpgradeAction from Plan 02).
 
 **Resume file:** None
 
 ## ▶ Next session — start here
 
-**Phase 36 framework SHIPPED.** Code activates on a single `UPDATE accounts SET email_provider='resend' WHERE id=...` once PREREQ-03 lands. No redeploy needed.
+**Phase 37 Plans 01 and 02 SHIPPED.** Migration + banner link + requestUpgradeAction all on main.
 
-### Path A: Phase 37 (upgrade flow + cap-hit UI) — preferred next phase
+### Path A: Phase 37 Plan 03 (settings upgrade page) — next immediate step
 
-Phase 37 depends on Phase 36 (LD-05 bootstrap constraint: `requestUpgradeAction` needs `createResendClient` to bypass the requester's own 200/day cap when sending the upgrade request to Andrew). Now unblocked.
-
-Run `/gsd:discuss-phase 37` then `/gsd:plan-phase 37`.
+Plan 03 builds `/app/settings/upgrade` page (server component + `_components/upgrade-form.tsx` client component). It:
+- Imports `requestUpgradeAction` from Plan 02 (`app/(shell)/app/settings/upgrade/_lib/actions.ts`)
+- Reads `last_upgrade_request_at` from the account row for server-rendered locked-out countdown
+- Follows the existing settings page pattern (profile/gmail/reminders pages)
 
 ### Path B: Phase 38 (Magic-link login) or Phase 39 (BOOKER polish) — work in parallel
 
