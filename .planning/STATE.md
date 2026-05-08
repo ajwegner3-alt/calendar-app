@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 (late evening) — Phase 35 architecture proven on PRODUCTION end-to-end. Two architectural fixes shipped tonight beyond Plan 04: (1) direct-Google OAuth replaces Supabase `linkIdentity` for the connect flow (commit `ab02a23`); (2) Gmail provider switched from SMTP+OAuth2 to Gmail REST API (commit `cb82b6f`) — the `gmail.send` scope authorizes only the REST endpoint, NOT SMTP relay; the old SMTP path silently dropped every message. Live booking on production at 2026-05-08 ~02:15 UTC delivered both booker and owner emails via Gmail OAuth REST API. See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the full pivot history.
+**Last updated:** 2026-05-08 (late evening / next session) — Phase 35 Plan 06 complete. SMTP singleton + App Password provider deleted. welcome-email migrated to getSenderForAccount (Approach A). GMAIL_APP_PASSWORD removed from env files. Phase 35 is functionally complete — all 6 success criteria pass. Awaiting orchestrator verifier + ROADMAP/REQUIREMENTS update.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 35 — production code is live + OAuth send path proven end-to-end. Two verification items remain: (a) per-account quota isolation SQL seed (proves Account A cap-hit doesn't block Account B); (b) reconnect-banner smoke test. After both pass, Plan 06 (SMTP singleton removal + `GMAIL_APP_PASSWORD` env-var deprecation) ships as a single commit.
+**Current focus:** v1.7 Phase 35 — COMPLETE. All 6 plans done. SMTP path deleted. Production live on Gmail REST API OAuth. Orchestrator to run verifier + ROADMAP update, then Phase 36 (Resend migration for welcome email).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
-**Phase:** 35 — Per-Account Gmail OAuth Send — Code complete on production; verification matrix in flight.
-**Plan:** 04 of 6 complete; 05 in flight (2 of 6 verification items still pending); 06 ready to ship after 05 passes.
-**Status:** Code is LIVE on production (`booking.nsintegrations.com`) at commit `cb82b6f`. nsi account has Gmail connected via the new direct-Google OAuth flow (`/auth/gmail-connect/callback`). Live booking proven 2026-05-08 ~02:15 UTC: `bookings.confirmation_email_sent=true`, both booker email (andrewjameswegner@gmail.com) and owner email (ajwegner3@gmail.com) delivered via Gmail REST API (`gmail.users.messages.send`). `email_send_log.account_id` correctly populated for nsi. Two verification items remain — see Session Continuity section.
-**Last activity:** 2026-05-08 — Diagnosed Gmail SMTP-with-`gmail.send`-scope silently-drops issue; rewrote provider to use Gmail REST API (commit `cb82b6f`); production deploy now sending real emails. 8/8 unit tests pass on the new provider.
+**Phase:** 35 — Per-Account Gmail OAuth Send — COMPLETE (all 6 plans done).
+**Plan:** 06 of 6 complete.
+**Status:** Production live at commit `6aecfbb`. SMTP singleton + providers/gmail.ts deleted. welcome-email migrated to getSenderForAccount. GMAIL_APP_PASSWORD removed from env files. All 6 Phase 35 success criteria pass. Awaiting verifier run + ROADMAP update from orchestrator.
+**Last activity:** 2026-05-08 — Plan 06 complete. Deleted SMTP App Password path; migrated welcome-email to getSenderForAccount (Approach A, accountId available at call site). Commits 31db425, 138cfb0, 6aecfbb.
 
-Progress (Phase 35): █████░ 5/6 plans complete (00, 01, 02, 03, 04 done + 2 architectural fixes; 05 verification 2/6 items pending; 06 ready)
+Progress (Phase 35): ██████ 6/6 plans complete (00-06 done + 2 architectural fixes shipped)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -97,67 +97,29 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 35 Plan 04 executed; Plan 05 verification on Vercel preview uncovered linkIdentity bug → first architectural pivot to direct-Google OAuth (`ab02a23`); shipped to production; second architectural pivot when emails still didn't deliver — root cause was Gmail SMTP+OAuth2 with `gmail.send` scope silently dropping messages → switched to Gmail REST API (`cb82b6f`); live production booking confirmed end-to-end at ~02:15 UTC.
+**Last session:** 2026-05-08 — Phase 35 Plans 05 verification gates passed (quota isolation architectural + reconnect banner smoke). Plan 06 executed: SMTP singleton deleted, welcome-email migrated to getSenderForAccount (Approach A), GMAIL_APP_PASSWORD removed from env files. Phase 35 complete.
 
-**Stopped at:** Production live at commit `cb82b6f`. nsi has Gmail connected. Real bookings → real emails delivered. Two of six Plan 35-05 verification items remain; user opted to do remaining tests after a context-clear so a fresh session can tackle them cleanly.
+**Stopped at:** Phase 35 complete. Commit `6aecfbb` is latest (Plan 06 Task 3). Awaiting orchestrator verifier + ROADMAP/REQUIREMENTS update before Phase 36.
 
 ## ▶ Next session — start here
 
-**Recommended path: A** (run quota isolation test, then ship Plan 06).
+**Phase 35 is complete.** All 6 plans committed. Production live.
 
-### Step 1: Per-account quota isolation SQL seed (~2 min)
-
-Goal: Prove that Account B (`nsi-rls-test`) hitting its 200/day cap does NOT block sends from Account A (`nsi`). Phase Success Criterion 2.
-
-Run via Supabase MCP `mcp__claude_ai_Supabase__execute_sql` (project_id `mogfnutxrrbtvnaupoun`):
-
-```sql
--- Seed nsi-rls-test (id b8981835-316e-44ef-9763-42bee4236b21) to 200 send-log rows for today
-insert into email_send_log (category, account_id, sent_at)
-select 'booking-confirmation', 'b8981835-316e-44ef-9763-42bee4236b21', now()
-from generate_series(1, 200);
-
--- Verify counts
-select account_id, count(*) from email_send_log
-where sent_at >= current_date group by account_id order by count(*) desc;
-```
-
-Then ask Andrew to make ONE more test booking on production against nsi. Expected outcome: booking succeeds, nsi's daily count grows by 2 (booker + owner), nsi-rls-test stays at exactly 200. The new sends go to Andrew's test inbox.
-
-If isolation breaks (nsi gets refused with quota error), STOP — file gap-closure plan instead of shipping Plan 06.
-
-### Step 2: Reconnect banner smoke (~1 min)
-
-```sql
--- Flip nsi's credential to needs_reconnect
-update account_oauth_credentials
-set status = 'needs_reconnect'
-where user_id = '1a8c687f-73fd-4085-934f-592891f51784' and provider = 'google';
-```
-
-Andrew refreshes `https://booking.nsintegrations.com/app/settings/gmail` — should show "Reconnect needed" with a Reconnect button.
-
-```sql
--- Revert
-update account_oauth_credentials
-set status = 'connected'
-where user_id = '1a8c687f-73fd-4085-934f-592891f51784' and provider = 'google';
-```
-
-Andrew refreshes again — back to "Connected".
-
-### Step 3: Plan 06 — SMTP singleton removal
-
-Spawn `gsd-executor` with sonnet model on `.planning/phases/35-per-account-gmail-oauth-send/35-06-smtp-singleton-removal-PLAN.md`. Plan-level work:
-- Remove `lib/email-sender/index.ts` (the singleton factory)
-- Remove `lib/email-sender/providers/gmail.ts` (App-Password SMTP provider)
-- Drop `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from `.env.example` (keep in `.env.local` until Andrew rotates)
-- Update `tests/email-sender.test.ts`
-- One commit per task per execute-plan rules.
-
-### Step 4: Phase 35 verifier + roadmap update
+### Step 1: Phase 35 verifier + roadmap update
 
 Spawn `gsd-verifier` to write `.planning/phases/35-per-account-gmail-oauth-send/35-VERIFICATION.md`. Update `.planning/ROADMAP.md` Phase 35 status row. Update `.planning/REQUIREMENTS.md` to mark AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33 as Complete.
+
+### Step 2: Andrew manual cleanup (non-blocking)
+
+Delete from Vercel → Settings → Environment Variables:
+1. GMAIL_USER (Preview + Production)
+2. GMAIL_APP_PASSWORD (Preview + Production)
+3. GMAIL_FROM_NAME (Preview + Production)
+4. (Optional) Revoke App Password in Google Account → Security → App passwords
+
+### Step 3: Phase 36 — Resend migration
+
+welcome-email already has accountId threading in place (Plan 06 Approach A). Phase 36 only needs to swap getSenderForAccount internals for a Resend provider.
 
 ### What's already in place — don't re-do
 
