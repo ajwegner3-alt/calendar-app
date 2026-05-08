@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /**
  * Phase 31 (EMAIL-24) — UnsentConfirmationsBanner.
  *
@@ -32,7 +34,13 @@ export function UnsentConfirmationsBanner({ count }: { count: number }) {
       </strong>{" "}
       {verb} an unsent confirmation email because the daily email quota
       (200/day) was reached. Use Gmail to notify these bookers manually. The
-      quota resets at UTC midnight.
+      quota resets at UTC midnight.{" "}
+      <Link
+        href="/app/settings/upgrade"
+        className="underline underline-offset-2 font-medium"
+      >
+        Request upgrade
+      </Link>
     </div>
   );
 }
