@@ -10,8 +10,15 @@ import { revokeGoogleRefreshToken } from "@/lib/oauth/google";
 /** Connect: kick off Supabase linkIdentity with the combined Gmail scope. */
 export async function connectGmailAction(): Promise<void> {
   const h = await headers();
+  // Server-action POSTs sometimes lack the Origin header; fall back to the
+  // forwarded host (Vercel sets x-forwarded-host/proto on every request) so
+  // the redirectTo lands on the same deploy the user is actually on.
+  const forwardedHost = h.get("x-forwarded-host");
+  const forwardedProto = h.get("x-forwarded-proto") ?? "https";
   const origin =
     h.get("origin") ??
+    (forwardedHost ? `${forwardedProto}://${forwardedHost}` : null) ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "http://localhost:3000";
 
