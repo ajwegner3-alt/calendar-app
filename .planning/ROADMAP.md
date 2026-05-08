@@ -211,7 +211,12 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 3. With `email_send_log` seeded to 200 rows for the requester's account, the upgrade request email still arrives in Andrew's inbox — the quota guard is bypassed for this specific send path.
 4. Submitting the upgrade request disables the button for 24 hours (one request per account per day); a second submit within 24 hours is rejected with a clear message.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 37-01-PLAN.md — Schema migration (accounts.last_upgrade_request_at) + banner Request-upgrade link append (Wave 1)
+- [ ] 37-02-PLAN.md — requestUpgradeAction server action (createResendClient direct send + 24h rate limit) + Vitest unit tests (Wave 2)
+- [ ] 37-03-PLAN.md — /app/settings/upgrade page (server component) + UpgradeForm client component with inline success/error/lockout states (Wave 3)
 
 ---
 
