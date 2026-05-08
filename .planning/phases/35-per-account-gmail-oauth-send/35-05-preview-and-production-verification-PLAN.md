@@ -28,6 +28,10 @@ must_haves:
 ---
 
 <objective>
+⚠ **SUPERSEDED 2026-05-08 by `35-DEVIATION-DIRECT-OAUTH.md`.** The original two-step preview→production plan was aborted mid-execution after the preview iteration revealed that Phase 34's `linkIdentity`-based connect flow does not reliably capture `provider_refresh_token`. Andrew opted to ship the rewrite (commit `ab02a23`) directly to production and run a single-step verification matrix against `https://booking.nsintegrations.com`. Read the DEVIATION doc first; the steps below are kept for historical reference.
+
+---
+
 Two-step deploy verification gate (RESEARCH §State of the Art + CONTEXT decision):
 1. Push the cutover commit (Plan 04) to a preview branch; Andrew dogfoods Phase 34's Connect Gmail button on the nsi account; Andrew makes a test booking and confirms the email arrives via Gmail OAuth; Andrew also proves per-account quota isolation and the Settings reconnect banner live.
 2. Merge to main; Andrew repeats the booking smoke on production.

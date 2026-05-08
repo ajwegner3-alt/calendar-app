@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-07 — Phase 35 Plan 04 complete. All 7 email paths cut over to getSenderForAccount factory.
+**Last updated:** 2026-05-08 — Phase 35 Plan 04 + architectural deviation `ab02a23` (direct-Google OAuth replaces Supabase `linkIdentity` for the connect flow). Andrew opted to skip preview iteration and ship to production. See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the full pivot story.
 
 ## Project Reference
 
@@ -8,19 +8,21 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 35 IN PROGRESS. Plans 00, 01, 02, 03, 04 complete; Plan 05 (preview verification) is next.
+**Current focus:** v1.7 Phase 35 IN PROGRESS — production cutover deploy of Plans 00-04 + direct-OAuth rewrite. Plan 05 verification happens directly on production (not preview). Plan 06 (SMTP removal) gated on production verification.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
-**Phase:** 35 — Per-Account Gmail OAuth Send — In Progress
-**Plan:** 04 of 6 — complete
-**Status:** Plans 00, 01, 02, 03, 04 complete. Plan 05 (preview verification — manual checkpoint) is next.
-**Last activity:** 2026-05-07 — Completed 35-04-PLAN.md (cut over all 7 email paths to getSenderForAccount)
+**Phase:** 35 — Per-Account Gmail OAuth Send — In Progress (production deploy initiated)
+**Plan:** 04 of 6 complete; 05 in flight (direct verification on production); 06 gated.
+**Status:** Plans 00-04 complete. Architectural deviation: connect flow rewritten as direct-Google OAuth (commit `ab02a23`); see DEVIATION doc. Cutover code is being merged to main and deployed to production. Andrew will connect Gmail on production immediately post-deploy and run the verification matrix (real OAuth send, per-account quota isolation via SQL seed, reconnect smoke). Plan 06 (SMTP removal) ships only after that verification.
+**Last activity:** 2026-05-08 — Built direct-OAuth `/auth/gmail-connect/callback` route + rewrote `connectGmailAction`; merging to main and pushing to production.
 
-Progress (Phase 35): ████░░ 4/6 plans complete (Plans 00 + 01 + 02 + 03 + 04)
+Progress (Phase 35): ████░░ 5/6 plans complete (00 + 01 + 02 + 03 + 04 + deviation pivot; 05 verification active on production; 06 pending)
+
+⚠ **Production cutover risk:** The moment this deploys, ALL accounts must have connected Gmail credentials or sends refuse. Andrew's nsi is the only active production account; he connects it within minutes of deploy. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers.
 
 ## Cumulative project progress
 
@@ -64,6 +66,9 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **OAuth refusal treated as confirmation soft-fail (Phase 35, Plan 04)** — `send-booking-emails.ts` checks `result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)` on the confirmation leg result; if true, same `confirmation_email_sent=false` flag path as `QuotaExceededError`. Booking succeeds regardless. Cancel/reschedule/reminder: refusal logged but not re-thrown (already committed); reminder re-throws so cron can count refused.
 - **Nil UUID sentinel for system-level sends (Phase 35, Plan 04)** — `signup/actions.ts` and `welcome-email.ts` pass `"00000000-0000-0000-0000-000000000000"` to `checkAndConsumeQuota`. No per-account context exists at these call sites. `email-change` action fetches the real accountId from DB.
 - **account-sender Vitest alias mock shares __mockSendCalls (Phase 35, Plan 04)** — `tests/__mocks__/account-sender.ts` imports from `@/lib/email-sender` (the aliased bare specifier, NOT the direct file path) so both the mock and the integration test files share the exact same module instance. vitest.config.ts alias: `find: /^@\/lib\/email-sender\/account-sender$/`.
+- **Direct-Google OAuth for Gmail connect (Phase 35 deviation, commit ab02a23)** — `connectGmailAction` builds the Google auth URL ourselves and the new `/auth/gmail-connect/callback` route exchanges the code at `oauth2.googleapis.com/token` directly. **Do NOT use `supabase.auth.linkIdentity` for capturing provider tokens** — it silently drops `provider_refresh_token` under several conditions and exposes Supabase's domain on Google's `/permissions` page. `signInWithOAuth` (signup/login) keeps using `/auth/google-callback` because it needs Supabase to create `auth.users` rows. Full pivot rationale in `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md`.
+- **state cookie CSRF for direct OAuth (Phase 35 deviation)** — `connectGmailAction` writes a 32-byte random hex token into an httpOnly `gmail_connect_state` cookie (10-min maxAge); `/auth/gmail-connect/callback` verifies the cookie matches the `state` query param before exchanging the code. Cookie is deleted after consumption.
+- **Hosted Supabase migrations applied via MCP (Phase 35 deviation)** — `account_oauth_credentials` table and `email_send_log.account_id` column were applied to hosted Supabase via `mcp__claude_ai_Supabase__apply_migration` during the 35-05 verification session. Local `supabase/config.toml` flags (e.g., `enable_manual_linking`) only apply to local Supabase — the hosted dashboard equivalent must be configured separately or skipped if the new direct-OAuth flow doesn't need it.
 
 ### Patterns established / locked through v1.6
 
@@ -91,20 +96,29 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-07 — Phase 35 Plan 04 executed.
+**Last session:** 2026-05-08 — Phase 35 Plan 04 executed; Plan 05 began on Vercel preview deploy and uncovered the linkIdentity bug; mid-session pivot to direct-Google OAuth (commit `ab02a23`); Andrew chose to ship to production rather than continue preview iteration.
 
-**Stopped at:** Completed 35-04-PLAN.md. Commits: 75f19b1 (Task 1: 5 leaf senders + orchestrator), 33b78c3 (Task 2: outer callers + tests).
+**Stopped at:** Direct-OAuth code pushed to feature branch `gsd/phase-35-per-account-gmail-oauth-send` at `ab02a23`. Planning docs updated. **About to merge feature branch into main and push origin/main** — this is the production deploy.
 
-**Next session:** Phase 35 Plan 05 — preview verification (manual checkpoint: deploy to preview, test real Gmail OAuth sends).
+**Next session (post-deploy):**
+1. Vercel finishes building main → production live with cutover + direct-OAuth.
+2. Andrew opens `https://booking.nsintegrations.com/app/settings/gmail` and clicks Connect Gmail. New flow walks through Google consent and writes a row to `account_oauth_credentials`.
+3. Andrew makes a test booking against nsi from a separate test inbox; both confirmation emails arrive via Gmail OAuth.
+4. SQL-driven per-account quota isolation test (seed `nsi-rls-test` to 200 sends, verify nsi unaffected).
+5. SQL-driven reconnect-banner smoke (flip `account_oauth_credentials.status='needs_reconnect'`, refresh Settings, revert).
+6. If all green: Wave 6 (Plan 35-06 SMTP singleton removal) ships as a separate commit.
+
+**GCP redirect URI required in production:** Andrew adds `https://booking.nsintegrations.com/auth/gmail-connect/callback` to the Web OAuth client's Authorized redirect URIs (the production equivalent of what we added for the preview URL).
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`
 - `.planning/STATE.md` — this file
 - `.planning/REQUIREMENTS.md` — all 30 v1.7 requirements with phase traceability filled
-- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-01-SUMMARY.md` — Plan 01 complete
-- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-02-SUMMARY.md` — Plan 02 complete
-- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-03-SUMMARY.md` — Plan 03 complete
-- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-04-SUMMARY.md` — Plan 04 complete
+- `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` — **READ FIRST** if returning to Phase 35 work after a break. Captures the linkIdentity → direct-OAuth pivot, why, and what's now on production.
+- `.planning/phases/35-per-account-gmail-oauth-send/35-00..04-SUMMARY.md` — wave-by-wave plan completion records
+- `.planning/phases/34-google-oauth-signup-and-credential-capture/34-01..04-SUMMARY.md` — Phase 34 plan completion records
+- `app/auth/gmail-connect/callback/route.ts` — **NEW (commit ab02a23)** direct-Google OAuth callback for the connect flow
+- `app/(shell)/app/settings/gmail/_lib/actions.ts` — **REWRITTEN (commit ab02a23)** — `connectGmailAction` builds Google auth URL directly, no `linkIdentity`
 - `lib/email-sender/account-sender.ts` — getSenderForAccount factory + REFUSED_SEND_ERROR_PREFIX (3e1ba69)
 - `lib/oauth/encrypt.ts` — AES-256-GCM encrypt/decrypt/generateKey (e09f019)
 - `lib/oauth/google.ts` — fetchGoogleGrantedScopes, revokeGoogleRefreshToken, hasGmailSendScope (f639f0c)
