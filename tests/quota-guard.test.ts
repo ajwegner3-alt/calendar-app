@@ -9,46 +9,79 @@
  * Phase 35 (EMAIL-27): All helpers now require accountId.
  * Tests updated to pass TEST_ACCOUNT_ID ("00000000-0000-0000-0000-000000000001").
  *
- * Four cases:
+ * Phase 36 (OQ-1): checkAndConsumeQuota now internally reads accounts.email_provider.
+ * Mock updated to handle both the new accounts SELECT and the existing
+ * email_send_log SELECT + INSERT chains.
+ * Default mock returns email_provider='gmail' so all existing test cases continue
+ * to exercise the Gmail cap path unchanged.
+ *
+ * Four original cases:
  *   1. Below threshold (count < 80% of cap) — silently allows send and inserts row.
  *   2. At 80% threshold — allows send, inserts row, logs GMAIL_SMTP_QUOTA_APPROACHING.
  *   3. At cap (count >= 200) — throws QuotaExceededError, does NOT insert.
  *   4. DB error on count query — fails OPEN (returns 0, allows send).
+ *
+ * Phase 36 additions:
+ *   6. Resend account — skips cap check; inserts with provider='resend'.
+ *   7. Nil-UUID sentinel (no matching accounts row) — falls through to Gmail cap path.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // --- Mock createAdminClient BEFORE importing quota-guard ---
-// The mock factory returns a fluent builder that intercepts .from().select()
-// and .from().insert() chains. We expose `__setCountResult` and `__setInsertResult`
-// so individual tests can set what the DB returns.
+// The mock factory returns a fluent builder that intercepts:
+//   .from("accounts").select("email_provider").eq(...).maybeSingle()  [Phase 36]
+//   .from("email_send_log").select(...).eq(...).gte(...)               [count]
+//   .from("email_send_log").insert(...)                                [log row]
+// We expose setters so individual tests can control what the DB returns.
 
 const TEST_ACCOUNT_ID = "00000000-0000-0000-0000-000000000001";
 
 let _mockCount: number | null = 0;
 let _mockCountError: object | null = null;
 let _mockInsertError: object | null = null;
+// Phase 36: controls the accounts.email_provider lookup result
+let _mockEmailProvider: string | null = "gmail";
 
 function resetMocks() {
   _mockCount = 0;
   _mockCountError = null;
   _mockInsertError = null;
+  _mockEmailProvider = "gmail";
 }
 
 vi.mock("@/lib/supabase/admin", () => {
   return {
     createAdminClient: () => ({
-      from: (_table: string) => ({
-        select: (_cols: string, _opts?: object) => ({
-          eq: (_col: string, _val: string) => ({
-            gte: (_col2: string, _val2: string) =>
+      from: (table: string) => {
+        if (table === "accounts") {
+          // Phase 36: accounts.email_provider lookup
+          // .from("accounts").select("email_provider").eq("id", ...).maybeSingle()
+          return {
+            select: (_cols: string) => ({
+              eq: (_col: string, _val: string) => ({
+                maybeSingle: () =>
+                  Promise.resolve({
+                    data: _mockEmailProvider !== null ? { email_provider: _mockEmailProvider } : null,
+                    error: null,
+                  }),
+              }),
+            }),
+          };
+        }
+        // email_send_log table — existing behavior
+        return {
+          select: (_cols: string, _opts?: object) => ({
+            eq: (_col: string, _val: string) => ({
+              gte: (_col2: string, _val2: string) =>
+                Promise.resolve({ count: _mockCount, error: _mockCountError }),
+            }),
+            gte: (_col: string, _val: string) =>
               Promise.resolve({ count: _mockCount, error: _mockCountError }),
           }),
-          gte: (_col: string, _val: string) =>
-            Promise.resolve({ count: _mockCount, error: _mockCountError }),
-        }),
-        insert: (_row: object) =>
-          Promise.resolve({ error: _mockInsertError }),
-      }),
+          insert: (_row: object) =>
+            Promise.resolve({ error: _mockInsertError }),
+        };
+      },
     }),
   };
 });
@@ -71,6 +104,10 @@ function setCountResult(count: number | null, error: object | null = null) {
 }
 function setInsertResult(error: object | null) {
   _mockInsertError = error;
+}
+// Phase 36 setter — null simulates no matching accounts row (nil-UUID sentinel)
+function setEmailProvider(provider: string | null) {
+  _mockEmailProvider = provider;
 }
 
 describe("quota-guard", () => {
@@ -125,17 +162,29 @@ describe("quota-guard", () => {
     // Re-mock with insert spy attached
     vi.doMock("@/lib/supabase/admin", () => ({
       createAdminClient: () => ({
-        from: (_table: string) => ({
-          select: (_cols: string, _opts?: object) => ({
-            eq: (_col: string, _val: string) => ({
-              gte: (_col2: string, _val2: string) =>
+        from: (table: string) => {
+          if (table === "accounts") {
+            return {
+              select: (_cols: string) => ({
+                eq: (_col: string, _val: string) => ({
+                  maybeSingle: () =>
+                    Promise.resolve({ data: { email_provider: "gmail" }, error: null }),
+                }),
+              }),
+            };
+          }
+          return {
+            select: (_cols: string, _opts?: object) => ({
+              eq: (_col: string, _val: string) => ({
+                gte: (_col2: string, _val2: string) =>
+                  Promise.resolve({ count: 200, error: null }),
+              }),
+              gte: (_col: string, _val: string) =>
                 Promise.resolve({ count: 200, error: null }),
             }),
-            gte: (_col: string, _val: string) =>
-              Promise.resolve({ count: 200, error: null }),
-          }),
-          insert: insertSpy,
-        }),
+            insert: insertSpy,
+          };
+        },
       }),
     }));
 
@@ -206,5 +255,69 @@ describe("quota-guard", () => {
       String(args[0]).includes("[quota-guard] getDailySendCount failed"),
     );
     expect(errorLogs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phase 36 additions
+  // ---------------------------------------------------------------------------
+
+  it("[#6 — Phase 36] Resend account: skips 200/day cap; inserts with provider='resend'", async () => {
+    setEmailProvider("resend");
+    // count is way above the Gmail cap — but cap should NOT be checked
+    setCountResult(500);
+
+    // Track what was inserted
+    const insertedRows: object[] = [];
+    vi.doMock("@/lib/supabase/admin", () => ({
+      createAdminClient: () => ({
+        from: (table: string) => {
+          if (table === "accounts") {
+            return {
+              select: (_cols: string) => ({
+                eq: (_col: string, _val: string) => ({
+                  maybeSingle: () =>
+                    Promise.resolve({ data: { email_provider: "resend" }, error: null }),
+                }),
+              }),
+            };
+          }
+          // email_send_log
+          return {
+            select: (_cols: string, _opts?: object) => ({
+              eq: (_col: string, _val: string) => ({
+                gte: (_col2: string, _val2: string) =>
+                  Promise.resolve({ count: 500, error: null }),
+              }),
+            }),
+            insert: (row: object) => {
+              insertedRows.push(row);
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
+      }),
+    }));
+
+    // Must NOT throw QuotaExceededError even though count (500) >> cap (200)
+    await expect(
+      checkAndConsumeQuota("booking-confirmation", TEST_ACCOUNT_ID),
+    ).resolves.toBeUndefined();
+
+    // No QUOTA_APPROACHING log (Resend bypasses cap entirely)
+    const warningCalls = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
+      String(args[0]).includes("GMAIL_SMTP_QUOTA_APPROACHING"),
+    );
+    expect(warningCalls).toHaveLength(0);
+  });
+
+  it("[#7 — Phase 36] nil-UUID sentinel (no accounts row): falls through to Gmail path", async () => {
+    // Simulate no matching accounts row (maybeSingle returns data:null)
+    setEmailProvider(null);
+    setCountResult(50);
+
+    // Should NOT throw — count 50 is well below the 200 cap
+    await expect(
+      checkAndConsumeQuota("signup-verify", "00000000-0000-0000-0000-000000000000"),
+    ).resolves.toBeUndefined();
   });
 });

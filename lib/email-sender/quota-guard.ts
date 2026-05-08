@@ -10,6 +10,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Account B. Signup-side paths (welcome email) currently pass the new account's
  * id post-creation; pre-account signup-verify/password-reset pass null and
  * remain on a global fallback until Phase 36 (Resend migration).
+ *
+ * Phase 36: Resend accounts bypass the 200/day cap entirely. The cap only
+ * applies to Gmail (email_provider='gmail' or missing account row). Resend
+ * accounts still log each send via email_send_log with provider='resend'.
  */
 export const SIGNUP_DAILY_EMAIL_CAP = 200;
 const WARN_THRESHOLD_PCT = 0.8;
@@ -69,6 +73,16 @@ export async function getDailySendCount(accountId: string): Promise<number> {
  *   try { await checkAndConsumeQuota("signup-verify", accountId); await sender.send(...); }
  *   catch (e) { if (e instanceof QuotaExceededError) ...handle... else throw; }
  *
+ * Phase 36 (OQ-1): internally reads accounts.email_provider to decide whether
+ * to enforce the 200/day Gmail cap. Resend accounts bypass the cap but still
+ * insert an email_send_log row with provider='resend'. Centralizing here means
+ * none of the 7 leaf callers need to change.
+ *
+ * The signup-side nil-UUID sentinel ('00000000-0000-0000-0000-000000000000')
+ * won't match any accounts row; maybeSingle() returns null and we fall through
+ * to the Gmail path (cap enforced) — exactly right for system-level sends like
+ * welcome and signup-verify.
+ *
  * 80% threshold logs a tagged warning ONCE PER ACCOUNT PER DAY (best-effort
  * de-dup via a tiny in-memory set keyed by UTC-day + account; for multi-instance
  * Vercel deploys this could log 2-3x per day total, which is acceptable).
@@ -79,23 +93,46 @@ export async function checkAndConsumeQuota(
   category: EmailCategory,
   accountId: string,
 ): Promise<void> {
-  const count = await getDailySendCount(accountId);
-  if (count >= SIGNUP_DAILY_EMAIL_CAP) {
-    throw new QuotaExceededError(count, SIGNUP_DAILY_EMAIL_CAP);
-  }
-  if (count >= SIGNUP_DAILY_EMAIL_CAP * WARN_THRESHOLD_PCT) {
-    const today = new Date().toISOString().slice(0, 10);
-    const warnKey = `${today}:${accountId}`;
-    if (!warnedDays.has(warnKey)) {
-      warnedDays.add(warnKey);
-      console.error(
-        `[GMAIL_SMTP_QUOTA_APPROACHING] account=${accountId} ${count}/${SIGNUP_DAILY_EMAIL_CAP} sent today. Consider Resend migration.`,
-      );
+  const admin = createAdminClient();
+
+  // Phase 36: read email_provider so we know whether to enforce the
+  // 200/day Gmail cap. Resend accounts bypass the cap entirely (CONTEXT
+  // decision — they have NSI's verified domain and a separate volume model).
+  // The signup-side nil-UUID sentinel ('00000000-...') won't match any row
+  // here; the maybeSingle() returns null and we fall through to the Gmail
+  // path (cap enforced) — which is exactly what we want for system-level
+  // sends like welcome and signup-verify.
+  const { data: acct } = await admin
+    .from("accounts")
+    .select("email_provider")
+    .eq("id", accountId)
+    .maybeSingle();
+
+  const provider: "gmail" | "resend" = acct?.email_provider === "resend" ? "resend" : "gmail";
+
+  if (provider === "gmail") {
+    const count = await getDailySendCount(accountId);
+    if (count >= SIGNUP_DAILY_EMAIL_CAP) {
+      throw new QuotaExceededError(count, SIGNUP_DAILY_EMAIL_CAP);
+    }
+    if (count >= SIGNUP_DAILY_EMAIL_CAP * WARN_THRESHOLD_PCT) {
+      const today = new Date().toISOString().slice(0, 10);
+      const warnKey = `${today}:${accountId}`;
+      if (!warnedDays.has(warnKey)) {
+        warnedDays.add(warnKey);
+        console.error(
+          `[GMAIL_SMTP_QUOTA_APPROACHING] account=${accountId} ${count}/${SIGNUP_DAILY_EMAIL_CAP} sent today. Consider Resend migration.`,
+        );
+      }
     }
   }
-  // Log the send, including the account so per-account counts work correctly.
-  const admin = createAdminClient();
-  const { error } = await admin.from("email_send_log").insert({ category, account_id: accountId });
+  // For provider==='resend', no cap check — abuse threshold is enforced
+  // by warnIfResendAbuseThresholdCrossed() inside getSenderForAccount.
+
+  // Log the send with the correct provider tag.
+  const { error } = await admin
+    .from("email_send_log")
+    .insert({ category, account_id: accountId, provider });
   if (error) {
     console.error("[quota-guard] insert failed; send proceeds anyway", error);
   }
