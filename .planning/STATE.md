@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 37 SHIPPED.** Verifier passed 4/4 must-haves. All 3 plans complete (schema + banner link, requestUpgradeAction server action with 9 Vitest tests, /app/settings/upgrade page + UpgradeForm). UPGRADE-01..04 all observable end-to-end after deploy; live Resend email delivery requires PREREQ-03 (same gate as Phase 36). Latest commits: `bf0307a`, `9b5eca7`, `13b6bb7` (Plan 37-03 set).
+**Last updated:** 2026-05-08 — **Phase 38 Plan 01 complete.** Wave-1 backend foundation for magic-link login shipped: `requestMagicLinkAction` server action (enumeration-safe, silent IP+email rate-limit, login-only `signInWithOtp`), `magicLinkSchema` Zod export, `AUTH_RATE_LIMITS.magicLink` config. REQUIREMENTS.md AUTH-28 reconciled to "5/hour per (IP+email) pair, silent on throttle". Plans 02 (form) and 03 (Supabase template) unblocked. Latest commits: `8c534d9`, `cc8a752`, `24d2358`.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 37 (upgrade flow + cap-hit UI) — Plans 01 and 02 complete. Plan 03 (settings upgrade page at /app/settings/upgrade) is next.
+**Current focus:** v1.7 Phase 38 (Magic-link login) — Plan 01 (server action + schema) complete. Plan 02 (form UI) and Plan 03 (Supabase email template config) unblocked.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (4 of 7 phases shipped)
-**Phase:** 37 — Upgrade Flow + In-App Cap-Hit UI — COMPLETE
-**Plan:** 3 of 3 complete (migration + banner link; requestUpgradeAction; settings page + form — all done)
-**Status:** Phase 37 complete. Phase 38 (Magic-link login) or Phase 39 (Booker polish) unblocked.
-**Last activity:** 2026-05-08 — Plan 37-03 executed; /app/settings/upgrade page + UpgradeForm client component shipped. Commits: `bf0307a`, `9b5eca7`.
+**Phase:** 38 — Magic-link login — IN PROGRESS (Plan 01 complete)
+**Plan:** 1 of 3 complete (server action + schema; form UI and Supabase template pending)
+**Status:** Plan 38-01 complete. Plan 38-02 (form UI on /app/login) is next.
+**Last activity:** 2026-05-08 — Plan 38-01 executed; `requestMagicLinkAction` + `magicLinkSchema` + AUTH-28 reconciliation shipped. Commits: `8c534d9`, `cc8a752`, `24d2358`.
 
-Progress (Phase 37): ████████ 3/3 plans complete
+Progress (Phase 38): ███░░░ 1/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -85,6 +85,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: P
 - **account.id not forwarded to client form components (Phase 37, Plan 03)** — Server actions re-derive the account from the session via RLS-scoped query. Client props must not expose account IDs that a user could substitute. Pattern: pass only display values and gate flags (e.g., lockedOut, timeRemaining) as props.
 - **invocationCallOrder Vitest assertion for async ordering (Phase 37, Plan 02)** — `sendMock.mock.invocationCallOrder[0] < updateMock.mock.invocationCallOrder[0]` proves temporal ordering across async calls without artificial ordering constraints. Use this pattern for any test that must assert "A happened before B" where both A and B are vi.fn() mocks.
 - **Core/wrapper split with three injected clients (Phase 37, Plan 02)** — `requestUpgradeCore(args, { rlsClient, adminClient, resendClient })` extends the reminders two-client pattern by adding `resendClient: EmailClient` as a third injection point. Tests pass a structural `{ provider: "resend", send: vi.fn(...) }` mock. The wrapper builds all three real clients then delegates. Dynamic `revalidatePath` import in wrapper ensures core never touches `next/cache`.
+- **Silent rate-limit return for enumeration-sensitive endpoints (Phase 38, Plan 01)** — `requestMagicLinkAction` returns `{ success: true }` (NOT `{ formError }`) on rate-limit miss. This intentionally diverges from `requestPasswordReset` and `loginAction`, which surface `formError` on throttle. CONTEXT lock: throttle status is itself enumeration-sensitive on magic-link (an attacker probing 6 requests for a target email could distinguish "real send threshold reached" from "no such account"). Apply this pattern to any future passwordless / OTP-style auth endpoint.
+- **5xx-only formError gating for enumeration-safe Supabase actions (Phase 38, Plan 01)** — `requestMagicLinkAction` only surfaces `{ formError }` when `error.status >= 500 || !error.status`. 4xx (including the canonical "unknown email" 400 from `signInWithOtp` with `shouldCreateUser:false`) always logged + swallowed. Mirrors `loginAction` LD pattern (auth-js `error.code` is unreliable; gate on `status` only).
+- **shouldCreateUser:false is the login-only switch (Phase 38, Plan 01)** — `signInWithOtp` defaults to `shouldCreateUser:true` which silently auto-registers any unknown email. CRITICAL: every magic-link login call site must pass `{ options: { shouldCreateUser: false } }`. The unknown-email error returned in this mode is the enumeration leak — handle in the action body via 5xx-only gating, never surface to the client.
+- **magicLink rate-limit key shape (Phase 38, Plan 01)** — Key `auth:magicLink:${ip}:${email}` does NOT collide with `auth:forgotPassword:${ip}:${email}` because `checkAuthRateLimit` namespaces by route key. Multi-route IP+email scoping is safe — adding new auth routes that reuse the IP+email identifier shape requires zero deduplication work.
 
 ### Patterns established / locked through v1.6
 
@@ -112,21 +116,23 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 37, Plan 03 executed. `/app/settings/upgrade` server page + `UpgradeForm` client component implemented; all 9 Plan 02 tests still pass; no new TS/lint errors. Commits: `bf0307a` (page.tsx), `9b5eca7` (upgrade-form.tsx).
+**Last session:** 2026-05-08 — Phase 38, Plan 01 executed. Backend foundation for magic-link login: `requestMagicLinkAction` server action with silent IP+email rate-limit (5/hour), `magicLinkSchema` Zod export, `AUTH_RATE_LIMITS.magicLink` config, REQUIREMENTS AUTH-28 reconciliation. Typecheck clean (no new errors). Commits: `8c534d9`, `cc8a752`, `24d2358`.
 
-**Stopped at:** Phase 37 complete (all 3 plans shipped). Resume at Phase 38 (Magic-link login) or Phase 39 (Booker polish) — both unblocked.
+**Stopped at:** Phase 38 Plan 01 complete. Resume at Plan 38-02 (magic-link form UI on /app/login).
 
 **Resume file:** None
 
 ## ▶ Next session — start here
 
-**Phase 37 fully SHIPPED.** All 3 plans complete: migration + banner link (01), requestUpgradeAction (02), /app/settings/upgrade page + UpgradeForm (03).
+**Phase 38 Plan 01 complete.** Backend ready: `requestMagicLinkAction` + `MagicLinkState` importable from `@/app/(auth)/app/login/actions`; `magicLinkSchema` from `@/app/(auth)/app/login/schema`.
 
-### Path A: Phase 38 (Magic-link login) — next recommended step
+### Path A: Phase 38 Plan 02 (Magic-link form UI) — next recommended step
+
+Wire a magic-link request form into `/app/login` consuming `requestMagicLinkAction` via `useActionState`. State shape locked: `{ success?, formError?, fieldErrors?: { email?: string[] } }`. Always render generic success message on `success` (do not distinguish known/unknown/throttled). Plan file: `.planning/phases/38-magic-link-login/38-02-PLAN.md`.
 
 ### Path B: Phase 39 (BOOKER polish) — work in parallel
 
-Both have zero backend dependencies. Phase 38 needs no prereqs. Phase 39 is pure UI.
+Zero backend dependencies. Pure UI. Can interleave with 38-02 if desired.
 
 ### PREREQ-03 — still required for Phase 36 live activation
 
