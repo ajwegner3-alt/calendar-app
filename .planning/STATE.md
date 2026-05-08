@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 36 SHIPPED (framework).** Verifier passed 13/13 must-haves. All 3 plans (schema + types, Resend HTTP provider, factory routing + orchestrator fix) complete; FUTURE_DIRECTIONS.md captures PREREQ-03 activation guide. Live Resend sends still gated on PREREQ-03 (Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds RESEND_API_KEY to Vercel) — code activates on a single `UPDATE accounts SET email_provider='resend'` once those land. Latest commits: `9681747`, `9583896`, `8863e2a`, `8253245`, `b870c19`, `245803e`.
+**Last updated:** 2026-05-08 — **Phase 37 Plan 01 complete.** Added `accounts.last_upgrade_request_at timestamptz` migration + "Request upgrade" Link appended to cap-hit banner. Latest commits: `1eb0850` (migration), `ab285ba` (banner link).
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 37 (upgrade flow + cap-hit UI) or 38 (magic-link login) or 39 (BOOKER polish) — pick any. Phase 36 framework shipped 2026-05-08; live Resend activation deferred until PREREQ-03 lands.
+**Current focus:** v1.7 Phase 37 (upgrade flow + cap-hit UI) — Plan 01 complete. Plans 02 (requestUpgradeAction) and 03 (settings upgrade page) are next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (3 of 7 phases shipped)
-**Phase:** 36 — Resend Backend for Upgraded Accounts — ✅ FRAMEWORK SHIPPED
-**Plan:** All 3 plans complete (schema+types, Resend provider, factory routing). Verifier 13/13 PASS.
-**Status:** Phase closed. PREREQ-03 deferred to FUTURE_DIRECTIONS.md per ROADMAP framework-only decision.
-**Last activity:** 2026-05-08 — Verifier wrote 36-VERIFICATION.md (status: passed); ROADMAP/STATE/REQUIREMENTS marked phase complete.
+**Phase:** 37 — Upgrade Flow + In-App Cap-Hit UI — IN PROGRESS
+**Plan:** 1 of 3 complete (schema + banner link done; requestUpgradeAction and settings page pending)
+**Status:** Plan 01 committed. Plans 02 and 03 unblocked.
+**Last activity:** 2026-05-08 — Plan 37-01 executed; migration created; banner link appended. Commits: `1eb0850`, `ab285ba`.
 
-Progress (Phase 36): ███████ 3/3 plans complete — ✅ DONE
+Progress (Phase 37): ███░░░░ 1/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -105,9 +105,11 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 (orchestrator) — Phase 36 SHIPPED (framework). All 3 plans executed; verifier wrote 36-VERIFICATION.md (status: passed; 13/13 must-haves verified). ROADMAP, STATE, REQUIREMENTS marked complete.
+**Last session:** 2026-05-08 — Phase 37, Plan 01 executed. Migration `20260508120000_phase37_last_upgrade_request_at.sql` created; `UnsentConfirmationsBanner` appended Request upgrade Link. Commits: `1eb0850`, `ab285ba`.
 
-**Stopped at:** Phase 36 closed. Phase 37 (upgrade flow + cap-hit UI), Phase 38 (magic-link login), or Phase 39 (BOOKER polish) are next candidates.
+**Stopped at:** Phase 37, Plan 01 complete. Resume at Plan 02 (requestUpgradeAction — reads/writes last_upgrade_request_at, sends upgrade-request email via Resend bypass) or Plan 03 (settings upgrade page at /app/settings/upgrade).
+
+**Resume file:** None
 
 ## ▶ Next session — start here
 
