@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 38 Plan 01 complete.** Wave-1 backend foundation for magic-link login shipped: `requestMagicLinkAction` server action (enumeration-safe, silent IP+email rate-limit, login-only `signInWithOtp`), `magicLinkSchema` Zod export, `AUTH_RATE_LIMITS.magicLink` config. REQUIREMENTS.md AUTH-28 reconciled to "5/hour per (IP+email) pair, silent on throttle". Plans 02 (form) and 03 (Supabase template) unblocked. Latest commits: `8c534d9`, `cc8a752`, `24d2358`.
+**Last updated:** 2026-05-08 — **Phase 38 Plan 02 complete.** Magic-link form UI live on `/app/login`: Password|Magic-link Tabs inside the email-auth Card, MagicLinkSuccess inline-replace component (30s resend cooldown), updated subtitle. Phase 34 Google-OAuth-above-Card layout preserved. `next build` clean. Plan 03 (Supabase email template config) is the only remaining piece for end-to-end click-through. Latest commits: `ecd3dc5`, `8cafad2`, `2161052`.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 38 (Magic-link login) — Plan 01 (server action + schema) complete. Plan 02 (form UI) and Plan 03 (Supabase email template config) unblocked.
+**Current focus:** v1.7 Phase 38 (Magic-link login) — Plans 01+02 complete (backend + form UI). Plan 03 (Supabase email template config — manual + verify route wiring) is the final piece.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (4 of 7 phases shipped)
-**Phase:** 38 — Magic-link login — IN PROGRESS (Plan 01 complete)
-**Plan:** 1 of 3 complete (server action + schema; form UI and Supabase template pending)
-**Status:** Plan 38-01 complete. Plan 38-02 (form UI on /app/login) is next.
-**Last activity:** 2026-05-08 — Plan 38-01 executed; `requestMagicLinkAction` + `magicLinkSchema` + AUTH-28 reconciliation shipped. Commits: `8c534d9`, `cc8a752`, `24d2358`.
+**Phase:** 38 — Magic-link login — IN PROGRESS (Plans 01+02 complete)
+**Plan:** 2 of 3 complete (server action + schema + form UI; Supabase template pending)
+**Status:** Plan 38-02 complete. Plan 38-03 (Supabase email template) is next.
+**Last activity:** 2026-05-08 — Plan 38-02 executed; MagicLinkSuccess component + Password|Magic-link Tabs in LoginForm + login page subtitle update shipped. `next build` clean. Commits: `ecd3dc5`, `8cafad2`, `2161052`.
 
-Progress (Phase 38): ███░░░ 1/3 plans complete
+Progress (Phase 38): ██████░░ 2/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -89,6 +89,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: P
 - **5xx-only formError gating for enumeration-safe Supabase actions (Phase 38, Plan 01)** — `requestMagicLinkAction` only surfaces `{ formError }` when `error.status >= 500 || !error.status`. 4xx (including the canonical "unknown email" 400 from `signInWithOtp` with `shouldCreateUser:false`) always logged + swallowed. Mirrors `loginAction` LD pattern (auth-js `error.code` is unreliable; gate on `status` only).
 - **shouldCreateUser:false is the login-only switch (Phase 38, Plan 01)** — `signInWithOtp` defaults to `shouldCreateUser:true` which silently auto-registers any unknown email. CRITICAL: every magic-link login call site must pass `{ options: { shouldCreateUser: false } }`. The unknown-email error returned in this mode is the enumeration leak — handle in the action body via 5xx-only gating, never surface to the client.
 - **magicLink rate-limit key shape (Phase 38, Plan 01)** — Key `auth:magicLink:${ip}:${email}` does NOT collide with `auth:forgotPassword:${ip}:${email}` because `checkAuthRateLimit` namespaces by route key. Multi-route IP+email scoping is safe — adding new auth routes that reuse the IP+email identifier shape requires zero deduplication work.
+- **Radix Tabs unmount-resets-state (Phase 38, Plan 02)** — Radix's default `<TabsContent>` unmounts inactive panels. Local `useState` and `useActionState` inside an inactive panel are discarded; remounting starts fresh. Use this for free state cleanup on tab switch — no `key` prop needed. Confirmed in `app/(auth)/app/login/login-form.tsx` `MagicLinkTabContent` where switching to Password and back resets both `useActionState(requestMagicLinkAction)` and the local `submittedEmail` capture.
+- **Distinct-IDs-per-tab pattern (Phase 38, Plan 02)** — When the same logical input (e.g., email) appears in multiple `TabsContent` panels, give each a unique DOM `id` (`id="email-password"`, `id="email-magic"`) with matching `<Label htmlFor>`. Defends against Radix configurations that keep both panels mounted simultaneously and is correct HTML regardless. RESEARCH §Pitfall 5.
+- **Cooldown-on-mount for resend components (Phase 38, Plan 02)** — When the parent only mounts a resend component AFTER an initial successful send, start `useState(cooldown)` at the cooldown value, not 0. Distinct from `resend-verification-button.tsx` which starts at 0 because that component lives on a standalone page where a user may land via email link without having just submitted. `MagicLinkSuccess` starts at 30; `ResendVerificationButton` starts at 0 — both correct for their mount conditions.
+- **Two useActionState hooks isolated by inner component (Phase 38, Plan 02)** — When one form area needs two independent server actions (here: `loginAction` for the Password tab + `requestMagicLinkAction` for the Magic-link tab), extract the second into a sibling/inner component (`MagicLinkTabContent`) rather than calling both `useActionState` hooks in the same parent. The inner component owns one hook + its own local state, and tab switching cleanly unmounts/remounts the entire isolated tree.
 
 ### Patterns established / locked through v1.6
 
@@ -116,23 +120,23 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 38, Plan 01 executed. Backend foundation for magic-link login: `requestMagicLinkAction` server action with silent IP+email rate-limit (5/hour), `magicLinkSchema` Zod export, `AUTH_RATE_LIMITS.magicLink` config, REQUIREMENTS AUTH-28 reconciliation. Typecheck clean (no new errors). Commits: `8c534d9`, `cc8a752`, `24d2358`.
+**Last session:** 2026-05-08 — Phase 38, Plan 02 executed. Magic-link form UI on `/app/login`: new `MagicLinkSuccess` client component (30s resend cooldown, exact CONTEXT-locked copy), `Password|Magic-link` Tabs control inserted INSIDE the email-auth Card's `CardContent`, login page subtitle updated to mention both options. Phase 34 Google-OAuth-button-above-Card layout fully preserved. `next build` clean. Commits: `ecd3dc5`, `8cafad2`, `2161052`.
 
-**Stopped at:** Phase 38 Plan 01 complete. Resume at Plan 38-02 (magic-link form UI on /app/login).
+**Stopped at:** Phase 38 Plan 02 complete. Resume at Plan 38-03 (Supabase email template + auth confirm route wiring).
 
 **Resume file:** None
 
 ## ▶ Next session — start here
 
-**Phase 38 Plan 01 complete.** Backend ready: `requestMagicLinkAction` + `MagicLinkState` importable from `@/app/(auth)/app/login/actions`; `magicLinkSchema` from `@/app/(auth)/app/login/schema`.
+**Phase 38 Plans 01 + 02 complete.** Full client-visible flow is functional in dev: visiting `/app/login` shows the new Tabs control, submitting a magic-link request displays the inline success state with countdown. Click-through authentication does NOT yet work — that needs Plan 03's Supabase email template + `/auth/confirm` route wiring.
 
-### Path A: Phase 38 Plan 02 (Magic-link form UI) — next recommended step
+### Path A: Phase 38 Plan 03 (Supabase email template + verify route) — next recommended step
 
-Wire a magic-link request form into `/app/login` consuming `requestMagicLinkAction` via `useActionState`. State shape locked: `{ success?, formError?, fieldErrors?: { email?: string[] } }`. Always render generic success message on `success` (do not distinguish known/unknown/throttled). Plan file: `.planning/phases/38-magic-link-login/38-02-PLAN.md`.
+Plan file: `.planning/phases/38-magic-link-login/38-03-PLAN.md`. Likely manual Supabase dashboard work (email template HTML + redirect URL config) + small route handler verification. Will end Phase 38.
 
 ### Path B: Phase 39 (BOOKER polish) — work in parallel
 
-Zero backend dependencies. Pure UI. Can interleave with 38-02 if desired.
+Zero backend dependencies. Pure UI. Can interleave with 38-03 if desired.
 
 ### PREREQ-03 — still required for Phase 36 live activation
 
