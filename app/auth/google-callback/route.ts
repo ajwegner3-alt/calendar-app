@@ -92,6 +92,26 @@ export async function GET(request: NextRequest) {
     grantedScopesPreview: grantedScopes ? grantedScopes.slice(0, 200) : null,
     gmailGranted,
   });
+  // Also write to a debug table so the orchestrator can read it via SQL when
+  // Vercel log streaming is unreliable.
+  try {
+    const dbg = createAdminClient();
+    await dbg.from("_oauth_debug").insert({
+      context: "google-callback",
+      data: {
+        userId,
+        hasRefreshToken: !!providerRefreshToken,
+        hasAccessToken: !!providerAccessToken,
+        grantedScopes,
+        gmailGranted,
+        sessionShape: data.session
+          ? Object.keys(data.session)
+          : null,
+      },
+    });
+  } catch (e) {
+    console.error("[google-callback] debug-insert failed:", e);
+  }
 
   // Persist credential ONLY if we have a refresh token AND gmail.send was granted.
   // If gmail.send was denied, no point storing a token that can't send mail —
