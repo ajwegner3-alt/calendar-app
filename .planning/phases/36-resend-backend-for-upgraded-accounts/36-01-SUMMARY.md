@@ -72,7 +72,7 @@ Each task was committed atomically:
 1. **Task 1: Create Phase 36 schema migration** - `c3b0e0b` (feat)
 2. **Task 2: Extend EmailProvider type union** - `a0fb2f3` (feat)
 
-**Plan metadata:** TBD (docs: complete schema-and-types plan)
+**Plan metadata:** `a6e5194` (docs: complete schema-and-types plan)
 
 ## Files Created/Modified
 
