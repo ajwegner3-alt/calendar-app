@@ -224,6 +224,7 @@ export async function completeOnboardingAction(
   // STEP D: Welcome email — fire-and-forget (non-fatal if it fails).
   // -------------------------------------------------------------------------
   sendWelcomeEmail({
+    id: me.id,
     owner_email: me.owner_email ?? claims.claims.email ?? "",
     name: me.name,
     slug: me.slug,

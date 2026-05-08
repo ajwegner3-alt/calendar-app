@@ -1,37 +1,37 @@
 import "server-only";
-import { sendEmail } from "@/lib/email-sender";
+import { getSenderForAccount, REFUSED_SEND_ERROR_PREFIX } from "@/lib/email-sender/account-sender";
 import { checkAndConsumeQuota, QuotaExceededError } from "@/lib/email-sender/quota-guard";
-
-// Resolved email-sender entry point (verified 2026-04-28): the project uses a
-// vendored email-sender at lib/email-sender/index.ts. The exported function is
-// `sendEmail(options)` — same pattern as send-booking-confirmation.ts.
 
 /**
  * Send a post-wizard welcome email to the newly onboarded account owner.
+ *
+ * Migrated to per-account Gmail OAuth in Phase 35 Plan 06 (Approach A).
+ * accountId is available at the call site (onboarding actions.ts has me.id).
+ * Phase 36 will swap the provider to Resend; the accountId threading is
+ * already in place, so that migration only needs to change getSenderForAccount.
  *
  * Fire-and-forget: the caller (completeOnboardingAction) does NOT await this
  * function — it calls `.catch()` on the returned Promise. Failures are logged
  * but do NOT block the wizard completion redirect.
  *
- * Quota-guarded: uses "signup-welcome" category against the 200/day Gmail SMTP
- * cap from Plan 10-04. If quota is exceeded, logs and returns silently (the
- * wizard has already completed; withholding the email is acceptable).
+ * Quota-guarded: uses "signup-welcome" category against the 200/day cap.
+ * If quota is exceeded, logs and returns silently (the wizard has already
+ * completed; withholding the email is acceptable).
  *
+ * @param account.id           accounts.id (needed for getSenderForAccount).
  * @param account.owner_email  Where to send the email (accounts.owner_email).
  * @param account.name         accounts.name (DB column; UI label is "Display Name").
  * @param account.slug         accounts.slug (their booking URL segment).
  */
 export async function sendWelcomeEmail(account: {
+  id: string;
   owner_email: string;
   name: string;
   slug: string;
 }): Promise<void> {
   // Quota guard FIRST (per 10-04 contract — signup-side callers gate before send).
   try {
-    // Nil UUID sentinel: no per-account context at welcome-email time (Phase 35).
-    // The email is sent on behalf of the system (singleton SMTP) until Phase 36
-    // migrates this path to per-account Gmail OAuth.
-    await checkAndConsumeQuota("signup-welcome", "00000000-0000-0000-0000-000000000000");
+    await checkAndConsumeQuota("signup-welcome", account.id);
   } catch (e) {
     if (e instanceof QuotaExceededError) {
       console.error("[welcome-email] quota exceeded; skipping welcome", e.message);
@@ -65,9 +65,8 @@ export async function sendWelcomeEmail(account: {
     "— NSI Booking",
   ].join("\n");
 
-  // DO NOT pass `from` — sendEmail singleton constructs defaultFrom from
-  // GMAIL_FROM_NAME + GMAIL_USER env vars. (Same pattern as send-booking-confirmation.ts.)
-  const result = await sendEmail({
+  const sender = await getSenderForAccount(account.id);
+  const result = await sender.send({
     to: account.owner_email,
     subject,
     html,
@@ -75,8 +74,14 @@ export async function sendWelcomeEmail(account: {
   });
 
   if (!result.success) {
-    // Welcome email is fire-and-forget per wizard spec — log and continue.
-    console.error("[welcome-email] sendEmail failed (non-fatal):", result.error);
+    if (result.error?.startsWith(REFUSED_SEND_ERROR_PREFIX)) {
+      // OAuth not connected or revoked for this account — expected at onboarding
+      // if the user skipped the Gmail connect step. Non-fatal.
+      console.warn("[welcome-email] OAuth send refused (non-fatal):", result.error);
+    } else {
+      // Welcome email is fire-and-forget per wizard spec — log and continue.
+      console.error("[welcome-email] send failed (non-fatal):", result.error);
+    }
   }
 }
 
