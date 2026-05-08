@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: Props) {
                 Sign in to your dashboard
               </h2>
               <p className="mt-2 text-sm text-gray-600">
-                Enter your email and password to continue.
+                Sign in with your email and password or a magic link.
               </p>
             </header>
             <LoginForm resetSuccess={reset === "success"} />
