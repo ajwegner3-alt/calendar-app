@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — Phase 35 Plan 04 + architectural deviation `ab02a23` (direct-Google OAuth replaces Supabase `linkIdentity` for the connect flow). Andrew opted to skip preview iteration and ship to production. See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the full pivot story.
+**Last updated:** 2026-05-08 (late evening) — Phase 35 architecture proven on PRODUCTION end-to-end. Two architectural fixes shipped tonight beyond Plan 04: (1) direct-Google OAuth replaces Supabase `linkIdentity` for the connect flow (commit `ab02a23`); (2) Gmail provider switched from SMTP+OAuth2 to Gmail REST API (commit `cb82b6f`) — the `gmail.send` scope authorizes only the REST endpoint, NOT SMTP relay; the old SMTP path silently dropped every message. Live booking on production at 2026-05-08 ~02:15 UTC delivered both booker and owner emails via Gmail OAuth REST API. See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the full pivot history.
 
 ## Project Reference
 
@@ -8,21 +8,21 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 35 IN PROGRESS — production cutover deploy of Plans 00-04 + direct-OAuth rewrite. Plan 05 verification happens directly on production (not preview). Plan 06 (SMTP removal) gated on production verification.
+**Current focus:** v1.7 Phase 35 — production code is live + OAuth send path proven end-to-end. Two verification items remain: (a) per-account quota isolation SQL seed (proves Account A cap-hit doesn't block Account B); (b) reconnect-banner smoke test. After both pass, Plan 06 (SMTP singleton removal + `GMAIL_APP_PASSWORD` env-var deprecation) ships as a single commit.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS
-**Phase:** 35 — Per-Account Gmail OAuth Send — In Progress (production deploy initiated)
-**Plan:** 04 of 6 complete; 05 in flight (direct verification on production); 06 gated.
-**Status:** Plans 00-04 complete. Architectural deviation: connect flow rewritten as direct-Google OAuth (commit `ab02a23`); see DEVIATION doc. Cutover code is being merged to main and deployed to production. Andrew will connect Gmail on production immediately post-deploy and run the verification matrix (real OAuth send, per-account quota isolation via SQL seed, reconnect smoke). Plan 06 (SMTP removal) ships only after that verification.
-**Last activity:** 2026-05-08 — Built direct-OAuth `/auth/gmail-connect/callback` route + rewrote `connectGmailAction`; merging to main and pushing to production.
+**Phase:** 35 — Per-Account Gmail OAuth Send — Code complete on production; verification matrix in flight.
+**Plan:** 04 of 6 complete; 05 in flight (2 of 6 verification items still pending); 06 ready to ship after 05 passes.
+**Status:** Code is LIVE on production (`booking.nsintegrations.com`) at commit `cb82b6f`. nsi account has Gmail connected via the new direct-Google OAuth flow (`/auth/gmail-connect/callback`). Live booking proven 2026-05-08 ~02:15 UTC: `bookings.confirmation_email_sent=true`, both booker email (andrewjameswegner@gmail.com) and owner email (ajwegner3@gmail.com) delivered via Gmail REST API (`gmail.users.messages.send`). `email_send_log.account_id` correctly populated for nsi. Two verification items remain — see Session Continuity section.
+**Last activity:** 2026-05-08 — Diagnosed Gmail SMTP-with-`gmail.send`-scope silently-drops issue; rewrote provider to use Gmail REST API (commit `cb82b6f`); production deploy now sending real emails. 8/8 unit tests pass on the new provider.
 
-Progress (Phase 35): ████░░ 5/6 plans complete (00 + 01 + 02 + 03 + 04 + deviation pivot; 05 verification active on production; 06 pending)
+Progress (Phase 35): █████░ 5/6 plans complete (00, 01, 02, 03, 04 done + 2 architectural fixes; 05 verification 2/6 items pending; 06 ready)
 
-⚠ **Production cutover risk:** The moment this deploys, ALL accounts must have connected Gmail credentials or sends refuse. Andrew's nsi is the only active production account; he connects it within minutes of deploy. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers.
+⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
 ## Cumulative project progress
 
@@ -67,6 +67,7 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **Nil UUID sentinel for system-level sends (Phase 35, Plan 04)** — `signup/actions.ts` and `welcome-email.ts` pass `"00000000-0000-0000-0000-000000000000"` to `checkAndConsumeQuota`. No per-account context exists at these call sites. `email-change` action fetches the real accountId from DB.
 - **account-sender Vitest alias mock shares __mockSendCalls (Phase 35, Plan 04)** — `tests/__mocks__/account-sender.ts` imports from `@/lib/email-sender` (the aliased bare specifier, NOT the direct file path) so both the mock and the integration test files share the exact same module instance. vitest.config.ts alias: `find: /^@\/lib\/email-sender\/account-sender$/`.
 - **Direct-Google OAuth for Gmail connect (Phase 35 deviation, commit ab02a23)** — `connectGmailAction` builds the Google auth URL ourselves and the new `/auth/gmail-connect/callback` route exchanges the code at `oauth2.googleapis.com/token` directly. **Do NOT use `supabase.auth.linkIdentity` for capturing provider tokens** — it silently drops `provider_refresh_token` under several conditions and exposes Supabase's domain on Google's `/permissions` page. `signInWithOAuth` (signup/login) keeps using `/auth/google-callback` because it needs Supabase to create `auth.users` rows. Full pivot rationale in `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md`.
+- **Gmail REST API, NOT SMTP, for OAuth-based send (Phase 35 deviation #2, commit cb82b6f)** — `lib/email-sender/providers/gmail-oauth.ts` POSTs to `https://gmail.googleapis.com/gmail/v1/users/me/messages/send` with a base64url-encoded RFC-822 message and `Authorization: Bearer <accessToken>`. **Do NOT try to use SMTP (`smtp.gmail.com:465` with `auth.type='OAuth2'`) when the OAuth scope is `gmail.send`** — `gmail.send` only authorizes the REST endpoint; SMTP relay requires the much broader `https://mail.google.com/` scope. The pitfall is that nodemailer's XOAUTH2 SMTP handshake silently accepts the wrong-scope token AND returns a synthetic messageId, so callers think the send succeeded — but Gmail drops every message after acceptance. Symptom: `bookings.confirmation_email_sent=true` + `email_send_log` rows logged + zero recipient delivery.
 - **state cookie CSRF for direct OAuth (Phase 35 deviation)** — `connectGmailAction` writes a 32-byte random hex token into an httpOnly `gmail_connect_state` cookie (10-min maxAge); `/auth/gmail-connect/callback` verifies the cookie matches the `state` query param before exchanging the code. Cookie is deleted after consumption.
 - **Hosted Supabase migrations applied via MCP (Phase 35 deviation)** — `account_oauth_credentials` table and `email_send_log.account_id` column were applied to hosted Supabase via `mcp__claude_ai_Supabase__apply_migration` during the 35-05 verification session. Local `supabase/config.toml` flags (e.g., `enable_manual_linking`) only apply to local Supabase — the hosted dashboard equivalent must be configured separately or skipped if the new direct-OAuth flow doesn't need it.
 
@@ -96,19 +97,87 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 35 Plan 04 executed; Plan 05 began on Vercel preview deploy and uncovered the linkIdentity bug; mid-session pivot to direct-Google OAuth (commit `ab02a23`); Andrew chose to ship to production rather than continue preview iteration.
+**Last session:** 2026-05-08 — Phase 35 Plan 04 executed; Plan 05 verification on Vercel preview uncovered linkIdentity bug → first architectural pivot to direct-Google OAuth (`ab02a23`); shipped to production; second architectural pivot when emails still didn't deliver — root cause was Gmail SMTP+OAuth2 with `gmail.send` scope silently dropping messages → switched to Gmail REST API (`cb82b6f`); live production booking confirmed end-to-end at ~02:15 UTC.
 
-**Stopped at:** Direct-OAuth code pushed to feature branch `gsd/phase-35-per-account-gmail-oauth-send` at `ab02a23`. Planning docs updated. **About to merge feature branch into main and push origin/main** — this is the production deploy.
+**Stopped at:** Production live at commit `cb82b6f`. nsi has Gmail connected. Real bookings → real emails delivered. Two of six Plan 35-05 verification items remain; user opted to do remaining tests after a context-clear so a fresh session can tackle them cleanly.
 
-**Next session (post-deploy):**
-1. Vercel finishes building main → production live with cutover + direct-OAuth.
-2. Andrew opens `https://booking.nsintegrations.com/app/settings/gmail` and clicks Connect Gmail. New flow walks through Google consent and writes a row to `account_oauth_credentials`.
-3. Andrew makes a test booking against nsi from a separate test inbox; both confirmation emails arrive via Gmail OAuth.
-4. SQL-driven per-account quota isolation test (seed `nsi-rls-test` to 200 sends, verify nsi unaffected).
-5. SQL-driven reconnect-banner smoke (flip `account_oauth_credentials.status='needs_reconnect'`, refresh Settings, revert).
-6. If all green: Wave 6 (Plan 35-06 SMTP singleton removal) ships as a separate commit.
+## ▶ Next session — start here
 
-**GCP redirect URI required in production:** Andrew adds `https://booking.nsintegrations.com/auth/gmail-connect/callback` to the Web OAuth client's Authorized redirect URIs (the production equivalent of what we added for the preview URL).
+**Recommended path: A** (run quota isolation test, then ship Plan 06).
+
+### Step 1: Per-account quota isolation SQL seed (~2 min)
+
+Goal: Prove that Account B (`nsi-rls-test`) hitting its 200/day cap does NOT block sends from Account A (`nsi`). Phase Success Criterion 2.
+
+Run via Supabase MCP `mcp__claude_ai_Supabase__execute_sql` (project_id `mogfnutxrrbtvnaupoun`):
+
+```sql
+-- Seed nsi-rls-test (id b8981835-316e-44ef-9763-42bee4236b21) to 200 send-log rows for today
+insert into email_send_log (category, account_id, sent_at)
+select 'booking-confirmation', 'b8981835-316e-44ef-9763-42bee4236b21', now()
+from generate_series(1, 200);
+
+-- Verify counts
+select account_id, count(*) from email_send_log
+where sent_at >= current_date group by account_id order by count(*) desc;
+```
+
+Then ask Andrew to make ONE more test booking on production against nsi. Expected outcome: booking succeeds, nsi's daily count grows by 2 (booker + owner), nsi-rls-test stays at exactly 200. The new sends go to Andrew's test inbox.
+
+If isolation breaks (nsi gets refused with quota error), STOP — file gap-closure plan instead of shipping Plan 06.
+
+### Step 2: Reconnect banner smoke (~1 min)
+
+```sql
+-- Flip nsi's credential to needs_reconnect
+update account_oauth_credentials
+set status = 'needs_reconnect'
+where user_id = '1a8c687f-73fd-4085-934f-592891f51784' and provider = 'google';
+```
+
+Andrew refreshes `https://booking.nsintegrations.com/app/settings/gmail` — should show "Reconnect needed" with a Reconnect button.
+
+```sql
+-- Revert
+update account_oauth_credentials
+set status = 'connected'
+where user_id = '1a8c687f-73fd-4085-934f-592891f51784' and provider = 'google';
+```
+
+Andrew refreshes again — back to "Connected".
+
+### Step 3: Plan 06 — SMTP singleton removal
+
+Spawn `gsd-executor` with sonnet model on `.planning/phases/35-per-account-gmail-oauth-send/35-06-smtp-singleton-removal-PLAN.md`. Plan-level work:
+- Remove `lib/email-sender/index.ts` (the singleton factory)
+- Remove `lib/email-sender/providers/gmail.ts` (App-Password SMTP provider)
+- Drop `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from `.env.example` (keep in `.env.local` until Andrew rotates)
+- Update `tests/email-sender.test.ts`
+- One commit per task per execute-plan rules.
+
+### Step 4: Phase 35 verifier + roadmap update
+
+Spawn `gsd-verifier` to write `.planning/phases/35-per-account-gmail-oauth-send/35-VERIFICATION.md`. Update `.planning/ROADMAP.md` Phase 35 status row. Update `.planning/REQUIREMENTS.md` to mark AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33 as Complete.
+
+### What's already in place — don't re-do
+
+- ✓ Production deploy of Plans 00-04 + both architectural fixes (commit `cb82b6f` on `main`)
+- ✓ Hosted Supabase migrations applied (`account_oauth_credentials` table, `email_send_log.account_id` column)
+- ✓ Vercel env vars set (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_TOKEN_ENCRYPTION_KEY`)
+- ✓ GCP redirect URIs registered: `localhost:3000`, `booking.nsintegrations.com`, the preview vercel.app, `/auth/gmail-connect/callback` paths for each
+- ✓ Supabase URL allowlist includes preview + production domains
+- ✓ nsi has a `connected` row in `account_oauth_credentials` with `gmail.send` scope
+- ✓ Real production booking proven via Gmail REST API (booking id `592eb13e-3037-4baf-8c81-c420a8e87a35` at 01:51 UTC sent emails successfully after the SMTP→REST API fix)
+
+### Files of record (post-pivots)
+
+- `lib/email-sender/providers/gmail-oauth.ts` — Gmail REST API provider (commit `cb82b6f`)
+- `app/auth/gmail-connect/callback/route.ts` — direct-Google OAuth callback (commit `ab02a23`)
+- `app/(shell)/app/settings/gmail/_lib/actions.ts` — direct-OAuth `connectGmailAction` (commit `ab02a23`)
+- `app/(shell)/app/settings/gmail/_components/gmail-status-panel.tsx` — error code → message map; `?connected=1` success banner (commit `ab02a23`)
+- `app/auth/google-callback/route.ts` — preserved for `signInWithOAuth` signup/login flow only; diag instrumentation removed (commit `ab02a23`)
+- `tests/email-sender-gmail-oauth.test.ts` — REST API fetch-mocked tests, 8/8 pass (commit `cb82b6f`)
+- `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` — full deviation post-mortem (this is the canonical Phase 35 story)
 
 **Files of record:**
 - `.planning/ROADMAP.md` — v1.7 Phases 34-40 defined; v1.6 collapsed to `<details>`

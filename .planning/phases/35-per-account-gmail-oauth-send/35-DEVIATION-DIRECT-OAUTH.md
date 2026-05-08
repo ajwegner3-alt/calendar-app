@@ -122,3 +122,41 @@ Since we're skipping preview verification per Andrew's direction:
 - Phase 34 RESEARCH.md and SUMMARY files describe `linkIdentity` as the canonical connect mechanism. Future readers should see this DEVIATION doc as the authoritative source for the connect flow architecture.
 - The `disconnectGmailAction` no longer calls `unlinkIdentity` (since linkIdentity is no longer used to create the row). Phase 34's "Conditional unlinkIdentity" pattern in STATE.md is now historical only.
 - The signup flow's `initiateGoogleOAuthAction` still uses `signInWithOAuth` which routes through `/auth/google-callback`. Refresh token capture for new-signup-with-Gmail may also be unreliable; if a future user reports their Gmail isn't connected after signup, route them through the Settings → Connect Gmail flow which will work via the new direct path.
+
+---
+
+## Resolution (appended 2026-05-08 late evening)
+
+After the direct-Google OAuth rewrite (`ab02a23`) shipped to production and the `account_oauth_credentials` row appeared correctly, a follow-up booking test surfaced a **second** silent-failure mode: bookings logged `confirmation_email_sent=true` and `email_send_log` rows landed correctly, but recipient inboxes received nothing.
+
+### Root cause #2
+
+The `gmail.send` OAuth scope authorizes only the Gmail REST API (`gmail.users.messages.send`), NOT SMTP relay. SMTP relay requires the much broader `https://mail.google.com/` scope. The original `gmail-oauth.ts` provider used nodemailer + `smtp.gmail.com:465` with `auth.type='OAuth2'`. nodemailer's XOAUTH2 SMTP handshake silently accepts the wrong-scope token AND returns a synthetic `messageId`, so the calling code logged success — but Gmail dropped every message after acceptance.
+
+### Fix (commit `cb82b6f`)
+
+Rewrote `lib/email-sender/providers/gmail-oauth.ts` to:
+- Build an RFC-822 multipart/alternative MIME message in JS (text + html, optional attachments wrapped in multipart/mixed).
+- base64url-encode the message.
+- POST to `https://gmail.googleapis.com/gmail/v1/users/me/messages/send` with `Authorization: Bearer <accessToken>` and `{ raw: <encoded> }` body.
+- Return `{ success: true, messageId: json.id }` only on `res.ok`; surface 4xx/5xx as `{ success: false, error: "gmail_api_<status>: <body>" }`.
+
+Tests rewritten to mock global `fetch` (was nodemailer); 8/8 pass.
+
+### Verified live on production
+
+Booking `592eb13e-3037-4baf-8c81-c420a8e87a35` at 2026-05-08 01:51:22 UTC:
+- `account_id = ba8e712d-...` (nsi) — cutover code threaded accountId correctly
+- `confirmation_email_sent = true` — Gmail REST API returned 200 with a real message ID
+- `email_send_log` rows 240 + 241 logged with correct `account_id`
+- Both booker (andrewjameswegner@gmail.com) and owner (ajwegner3@gmail.com) inboxes received the messages
+
+The OAuth-send architecture is now end-to-end proven on production. Two verification items remain (per-account quota isolation SQL seed + reconnect banner smoke); after those pass, Plan 06 (SMTP singleton + `GMAIL_APP_PASSWORD` removal) ships.
+
+### Lesson worth saving
+
+If a future plan ever considers SMTP+OAuth2, two things must hold:
+1. The OAuth scope MUST be `https://mail.google.com/` (not `gmail.send`).
+2. Doc the dependency loud — this is the second pitfall in this phase that involved a silent-success path returning a fake message ID. Either use the REST API explicitly OR fail-loud at startup if scope ≠ `mail.google.com`.
+
+The simpler answer: stay on the REST API.

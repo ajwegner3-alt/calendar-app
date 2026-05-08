@@ -270,8 +270,8 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 | 25-27 | v1.4 | 8 / 8 | ✅ Shipped | 2026-05-03 |
 | 28-30 | v1.5 | 6 / 6 | ✅ Shipped | 2026-05-05 |
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
-| 34 | v1.7 | 4 / 4 | Code complete — live OAuth verification pending PREREQs | 2026-05-06 |
-| 35 | v1.7 | 0 / TBD | Not started | - |
+| 34 | v1.7 | 4 / 4 | Code complete — connect path superseded by Phase 35 direct-OAuth (commit `ab02a23`); signup path still uses original `/auth/google-callback` | 2026-05-06 |
+| 35 | v1.7 | 5 / 7 | Code LIVE on production at `cb82b6f`; 2 verification items remain (quota isolation SQL + reconnect smoke) before Plan 06 (SMTP removal) ships. See `35-DEVIATION-DIRECT-OAUTH.md` for the architecture pivots. | - |
 | 36 | v1.7 | 0 / TBD | Not started | - |
 | 37 | v1.7 | 0 / TBD | Not started | - |
 | 38 | v1.7 | 0 / TBD | Not started | - |
@@ -288,4 +288,4 @@ See [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md) for full phase 
 
 ---
 
-*Roadmap last updated: 2026-05-06 — Phase 34 (Google OAuth Signup + Credential Capture) code complete: 4 plans, 10 commits, 5/5 must-haves verified statically. Live OAuth verification pending Andrew completing PREREQ-01/02/04. Run `/gsd:plan-phase 35` for next phase (Per-Account Gmail OAuth Send).*
+*Roadmap last updated: 2026-05-08 — Phase 35 code LIVE on production at commit `cb82b6f`. Two architectural deviations during Plan 35-05 verification: (1) Supabase `linkIdentity` replaced by direct-Google OAuth at `/auth/gmail-connect/callback` (silently dropped `provider_refresh_token`); (2) Gmail provider switched from SMTP/OAuth2 to Gmail REST API (`gmail.send` scope is REST-only — SMTP relay needs `https://mail.google.com/`, which we don't request). Live booking verified end-to-end at 2026-05-08 ~02:15 UTC. 2 verification items remain (quota isolation SQL seed + reconnect smoke) before Plan 06 (SMTP removal) ships. See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` for the canonical Phase 35 story.*
