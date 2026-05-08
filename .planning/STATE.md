@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 36 Plan 02 complete.** Resend HTTP provider (`createResendClient`) + 9 unit tests + vitest alias + mock updates shipped. Wave 2 of Phase 36 done. Latest commits: `0d4a1a4` (provider), `039ef86` (tests), `d30a675` (mock update), `03b88d6` (alias).
+**Last updated:** 2026-05-08 — **Phase 36 Plan 03 complete.** Factory routing + quota bypass (OQ-1) + isRefusedSend dual-prefix fix (OQ-2) + soft 5000/day abuse warn + FUTURE_DIRECTIONS.md activation guide shipped. Wave 3 of Phase 36 done. All 3 implementation plans complete. Latest commits: `9681747` (factory), `9583896` (quota), `8863e2a` (OQ-2 + tests), `8253245` (docs), `b870c19` (mock fix).
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Plans 01-02 complete 2026-05-08. Plan 03 next (factory routing). Blocked on PREREQ-03 for live Resend sends but plans can proceed with mocks.
+**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Plans 01-03 complete 2026-05-08. Phase 36 implementation complete. Plans 04-06 (welcome-email migration, singleton removal, verification) pending. Blocked on PREREQ-03 for live Resend sends.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (2 of 7 phases shipped)
 **Phase:** 36 — Resend Backend for Upgraded Accounts — IN PROGRESS
-**Plan:** Plan 02 complete (Resend provider + tests). Next: Plan 03 (factory routing).
-**Status:** Wave 2 complete. Resend HTTP provider implemented, 9 unit tests green, vitest alias registered, mock updated. Framework-only — PREREQ-03 still deferred.
-**Last activity:** 2026-05-08 — Plan 36-02 executed; createResendClient provider + unit tests + alias shipped; SUMMARY.md written.
+**Plan:** Plan 03 complete (factory routing + OQ-1 + OQ-2 + abuse-warn + FUTURE_DIRECTIONS.md). Plans 04-06 pending.
+**Status:** Wave 3 complete. All Phase 36 implementation plans (01-03) done. Framework-only — PREREQ-03 still deferred. Activation: one SQL UPDATE per account.
+**Last activity:** 2026-05-08 — Plan 36-03 executed; factory routing + quota bypass + dual-prefix fix + 14 account-sender tests + 7 quota-guard tests green; SUMMARY.md written.
 
-Progress (Phase 36): ██░░░░░ 2/7 plans complete (01-02 done, 03-06 + verification pending)
+Progress (Phase 36): ███░░░░ 3/7 plans complete (01-03 done, 04-06 + verification pending)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -74,6 +74,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **Resend snake_case wire fields (Phase 36, Plan 02)** — Resend's REST API requires `reply_to` (not `replyTo`) and `content_type` on attachments (not `contentType`). Resend silently ignores unknown fields so a camelCase typo silently drops the feature. Always verify against Resend API docs.
 - **RESEND_REFUSED_SEND_ERROR_PREFIX exported constant (Phase 36, Plan 02)** — `"resend_send_refused"` exported from `lib/email-sender/providers/resend.ts`. Plan 03 orchestrator dual-prefix fix uses `isRefusedSend(error)` helper (in account-sender mock) to check both `oauth_send_refused:` and `resend_send_refused:` prefixes.
 - **resend-provider vitest alias registered pre-emptively (Phase 36, Plan 02)** — `find: /^@\/lib\/email-sender\/providers\/resend$/` → `tests/__mocks__/resend-provider.ts`. Dormant until Plan 03 wires `getSenderForAccount` to import `createResendClient`. Follows LD-14 exact-regex pattern.
+- **Resend routing in getSenderForAccount (Phase 36, Plan 03)** — `accounts.email_provider='resend'` → `createResendClient()`; `resend_status='suspended'` → refused before any credential lookup; `'gmail'` (default) → existing OAuth path. CONTEXT decision: Resend wins even when `account_oauth_credentials` row present (flip back to `'gmail'` restores OAuth path without re-OAuth). Activation is one SQL UPDATE per account.
+- **OQ-1 centralized in checkAndConsumeQuota (Phase 36, Plan 03)** — Resend cap bypass is inside `checkAndConsumeQuota` via an internal `accounts.email_provider` SELECT — zero leaf-caller changes. `maybeSingle()` returns `null` for nil-UUID sentinel → falls through to Gmail path (correct for system-level sends). All test mocks for `checkAndConsumeQuota` must add `maybeSingle: () => Promise.resolve({ data: null, error: null })` to the `.eq()` chain.
+- **isRefusedSend shared helper (Phase 36, Plan 03)** — `export function isRefusedSend(error?: string)` in `lib/email-sender/account-sender.ts` covers both `oauth_send_refused:` and `resend_send_refused:` prefixes. Use `isRefusedSend(error)` everywhere — never `startsWith(REFUSED_SEND_ERROR_PREFIX)` directly. Future providers only need to update this one helper. Mock in `tests/__mocks__/account-sender.ts` mirrors the real implementation.
+- **Soft Resend abuse threshold (Phase 36, Plan 03)** — `RESEND_ABUSE_WARN_THRESHOLD = 5000`; `warnIfResendAbuseThresholdCrossed(accountId)` fire-and-forget; emits `console.warn("[RESEND_ABUSE_THRESHOLD_CROSSED]", {...})`. Never blocks. Per-account `${today}:${accountId}` dedup pattern (matches Phase 35 LD-12 precedent). Hard cap deferred until abuse observed in production.
 
 ### Patterns established / locked through v1.6
 
@@ -101,21 +105,21 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Plan 36-02 executed (Resend HTTP provider + 9 unit tests + vitest alias + mock update). Commits: `0d4a1a4` (provider), `039ef86` (tests), `d30a675` (mock update), `03b88d6` (alias). 9/9 new tests green; 337/339 total tests pass (2 pre-existing DB fixture failures). Framework-only; PREREQ-03 deferred.
+**Last session:** 2026-05-08 — Plan 36-03 executed (factory routing + OQ-1 quota bypass + OQ-2 isRefusedSend dual-prefix fix + soft 5000/day abuse warn-log + FUTURE_DIRECTIONS.md activation guide). Commits: `9681747` (factory), `9583896` (quota), `8863e2a` (OQ-2+tests), `8253245` (docs), `b870c19` (mock fix). 14/14 account-sender tests + 7/7 quota-guard tests green; 341-343/355 total tests pass (pre-existing bookings-api rate_limit_events accumulation + slots-api DB timing = 2-4 pre-existing failures). Framework-only; PREREQ-03 deferred.
 
-**Stopped at:** Phase 36 Plan 02 complete. Plan 03 is next (factory routing). Plans 03+ can be coded and mock-tested without PREREQ-03; live Resend sends blocked on PREREQ-03.
+**Stopped at:** Phase 36 Plan 03 complete. Plans 04-06 (welcome-email Resend migration, singleton removal, verification) are next.
 
 ## ▶ Next session — start here
 
-**Phase 36 Plans 01-02 are shipped.** Wave 2 complete. Continue with Plan 03.
+**Phase 36 Plans 01-03 are shipped.** Wave 3 complete. All implementation plans done.
 
-### Plan 02: Resend provider implementation — DONE
+### Plan 03: Factory routing — DONE
 
-`lib/email-sender/providers/resend.ts` created with `createResendClient`, lazy RESEND_API_KEY read, never-throws contract, snake_case wire fields. 9 unit tests green. vitest alias + mock stub ready for Plan 03.
+`lib/email-sender/account-sender.ts` extended with Resend routing branch, `isRefusedSend` helper, `RESEND_REFUSED_SEND_ERROR_PREFIX` re-export, `warnIfResendAbuseThresholdCrossed` fire-and-forget. `lib/email-sender/quota-guard.ts` updated: Resend accounts bypass 200/day cap, log rows tagged with `provider='resend'`. `lib/email/send-booking-emails.ts` updated: `isRefusedSend` replaces single-prefix `startsWith` check. 14 account-sender tests + 7 quota-guard tests green. FUTURE_DIRECTIONS.md updated with PREREQ-03 activation steps.
 
-### Plan 03: Factory routing
+### Plan 04: welcome-email Resend migration
 
-Execute `36-03` — extends `getSenderForAccount` to branch on `accounts.email_provider`. Reads the new columns added in Plan 01. Can be coded without PREREQ-03.
+Execute `36-04` — migrate `lib/email/welcome-email.ts` to use `getSenderForAccount` instead of the `sendEmail()` singleton. Can be coded without PREREQ-03.
 
 ### PREREQ-03 still blocking live Resend sends
 
