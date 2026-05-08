@@ -35,6 +35,21 @@ export { __mockSendCalls };
 
 export const REFUSED_SEND_ERROR_PREFIX = "oauth_send_refused";
 
+/** Phase 36: mirror the real constant exported from providers/resend.ts.
+ *  Tests that branch on the prefix (e.g. send-booking-emails.test.ts) need
+ *  this exported here too, since the alias mock replaces the real module. */
+export const RESEND_REFUSED_SEND_ERROR_PREFIX = "resend_send_refused";
+
+/** Phase 36: mirrors lib/email-sender/account-sender.ts isRefusedSend.
+ *  Returns true if the error string matches either the OAuth or Resend prefix. */
+export function isRefusedSend(error?: string): boolean {
+  if (!error) return false;
+  return (
+    error.startsWith(REFUSED_SEND_ERROR_PREFIX + ":") ||
+    error.startsWith(RESEND_REFUSED_SEND_ERROR_PREFIX + ":")
+  );
+}
+
 /** Stub EmailClient that records sends to __mockSendCalls. */
 function makeStubSender(): EmailClient {
   return {
