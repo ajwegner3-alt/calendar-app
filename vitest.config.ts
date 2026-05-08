@@ -55,6 +55,20 @@ export default defineConfig({
         find: /^@\/lib\/email-sender\/account-sender$/,
         replacement: path.resolve(__dirname, "tests/__mocks__/account-sender.ts"),
       },
+
+      // Resend provider mock — intercepts createResendClient() called by
+      // getSenderForAccount when accounts.email_provider='resend'. Mirrors the
+      // account-sender alias pattern; pinned to EXACT regex (not prefix) per
+      // STATE.md LD-14. Pushes to the shared __mockSendCalls array so
+      // integration tests can assert against sent options regardless of provider.
+      //
+      // Phase 36 Plan 02 (LD-14 prefix-bleed prevention): added alongside
+      // tests/__mocks__/resend-provider.ts. Dormant until Plan 03 wires
+      // getSenderForAccount to import createResendClient for resend accounts.
+      {
+        find: /^@\/lib\/email-sender\/providers\/resend$/,
+        replacement: path.resolve(__dirname, "tests/__mocks__/resend-provider.ts"),
+      },
     ],
   },
   test: {
