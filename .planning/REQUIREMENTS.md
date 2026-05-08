@@ -14,7 +14,7 @@
 - [x] **AUTH-25**: When user denies `gmail.send` at the OAuth consent screen, the account is still created and the user is prompted to connect Gmail later (partial-grant handled gracefully)
 - [x] **AUTH-26**: Existing email/password account holder can connect a Google Gmail from `/app/settings` via `linkIdentity()` — does NOT create a duplicate user
 - [x] **AUTH-27**: User can disconnect their Gmail from `/app/settings`, which revokes the stored refresh token
-- [ ] **AUTH-28**: Magic-link requests rate-limited via `rate_limit_events` (3/hour per IP)
+- [ ] **AUTH-28**: Magic-link requests rate-limited via `rate_limit_events` (5/hour per (IP+email) pair, silent on throttle — same success-shape response as real sends)
 - [ ] **AUTH-29**: Magic-link request returns identical HTTP response body for known and unknown emails (enumeration-safe)
 - [x] **AUTH-30**: When user's Gmail refresh token is revoked (`invalid_grant`), an in-app banner prompts reconnect; subsequent email sends refuse-send fail-closed
 
