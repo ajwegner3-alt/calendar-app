@@ -190,7 +190,10 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 2. A `.ics` calendar attachment is present and renders as a calendar invite in the received email (MEDIUM-confidence: verify in QA; `content_type: 'text/calendar'` may be needed if not).
 3. An account with `email_provider = 'resend'` can receive more than 200 booking emails in a day — the 200/day cap check is skipped for Resend accounts; sends still appear in `email_send_log`.
 
-**Plans:** TBD
+**Plans:** 3 plans in 3 waves
+- [ ] 36-01-PLAN.md — Schema migration (accounts.email_provider, accounts.resend_status, email_send_log.provider) + EmailProvider type union extension (Wave 1)
+- [ ] 36-02-PLAN.md — createResendClient HTTP provider + unit tests + mock + vitest alias (Wave 2)
+- [ ] 36-03-PLAN.md — Factory routing on email_provider + quota-guard cap bypass for Resend + isRefusedSend dual-prefix orchestrator fix + abuse warn-log + FUTURE_DIRECTIONS.md activation guide (Wave 3)
 
 ---
 
@@ -278,7 +281,7 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
 | 34 | v1.7 | 4 / 4 | ✅ Code complete — connect path superseded by Phase 35 direct-OAuth (commit `ab02a23`); signup path still uses original `/auth/google-callback` | 2026-05-06 |
 | 35 | v1.7 | 7 / 7 | ✅ Shipped — verifier 5/5 PASS; SMTP singleton + `GMAIL_APP_PASSWORD` removed (commits `31db425`, `138cfb0`, `6aecfbb`). See `35-DEVIATION-DIRECT-OAUTH.md` for architecture pivots. | 2026-05-08 |
-| 36 | v1.7 | 0 / TBD | Not started | - |
+| 36 | v1.7 | 0 / 3 | Plans created (framework-only ship; PREREQ-03 deferred to FUTURE_DIRECTIONS.md) | - |
 | 37 | v1.7 | 0 / TBD | Not started | - |
 | 38 | v1.7 | 0 / TBD | Not started | - |
 | 39 | v1.7 | 0 / TBD | Not started | - |
