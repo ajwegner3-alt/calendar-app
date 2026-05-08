@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 36 Plan 03 complete.** Factory routing + quota bypass (OQ-1) + isRefusedSend dual-prefix fix (OQ-2) + soft 5000/day abuse warn + FUTURE_DIRECTIONS.md activation guide shipped. Wave 3 of Phase 36 done. All 3 implementation plans complete. Latest commits: `9681747` (factory), `9583896` (quota), `8863e2a` (OQ-2 + tests), `8253245` (docs), `b870c19` (mock fix).
+**Last updated:** 2026-05-08 — **Phase 36 SHIPPED (framework).** Verifier passed 13/13 must-haves. All 3 plans (schema + types, Resend HTTP provider, factory routing + orchestrator fix) complete; FUTURE_DIRECTIONS.md captures PREREQ-03 activation guide. Live Resend sends still gated on PREREQ-03 (Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds RESEND_API_KEY to Vercel) — code activates on a single `UPDATE accounts SET email_provider='resend'` once those land. Latest commits: `9681747`, `9583896`, `8863e2a`, `8253245`, `b870c19`, `245803e`.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Plans 01-03 complete 2026-05-08. Phase 36 implementation complete. Plans 04-06 (welcome-email migration, singleton removal, verification) pending. Blocked on PREREQ-03 for live Resend sends.
+**Current focus:** v1.7 Phase 37 (upgrade flow + cap-hit UI) or 38 (magic-link login) or 39 (BOOKER polish) — pick any. Phase 36 framework shipped 2026-05-08; live Resend activation deferred until PREREQ-03 lands.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (2 of 7 phases shipped)
-**Phase:** 36 — Resend Backend for Upgraded Accounts — IN PROGRESS
-**Plan:** Plan 03 complete (factory routing + OQ-1 + OQ-2 + abuse-warn + FUTURE_DIRECTIONS.md). Plans 04-06 pending.
-**Status:** Wave 3 complete. All Phase 36 implementation plans (01-03) done. Framework-only — PREREQ-03 still deferred. Activation: one SQL UPDATE per account.
-**Last activity:** 2026-05-08 — Plan 36-03 executed; factory routing + quota bypass + dual-prefix fix + 14 account-sender tests + 7 quota-guard tests green; SUMMARY.md written.
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (3 of 7 phases shipped)
+**Phase:** 36 — Resend Backend for Upgraded Accounts — ✅ FRAMEWORK SHIPPED
+**Plan:** All 3 plans complete (schema+types, Resend provider, factory routing). Verifier 13/13 PASS.
+**Status:** Phase closed. PREREQ-03 deferred to FUTURE_DIRECTIONS.md per ROADMAP framework-only decision.
+**Last activity:** 2026-05-08 — Verifier wrote 36-VERIFICATION.md (status: passed); ROADMAP/STATE/REQUIREMENTS marked phase complete.
 
-Progress (Phase 36): ███░░░░ 3/7 plans complete (01-03 done, 04-06 + verification pending)
+Progress (Phase 36): ███████ 3/3 plans complete — ✅ DONE
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -34,7 +34,7 @@ v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shippe
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipped 2026-05-06 — ~2 days)
-v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in progress: Phase 34 done)
+v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: Phases 34, 35, 36 shipped)
 ```
 
 **Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases completed, 138+ plans, ~570 commits
@@ -105,23 +105,25 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Plan 36-03 executed (factory routing + OQ-1 quota bypass + OQ-2 isRefusedSend dual-prefix fix + soft 5000/day abuse warn-log + FUTURE_DIRECTIONS.md activation guide). Commits: `9681747` (factory), `9583896` (quota), `8863e2a` (OQ-2+tests), `8253245` (docs), `b870c19` (mock fix). 14/14 account-sender tests + 7/7 quota-guard tests green; 341-343/355 total tests pass (pre-existing bookings-api rate_limit_events accumulation + slots-api DB timing = 2-4 pre-existing failures). Framework-only; PREREQ-03 deferred.
+**Last session:** 2026-05-08 (orchestrator) — Phase 36 SHIPPED (framework). All 3 plans executed; verifier wrote 36-VERIFICATION.md (status: passed; 13/13 must-haves verified). ROADMAP, STATE, REQUIREMENTS marked complete.
 
-**Stopped at:** Phase 36 Plan 03 complete. Plans 04-06 (welcome-email Resend migration, singleton removal, verification) are next.
+**Stopped at:** Phase 36 closed. Phase 37 (upgrade flow + cap-hit UI), Phase 38 (magic-link login), or Phase 39 (BOOKER polish) are next candidates.
 
 ## ▶ Next session — start here
 
-**Phase 36 Plans 01-03 are shipped.** Wave 3 complete. All implementation plans done.
+**Phase 36 framework SHIPPED.** Code activates on a single `UPDATE accounts SET email_provider='resend' WHERE id=...` once PREREQ-03 lands. No redeploy needed.
 
-### Plan 03: Factory routing — DONE
+### Path A: Phase 37 (upgrade flow + cap-hit UI) — preferred next phase
 
-`lib/email-sender/account-sender.ts` extended with Resend routing branch, `isRefusedSend` helper, `RESEND_REFUSED_SEND_ERROR_PREFIX` re-export, `warnIfResendAbuseThresholdCrossed` fire-and-forget. `lib/email-sender/quota-guard.ts` updated: Resend accounts bypass 200/day cap, log rows tagged with `provider='resend'`. `lib/email/send-booking-emails.ts` updated: `isRefusedSend` replaces single-prefix `startsWith` check. 14 account-sender tests + 7 quota-guard tests green. FUTURE_DIRECTIONS.md updated with PREREQ-03 activation steps.
+Phase 37 depends on Phase 36 (LD-05 bootstrap constraint: `requestUpgradeAction` needs `createResendClient` to bypass the requester's own 200/day cap when sending the upgrade request to Andrew). Now unblocked.
 
-### Plan 04: welcome-email Resend migration
+Run `/gsd:discuss-phase 37` then `/gsd:plan-phase 37`.
 
-Execute `36-04` — migrate `lib/email/welcome-email.ts` to use `getSenderForAccount` instead of the `sendEmail()` singleton. Can be coded without PREREQ-03.
+### Path B: Phase 38 (Magic-link login) or Phase 39 (BOOKER polish) — work in parallel
 
-### PREREQ-03 still blocking live Resend sends
+Both have zero backend dependencies. Phase 38 needs no prereqs. Phase 39 is pure UI.
+
+### PREREQ-03 — still required for Phase 36 live activation
 
 Andrew must (when ready):
 1. Create Resend account (~$20/month Pro tier)
@@ -131,9 +133,7 @@ Andrew must (when ready):
 5. Add `RESEND_API_KEY` to Vercel env vars (Preview + Production)
 6. Apply migration `20260507120000_phase36_resend_provider.sql` to hosted Supabase via `mcp__claude_ai_Supabase__apply_migration`
 
-### Path B: Phase 38 (Magic-link login) or Phase 39 (BOOKER polish) — work in parallel
-
-Both have zero backend dependencies on Phase 36 — they can be planned and executed any time. Phase 38 needs no prereqs. Phase 39 is pure UI.
+Full activation guide: `FUTURE_DIRECTIONS.md` Phase 36 section.
 
 ### Andrew manual cleanup (non-blocking; can be done at any time)
 

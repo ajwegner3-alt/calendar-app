@@ -35,8 +35,8 @@
 - [ ] **UPGRADE-02**: `/app/settings/upgrade` page accepts an optional message; submission triggers `requestUpgradeAction`
 - [ ] **UPGRADE-03**: `requestUpgradeAction` emails Andrew via NSI-owned Resend, bypassing the per-account quota guard entirely (bootstrap-safe — works at exactly the moment the requester is at cap)
 - [ ] **UPGRADE-04**: Upgrade request button has a 24-hour per-account debounce (one request/day max)
-- [ ] **UPGRADE-05**: When Andrew sets `accounts.email_provider = 'resend'`, that account's emails route via NSI's Resend with the account's business name as the display name and NSI's verified domain in the envelope
-- [ ] **UPGRADE-06**: Upgraded (Resend) accounts skip the 200/day cap check; sends still log to `email_send_log` for analytics
+- [x] **UPGRADE-05**: When Andrew sets `accounts.email_provider = 'resend'`, that account's emails route via NSI's Resend with the account's business name as the display name and NSI's verified domain in the envelope (framework complete 2026-05-08; live activation requires PREREQ-03)
+- [x] **UPGRADE-06**: Upgraded (Resend) accounts skip the 200/day cap check; sends still log to `email_send_log` for analytics (framework complete 2026-05-08; live activation requires PREREQ-03)
 
 ### Booker Polish
 
@@ -127,8 +127,8 @@ These block specific phases. Andrew action required before phase can ship.
 | UPGRADE-02 | Phase 37 | Pending |
 | UPGRADE-03 | Phase 37 | Pending |
 | UPGRADE-04 | Phase 37 | Pending |
-| UPGRADE-05 | Phase 36 | Pending |
-| UPGRADE-06 | Phase 36 | Pending |
+| UPGRADE-05 | Phase 36 | Complete (framework — live activation deferred per PREREQ-03) |
+| UPGRADE-06 | Phase 36 | Complete (framework — live activation deferred per PREREQ-03) |
 | BOOKER-06 | Phase 39 | Pending |
 | BOOKER-07 | Phase 39 | Pending |
 | BOOKER-08 | Phase 39 | Pending |

@@ -9,7 +9,7 @@
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
-- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — in planning.
+- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 3 of 7 phases shipped (34, 35, 36 framework).
 
 ## Phases
 
@@ -190,10 +190,10 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 2. A `.ics` calendar attachment is present and renders as a calendar invite in the received email (MEDIUM-confidence: verify in QA; `content_type: 'text/calendar'` may be needed if not).
 3. An account with `email_provider = 'resend'` can receive more than 200 booking emails in a day — the 200/day cap check is skipped for Resend accounts; sends still appear in `email_send_log`.
 
-**Plans:** 3 plans in 3 waves
-- [ ] 36-01-PLAN.md — Schema migration (accounts.email_provider, accounts.resend_status, email_send_log.provider) + EmailProvider type union extension (Wave 1)
-- [ ] 36-02-PLAN.md — createResendClient HTTP provider + unit tests + mock + vitest alias (Wave 2)
-- [ ] 36-03-PLAN.md — Factory routing on email_provider + quota-guard cap bypass for Resend + isRefusedSend dual-prefix orchestrator fix + abuse warn-log + FUTURE_DIRECTIONS.md activation guide (Wave 3)
+**Plans:** 3 plans in 3 waves — all complete 2026-05-08 (framework only; PREREQ-03 deferred)
+- [x] 36-01-PLAN.md — Schema migration (accounts.email_provider, accounts.resend_status, email_send_log.provider) + EmailProvider type union extension (Wave 1)
+- [x] 36-02-PLAN.md — createResendClient HTTP provider + unit tests + mock + vitest alias (Wave 2)
+- [x] 36-03-PLAN.md — Factory routing on email_provider + quota-guard cap bypass for Resend + isRefusedSend dual-prefix orchestrator fix + abuse warn-log + FUTURE_DIRECTIONS.md activation guide (Wave 3)
 
 ---
 
@@ -281,7 +281,7 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 | 31-33 | v1.6 | 10 / 10 | ✅ Shipped | 2026-05-06 |
 | 34 | v1.7 | 4 / 4 | ✅ Code complete — connect path superseded by Phase 35 direct-OAuth (commit `ab02a23`); signup path still uses original `/auth/google-callback` | 2026-05-06 |
 | 35 | v1.7 | 7 / 7 | ✅ Shipped — verifier 5/5 PASS; SMTP singleton + `GMAIL_APP_PASSWORD` removed (commits `31db425`, `138cfb0`, `6aecfbb`). See `35-DEVIATION-DIRECT-OAUTH.md` for architecture pivots. | 2026-05-08 |
-| 36 | v1.7 | 0 / 3 | Plans created (framework-only ship; PREREQ-03 deferred to FUTURE_DIRECTIONS.md) | - |
+| 36 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 13/13 PASS; live activation requires PREREQ-03 (Resend domain DNS) per FUTURE_DIRECTIONS.md | 2026-05-08 |
 | 37 | v1.7 | 0 / TBD | Not started | - |
 | 38 | v1.7 | 0 / TBD | Not started | - |
 | 39 | v1.7 | 0 / TBD | Not started | - |
@@ -297,4 +297,6 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 
 ---
 
-*Roadmap last updated: 2026-05-08 — Phase 35 SHIPPED. Plan 35-05 verification completed (architectural quota isolation + reconnect-banner smoke); Plan 35-06 retired the SMTP singleton and `GMAIL_APP_PASSWORD` env var (commits `31db425` migrate-welcome-email, `138cfb0` delete-singleton, `6aecfbb` remove-env-vars, `e7984fe` plan-metadata). Verifier passed 5/5 must-haves. Phase 35 requirements (AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33) all marked Complete in REQUIREMENTS.md. v1.7 progress: Phases 34 + 35 of 7 shipped. Andrew manual cleanup pending: delete `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from Vercel (Preview + Production) — they are now inert, no redeploy required.*
+*Roadmap last updated: 2026-05-08 — Phase 36 framework SHIPPED (verifier 13/13 PASS). Schema migration + Resend HTTP provider + factory routing + quota-guard cap-bypass + dual-prefix orchestrator fix + FUTURE_DIRECTIONS.md activation guide all landed; live Resend activation requires PREREQ-03 (Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds RESEND_API_KEY to Vercel). Code activates immediately on `UPDATE accounts SET email_provider='resend' WHERE id=...` once PREREQ-03 done — no redeploy. v1.7 progress: 3 of 7 phases shipped (34, 35, 36).*
+
+*Earlier: Phase 35 SHIPPED. Plan 35-05 verification completed (architectural quota isolation + reconnect-banner smoke); Plan 35-06 retired the SMTP singleton and `GMAIL_APP_PASSWORD` env var (commits `31db425` migrate-welcome-email, `138cfb0` delete-singleton, `6aecfbb` remove-env-vars, `e7984fe` plan-metadata). Verifier passed 5/5 must-haves. Phase 35 requirements (AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33) all marked Complete in REQUIREMENTS.md. v1.7 progress: Phases 34 + 35 of 7 shipped. Andrew manual cleanup pending: delete `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from Vercel (Preview + Production) — they are now inert, no redeploy required.*
