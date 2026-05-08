@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 37 Plan 03 complete. Phase 37 DONE.** `/app/settings/upgrade` server component + `UpgradeForm` client component shipped; all 4 UPGRADE criteria observable end-to-end. Latest commits: `bf0307a` (page.tsx), `9b5eca7` (upgrade-form.tsx).
+**Last updated:** 2026-05-08 — **Phase 37 SHIPPED.** Verifier passed 4/4 must-haves. All 3 plans complete (schema + banner link, requestUpgradeAction server action with 9 Vitest tests, /app/settings/upgrade page + UpgradeForm). UPGRADE-01..04 all observable end-to-end after deploy; live Resend email delivery requires PREREQ-03 (same gate as Phase 36). Latest commits: `bf0307a`, `9b5eca7`, `13b6bb7` (Plan 37-03 set).
 
 ## Project Reference
 
@@ -14,7 +14,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (3 of 7 phases shipped)
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (4 of 7 phases shipped)
 **Phase:** 37 — Upgrade Flow + In-App Cap-Hit UI — COMPLETE
 **Plan:** 3 of 3 complete (migration + banner link; requestUpgradeAction; settings page + form — all done)
 **Status:** Phase 37 complete. Phase 38 (Magic-link login) or Phase 39 (Booker polish) unblocked.

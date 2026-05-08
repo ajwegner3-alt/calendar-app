@@ -9,7 +9,7 @@
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
-- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 3 of 7 phases shipped (34, 35, 36 framework).
+- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 4 of 7 phases shipped (34, 35, 36 framework, 37).
 
 ## Phases
 
@@ -211,12 +211,10 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 3. With `email_send_log` seeded to 200 rows for the requester's account, the upgrade request email still arrives in Andrew's inbox — the quota guard is bypassed for this specific send path.
 4. Submitting the upgrade request disables the button for 24 hours (one request per account per day); a second submit within 24 hours is rejected with a clear message.
 
-**Plans:** 3 plans
-
-Plans:
-- [ ] 37-01-PLAN.md — Schema migration (accounts.last_upgrade_request_at) + banner Request-upgrade link append (Wave 1)
-- [ ] 37-02-PLAN.md — requestUpgradeAction server action (createResendClient direct send + 24h rate limit) + Vitest unit tests (Wave 2)
-- [ ] 37-03-PLAN.md — /app/settings/upgrade page (server component) + UpgradeForm client component with inline success/error/lockout states (Wave 3)
+**Plans:** 3 plans in 3 waves — all complete 2026-05-08 (framework only; live Resend delivery gated on PREREQ-03)
+- [x] 37-01-PLAN.md — Schema migration (accounts.last_upgrade_request_at) + banner Request-upgrade link append (Wave 1)
+- [x] 37-02-PLAN.md — requestUpgradeAction server action (createResendClient direct send + 24h rate limit) + 9 Vitest unit tests (Wave 2)
+- [x] 37-03-PLAN.md — /app/settings/upgrade page (server component) + UpgradeForm client component with inline success/error/lockout states (Wave 3)
 
 ---
 
@@ -287,7 +285,7 @@ Plans:
 | 34 | v1.7 | 4 / 4 | ✅ Code complete — connect path superseded by Phase 35 direct-OAuth (commit `ab02a23`); signup path still uses original `/auth/google-callback` | 2026-05-06 |
 | 35 | v1.7 | 7 / 7 | ✅ Shipped — verifier 5/5 PASS; SMTP singleton + `GMAIL_APP_PASSWORD` removed (commits `31db425`, `138cfb0`, `6aecfbb`). See `35-DEVIATION-DIRECT-OAUTH.md` for architecture pivots. | 2026-05-08 |
 | 36 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 13/13 PASS; live activation requires PREREQ-03 (Resend domain DNS) per FUTURE_DIRECTIONS.md | 2026-05-08 |
-| 37 | v1.7 | 0 / TBD | Not started | - |
+| 37 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 4/4 PASS; live Resend delivery requires PREREQ-03 (same gate as Phase 36) | 2026-05-08 |
 | 38 | v1.7 | 0 / TBD | Not started | - |
 | 39 | v1.7 | 0 / TBD | Not started | - |
 | 40 | v1.7 | 0 / TBD | Not started | - |
@@ -302,6 +300,8 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-08 — Phase 36 framework SHIPPED (verifier 13/13 PASS). Schema migration + Resend HTTP provider + factory routing + quota-guard cap-bypass + dual-prefix orchestrator fix + FUTURE_DIRECTIONS.md activation guide all landed; live Resend activation requires PREREQ-03 (Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds RESEND_API_KEY to Vercel). Code activates immediately on `UPDATE accounts SET email_provider='resend' WHERE id=...` once PREREQ-03 done — no redeploy. v1.7 progress: 3 of 7 phases shipped (34, 35, 36).*
+*Roadmap last updated: 2026-05-08 — Phase 37 SHIPPED (verifier 4/4 PASS). Schema migration + Request-upgrade banner link + requestUpgradeAction server action (createResendClient direct send, 24h rate limit, 9 Vitest unit tests passing) + /app/settings/upgrade server-component page + UpgradeForm client component with 5 visual states all landed. UPGRADE-01..04 marked Complete in REQUIREMENTS.md. Live email delivery requires PREREQ-03 (same Resend gate as Phase 36). v1.7 progress: 4 of 7 phases shipped (34, 35, 36, 37). Next candidates: Phase 38 (magic-link login, no prereqs) or Phase 39 (BOOKER polish, pure UI).*
+
+*Earlier: Phase 36 framework SHIPPED (verifier 13/13 PASS). Schema migration + Resend HTTP provider + factory routing + quota-guard cap-bypass + dual-prefix orchestrator fix + FUTURE_DIRECTIONS.md activation guide all landed; live Resend activation requires PREREQ-03 (Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds RESEND_API_KEY to Vercel). Code activates immediately on `UPDATE accounts SET email_provider='resend' WHERE id=...` once PREREQ-03 done — no redeploy. v1.7 progress: 3 of 7 phases shipped (34, 35, 36).*
 
 *Earlier: Phase 35 SHIPPED. Plan 35-05 verification completed (architectural quota isolation + reconnect-banner smoke); Plan 35-06 retired the SMTP singleton and `GMAIL_APP_PASSWORD` env var (commits `31db425` migrate-welcome-email, `138cfb0` delete-singleton, `6aecfbb` remove-env-vars, `e7984fe` plan-metadata). Verifier passed 5/5 must-haves. Phase 35 requirements (AUTH-30, EMAIL-26, EMAIL-27, EMAIL-28, EMAIL-32, EMAIL-33) all marked Complete in REQUIREMENTS.md. v1.7 progress: Phases 34 + 35 of 7 shipped. Andrew manual cleanup pending: delete `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` from Vercel (Preview + Production) — they are now inert, no redeploy required.*
