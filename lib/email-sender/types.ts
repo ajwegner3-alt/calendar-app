@@ -43,7 +43,7 @@ export interface EmailResult {
 }
 
 /** Supported email providers. */
-export type EmailProvider = "gmail";
+export type EmailProvider = "gmail" | "resend";
 
 /** Configuration for creating an email client. */
 export interface EmailClientConfig {
