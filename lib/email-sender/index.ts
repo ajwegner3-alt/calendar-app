@@ -1,17 +1,22 @@
 import "server-only";
 
-// Vendored from @nsi/email-sender sibling project (2026-04-25).
-// Phase 5 ships the Gmail provider only (nodemailer SMTP via App Password).
-// Resend provider was removed — re-vendor from ../email-sender/src/providers/resend.ts
-// if a non-Gmail backend is ever needed.
+// Phase 35 Plan 06 (2026-05-08): SMTP singleton and App Password provider retired.
+// The env-var singleton (_defaultClient / getDefaultClient / sendEmail) and
+// providers/gmail.ts (nodemailer SMTP with GMAIL_APP_PASSWORD) are gone.
 //
-// v1: env-based singleton — Andrew's GMAIL_USER + GMAIL_APP_PASSWORD.
-// v2 (multi-tenant onboarding): per-account credential lookup at send time.
-//   Add a `gmail-oauth` provider variant that uses a refresh token stored on
-//   accounts.gmail_refresh_token (column added in v2 migration).
-//   The createEmailClient(config) factory already accepts per-call config, so
-//   the abstraction is forward-compatible — only a new provider file +
-//   schema columns needed for v2.
+// Active send path: lib/email-sender/account-sender.ts → getSenderForAccount()
+// All 8 leaf senders (booking confirmation, owner notification, cancel booker,
+// cancel owner, reschedule booker, reschedule owner, reminders, welcome) now
+// go through getSenderForAccount, which uses the Gmail REST API with per-account
+// OAuth credentials stored encrypted in account_oauth_credentials.
+//
+// This file now provides only:
+//   1. Type re-exports (EmailOptions, EmailResult, etc.)
+//   2. Utility re-exports (escapeHtml, stripHtml)
+//
+// See also: tests/__mocks__/email-sender.ts — the Vitest alias mock used by
+// integration tests still exports __mockSendCalls / __resetMockSendCalls /
+// sendEmail stubs for backwards-compatible test assertions.
 
 // Types
 export type {
@@ -23,63 +28,5 @@ export type {
   EmailProvider,
 } from "./types";
 
-// Providers
-import { createGmailClient } from "./providers/gmail";
-import type { EmailClient, EmailClientConfig, EmailOptions, EmailResult } from "./types";
-
 // Utilities
 export { escapeHtml, stripHtml } from "./utils";
-
-// ---------------------------------------------------------------------------
-// Client factory
-// ---------------------------------------------------------------------------
-
-export function createEmailClient(config: EmailClientConfig): EmailClient {
-  switch (config.provider) {
-    case "gmail":
-      return createGmailClient(config);
-    default:
-      throw new Error(
-        `[email-sender] Provider "${config.provider}" not vendored. Only "gmail" is shipped in this copy.`
-      );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Quick send — auto-detects provider from env vars
-// ---------------------------------------------------------------------------
-
-let _defaultClient: EmailClient | null = null;
-
-function getDefaultClient(): EmailClient {
-  if (_defaultClient) return _defaultClient;
-
-  _defaultClient = createEmailClient({
-    provider: "gmail",
-    user: process.env.GMAIL_USER,
-    appPassword: process.env.GMAIL_APP_PASSWORD,
-    fromName: process.env.GMAIL_FROM_NAME || "Andrew @ NSI",
-  });
-
-  return _defaultClient;
-}
-
-/**
- * Send an email via the configured provider (Gmail SMTP in v1.x).
- *
- * QUOTA GUARD CONTRACT (Phase 31, EMAIL-21):
- * All email senders — signup, booking confirmation, owner notification, reminder,
- * cancel, and reschedule — MUST call checkAndConsumeQuota() with the matching
- * EmailCategory before invoking sendEmail. The v1.1 carve-out for booking/reminder
- * paths was closed in Phase 31. See lib/email-sender/quota-guard.ts for the helper
- * signatures and EmailCategory union.
- */
-export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
-  try {
-    const client = getDefaultClient();
-    return client.send(options);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return { success: false, error: msg };
-  }
-}
