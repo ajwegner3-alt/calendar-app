@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 38 Plan 02 complete.** Magic-link form UI live on `/app/login`: Password|Magic-link Tabs inside the email-auth Card, MagicLinkSuccess inline-replace component (30s resend cooldown), updated subtitle. Phase 34 Google-OAuth-above-Card layout preserved. `next build` clean. Plan 03 (Supabase email template config) is the only remaining piece for end-to-end click-through. Latest commits: `ecd3dc5`, `8cafad2`, `2161052`.
+**Last updated:** 2026-05-08 — **Phase 38 COMPLETE.** Magic-link login fully shipped and live-verified on `https://booking.nsintegrations.com`: known-email click-through authenticates, unknown-email + 5/hour throttle + Supabase-internal-cooldown all return byte-identical success UI (four-way enumeration-safety ambiguity invariant), and tab switching cleanly resets state. Plans 01 + 02 + 03 all done; verifier next, then orchestrator updates ROADMAP/REQUIREMENTS. Latest commits: `ecd3dc5`, `8cafad2`, `2161052`, `2632f19`.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 38 (Magic-link login) — Plans 01+02 complete (backend + form UI). Plan 03 (Supabase email template config — manual + verify route wiring) is the final piece.
+**Current focus:** v1.7 Phase 38 (Magic-link login) **COMPLETE** — Plans 01 + 02 + 03 shipped and live-verified on production. Phase 39 (BOOKER polish) or Phase 40 (final manual QA) is the next path.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (4 of 7 phases shipped)
-**Phase:** 38 — Magic-link login — IN PROGRESS (Plans 01+02 complete)
-**Plan:** 2 of 3 complete (server action + schema + form UI; Supabase template pending)
-**Status:** Plan 38-02 complete. Plan 38-03 (Supabase email template) is next.
-**Last activity:** 2026-05-08 — Plan 38-02 executed; MagicLinkSuccess component + Password|Magic-link Tabs in LoginForm + login page subtitle update shipped. `next build` clean. Commits: `ecd3dc5`, `8cafad2`, `2161052`.
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (5 of 7 phases shipped)
+**Phase:** 38 — Magic-link login — **COMPLETE**
+**Plan:** 3 of 3 complete (server action + schema; form UI; Supabase template + live verification)
+**Status:** Phase 38 complete. Verifier next, then ROADMAP/REQUIREMENTS update by orchestrator.
+**Last activity:** 2026-05-08 — Plan 38-03 verified live on production (`booking.nsintegrations.com`); A/B/C/D all pass; Site URL config drift (default `localhost:3000`) surfaced and resolved during verification by updating hosted Supabase Site URL → `https://booking.nsintegrations.com`. Commit: `2632f19`.
 
-Progress (Phase 38): ██████░░ 2/3 plans complete
+Progress (Phase 38): ████████ 3/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -34,7 +34,7 @@ v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shippe
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipped 2026-05-06 — ~2 days)
-v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: Phases 34, 35, 36 shipped)
+v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: Phases 34, 35, 36, 37, 38 shipped)
 ```
 
 **Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases completed, 138+ plans, ~570 commits
@@ -93,6 +93,9 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: P
 - **Distinct-IDs-per-tab pattern (Phase 38, Plan 02)** — When the same logical input (e.g., email) appears in multiple `TabsContent` panels, give each a unique DOM `id` (`id="email-password"`, `id="email-magic"`) with matching `<Label htmlFor>`. Defends against Radix configurations that keep both panels mounted simultaneously and is correct HTML regardless. RESEARCH §Pitfall 5.
 - **Cooldown-on-mount for resend components (Phase 38, Plan 02)** — When the parent only mounts a resend component AFTER an initial successful send, start `useState(cooldown)` at the cooldown value, not 0. Distinct from `resend-verification-button.tsx` which starts at 0 because that component lives on a standalone page where a user may land via email link without having just submitted. `MagicLinkSuccess` starts at 30; `ResendVerificationButton` starts at 0 — both correct for their mount conditions.
 - **Two useActionState hooks isolated by inner component (Phase 38, Plan 02)** — When one form area needs two independent server actions (here: `loginAction` for the Password tab + `requestMagicLinkAction` for the Magic-link tab), extract the second into a sibling/inner component (`MagicLinkTabContent`) rather than calling both `useActionState` hooks in the same parent. The inner component owns one hook + its own local state, and tab switching cleanly unmounts/remounts the entire isolated tree.
+- **Four-way enumeration-safety ambiguity invariant (Phase 38, Plan 03)** — For any magic-link / passwordless / OTP-style submit, the user-visible response is byte-identical across FOUR distinct backend states: (a) unknown email, (b) our 5/hour rate-limit bucket exhausted, (c) Supabase's internal per-email OTP cooldown active (~60s), and (d) genuinely successful send. This is the working invariant for AUTH-29 — not a coincidence. It is a direct consequence of the 5xx-only formError gate in `requestMagicLinkAction` (LD pattern from Plan 38-01) which swallows ALL 4xx errors identically. Any future passwordless auth endpoint MUST preserve the 5xx-only gate to maintain this property; surfacing 4xx errors to the user breaks the invariant.
+- **Supabase internal per-email OTP cooldown (~60s) is a second throttle layer (Phase 38, Plan 03)** — Supabase's auth service enforces its own ~60s cooldown per email address on top of any application-level rate-limit. This was observed live on production: 5 hits to our `auth:magicLink:${ip}:${email}` bucket across 23 minutes resulted in only 2 actual email deliveries because Supabase's cooldown fired faster than our 5/hour bucket on rapid retries. Treat this as feature, not bug — it strengthens AUTH-29's enumeration-safety contract. Every `signInWithOtp` call site must tolerate this and rely on the 5xx-only formError gate to keep it invisible. The error-swallow pattern from `app/(auth)/app/forgot-password/actions.ts` is the canonical model.
+- **Hosted Supabase Site URL is the source-of-truth for `{{ .SiteURL }}` (Phase 38, Plan 03 deviation)** — When introducing a hosted Supabase email template that interpolates `{{ .SiteURL }}`, the Site URL field at Authentication → URL Configuration MUST be set to the production domain on the hosted dashboard. This is a DIFFERENT field from the Redirect URLs allowlist (which Phase 34 OAuth setup already populated). Local `supabase/config.toml` `site_url` is irrelevant to hosted email rendering. Surfaced live during Phase 38 verification: hosted Site URL was on default `http://localhost:3000` even though the redirect URL allowlist was correctly populated for the production domain — magic-link emails arrived with `localhost:3000` CTAs. Future phases that ship hosted email templates with `{{ .SiteURL }}` must include "Verify Site URL field is set to production domain" in their USER-SETUP checklist, AND should include "click the link in the actual email" as a verification step (not just dashboard-field inspection — the bug only manifests in the live email body, not in the dashboard UI itself).
 
 ### Patterns established / locked through v1.6
 
@@ -120,23 +123,23 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 38, Plan 02 executed. Magic-link form UI on `/app/login`: new `MagicLinkSuccess` client component (30s resend cooldown, exact CONTEXT-locked copy), `Password|Magic-link` Tabs control inserted INSIDE the email-auth Card's `CardContent`, login page subtitle updated to mention both options. Phase 34 Google-OAuth-button-above-Card layout fully preserved. `next build` clean. Commits: `ecd3dc5`, `8cafad2`, `2161052`.
+**Last session:** 2026-05-08 — Phase 38, Plan 03 executed and verified live on production. Local `supabase/config.toml` `otp_expiry` set to 900s (commit `2632f19`). Andrew configured hosted Supabase: Magic Link template subject `Your NSI login link` + body using `{{ .TokenHash }}` PKCE pattern routing through `/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink`; OTP expiry 900s; redirect URL `https://booking.nsintegrations.com/auth/confirm` confirmed in allowlist; **Site URL changed from default `http://localhost:3000` to `https://booking.nsintegrations.com`** (deviation discovered mid-verification — first happy-path attempt failed because emails pointed to localhost). Live verification on `booking.nsintegrations.com`: Test A happy-path PASS after Site URL fix; Test B enumeration safety PASS (zero new `auth.users` rows for fake-email submits, byte-identical UI); Test C silent rate-limit PASS with the additional observation that Supabase's internal per-email OTP cooldown (~60s) reduced 5/5 bucket hits to 2 actual deliveries — strengthens AUTH-29 because all four states (unknown/our-throttle/Supabase-throttle/real-send) now return identical UI; Test D Tabs reset PASS.
 
-**Stopped at:** Phase 38 Plan 02 complete. Resume at Plan 38-03 (Supabase email template + auth confirm route wiring).
+**Stopped at:** Phase 38 complete. Verifier next, then ROADMAP/REQUIREMENTS update by orchestrator.
 
 **Resume file:** None
 
 ## ▶ Next session — start here
 
-**Phase 38 Plans 01 + 02 complete.** Full client-visible flow is functional in dev: visiting `/app/login` shows the new Tabs control, submitting a magic-link request displays the inline success state with countdown. Click-through authentication does NOT yet work — that needs Plan 03's Supabase email template + `/auth/confirm` route wiring.
+**Phase 38 COMPLETE.** All three plans shipped and live-verified on `https://booking.nsintegrations.com`. AUTH-24 (delivery), AUTH-28 (5/hour silent throttle), AUTH-29 (enumeration safety) all observable on production. Verifier next, then orchestrator updates ROADMAP.md and REQUIREMENTS.md.
 
-### Path A: Phase 38 Plan 03 (Supabase email template + verify route) — next recommended step
+### Path A: Phase 39 (BOOKER polish) — next recommended step
 
-Plan file: `.planning/phases/38-magic-link-login/38-03-PLAN.md`. Likely manual Supabase dashboard work (email template HTML + redirect URL config) + small route handler verification. Will end Phase 38.
+Zero backend dependencies. Pure UI work. Plan file does not yet exist; orchestrator will scaffold via `/gsd:plan-phase`.
 
-### Path B: Phase 39 (BOOKER polish) — work in parallel
+### Path B: Phase 40 (final manual QA + dead-code audit) — final v1.7 phase
 
-Zero backend dependencies. Pure UI. Can interleave with 38-03 if desired.
+Includes the canonical Phase 38 regression sub-tests (re-run A-D from `38-03-PLAN.md`) as part of the broader v1.7 manual QA pass. `slot-picker.tsx` knip ignore-list audit lives here. Will close v1.7.
 
 ### PREREQ-03 — still required for Phase 36 live activation
 
