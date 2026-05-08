@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 36 Plan 01 complete.** Schema migration (`20260507120000_phase36_resend_provider.sql`) + `EmailProvider` union extension shipped. Wave 1 of Phase 36 done. Latest commits: `c3b0e0b` (migration), `a0fb2f3` (types union).
+**Last updated:** 2026-05-08 — **Phase 36 Plan 02 complete.** Resend HTTP provider (`createResendClient`) + 9 unit tests + vitest alias + mock updates shipped. Wave 2 of Phase 36 done. Latest commits: `0d4a1a4` (provider), `039ef86` (tests), `d30a675` (mock update), `03b88d6` (alias).
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Plan 01 (schema + types) complete 2026-05-08. Plans 02-03 next (Resend provider impl + factory routing). Blocked on PREREQ-03 for live Resend sends but plans can proceed with mocks.
+**Current focus:** v1.7 Phase 36 — Resend backend for upgraded accounts. Plans 01-02 complete 2026-05-08. Plan 03 next (factory routing). Blocked on PREREQ-03 for live Resend sends but plans can proceed with mocks.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,11 +16,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (2 of 7 phases shipped)
 **Phase:** 36 — Resend Backend for Upgraded Accounts — IN PROGRESS
-**Plan:** Plan 01 complete (schema + types). Next: Plan 02 (Resend provider implementation).
-**Status:** Wave 1 complete. Schema migration file created, EmailProvider union extended. Framework-only — migration NOT applied to hosted Supabase (deferred per PREREQ-03).
-**Last activity:** 2026-05-08 — Plan 36-01 executed; schema migration + type union shipped; SUMMARY.md written.
+**Plan:** Plan 02 complete (Resend provider + tests). Next: Plan 03 (factory routing).
+**Status:** Wave 2 complete. Resend HTTP provider implemented, 9 unit tests green, vitest alias registered, mock updated. Framework-only — PREREQ-03 still deferred.
+**Last activity:** 2026-05-08 — Plan 36-02 executed; createResendClient provider + unit tests + alias shipped; SUMMARY.md written.
 
-Progress (Phase 36): █░░░░░░ 1/7 plans complete (01 done, 02-06 + verification pending)
+Progress (Phase 36): ██░░░░░ 2/7 plans complete (01-02 done, 03-06 + verification pending)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -70,6 +70,10 @@ v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases, plans TBD — in 
 - **Gmail REST API, NOT SMTP, for OAuth-based send (Phase 35 deviation #2, commit cb82b6f)** — `lib/email-sender/providers/gmail-oauth.ts` POSTs to `https://gmail.googleapis.com/gmail/v1/users/me/messages/send` with a base64url-encoded RFC-822 message and `Authorization: Bearer <accessToken>`. **Do NOT try to use SMTP (`smtp.gmail.com:465` with `auth.type='OAuth2'`) when the OAuth scope is `gmail.send`** — `gmail.send` only authorizes the REST endpoint; SMTP relay requires the much broader `https://mail.google.com/` scope. The pitfall is that nodemailer's XOAUTH2 SMTP handshake silently accepts the wrong-scope token AND returns a synthetic messageId, so callers think the send succeeded — but Gmail drops every message after acceptance. Symptom: `bookings.confirmation_email_sent=true` + `email_send_log` rows logged + zero recipient delivery.
 - **state cookie CSRF for direct OAuth (Phase 35 deviation)** — `connectGmailAction` writes a 32-byte random hex token into an httpOnly `gmail_connect_state` cookie (10-min maxAge); `/auth/gmail-connect/callback` verifies the cookie matches the `state` query param before exchanging the code. Cookie is deleted after consumption.
 - **Hosted Supabase migrations applied via MCP (Phase 35 deviation)** — `account_oauth_credentials` table and `email_send_log.account_id` column were applied to hosted Supabase via `mcp__claude_ai_Supabase__apply_migration` during the 35-05 verification session. Local `supabase/config.toml` flags (e.g., `enable_manual_linking`) only apply to local Supabase — the hosted dashboard equivalent must be configured separately or skipped if the new direct-OAuth flow doesn't need it.
+- **Resend HTTP provider lazy RESEND_API_KEY read (Phase 36, Plan 02)** — `RESEND_API_KEY` read inside `send()` body, not at module top level. Same pattern as Phase 34 `getKey()` and Phase 35 `fetchGoogleAccessToken`. Apply to all new env-var-gated providers.
+- **Resend snake_case wire fields (Phase 36, Plan 02)** — Resend's REST API requires `reply_to` (not `replyTo`) and `content_type` on attachments (not `contentType`). Resend silently ignores unknown fields so a camelCase typo silently drops the feature. Always verify against Resend API docs.
+- **RESEND_REFUSED_SEND_ERROR_PREFIX exported constant (Phase 36, Plan 02)** — `"resend_send_refused"` exported from `lib/email-sender/providers/resend.ts`. Plan 03 orchestrator dual-prefix fix uses `isRefusedSend(error)` helper (in account-sender mock) to check both `oauth_send_refused:` and `resend_send_refused:` prefixes.
+- **resend-provider vitest alias registered pre-emptively (Phase 36, Plan 02)** — `find: /^@\/lib\/email-sender\/providers\/resend$/` → `tests/__mocks__/resend-provider.ts`. Dormant until Plan 03 wires `getSenderForAccount` to import `createResendClient`. Follows LD-14 exact-regex pattern.
 
 ### Patterns established / locked through v1.6
 
@@ -97,17 +101,17 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Plan 36-01 executed (schema migration + EmailProvider union extension). Commits: `c3b0e0b` (migration), `a0fb2f3` (types union). tsc pre-existing test errors confirmed baseline — zero new errors introduced. Framework-only; migration deferred from hosted Supabase per PREREQ-03.
+**Last session:** 2026-05-08 — Plan 36-02 executed (Resend HTTP provider + 9 unit tests + vitest alias + mock update). Commits: `0d4a1a4` (provider), `039ef86` (tests), `d30a675` (mock update), `03b88d6` (alias). 9/9 new tests green; 337/339 total tests pass (2 pre-existing DB fixture failures). Framework-only; PREREQ-03 deferred.
 
-**Stopped at:** Phase 36 Plan 01 complete. Plan 02 is next (Resend provider implementation). Plans 02-03 can be coded and mock-tested without PREREQ-03; live Resend sends blocked on PREREQ-03.
+**Stopped at:** Phase 36 Plan 02 complete. Plan 03 is next (factory routing). Plans 03+ can be coded and mock-tested without PREREQ-03; live Resend sends blocked on PREREQ-03.
 
 ## ▶ Next session — start here
 
-**Phase 36 Plan 01 is shipped.** Wave 1 complete. Continue with Plan 02.
+**Phase 36 Plans 01-02 are shipped.** Wave 2 complete. Continue with Plan 03.
 
-### Plan 02: Resend provider implementation (next)
+### Plan 02: Resend provider implementation — DONE
 
-Execute `36-02` — creates `lib/email-sender/providers/resend.ts` implementing the `EmailClient` interface using the Resend SDK. Can be coded and mock-tested without PREREQ-03.
+`lib/email-sender/providers/resend.ts` created with `createResendClient`, lazy RESEND_API_KEY read, never-throws contract, snake_case wire fields. 9 unit tests green. vitest alias + mock stub ready for Plan 03.
 
 ### Plan 03: Factory routing
 
@@ -154,6 +158,7 @@ welcome-email already has `accountId` threading in place (Plan 35-06 Approach A)
 ### Files of record (post-pivots)
 
 - `lib/email-sender/providers/gmail-oauth.ts` — Gmail REST API provider (commit `cb82b6f`)
+- `lib/email-sender/providers/resend.ts` — **NEW (Plan 36-02, commit 0d4a1a4)** Resend HTTP provider; createResendClient + RESEND_REFUSED_SEND_ERROR_PREFIX
 - `app/auth/gmail-connect/callback/route.ts` — direct-Google OAuth callback (commit `ab02a23`)
 - `app/(shell)/app/settings/gmail/_lib/actions.ts` — direct-OAuth `connectGmailAction` (commit `ab02a23`)
 - `app/(shell)/app/settings/gmail/_components/gmail-status-panel.tsx` — error code → message map; `?connected=1` success banner (commit `ab02a23`)
