@@ -12,7 +12,11 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "knip": "knip",
+    "knip:report": "knip --reporter markdown > .planning/phases/40-dead-code-audit/40-KNIP-REPORT.md",
+    "knip:json": "knip --reporter json > .planning/phases/40-dead-code-audit/40-KNIP-REPORT.json",
+    "knip:ci": "knip --no-progress --reporter compact"
   },
   "dependencies": {
     "@date-fns/tz": "^1.4.1",
@@ -57,6 +61,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "jsdom": "^29.0.2",
+    "knip": "^6.12.1",
     "postcss": "^8.5.10",
     "postgres": "^3.4.9",
     "supabase": "^2.92.1",
