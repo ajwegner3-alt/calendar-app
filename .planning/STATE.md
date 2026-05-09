@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 39 COMPLETE.** BOOKER polish fully shipped and live-verified on `https://booking.nsintegrations.com`: V15-MP-05 Turnstile lifecycle lock preserved via `key` prop removal, static `BookingFormSkeleton` replaces bare-text placeholder pre-pick, 220ms fade+rise wrapper animation lands on first slot pick (CLS = 0), `@media (prefers-reduced-motion: reduce)` override suppresses animation cleanly, and re-picks no longer remount the form (typed values + Turnstile token persist across same-date slot changes). Verifier 4/4 PASS. Plans 39-01/02/03 all done. Latest commits: `7b0ec82`, `672500b`, `8223203`, `c3108b3`, `0595108`, `13de0b7`.
+**Last updated:** 2026-05-08 — **Phase 40 Plan 01 COMPLETE.** Dead-code audit baseline established. `knip@6.12.1` installed as devDependency; `knip.json` at repo root with locked ignore (slot-picker.tsx) and explicit entry list (tests/setup.ts + tests/helpers/**); 4 npm scripts added (`knip` / `knip:report` / `knip:json` / `knip:ci`). Baseline reports generated: `40-KNIP-REPORT.json` (raw machine-readable) + `40-KNIP-REPORT.md` (curated 80-row table with REMOVE/KEEP/INVESTIGATE pre-seeded, Decision column blank for Andrew). 80 findings: 1 unused file + 3 unused deps + 4 unused devDeps + 1 unlisted + 58 unused exports + 13 unused exported types + 0 duplicates. slot-picker.tsx correctly suppressed; Phase 39 still 4/4 PASS. Latest commits: `96f4033` (knip install + config), `d5cfe61` (baseline reports). Now waiting on Andrew checkpoint (Plan 02) to fill Decision column.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 39 (BOOKER polish) **COMPLETE** — Plans 01 + 02 + 03 shipped and live-verified on production. Phase 40 (dead-code audit) is the final v1.7 phase.
+**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plan 01 COMPLETE** (knip installed + baseline reports generated). Plan 02 is an Andrew checkpoint: open `40-KNIP-REPORT.md`, fill the Decision column (REMOVE/KEEP/INVESTIGATE per row), then Plan 03+ executes the per-category removal commits.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (6 of 7 phases shipped)
-**Phase:** 39 — BOOKER polish — **COMPLETE**
-**Plan:** 3 of 3 complete (key-prop removal; skeleton placeholder; entry animation + reduced-motion)
-**Status:** Phase 39 complete. Verifier 4/4 PASS. ROADMAP/REQUIREMENTS updated; ready for Phase 40 (dead-code audit).
-**Last activity:** 2026-05-08 — Plan 39-03 verified live on production (`booking.nsintegrations.com`); A/B/C all pass (animation 220ms fade+rise smooth, CLS = 0, reduced-motion suppresses cleanly, V15-MP-05 lock + RHF field persistence + Turnstile non-staleness regression-checked). Latest commit: `13de0b7`.
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plan 01 of N done)
+**Phase:** 40 — Dead-code audit — IN PROGRESS
+**Plan:** 1 of N complete (knip install + baseline audit report). Plan 02 = Andrew checkpoint (fill Decision column in `40-KNIP-REPORT.md`).
+**Status:** Plan 40-01 complete. 80 baseline findings enumerated with seeded recommendations. Awaiting Andrew checkpoint for Plan 02 to convert recommendations → decisions; then Plans 03–06 execute per-category removals (deps → exports → files), then Plan 07 adds CI gate, then final v1.7 manual QA pass closes milestone.
+**Last activity:** 2026-05-08 — Plan 40-01 generated `.planning/phases/40-dead-code-audit/40-KNIP-REPORT.md` + `.json` baseline. Latest commits: `96f4033`, `d5cfe61`.
 
-Progress (Phase 39): ████████ 3/3 plans complete
+Progress (Phase 40): █░░░░░ 1/N plans complete (Plan 02 unblocked, awaiting Andrew)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -123,21 +123,32 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 39 (BOOKER polish) executed end-to-end across three sequential waves. Wave 1 (`7b0ec82`): removed `key={selectedSlot.start_at}` from `<BookingForm>` in `booking-shell.tsx` + rewrote surrounding lifecycle comment — preserves V15-MP-05 Turnstile lock and RHF field persistence on slot re-pick. Wave 2 (`672500b` + `8223203`): created static `BookingFormSkeleton` (8 shape-only `bg-muted` blocks, NO `animate-pulse`, helper copy "Pick a time to continue") and wired it into the no-slot branch, replacing the bare-text placeholder. Wave 3 (`c3108b3` + `0595108`): wrapped `<BookingForm>` (no `key` prop) in `animate-in fade-in slide-in-from-bottom-2 duration-[220ms] ease-out motion-reduce:animate-none` div + added `@media (prefers-reduced-motion: reduce)` belt-and-suspenders override in `app/globals.css`. Each plan checkpoint live-verified by Andrew: V15-MP-05 lock holds (form absent pre-pick, persists across re-pick on same date, unmounts on date change per design), skeleton renders cleanly on desktop + mobile (no false loading spinner), animation smooth + CLS = 0, reduced-motion fully suppresses, Turnstile token does not stale on re-pick. Verifier 4/4 PASS — BOOKER-06..09 marked Complete.
+**Last session:** 2026-05-08 — Phase 40 Plan 01 (knip install + baseline audit report) executed in two atomic tasks. Task 1 (`96f4033`): `npm install --save-dev knip@6` resolved to v6.12.1; created `knip.json` at repo root with locked config per RESEARCH.md (ignore: `app/[account]/[event-slug]/_components/slot-picker.tsx`; entry: `tests/setup.ts` + `tests/helpers/**/*.ts`; project excludes `.planning/`, `tmp/`, `supabase/`); added 4 npm scripts (`knip`, `knip:report`, `knip:json`, `knip:ci`). Task 2 (`d5cfe61`): generated `40-KNIP-REPORT.json` raw + curated `40-KNIP-REPORT.md` (80 rows across 4 sections: 1a unused deps, 1b unused devDeps, 1c unlisted, 2 duplicates [_None._], 3a unused exports, 3b unused exported types, 4 unused files). Each row has REMOVE/KEEP/INVESTIGATE pre-seeded with 1-line rationale per RESEARCH.md methodology (git log + grep + filename semantics + neighbor checks). Decision column left as `_____` for Andrew. slot-picker.tsx correctly suppressed by ignore (knip emitted "Remove from ignore" hint, kept as policy per Plan 30-01 Rule 4). 33 of 80 findings are shadcn/ui primitives (`components/ui/*`) seeded as KEEP — installed-as-library convention.
 
-**Stopped at:** Phase 39 complete. ROADMAP/STATE/REQUIREMENTS updated. Ready for Phase 40 (dead-code audit + final manual QA).
+**Stopped at:** Plan 40-01 complete. Reports committed to phase folder. Awaiting Andrew checkpoint to fill Decision column for Plan 02 input.
 
-**Resume file:** None
+**Resume file:** None — Andrew opens `.planning/phases/40-dead-code-audit/40-KNIP-REPORT.md` directly.
 
 ## ▶ Next session — start here
 
-**Phase 39 COMPLETE.** All three plans shipped and live-verified on `https://booking.nsintegrations.com`. BOOKER-06 (entry animation), BOOKER-07 (skeleton placeholder), BOOKER-08 (reduced-motion respected), BOOKER-09 (V15-MP-05 lock + CLS = 0) all observable on production. Verifier 4/4 PASS.
+**Phase 40 Plan 01 COMPLETE.** Knip baseline audit generated; 80 findings across 4 categories pre-seeded with recommendations. Plan 02 is an Andrew checkpoint.
 
-### Path A: Phase 40 (dead-code audit + final manual QA) — final v1.7 phase
+### Path A: Andrew fills Decision column → Plan 02 reads it back
 
-Closes v1.7. Tasks: install `knip` as devDependency, configure `knip.json` with explicit ignore list (must include `slot-picker.tsx` per Plan 30-01 Rule 4, test mock helpers, `__mocks__/`), generate report (markdown + JSON committed to phase folder), Andrew reviews each removal candidate item-by-item with REMOVE / KEEP / INVESTIGATE decision, atomic surgical commits with `next build` green between batches, SQL migration files untouched. Also includes regression re-runs of Phase 38 A-D and Phase 39 A-C as part of the broader v1.7 manual QA pass.
+1. Open `.planning/phases/40-dead-code-audit/40-KNIP-REPORT.md`.
+2. For each row, edit the Decision cell (`_____`) to `REMOVE`, `KEEP`, or `INVESTIGATE`.
+3. Save the file.
+4. Run `/gsd:execute-phase 40` (or invoke Plan 02 directly) — Plan 02 reads the filled file and produces `40-KNIP-DECISIONS.md`.
+5. Plans 03–06 execute the per-category removal commits (deps → exports → files; build+test green between batches).
+6. Plan 07 adds the CI gate (`.github/workflows/knip.yml`).
+7. Final v1.7 manual QA pass closes the milestone.
 
-**Recommended next command:** `/gsd:plan-phase 40` (after `/clear` for fresh context).
+**Pre-seeded recommendation summary (Andrew can override any row):**
+- 14 REMOVE seeds (welcome-card, nodemailer, @types/nodemailer, @eslint/eslintrc, lib/email-sender barrel re-exports, renderEmailLogoHeader [@deprecated], canonical escapeHtml export with no consumers)
+- 41 KEEP seeds (33× shadcn/ui primitives, supabase CLI, tailwindcss CLI surface, tw-animate-css [used in CSS])
+- 25 INVESTIGATE seeds (duplicate `DEFAULT_BRAND_PRIMARY`, internal-only `export` keywords on `isPastEod`/`AUTH_RATE_LIMITS`, server-action input types, schema files, Zod-derived form types, `shadcn` CLI dep, `postcss-load-config` unlisted)
+
+**Recommended next command:** None — wait for Andrew. When ready, `/gsd:execute-phase 40` resumes from Plan 02.
 
 ### Path B: Pause v1.7 and do something else
 
