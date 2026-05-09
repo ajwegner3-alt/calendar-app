@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 40 Plan 02 COMPLETE.** Andrew delegated final REMOVE/KEEP calls to Claude ("I trust what you recommend. Go ahead."); pre-seeded recommendations applied as final decisions for non-INVESTIGATE rows; 21 INVESTIGATE items deep-dived per Plan 02 Task 2 methodology with conservative bias. Final scope: **27 REMOVE + 53 KEEP = 80 findings, zero unresolved INVESTIGATE.** `40-KNIP-REPORT.md` finalized with per-row Investigation: sub-rows. `40-KNIP-DECISIONS.md` created as machine-readable contract for Plans 03-06: REMOVE list split into whole-symbol-deletion (17 items) vs export-keyword-only (6 items) categories; KEEP list with rationales feeds Plan 07 `knip.json` ignore wiring; recovery protocol documented per plan spec. Latest commits: `96f4033` (knip install + config), `d5cfe61` (baseline reports), `18ff367` (decisions log lock). Wave 3 (Plan 03 — remove unused deps: `nodemailer` + `@eslint/eslintrc` + `@types/nodemailer`) is now unblocked.
+**Last updated:** 2026-05-08 — **Phase 40 Plan 03 COMPLETE.** Three orphaned dependencies removed in single atomic chore commit (`14fb48c`): `nodemailer`, `@eslint/eslintrc`, `@types/nodemailer`. Pre-flight greps confirmed zero source-level imports for all three. Build green (`next build` ~20s, exit 0); pushed to origin/main (`b00b112..14fb48c`); Vercel auto-deploy triggered. **Watermark correction:** vitest baseline confirmed at 2 failing tests (`tests/bookings-api.test.ts` + `tests/slots-api.test.ts`), NOT 1 — both fail on pre-commit state too (verified via temporary `git checkout 6b1c3b0 -- package.json package-lock.json` rollback test). Dep removal does NOT cause either failure; both are pre-existing test-fixture date-sensitivity issues. Wave 4 (Plan 04 — duplicate exports) is next; per DECISIONS.md, that wave is empty (`_None._`) and will auto-skip with a documentation-only commit. Plan 05 (23 export REMOVEs) is the next substantive batch.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 COMPLETE** (baseline + decisions locked). Wave 3 (Plan 03: remove 3 unused npm deps) is unblocked. Plan 05 will execute the largest batch (23 export removals across whole-symbol vs export-keyword-only modes).
+**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 + 03 COMPLETE** (baseline + decisions locked + 3 unused deps removed). Wave 4 (Plan 04: duplicate exports) is unblocked but is empty per DECISIONS.md and will auto-skip. Plan 05 will execute the largest batch (23 export removals across whole-symbol vs export-keyword-only modes).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-02 done)
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-03 done)
 **Phase:** 40 — Dead-code audit — IN PROGRESS
-**Plan:** 2 of 7 complete (knip install + baseline audit report + Andrew-delegated decisions lock). Wave 3 (Plan 03 — npm uninstall of 3 dead deps) is next.
-**Status:** Plans 40-01 + 40-02 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP. `40-KNIP-DECISIONS.md` is the locked contract for Plans 03-06 deletion targets and Plan 07 `knip.json` ignore wiring. Plans 03-06 execute per-category removals (deps → [duplicates: empty] → exports → files); Plan 07 adds CI gate + ignore-list expansion; final v1.7 manual QA pass closes milestone.
-**Last activity:** 2026-05-08 — Plan 40-02 produced `40-KNIP-DECISIONS.md` and finalized `40-KNIP-REPORT.md`. Latest commits: `96f4033`, `d5cfe61`, `d94e3c6`, `18ff367`.
+**Plan:** 3 of 7 complete (knip install + baseline audit report + decisions lock + dep removal). Wave 4 (Plan 04 — duplicate exports, empty) is next.
+**Status:** Plans 40-01 + 40-02 + 40-03 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP; first 3 REMOVEs (npm deps) executed. Remaining: Plan 04 (empty wave — duplicates: 0 items; documentation skip), Plan 05 (23 export REMOVEs across whole-symbol + export-keyword-only categories), Plan 06 (1 file delete: `components/welcome-card.tsx`), Plan 07 (CI gate + `knip.json` ignore wiring per DECISIONS.md KEEP list); final v1.7 manual QA pass closes milestone.
+**Last activity:** 2026-05-08 — Plan 40-03 removed `nodemailer`, `@eslint/eslintrc`, `@types/nodemailer` via single `npm uninstall`. Build green (~20s); pushed to origin/main. Latest commits: `96f4033`, `d5cfe61`, `d94e3c6`, `18ff367`, `6b1c3b0`, `14fb48c`.
 
-Progress (Phase 40): ██░░░░░ 2/7 plans complete (Plan 03 unblocked — auto-runnable, no checkpoints needed)
+Progress (Phase 40): ███░░░░ 3/7 plans complete (Plan 04 next — empty wave, will auto-skip; Plan 05 is next substantive batch)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -118,35 +118,34 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 ### Open tech debt (carried into v1.7)
 
 - `slot-picker.tsx` on disk per Andrew Option A (Phase 40 audit will surface it; explicit knip ignore required).
-- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` working-tree drift — uncommitted.
-- `tests/bookings-api.test.ts` one failing test (fixture mismatch); 30/31 test files green.
+- Pre-existing `M .planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md` + `23-VERIFICATION.md` + `33-CONTEXT.md` working-tree drift — uncommitted.
+- **Vitest watermark: 2 failing tests** (corrected by Plan 40-03 from previously-stated 1): `tests/bookings-api.test.ts > (a) 201 returns bookingId...` AND `tests/slots-api.test.ts > returns flat slots array...`. Both fail on pre-Plan-40-03 state (verified via temp `git checkout 6b1c3b0 -- package.json package-lock.json` rollback test). Both are date-sensitive fixture failures (test expects Monday 9-17 window seeded data; actual run-time may be a Friday triggering min-notice filter to 0 slots / 0 emails). 40/42 test files green.
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 40 Plan 02 (Andrew-delegated decisions checkpoint) executed under "I trust what you recommend. Go ahead." authority. Task 1 wait-for-Andrew step skipped per delegation. Pre-seeded REMOVE/KEEP recommendations applied as final decisions for 59 non-INVESTIGATE rows. 21 INVESTIGATE rows deep-dived per Task 2 methodology: grep across `app/`/`lib/`/`tests/`, dynamic-import / config-side checks, internal-cross-reference scans. Each former INVESTIGATE row got an inline `Investigation:` sub-row capturing the search performed and final call. Conservative bias rule applied (when in doubt, KEEP). Resolution: 13 INVESTIGATE → REMOVE, 8 INVESTIGATE → KEEP. Final scope: 27 REMOVE + 53 KEEP. `40-KNIP-DECISIONS.md` produced per Task 3 with whole-symbol vs export-keyword-only REMOVE separation, per-KEEP rationales for Plan 07, INVESTIGATE-→-KEEP audit-trail (8 entries), INVESTIGATE-→-REMOVE audit-trail (11 entries), and recovery protocol. Single commit `18ff367` covers both file finalizations per plan spec.
+**Last session:** 2026-05-08 — Phase 40 Plan 03 executed autonomously. Pre-flight greps run for all 3 packages across `*.{ts,tsx,js,mjs}` source + config files; zero real-consumer hits surfaced (only stale comments in `eslint.config.mjs:9` and email-stack source files, plus `package.json`/`package-lock.json` self-refs). `npm uninstall nodemailer @eslint/eslintrc @types/nodemailer` removed 2 packages from the tree. `git diff package.json` showed only the 3 expected line removals. Atomic commit `14fb48c` ("chore(40): remove unused dependencies") landed; build gate green (`next build` ~20s, exit 0); vitest gate showed 2 failures vs documented watermark of 1, but rollback-test confirmed both failures are pre-existing (not caused by removal) — watermark corrected from 1 → 2 in Open Tech Debt section. Pushed to origin/main (`b00b112..14fb48c`). Vercel CLI not available in session; deploy-status verification deferred to Andrew. Three pre-existing-drift VERIFICATION/CONTEXT files left untouched per plan instruction.
 
-**Stopped at:** Plan 40-02 complete. Plan 03 (Wave 3 — `npm uninstall nodemailer @eslint/eslintrc @types/nodemailer`) is unblocked and fully autonomous (zero checkpoints).
+**Stopped at:** Plan 40-03 complete. Plan 04 (Wave 4 — duplicate exports) is empty per DECISIONS.md ("_None._") and will auto-skip with a documentation-only commit. Plan 05 (Wave 5 — 23 export REMOVEs) is the next substantive batch.
 
-**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 03.
+**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 04.
 
 ## ▶ Next session — start here
 
-**Phase 40 Plans 01 + 02 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. `40-KNIP-DECISIONS.md` is the locked contract for Plans 03-06.
+**Phase 40 Plans 01 + 02 + 03 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. First 3 REMOVEs (npm deps) executed — `nodemailer`, `@eslint/eslintrc`, `@types/nodemailer` removed in commit `14fb48c`, pushed to origin/main. `40-KNIP-DECISIONS.md` is the locked contract for Plans 04-06.
 
-### Path A: Resume Plan 03 (auto-runnable, no checkpoint)
+### Path A: Resume Plan 04 (empty wave — auto-skips)
 
-1. Run `/gsd:execute-phase 40` — Plan 03 reads `40-KNIP-DECISIONS.md` Unused Dependencies section, runs `npm uninstall nodemailer @eslint/eslintrc @types/nodemailer`, verifies `next build` + `vitest run` green, commits.
-2. Plan 04 (duplicates): empty wave; auto-skips.
-3. Plan 05 (exports): 17 whole-symbol REMOVEs + 6 export-keyword-only REMOVEs. Largest blast radius — auto-execute with green-build verification per batch.
-4. Plan 06 (files): 1 file delete (`components/welcome-card.tsx`).
-5. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`).
-6. Final v1.7 manual QA pass closes the milestone.
+1. Run `/gsd:execute-phase 40` — Plan 04 (duplicate exports) is empty per DECISIONS.md and will auto-skip with a documentation-only commit; orchestrator advances to Plan 05.
+2. Plan 05 (exports): 17 whole-symbol REMOVEs + 6 export-keyword-only REMOVEs. Largest blast radius — auto-execute with green-build verification per batch.
+3. Plan 06 (files): 1 file delete (`components/welcome-card.tsx`).
+4. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`).
+5. Final v1.7 manual QA pass closes the milestone.
 
 **Final-decision summary (per `40-KNIP-DECISIONS.md`):**
 - 27 REMOVE: 3 deps (nodemailer + 2 supporting), 17 whole-symbol exports, 6 export-keyword-only exports, 1 file (welcome-card.tsx).
 - 53 KEEP: 5 deps (CSS/CLI consumers + JSDoc-only), 42 shadcn/ui primitives, 3 internal type-graph nodes (lib/email-sender/types.ts), 2 internal-cross-component (usePushbackDialog, customQuestionSchema), 1 dev-tool (generateKey).
 
-**Recommended next command:** `/gsd:execute-phase 40` — Plan 03 starts immediately.
+**Recommended next command:** `/gsd:execute-phase 40` — Plan 04 (empty wave, auto-skips) then Plan 05 (23 export REMOVEs) starts immediately.
 
 ### Path B: Pause v1.7 and do something else
 
