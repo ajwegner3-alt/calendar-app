@@ -13,13 +13,16 @@ import { Input } from "@/components/ui/input";
  * via the helpers below.
  */
 
-export function minutesToHHMM(m: number): string {
+// Phase 40 Plan 05 (2026-05-09): export keywords removed — internal-only use
+// at lines 48, 50, 59, 63 of this file. Sibling `_lib/schema.ts:46` and
+// `overrides-list.tsx:57` define their own private copies.
+function minutesToHHMM(m: number): string {
   const hh = String(Math.floor(m / 60)).padStart(2, "0");
   const mm = String(m % 60).padStart(2, "0");
   return `${hh}:${mm}`;
 }
 
-export function hhmmToMinutes(s: string): number {
+function hhmmToMinutes(s: string): number {
   // s = "09:30"
   const [hh, mm] = s.split(":").map(Number);
   if (Number.isNaN(hh) || Number.isNaN(mm)) return 0;

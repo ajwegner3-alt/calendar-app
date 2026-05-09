@@ -2,15 +2,12 @@
 // Copied verbatim from ../email-sender/src/utils.ts.
 // Required by providers/resend.ts (stripHtml for plain-text fallback).
 
-/** Escape HTML special characters to prevent injection in email bodies. */
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+// Phase 40 Plan 05 (2026-05-09): escapeHtml removed — every email sender
+// inlines its own private copy (send-booking-confirmation.ts, send-cancel-emails.ts,
+// send-reminder-booker.ts, send-reschedule-emails.ts, send-owner-notification.ts,
+// branding-blocks.ts, onboarding/welcome-email.ts, settings/upgrade/_lib/actions.ts).
+// Zero consumers imported it from this file. stripHtml stays — used by
+// providers/gmail-oauth.ts and providers/resend.ts for plain-text fallback.
 
 /** Strip HTML tags for a plain-text fallback. */
 export function stripHtml(html: string): string {

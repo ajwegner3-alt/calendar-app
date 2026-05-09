@@ -11,4 +11,5 @@ export const magicLinkSchema = z.object({
   email: z.string().email("Enter a valid email address."),
 });
 
-export type MagicLinkInput = z.infer<typeof magicLinkSchema>;
+// Phase 40 Plan 05 (2026-05-09): MagicLinkInput type deleted — zero consumers;
+// Phase 38 forms use magicLinkSchema directly via zodResolver(magicLinkSchema).

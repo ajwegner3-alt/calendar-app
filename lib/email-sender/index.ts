@@ -10,23 +10,11 @@ import "server-only";
 // go through getSenderForAccount, which uses the Gmail REST API with per-account
 // OAuth credentials stored encrypted in account_oauth_credentials.
 //
-// This file now provides only:
-//   1. Type re-exports (EmailOptions, EmailResult, etc.)
-//   2. Utility re-exports (escapeHtml, stripHtml)
+// Phase 40 Plan 05 (2026-05-09): all barrel re-exports removed (zero consumers).
+// Types are imported directly from "./types"; provider utilities are imported
+// directly from "./utils" or "./providers/*". This file is now an inert
+// documentation marker for the email-sender module.
 //
 // See also: tests/__mocks__/email-sender.ts — the Vitest alias mock used by
 // integration tests still exports __mockSendCalls / __resetMockSendCalls /
 // sendEmail stubs for backwards-compatible test assertions.
-
-// Types
-export type {
-  EmailOptions,
-  EmailResult,
-  EmailAttachment,
-  EmailClient,
-  EmailClientConfig,
-  EmailProvider,
-} from "./types";
-
-// Utilities
-export { escapeHtml, stripHtml } from "./utils";

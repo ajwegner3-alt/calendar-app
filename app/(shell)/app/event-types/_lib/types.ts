@@ -6,7 +6,10 @@
  * - EventTypeListItem: projected shape for the list page (subset of columns we SELECT)
  */
 
-export type CustomQuestion =
+// Phase 40 Plan 05 (2026-05-09): export keyword removed — internal-only use
+// at line 47 by EventTypeRow. Booker side declares a different CustomQuestion
+// interface at app/[account]/[event-slug]/_lib/types.ts:15 (zero overlap).
+type CustomQuestion =
   | {
       id: string;
       label: string;

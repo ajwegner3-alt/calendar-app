@@ -84,7 +84,9 @@ const inputSchema = z.discriminatedUnion("isFullDayBlock", [
     }),
 ]);
 
-export type CommitInverseOverrideInput = z.infer<typeof inputSchema>;
+// Phase 40 Plan 05 (2026-05-09): CommitInverseOverrideInput type deleted —
+// zero consumers; action uses inputSchema.parse() directly with no exposed
+// type boundary.
 
 export type CommitOverrideResult =
   | {

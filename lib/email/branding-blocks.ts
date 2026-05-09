@@ -1,7 +1,11 @@
 import "server-only";
 import { pickTextColor } from "@/lib/branding/contrast";
 
-export const DEFAULT_BRAND_PRIMARY = "#3B82F6"; // NSI blue-500 — email-layer default. Intentionally diverges from lib/branding/read-branding.ts DEFAULT_BRAND_PRIMARY (#0A2540). DO NOT unify per Phase 19 CONTEXT lock.
+// Phase 40 Plan 05 (2026-05-09): export keyword removed — internal-only use
+// at lines 37, 98, 107 of this file. DECISIONS.md classified as whole-symbol
+// REMOVE but verification surfaced 3 internal readers; reclassified to
+// export-keyword-only REMOVE (same kind as the read-branding.ts copy).
+const DEFAULT_BRAND_PRIMARY = "#3B82F6"; // NSI blue-500 — email-layer default. Intentionally diverges from lib/branding/read-branding.ts DEFAULT_BRAND_PRIMARY (#0A2540). DO NOT unify per Phase 19 CONTEXT lock.
 
 /** Branding subset most senders need; lets callers pass either the full account or a slim subset. */
 export interface EmailBranding {
@@ -46,27 +50,8 @@ export function renderEmailBrandedHeader(branding: EmailBranding): string {
 </table>`;
 }
 
-/**
- * Top-centered logo header for transactional emails.
- *
- * @deprecated Use renderEmailBrandedHeader() instead (Plan 12-06 migration).
- * Kept for one release cycle so test fixtures referencing the old helper
- * don't break. Will be removed in a future cleanup pass.
- *
- * Returns "" when logo_url is null (no empty space, no broken-img placeholder).
- * Inline-styled to survive Gmail/Outlook/Apple Mail (caniemail.com lock).
- */
-export function renderEmailLogoHeader(branding: Pick<EmailBranding, "name" | "logo_url">): string {
-  if (!branding.logo_url) return "";
-  // Use escapeHtml on alt text only — URL is from our DB and already URL-shaped
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
-  <tr>
-    <td align="center" style="padding: 16px 0;">
-      <img src="${branding.logo_url}" alt="${escapeHtml(branding.name)} logo" width="120" style="max-width:120px;height:auto;display:block;border:0;" />
-    </td>
-  </tr>
-</table>`;
-}
+// Phase 40 Plan 05 (2026-05-09): renderEmailLogoHeader deleted (deprecated
+// since Phase 12-06; superseded by renderEmailBrandedHeader; zero consumers).
 
 /**
  * "Powered by North Star Integrations" text-only footer.

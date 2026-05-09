@@ -1,5 +1,4 @@
 import "server-only";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { pickTextColor } from "@/lib/branding/contrast";
 import type { Branding } from "@/lib/branding/types";
 
@@ -7,8 +6,11 @@ import type { Branding } from "@/lib/branding/types";
  * Default primary brand color — NSI navy (matches Phase 2 lock:
  * Tailwind v4 @theme --color-primary).
  * Phase 7 branding editor (Plan 07-04) allows owners to override this per account.
+ *
+ * Phase 40 Plan 05 (2026-05-09): export keyword removed — internal-only use
+ * at line 31 by brandingFromRow. Constant stays.
  */
-export const DEFAULT_BRAND_PRIMARY = "#0A2540";
+const DEFAULT_BRAND_PRIMARY = "#0A2540";
 
 /**
  * Derive a Branding object from an already-fetched accounts row.
@@ -36,42 +38,6 @@ export function brandingFromRow(row: {
   };
 }
 
-/**
- * Fetch branding for an account by ID from the database.
- *
- * Use this when the caller has only an accountId (e.g., email senders,
- * embed page) and does NOT already have the accounts row in memory.
- * For callers that already have the row, prefer brandingFromRow() to
- * avoid the extra round-trip.
- *
- * Fails open: if the row is missing or the query errors, returns all-defaults
- * Branding (logoUrl null, primaryColor DEFAULT, textColor white).
- * Caller decides whether to surface the error — this helper never throws.
- *
- * Phase 18 (BRAND-20): SELECT shrunk to logo_url, brand_primary only.
- * Phase 20: deprecated column references removed from brandingFromRow signature.
- *
- * @param accountId - UUID of the account.
- * @returns Resolved Branding object, always valid.
- */
-export async function getBrandingForAccount(
-  accountId: string,
-): Promise<Branding> {
-  try {
-    const supabase = createAdminClient();
-    const { data: row } = await supabase
-      .from("accounts")
-      .select("logo_url, brand_primary")
-      .eq("id", accountId)
-      .maybeSingle();
-
-    if (!row) {
-      return brandingFromRow({ logo_url: null, brand_primary: null });
-    }
-
-    return brandingFromRow(row);
-  } catch {
-    // Supabase client construction or network error — return safe defaults.
-    return brandingFromRow({ logo_url: null, brand_primary: null });
-  }
-}
+// Phase 40 Plan 05 (2026-05-09): getBrandingForAccount deleted — zero callers
+// in app/, lib/, or tests/. Booker flow uses brandingFromRow directly with
+// already-fetched accounts rows (avoids the extra DB round-trip).

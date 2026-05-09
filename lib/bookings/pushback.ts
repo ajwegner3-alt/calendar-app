@@ -91,8 +91,11 @@ export function snapToNextSlotMs(rawMs: number, slotStepMinutes: number): number
  * DST-safe by construction (same pattern as lib/slots.ts).
  *
  * 1440 sentinel: immediately returns false — no PAST_EOD flags on no-rules days.
+ *
+ * Phase 40 Plan 05 (2026-05-09): export keyword removed — internal-only use
+ * at line 183 by computeCascadePreview. Function stays as a file-private helper.
  */
-export function isPastEod(
+function isPastEod(
   startMs: number,
   accountTimezone: string,
   endOfDayMinutes: number,

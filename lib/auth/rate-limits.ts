@@ -7,8 +7,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * Re-uses the v1.0 rate_limit_events Postgres table via lib/rate-limit.ts.
  *
  * To adjust a threshold: edit this file only — all auth actions delegate here.
+ *
+ * Phase 40 Plan 05 (2026-05-09): export keyword removed — internal-only use
+ * at lines 23 (`keyof typeof`) and 39 (`AUTH_RATE_LIMITS[route]`). Callers use
+ * `checkAuthRateLimit("magicLink")` not the object directly.
  */
-export const AUTH_RATE_LIMITS = {
+const AUTH_RATE_LIMITS = {
   signup: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 / hour / IP
   login: { max: 10, windowMs: 5 * 60 * 1000 }, // 10 / 5 min / IP
   forgotPassword: { max: 3, windowMs: 60 * 60 * 1000 }, // 3 / hour / (IP+email)
