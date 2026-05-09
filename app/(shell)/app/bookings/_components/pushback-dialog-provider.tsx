@@ -41,6 +41,11 @@ const PushbackDialogCtx = createContext<PushbackDialogContextValue | null>(
   null,
 );
 
+/**
+ * @public — KEEP per Phase 40 audit (40-KNIP-DECISIONS.md): used at lines 109 and 129 of this same
+ * file by sibling components (PushbackHeaderButton, PushbackDaySectionButton). Knip miscounts
+ * intra-file cross-component references as zero-callers.
+ */
 export function usePushbackDialog(): PushbackDialogContextValue {
   const ctx = useContext(PushbackDialogCtx);
   if (!ctx) {

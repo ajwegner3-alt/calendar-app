@@ -77,6 +77,8 @@ _None._ (No files in the KEEP list. `slot-picker.tsx` is already suppressed via 
 
 **shadcn/ui primitives (42 entries; reason identical for all):** Installed-as-library convention. Each is part of the `npx shadcn add <component>` upgrade surface. Removing breaks future re-installs. Suppress via `knip.json` `ignore` glob `components/ui/**` after Plan 06.
 
+_(suppressed via: `knip.json` `ignore: ["components/ui/**"]` — single glob covers all 42 exports; Plan 06 commit `<hash>`)_
+
 - `components/ui/sidebar.tsx:682` — `SidebarGroupAction`
 - `components/ui/sidebar.tsx:684` — `SidebarGroupLabel`
 - `components/ui/sidebar.tsx:685` — `SidebarHeader`
@@ -120,20 +122,20 @@ _None._ (No files in the KEEP list. `slot-picker.tsx` is already suppressed via 
 - `components/ui/dialog.tsx:165` — `DialogPortal`
 - `components/ui/dialog.tsx:167` — `DialogTrigger`
 
-**Module-internal type-graph KEEPs (3 entries):** Suppress via `knip.json` `ignoreExportsUsedInFile` (or per-file `ignore`) after Plan 06.
+**Module-internal type-graph KEEPs (3 entries):** Suppress via `@public` JSDoc tag at each export site. (Knip's official `ignoreExportsUsedInFile` config option is global-only / boolean — no per-file form in this knip version. JSDoc `@public` tag is the per-symbol mechanism with rationale documented inline.)
 
-- `lib/email-sender/types.ts:5` `EmailAttachment` (interface) — KEEP because: load-bearing internal type within the email-sender module. Used at `types.ts:29` (`attachments?: EmailAttachment[]` inside `EmailOptions`). Knip false positive on transitive type references.
-- `lib/email-sender/types.ts:46` `EmailProvider` (type) — KEEP because: used internally at `types.ts:51` and `:69` to compose `EmailClientConfig` and `EmailClient`. Load-bearing type-graph node.
-- `lib/email-sender/types.ts:49` `EmailClientConfig` (interface) — KEEP because: provider factory parameter shape consumed by `account-sender.ts` via inference. Conservative bias on type-only references.
+- `lib/email-sender/types.ts:5` `EmailAttachment` (interface) — KEEP because: load-bearing internal type within the email-sender module. Used at `types.ts:29` (`attachments?: EmailAttachment[]` inside `EmailOptions`). Knip false positive on transitive type references. _(suppressed via: `@public` JSDoc tag at export site)_
+- `lib/email-sender/types.ts:46` `EmailProvider` (type) — KEEP because: used internally at `types.ts:51` and `:69` to compose `EmailClientConfig` and `EmailClient`. Load-bearing type-graph node. _(suppressed via: `@public` JSDoc tag at export site)_
+- `lib/email-sender/types.ts:49` `EmailClientConfig` (interface) — KEEP because: provider factory parameter shape consumed by `account-sender.ts` via inference. Conservative bias on type-only references. _(suppressed via: `@public` JSDoc tag at export site)_
 
 **Internal-cross-component KEEPs (2 entries):**
 
-- `app/(shell)/app/bookings/_components/pushback-dialog-provider.tsx:44` `usePushbackDialog` — KEEP because: used at lines 109, 129 of the same file by `PushbackHeaderButton` and `PushbackDaySectionButton`. Knip miscounted internal cross-component use as zero-references.
-- `app/(shell)/app/event-types/_lib/schema.ts:31` `customQuestionSchema` — KEEP because: used internally at `schema.ts:82` (`custom_questions: z.array(customQuestionSchema).default([])`). Required by Zod's runtime composition (the eventTypeSchema embeds it). Knip false positive on array-element schema references.
+- `app/(shell)/app/bookings/_components/pushback-dialog-provider.tsx:44` `usePushbackDialog` — KEEP because: used at lines 109, 129 of the same file by `PushbackHeaderButton` and `PushbackDaySectionButton`. Knip miscounted internal cross-component use as zero-references. _(suppressed via: `@public` JSDoc tag at export site)_
+- `app/(shell)/app/event-types/_lib/schema.ts:31` `customQuestionSchema` — KEEP because: used internally at `schema.ts:82` (`custom_questions: z.array(customQuestionSchema).default([])`). Required by Zod's runtime composition (the eventTypeSchema embeds it). Knip false positive on array-element schema references. _(suppressed via: `@public` JSDoc tag at export site)_
 
 **Developer-tool KEEP (1 entry):**
 
-- `lib/oauth/encrypt.ts:94` `generateKey` — KEEP because: ad-hoc CLI helper documented in JSDoc as `node -e "const { generateKey } = require('./lib/oauth/encrypt'); console.log(generateKey())"`. Designed for one-off key rotation; removal would force re-creation. Conservative bias.
+- `lib/oauth/encrypt.ts:94` `generateKey` — KEEP because: ad-hoc CLI helper documented in JSDoc as `node -e "const { generateKey } = require('./lib/oauth/encrypt'); console.log(generateKey())"`. Designed for one-off key rotation; removal would force re-creation. Conservative bias. _(suppressed via: `@public` JSDoc tag at export site)_
 
 ---
 

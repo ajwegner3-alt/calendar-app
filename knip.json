@@ -13,6 +13,14 @@
     "!supabase/**"
   ],
   "ignore": [
-    "app/[account]/[event-slug]/_components/slot-picker.tsx"
+    "app/[account]/[event-slug]/_components/slot-picker.tsx",
+    "components/ui/**"
+  ],
+  "ignoreDependencies": [
+    "shadcn",
+    "tw-animate-css",
+    "supabase",
+    "tailwindcss",
+    "postcss-load-config"
   ]
 }

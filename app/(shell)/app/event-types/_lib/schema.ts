@@ -28,6 +28,11 @@ const singleSelectQuestion = baseQuestion.extend({
     .max(20, "A single-select question can have at most 20 options."),
 });
 
+/**
+ * @public — KEEP per Phase 40 audit (40-KNIP-DECISIONS.md): used at line 82 below via
+ * `z.array(customQuestionSchema)` in the eventTypeSchema composition. Knip undercounts Zod
+ * runtime-composition references as zero-callers.
+ */
 export const customQuestionSchema = z.discriminatedUnion("type", [
   shortTextQuestion,
   longTextQuestion,

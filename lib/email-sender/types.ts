@@ -1,7 +1,12 @@
 // Vendored from @nsi/email-sender sibling project (2026-04-25).
 // Copied verbatim from ../email-sender/src/types.ts.
 
-/** Attachment for an email — either raw content or a file path. */
+/**
+ * Attachment for an email — either raw content or a file path.
+ *
+ * @public — KEEP per Phase 40 audit (40-KNIP-DECISIONS.md): used internally at line 29 by
+ * `EmailOptions.attachments`. Knip false-positive on transitive type-graph references.
+ */
 export interface EmailAttachment {
   /** File name shown to the recipient, e.g. "Guide.pdf" */
   filename: string;
@@ -42,10 +47,20 @@ export interface EmailResult {
   error?: string;
 }
 
-/** Supported email providers. */
+/**
+ * Supported email providers.
+ *
+ * @public — KEEP per Phase 40 audit (40-KNIP-DECISIONS.md): composed into `EmailClientConfig`
+ * (line 56 below) and `EmailClient` (line 74 below). Knip false-positive on type-graph nodes.
+ */
 export type EmailProvider = "gmail" | "resend";
 
-/** Configuration for creating an email client. */
+/**
+ * Configuration for creating an email client.
+ *
+ * @public — KEEP per Phase 40 audit (40-KNIP-DECISIONS.md): provider factory parameter shape
+ * consumed by `account-sender.ts` via inference. Conservative bias on type-only references.
+ */
 export interface EmailClientConfig {
   /** Which provider to use */
   provider: EmailProvider;

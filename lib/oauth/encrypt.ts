@@ -90,6 +90,9 @@ export function decryptToken(stored: string): string {
  * Print once and store in .env.local as GMAIL_TOKEN_ENCRYPTION_KEY.
  *
  * Usage: `node -e "const { generateKey } = require('./lib/oauth/encrypt'); console.log(generateKey())"`
+ *
+ * @public — KEEP per Phase 40 audit (40-KNIP-DECISIONS.md): ad-hoc CLI dev helper invoked via `node -e`,
+ * intentionally has no static-analysis-visible callers. Removal would force re-creation on key rotation.
  */
 export function generateKey(): string {
   return randomBytes(32).toString("hex");
