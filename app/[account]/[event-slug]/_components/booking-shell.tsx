@@ -257,13 +257,15 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
                     token persist (Phase 39 field-persistence guarantee + V15-MP-05). */}
                 <div>
                   {selectedSlot ? (
-                    <BookingForm
-                      accountSlug={account.slug}
-                      eventType={eventType}
-                      selectedSlot={selectedSlot}
-                      bookerTimezone={bookerTz}
-                      onRaceLoss={handleRaceLoss}
-                    />
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-[220ms] ease-out motion-reduce:animate-none">
+                      <BookingForm
+                        accountSlug={account.slug}
+                        eventType={eventType}
+                        selectedSlot={selectedSlot}
+                        bookerTimezone={bookerTz}
+                        onRaceLoss={handleRaceLoss}
+                      />
+                    </div>
                   ) : (
                     <BookingFormSkeleton />
                   )}
