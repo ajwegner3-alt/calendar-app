@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import type { AccountSummary, EventTypeSummary } from "../_lib/types";
 import { type Slot } from "./slot-picker";
 import { BookingForm } from "./booking-form";
+import { BookingFormSkeleton } from "./booking-form-skeleton";
 import { RaceLoserBanner } from "./race-loser-banner";
 
 interface BookingShellProps {
@@ -264,9 +265,7 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
                       onRaceLoss={handleRaceLoss}
                     />
                   ) : (
-                    <div className="text-sm text-muted-foreground">
-                      Pick a time on the left to continue.
-                    </div>
+                    <BookingFormSkeleton />
                   )}
                 </div>
               </div>
