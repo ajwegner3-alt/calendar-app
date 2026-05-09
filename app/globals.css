@@ -4,6 +4,19 @@
 
 @source not "../.planning";
 
+/* Phase 39: defense-in-depth reduced-motion override.
+   tw-animate-css drives entry/exit via CSS custom properties; Tailwind's
+   `motion-reduce:animate-none` variant SHOULD nullify it, but this @media
+   rule is a belt-and-suspenders safeguard so the animation is fully
+   cancelled for any user with prefers-reduced-motion: reduce. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
