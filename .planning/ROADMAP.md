@@ -256,7 +256,12 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 3. With OS reduced-motion enabled, picking a slot shows the form immediately with no animation — the skeleton disappears and the form appears without any transition.
 4. React DevTools confirms `BookingForm` is absent from the DOM before a slot is selected (V15-MP-05 Turnstile lifecycle lock preserved); Turnstile token does not stale on slot re-pick.
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 39-01-key-prop-removal-PLAN.md — Remove `key={selectedSlot.start_at}` from `<BookingForm>` to preserve V15-MP-05 lock and field-persistence
+- [ ] 39-02-skeleton-placeholder-PLAN.md — Add static `BookingFormSkeleton` component and wire into pre-slot state
+- [ ] 39-03-entry-animation-and-reduced-motion-PLAN.md — Add 220ms fade+rise wrapper animation and `prefers-reduced-motion` CSS override
 
 ---
 
@@ -294,7 +299,7 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 | 36 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 13/13 PASS; live activation requires PREREQ-03 (Resend domain DNS) per FUTURE_DIRECTIONS.md | 2026-05-08 |
 | 37 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 4/4 PASS; live Resend delivery requires PREREQ-03 (same gate as Phase 36) | 2026-05-08 |
 | 38 | v1.7 | 3 / 3 | ✅ Shipped — verifier 19/19 PASS; Andrew live-verified A/B/C/D against production (`booking.nsintegrations.com`); two non-blocking deviations captured (Site URL fix, Supabase inner-cooldown observation) | 2026-05-08 |
-| 39 | v1.7 | 0 / TBD | Not started | - |
+| 39 | v1.7 | 0 / 3 | Plans drafted (planned 2026-05-08); ready for `/gsd:execute-phase 39` | - |
 | 40 | v1.7 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
