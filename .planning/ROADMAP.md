@@ -9,7 +9,7 @@
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
-- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 4 of 7 phases shipped (34, 35, 36 framework, 37).
+- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 5 of 7 phases shipped (34, 35, 36 framework, 37, 38).
 
 ## Phases
 
@@ -231,10 +231,14 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 2. Submitting a known email address and submitting an unknown email address return identical HTTP status codes and identical response body text — no enumeration leakage.
 3. More than 5 magic-link requests from the same (IP, email) pair within one hour are silently throttled (rate-limited via `rate_limit_events`); throttled requests return the SAME success-shape response as real sends — no enumeration leakage and no throttle leakage.
 
-**Plans:** 3 plans in 3 waves
-- [ ] 38-01-PLAN.md — Server action (requestMagicLinkAction) + magicLinkSchema + magicLink rate-limit config + ROADMAP/REQUIREMENTS reconciliation (Wave 1)
-- [ ] 38-02-PLAN.md — Login form Tabs (Password|Magic link) + MagicLinkSuccess client component with 30s resend countdown + page subtitle update (Wave 2)
-- [ ] 38-03-PLAN.md — supabase/config.toml otp_expiry → 900 + manual Supabase dashboard config (template + expiry) + live end-to-end preview verification (Wave 3, has checkpoints)
+**Plans:** 3 plans in 3 waves — all complete 2026-05-08
+- [x] 38-01-PLAN.md — Server action (requestMagicLinkAction) + magicLinkSchema + magicLink rate-limit config + ROADMAP/REQUIREMENTS reconciliation (Wave 1)
+- [x] 38-02-PLAN.md — Login form Tabs (Password|Magic link) + MagicLinkSuccess client component with 30s resend countdown + page subtitle update (Wave 2)
+- [x] 38-03-PLAN.md — supabase/config.toml otp_expiry → 900 + manual Supabase dashboard config (template + expiry + Site URL) + live end-to-end production verification (Wave 3, had checkpoints)
+
+**Deviations during verification (non-blocking, captured in 38-03-SUMMARY.md):**
+- Hosted Supabase Site URL was on default `http://localhost:3000`; Andrew updated to `https://booking.nsintegrations.com` mid-verification (was not in the original Task 2 dashboard checklist because Phase 34 OAuth uses redirect URL allowlist, not `{{ .SiteURL }}` template interpolation).
+- Supabase's internal per-email OTP cooldown (~60s) reduces actual email deliveries below our 5/hour bucket on rapid-fire submits. Treated as feature, not bug — produces a four-way enumeration-safety ambiguity (unknown email / our-throttle / Supabase-throttle / real-send all return identical UI), strengthening AUTH-29 beyond the must_have.
 
 ---
 
@@ -289,7 +293,7 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 | 35 | v1.7 | 7 / 7 | ✅ Shipped — verifier 5/5 PASS; SMTP singleton + `GMAIL_APP_PASSWORD` removed (commits `31db425`, `138cfb0`, `6aecfbb`). See `35-DEVIATION-DIRECT-OAUTH.md` for architecture pivots. | 2026-05-08 |
 | 36 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 13/13 PASS; live activation requires PREREQ-03 (Resend domain DNS) per FUTURE_DIRECTIONS.md | 2026-05-08 |
 | 37 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 4/4 PASS; live Resend delivery requires PREREQ-03 (same gate as Phase 36) | 2026-05-08 |
-| 38 | v1.7 | 0 / TBD | Not started | - |
+| 38 | v1.7 | 3 / 3 | ✅ Shipped — verifier 19/19 PASS; Andrew live-verified A/B/C/D against production (`booking.nsintegrations.com`); two non-blocking deviations captured (Site URL fix, Supabase inner-cooldown observation) | 2026-05-08 |
 | 39 | v1.7 | 0 / TBD | Not started | - |
 | 40 | v1.7 | 0 / TBD | Not started | - |
 
@@ -303,7 +307,9 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 
 ---
 
-*Roadmap last updated: 2026-05-08 — Phase 37 SHIPPED (verifier 4/4 PASS). Schema migration + Request-upgrade banner link + requestUpgradeAction server action (createResendClient direct send, 24h rate limit, 9 Vitest unit tests passing) + /app/settings/upgrade server-component page + UpgradeForm client component with 5 visual states all landed. UPGRADE-01..04 marked Complete in REQUIREMENTS.md. Live email delivery requires PREREQ-03 (same Resend gate as Phase 36). v1.7 progress: 4 of 7 phases shipped (34, 35, 36, 37). Next candidates: Phase 38 (magic-link login, no prereqs) or Phase 39 (BOOKER polish, pure UI).*
+*Roadmap last updated: 2026-05-08 — Phase 38 SHIPPED (verifier 19/19 PASS). All three plans complete: backend (`requestMagicLinkAction` + `magicLinkSchema` + 5/hr/IP+email rate-limit config), UI (Password|Magic-link Tabs in `/app/login` Card with Google OAuth preserved above; `MagicLinkSuccess` component with exact CONTEXT-locked copy + 15-min expiry note + 30s resend countdown), and live wiring (`supabase/config.toml` `otp_expiry → 900` + hosted Supabase Magic Link template using `{{ .TokenHash }}` PKCE-compatible URL + Site URL set to production). Andrew live-verified A/B/C/D against production. AUTH-24, AUTH-28, AUTH-29 marked Complete in REQUIREMENTS.md. v1.7 progress: 5 of 7 phases shipped (34, 35, 36, 37, 38). Next candidates: Phase 39 (BOOKER polish, pure UI) or Phase 40 (dead-code audit, depends on all of 34-39).*
+
+*Earlier: Phase 37 SHIPPED (verifier 4/4 PASS). Schema migration + Request-upgrade banner link + requestUpgradeAction server action (createResendClient direct send, 24h rate limit, 9 Vitest unit tests passing) + /app/settings/upgrade server-component page + UpgradeForm client component with 5 visual states all landed. UPGRADE-01..04 marked Complete in REQUIREMENTS.md. Live email delivery requires PREREQ-03 (same Resend gate as Phase 36). v1.7 progress: 4 of 7 phases shipped (34, 35, 36, 37). Next candidates: Phase 38 (magic-link login, no prereqs) or Phase 39 (BOOKER polish, pure UI).*
 
 *Earlier: Phase 36 framework SHIPPED (verifier 13/13 PASS). Schema migration + Resend HTTP provider + factory routing + quota-guard cap-bypass + dual-prefix orchestrator fix + FUTURE_DIRECTIONS.md activation guide all landed; live Resend activation requires PREREQ-03 (Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds RESEND_API_KEY to Vercel). Code activates immediately on `UPDATE accounts SET email_provider='resend' WHERE id=...` once PREREQ-03 done — no redeploy. v1.7 progress: 3 of 7 phases shipped (34, 35, 36).*
 

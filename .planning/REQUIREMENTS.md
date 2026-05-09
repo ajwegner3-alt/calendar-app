@@ -10,12 +10,12 @@
 ### Authentication
 
 - [x] **AUTH-23**: User can sign up by clicking "Sign up with Google" on `/app/signup`; one consent screen requests `openid email profile` + `gmail.send` together
-- [ ] **AUTH-24**: User can request a passwordless login email from the existing `/app/login` card (magic-link option, no separate route)
+- [x] **AUTH-24**: User can request a passwordless login email from the existing `/app/login` card (magic-link option, no separate route)
 - [x] **AUTH-25**: When user denies `gmail.send` at the OAuth consent screen, the account is still created and the user is prompted to connect Gmail later (partial-grant handled gracefully)
 - [x] **AUTH-26**: Existing email/password account holder can connect a Google Gmail from `/app/settings` via `linkIdentity()` — does NOT create a duplicate user
 - [x] **AUTH-27**: User can disconnect their Gmail from `/app/settings`, which revokes the stored refresh token
-- [ ] **AUTH-28**: Magic-link requests rate-limited via `rate_limit_events` (5/hour per (IP+email) pair, silent on throttle — same success-shape response as real sends)
-- [ ] **AUTH-29**: Magic-link request returns identical HTTP response body for known and unknown emails (enumeration-safe)
+- [x] **AUTH-28**: Magic-link requests rate-limited via `rate_limit_events` (5/hour per (IP+email) pair, silent on throttle — same success-shape response as real sends)
+- [x] **AUTH-29**: Magic-link request returns identical HTTP response body for known and unknown emails (enumeration-safe)
 - [x] **AUTH-30**: When user's Gmail refresh token is revoked (`invalid_grant`), an in-app banner prompts reconnect; subsequent email sends refuse-send fail-closed
 
 ### Email Infrastructure
@@ -108,12 +108,12 @@ These block specific phases. Andrew action required before phase can ship.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | AUTH-23 | Phase 34 | Complete |
-| AUTH-24 | Phase 38 | Pending |
+| AUTH-24 | Phase 38 | Complete |
 | AUTH-25 | Phase 34 | Complete |
 | AUTH-26 | Phase 34 | Complete |
 | AUTH-27 | Phase 34 | Complete |
-| AUTH-28 | Phase 38 | Pending |
-| AUTH-29 | Phase 38 | Pending |
+| AUTH-28 | Phase 38 | Complete |
+| AUTH-29 | Phase 38 | Complete |
 | AUTH-30 | Phase 35 | Complete |
 | EMAIL-26 | Phase 35 | Complete |
 | EMAIL-27 | Phase 35 | Complete |
