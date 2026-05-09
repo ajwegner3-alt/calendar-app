@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-09 — **Phase 40 Plan 04 COMPLETE (no-op wave).** Per `40-KNIP-DECISIONS.md` `### Duplicate Exports (Plan 04 target)` = `_None._`, knip found zero duplicates in baseline; plan trivially satisfied. No source-level changes, no `chore(40)` commit, no build/test gate run (nothing to validate). Single `docs(40-04)` metadata commit preserves the wave boundary in git history. SUMMARY codifies the no-op path. Wave 5 (Plan 05 — 23 export REMOVEs across 17 whole-symbol + 6 export-keyword-only) is unblocked and is the next substantive batch. Watermark unchanged: vitest ≤2 failing tests (pre-existing `tests/bookings-api.test.ts` + `tests/slots-api.test.ts` date-sensitive fixtures); `next build` exit 0.
+**Last updated:** 2026-05-09 — **Phase 40 Plan 05 COMPLETE (substantive 23-export batch).** Single atomic `chore(40): remove unused exports` commit `1cbb273` deleted 22 unused exports (15 whole-symbol + 7 export-keyword-only) across 12 source files; 138 lines removed. Build green, vitest watermark held at 2 failing tests (same pre-existing date-sensitive fixtures), tsc error count unchanged at 42 lines (all pre-existing test-file errors). One in-band KEEP-flip: `lib/email/branding-blocks.ts:4 DEFAULT_BRAND_PRIMARY` reclassified whole-symbol → export-keyword-only because pre-flight grep surfaced 3 internal readers DECISIONS.md missed; constant kept as file-private (Phase 19 intentional-divergence lock preserved). Pushed to `origin/main`. Wave 6 (Plan 06: 1 file delete — `components/welcome-card.tsx`) is unblocked.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 + 03 + 04 COMPLETE** (baseline + decisions locked + 3 unused deps removed + duplicate-exports no-op wave). Wave 5 (Plan 05: 23 unused-export REMOVEs) is now next — the largest blast-radius batch.
+**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 + 03 + 04 + 05 COMPLETE** (baseline + decisions locked + 3 unused deps removed + duplicate-exports no-op wave + 22 unused-export REMOVEs landed). Wave 6 (Plan 06: 1 file delete) is now next — small wrap-up before the CI-gate wave.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-04 done)
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-05 done)
 **Phase:** 40 — Dead-code audit — IN PROGRESS
-**Plan:** 4 of 7 complete (knip install + baseline audit report + decisions lock + dep removal + duplicate-exports no-op wave). Wave 5 (Plan 05 — 23 export REMOVEs) is next.
-**Status:** Plans 40-01 + 40-02 + 40-03 + 40-04 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP; first 3 REMOVEs (npm deps) executed in Plan 03; Plan 04 was the empty duplicate-exports wave (zero source changes, single `docs(40-04)` metadata commit only). Remaining: Plan 05 (23 export REMOVEs across whole-symbol + export-keyword-only categories), Plan 06 (1 file delete: `components/welcome-card.tsx`), Plan 07 (CI gate + `knip.json` ignore wiring per DECISIONS.md KEEP list); final v1.7 manual QA pass closes milestone.
-**Last activity:** 2026-05-09 — Plan 40-04 executed as no-op per DECISIONS.md (duplicate-exports target = `_None._`). SUMMARY + STATE update only; no source/test/build changes. Plan-metadata commit (about to land): `docs(40-04): complete remove-duplicate-exports plan (no-op — zero duplicates)`.
+**Plan:** 5 of 7 complete (knip install + baseline audit report + decisions lock + dep removal + duplicate-exports no-op wave + 22 export REMOVEs). Wave 6 (Plan 06 — 1 file delete) is next.
+**Status:** Plans 40-01 + 40-02 + 40-03 + 40-04 + 40-05 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP; first 3 REMOVEs (npm deps) executed in Plan 03; Plan 04 was the empty duplicate-exports wave; Plan 05 landed 22 export REMOVEs (15 whole-symbol + 7 export-keyword-only) atomically in commit `1cbb273` with one in-band KEEP-flip on `lib/email/branding-blocks.ts:4 DEFAULT_BRAND_PRIMARY` (whole-symbol → export-keyword-only — DECISIONS.md miscounted internal readers). Remaining: Plan 06 (1 file delete: `components/welcome-card.tsx`), Plan 07 (CI gate + `knip.json` ignore wiring per DECISIONS.md KEEP list); final v1.7 manual QA pass closes milestone.
+**Last activity:** 2026-05-09 — Plan 40-05 landed atomically as `chore(40): remove unused exports` (commit `1cbb273` pushed to `origin/main`). 12 source files modified, 138 lines deleted. Build green, vitest 2 failing (watermark held), tsc errors unchanged at 42 (all pre-existing). SUMMARY documents the per-symbol log, grep results, and the one KEEP-flip. Plan-metadata commit (about to land): `docs(40-05): complete remove-unused-exports plan`.
 
-Progress (Phase 40): ████░░░ 4/7 plans complete (Plan 05 is next — substantive 23-export batch)
+Progress (Phase 40): █████░░ 5/7 plans complete (Plan 06 is next — single file delete)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -123,28 +123,27 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-09 — Phase 40 Plan 04 executed as documented no-op. Read `40-KNIP-DECISIONS.md` and confirmed `### Duplicate Exports (Plan 04 target)` = `_None._` (matches Plan 02's audit verdict that knip reported zero duplicates in baseline `40-KNIP-REPORT.md`). Skipped Task 1's surgical-removal flow (nothing to remove). Skipped Task 2's `chore(40)` commit (would be empty). Skipped build + test gate (no change to validate; vitest watermark of ≤2 trivially preserved). Created `40-04-SUMMARY.md` codifying the no-op path; updated this STATE.md. Three pre-existing-drift VERIFICATION/CONTEXT files left untouched per plan instruction.
+**Last session:** 2026-05-09 — Phase 40 Plan 05 executed end-to-end. Read `40-KNIP-DECISIONS.md` `### Unused Exports (Plan 05 target)` (23 entries: 17 whole-symbol + 6 export-keyword-only). For every entry, ran the appropriate per-symbol grep across `app/`, `lib/`, `tests/` — verified zero non-self hits per the contract. One verification surfaced a contract miscount: `lib/email/branding-blocks.ts:4 DEFAULT_BRAND_PRIMARY` was classified whole-symbol REMOVE but had 3 internal readers (lines 37, 98, 107) — reclassified in-band to export-keyword-only REMOVE per Plan-execution Rule 3 (blocking issue). All 22 surviving REMOVEs landed atomically in `chore(40): remove unused exports` (commit `1cbb273`). `npm run build` exit 0; `npx vitest run` 2 failing tests (same pre-existing date-sensitive fixtures — watermark held); `npx tsc --noEmit` 42 error lines (identical to pre-edit count — all test-file pre-existing). Pushed to `origin/main` (`fa30c43..1cbb273`). Created `40-05-SUMMARY.md` with full per-symbol log + grep matrix + KEEP-flip rationale. Three pre-existing-drift VERIFICATION/CONTEXT files left untouched per plan instruction.
 
-**Stopped at:** Plan 40-04 complete (no-op wave). Plan 05 (Wave 5 — 23 export REMOVEs across 17 whole-symbol + 6 export-keyword-only modes) is the next substantive batch.
+**Stopped at:** Plan 40-05 complete (22 export REMOVEs landed). Plan 06 (Wave 6 — single file delete: `components/welcome-card.tsx`) is the next batch.
 
-**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 05.
+**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 06.
 
 ## ▶ Next session — start here
 
-**Phase 40 Plans 01 + 02 + 03 + 04 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. First 3 REMOVEs (npm deps) executed in Plan 03 (`14fb48c`); Plan 04 was the documented no-op duplicate-exports wave. `40-KNIP-DECISIONS.md` is the locked contract for Plans 05-06.
+**Phase 40 Plans 01 + 02 + 03 + 04 + 05 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. First 3 REMOVEs (npm deps) executed in Plan 03 (`14fb48c`); Plan 04 was the documented no-op duplicate-exports wave; Plan 05 landed 22 export REMOVEs in commit `1cbb273`. `40-KNIP-DECISIONS.md` remains the locked contract for Plan 06.
 
-### Path A: Resume at Plan 05 (substantive 23-export batch)
+### Path A: Resume at Plan 06 (single file delete)
 
-1. Run `/gsd:execute-phase 40` — Plan 05 (exports) executes next: 17 whole-symbol REMOVEs + 6 export-keyword-only REMOVEs. Largest blast radius — auto-execute with green-build verification per batch.
-2. Plan 06 (files): 1 file delete (`components/welcome-card.tsx`).
-3. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`).
-4. Final v1.7 manual QA pass closes the milestone.
+1. Run `/gsd:execute-phase 40` — Plan 06 (files) executes next: 1 file delete (`components/welcome-card.tsx`). Pre-flight grep across `app/`, `lib/`, `tests/` to confirm zero importers. Quick wave; primarily a `git rm` + atomic commit + push.
+2. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`). Plan 07 may also consider deleting `lib/email-sender/index.ts` (now an inert comment-only file post-Plan-05) as an optional cleanup.
+3. Final v1.7 manual QA pass closes the milestone.
 
 **Final-decision summary (per `40-KNIP-DECISIONS.md`):**
-- 27 REMOVE: 3 deps (nodemailer + 2 supporting), 17 whole-symbol exports, 6 export-keyword-only exports, 1 file (welcome-card.tsx).
+- 27 REMOVE landed/queued: 3 deps (Plan 03), 22 exports across whole-symbol + export-keyword-only (Plan 05), 1 file (Plan 06 next), 0 duplicates (Plan 04 no-op). Total executed: 25/27.
 - 53 KEEP: 5 deps (CSS/CLI consumers + JSDoc-only), 42 shadcn/ui primitives, 3 internal type-graph nodes (lib/email-sender/types.ts), 2 internal-cross-component (usePushbackDialog, customQuestionSchema), 1 dev-tool (generateKey).
 
-**Recommended next command:** `/gsd:execute-phase 40` — Plan 05 (23 export REMOVEs) starts immediately.
+**Recommended next command:** `/gsd:execute-phase 40` — Plan 06 (single file delete) starts immediately.
 
 ### Path B: Pause v1.7 and do something else
 
