@@ -278,7 +278,17 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 3. Each removal group is committed atomically; `next build` runs green between batches; SQL migration files are not touched.
 4. After all approved removals, `npx knip` reports zero issues in the target categories.
 
-**Plans:** TBD
+**Plans:** 9 plans in 9 waves
+
+- [ ] 40-01-knip-install-and-baseline-PLAN.md — Install knip + write knip.json + add scripts + generate baseline 40-KNIP-REPORT.md (Wave 1, autonomous)
+- [ ] 40-02-andrew-review-checkpoint-PLAN.md — Andrew reviews report; Claude deep-dives INVESTIGATE items; produces 40-KNIP-DECISIONS.md (Wave 2, has checkpoint)
+- [ ] 40-03-remove-unused-deps-PLAN.md — Atomic chore commit removing unused dependencies (Wave 3, build+test gate)
+- [ ] 40-04-remove-duplicate-exports-PLAN.md — Atomic chore commit removing duplicate exports (Wave 4, build+test gate)
+- [ ] 40-05-remove-unused-exports-PLAN.md — Atomic chore commit removing unused exports + server-action grep verification (Wave 5, build+test gate)
+- [ ] 40-06-remove-unused-files-PLAN.md — Atomic chore commit removing unused files + sync knip.json with KEEP residue (Wave 6, build+test gate)
+- [ ] 40-07-knip-ci-gate-PLAN.md — Add .github/workflows/knip.yml PR gate (Wave 7, autonomous, lands AFTER all removals)
+- [ ] 40-08-v17-final-qa-PLAN.md — Andrew runs Phase 38 A-D + Phase 39 A-C regression checks on production; results captured in 40-V17-FINAL-QA.md (Wave 8, has checkpoint)
+- [ ] 40-09-milestone-close-PLAN.md — Andrew runs /gsd:complete-milestone to archive v1.7 (Wave 9, has checkpoint)
 
 ---
 
