@@ -9,7 +9,7 @@
 - ✅ **v1.4 Slot Correctness + Polish** — Phases 25-27 (8 plans across 3 phases) — shipped 2026-05-03. Full archive: [`milestones/v1.4-ROADMAP.md`](./milestones/v1.4-ROADMAP.md).
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
-- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 5 of 7 phases shipped (34, 35, 36 framework, 37, 38).
+- 🚧 **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (7 phases) — 6 of 7 phases shipped (34, 35, 36 framework, 37, 38, 39).
 
 ## Phases
 
@@ -256,12 +256,11 @@ See `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.
 3. With OS reduced-motion enabled, picking a slot shows the form immediately with no animation — the skeleton disappears and the form appears without any transition.
 4. React DevTools confirms `BookingForm` is absent from the DOM before a slot is selected (V15-MP-05 Turnstile lifecycle lock preserved); Turnstile token does not stale on slot re-pick.
 
-**Plans:** 3 plans
+**Plans:** 3 plans in 3 waves — all complete 2026-05-08
 
-Plans:
-- [ ] 39-01-key-prop-removal-PLAN.md — Remove `key={selectedSlot.start_at}` from `<BookingForm>` to preserve V15-MP-05 lock and field-persistence
-- [ ] 39-02-skeleton-placeholder-PLAN.md — Add static `BookingFormSkeleton` component and wire into pre-slot state
-- [ ] 39-03-entry-animation-and-reduced-motion-PLAN.md — Add 220ms fade+rise wrapper animation and `prefers-reduced-motion` CSS override
+- [x] 39-01-key-prop-removal-PLAN.md — Remove `key={selectedSlot.start_at}` from `<BookingForm>` to preserve V15-MP-05 lock and field-persistence (Wave 1)
+- [x] 39-02-skeleton-placeholder-PLAN.md — Add static `BookingFormSkeleton` component and wire into pre-slot state (Wave 2)
+- [x] 39-03-entry-animation-and-reduced-motion-PLAN.md — Add 220ms fade+rise wrapper animation and `prefers-reduced-motion` CSS override (Wave 3)
 
 ---
 
@@ -299,7 +298,7 @@ Plans:
 | 36 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 13/13 PASS; live activation requires PREREQ-03 (Resend domain DNS) per FUTURE_DIRECTIONS.md | 2026-05-08 |
 | 37 | v1.7 | 3 / 3 | ✅ Framework shipped — verifier 4/4 PASS; live Resend delivery requires PREREQ-03 (same gate as Phase 36) | 2026-05-08 |
 | 38 | v1.7 | 3 / 3 | ✅ Shipped — verifier 19/19 PASS; Andrew live-verified A/B/C/D against production (`booking.nsintegrations.com`); two non-blocking deviations captured (Site URL fix, Supabase inner-cooldown observation) | 2026-05-08 |
-| 39 | v1.7 | 0 / 3 | Plans drafted (planned 2026-05-08); ready for `/gsd:execute-phase 39` | - |
+| 39 | v1.7 | 3 / 3 | ✅ Shipped — verifier 4/4 PASS; Andrew live-verified all three checkpoints (key-prop removal, skeleton, animation+reduced-motion) on production | 2026-05-08 |
 | 40 | v1.7 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
@@ -312,7 +311,9 @@ Plans:
 
 ---
 
-*Roadmap last updated: 2026-05-08 — Phase 38 SHIPPED (verifier 19/19 PASS). All three plans complete: backend (`requestMagicLinkAction` + `magicLinkSchema` + 5/hr/IP+email rate-limit config), UI (Password|Magic-link Tabs in `/app/login` Card with Google OAuth preserved above; `MagicLinkSuccess` component with exact CONTEXT-locked copy + 15-min expiry note + 30s resend countdown), and live wiring (`supabase/config.toml` `otp_expiry → 900` + hosted Supabase Magic Link template using `{{ .TokenHash }}` PKCE-compatible URL + Site URL set to production). Andrew live-verified A/B/C/D against production. AUTH-24, AUTH-28, AUTH-29 marked Complete in REQUIREMENTS.md. v1.7 progress: 5 of 7 phases shipped (34, 35, 36, 37, 38). Next candidates: Phase 39 (BOOKER polish, pure UI) or Phase 40 (dead-code audit, depends on all of 34-39).*
+*Roadmap last updated: 2026-05-08 — Phase 39 SHIPPED (verifier 4/4 PASS). All three plans complete: key-prop removal (`7b0ec82`) preserves V15-MP-05 Turnstile lifecycle lock + field persistence on slot re-pick; static `BookingFormSkeleton` (`672500b` + `8223203`) replaces bare-text placeholder with shape-only blocks + "Pick a time to continue" copy; 220ms fade+rise wrapper (`c3108b3`) + `@media (prefers-reduced-motion: reduce)` override (`0595108`) deliver smooth first-pick animation that respects accessibility and never re-fires on re-pick. Andrew live-verified all three checkpoints on production: animation smooth + CLS = 0, reduced-motion suppresses cleanly, Turnstile token + RHF field values persist across slot re-picks. BOOKER-06..09 marked Complete in REQUIREMENTS.md. v1.7 progress: 6 of 7 phases shipped (34, 35, 36, 37, 38, 39). Final phase: 40 (dead-code audit).*
+
+*Earlier: Phase 38 SHIPPED (verifier 19/19 PASS). All three plans complete: backend (`requestMagicLinkAction` + `magicLinkSchema` + 5/hr/IP+email rate-limit config), UI (Password|Magic-link Tabs in `/app/login` Card with Google OAuth preserved above; `MagicLinkSuccess` component with exact CONTEXT-locked copy + 15-min expiry note + 30s resend countdown), and live wiring (`supabase/config.toml` `otp_expiry → 900` + hosted Supabase Magic Link template using `{{ .TokenHash }}` PKCE-compatible URL + Site URL set to production). Andrew live-verified A/B/C/D against production. AUTH-24, AUTH-28, AUTH-29 marked Complete in REQUIREMENTS.md. v1.7 progress: 5 of 7 phases shipped (34, 35, 36, 37, 38). Next candidates: Phase 39 (BOOKER polish, pure UI) or Phase 40 (dead-code audit, depends on all of 34-39).*
 
 *Earlier: Phase 37 SHIPPED (verifier 4/4 PASS). Schema migration + Request-upgrade banner link + requestUpgradeAction server action (createResendClient direct send, 24h rate limit, 9 Vitest unit tests passing) + /app/settings/upgrade server-component page + UpgradeForm client component with 5 visual states all landed. UPGRADE-01..04 marked Complete in REQUIREMENTS.md. Live email delivery requires PREREQ-03 (same Resend gate as Phase 36). v1.7 progress: 4 of 7 phases shipped (34, 35, 36, 37). Next candidates: Phase 38 (magic-link login, no prereqs) or Phase 39 (BOOKER polish, pure UI).*
 

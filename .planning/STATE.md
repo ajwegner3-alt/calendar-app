@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 38 COMPLETE.** Magic-link login fully shipped and live-verified on `https://booking.nsintegrations.com`: known-email click-through authenticates, unknown-email + 5/hour throttle + Supabase-internal-cooldown all return byte-identical success UI (four-way enumeration-safety ambiguity invariant), and tab switching cleanly resets state. Plans 01 + 02 + 03 all done; verifier next, then orchestrator updates ROADMAP/REQUIREMENTS. Latest commits: `ecd3dc5`, `8cafad2`, `2161052`, `2632f19`.
+**Last updated:** 2026-05-08 — **Phase 39 COMPLETE.** BOOKER polish fully shipped and live-verified on `https://booking.nsintegrations.com`: V15-MP-05 Turnstile lifecycle lock preserved via `key` prop removal, static `BookingFormSkeleton` replaces bare-text placeholder pre-pick, 220ms fade+rise wrapper animation lands on first slot pick (CLS = 0), `@media (prefers-reduced-motion: reduce)` override suppresses animation cleanly, and re-picks no longer remount the form (typed values + Turnstile token persist across same-date slot changes). Verifier 4/4 PASS. Plans 39-01/02/03 all done. Latest commits: `7b0ec82`, `672500b`, `8223203`, `c3108b3`, `0595108`, `13de0b7`.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 38 (Magic-link login) **COMPLETE** — Plans 01 + 02 + 03 shipped and live-verified on production. Phase 39 (BOOKER polish) or Phase 40 (final manual QA) is the next path.
+**Current focus:** v1.7 Phase 39 (BOOKER polish) **COMPLETE** — Plans 01 + 02 + 03 shipped and live-verified on production. Phase 40 (dead-code audit) is the final v1.7 phase.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (5 of 7 phases shipped)
-**Phase:** 38 — Magic-link login — **COMPLETE**
-**Plan:** 3 of 3 complete (server action + schema; form UI; Supabase template + live verification)
-**Status:** Phase 38 complete. Verifier next, then ROADMAP/REQUIREMENTS update by orchestrator.
-**Last activity:** 2026-05-08 — Plan 38-03 verified live on production (`booking.nsintegrations.com`); A/B/C/D all pass; Site URL config drift (default `localhost:3000`) surfaced and resolved during verification by updating hosted Supabase Site URL → `https://booking.nsintegrations.com`. Commit: `2632f19`.
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (6 of 7 phases shipped)
+**Phase:** 39 — BOOKER polish — **COMPLETE**
+**Plan:** 3 of 3 complete (key-prop removal; skeleton placeholder; entry animation + reduced-motion)
+**Status:** Phase 39 complete. Verifier 4/4 PASS. ROADMAP/REQUIREMENTS updated; ready for Phase 40 (dead-code audit).
+**Last activity:** 2026-05-08 — Plan 39-03 verified live on production (`booking.nsintegrations.com`); A/B/C all pass (animation 220ms fade+rise smooth, CLS = 0, reduced-motion suppresses cleanly, V15-MP-05 lock + RHF field persistence + Turnstile non-staleness regression-checked). Latest commit: `13de0b7`.
 
-Progress (Phase 38): ████████ 3/3 plans complete
+Progress (Phase 39): ████████ 3/3 plans complete
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -34,7 +34,7 @@ v1.3 [X] Bug Fixes + Polish           (Phases 22-24, 6 plans, 34 commits, shippe
 v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shipped 2026-05-03 — 2 days)
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipped 2026-05-06 — ~2 days)
-v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: Phases 34, 35, 36, 37, 38 shipped)
+v1.7 [ ] Auth + Email + Polish + Debt (Phases 34-40, 7 phases — in progress: Phases 34, 35, 36, 37, 38, 39 shipped)
 ```
 
 **Total shipped:** 6 milestones archived (v1.0–v1.6), 33 phases completed, 138+ plans, ~570 commits
@@ -123,23 +123,25 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 38, Plan 03 executed and verified live on production. Local `supabase/config.toml` `otp_expiry` set to 900s (commit `2632f19`). Andrew configured hosted Supabase: Magic Link template subject `Your NSI login link` + body using `{{ .TokenHash }}` PKCE pattern routing through `/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink`; OTP expiry 900s; redirect URL `https://booking.nsintegrations.com/auth/confirm` confirmed in allowlist; **Site URL changed from default `http://localhost:3000` to `https://booking.nsintegrations.com`** (deviation discovered mid-verification — first happy-path attempt failed because emails pointed to localhost). Live verification on `booking.nsintegrations.com`: Test A happy-path PASS after Site URL fix; Test B enumeration safety PASS (zero new `auth.users` rows for fake-email submits, byte-identical UI); Test C silent rate-limit PASS with the additional observation that Supabase's internal per-email OTP cooldown (~60s) reduced 5/5 bucket hits to 2 actual deliveries — strengthens AUTH-29 because all four states (unknown/our-throttle/Supabase-throttle/real-send) now return identical UI; Test D Tabs reset PASS.
+**Last session:** 2026-05-08 — Phase 39 (BOOKER polish) executed end-to-end across three sequential waves. Wave 1 (`7b0ec82`): removed `key={selectedSlot.start_at}` from `<BookingForm>` in `booking-shell.tsx` + rewrote surrounding lifecycle comment — preserves V15-MP-05 Turnstile lock and RHF field persistence on slot re-pick. Wave 2 (`672500b` + `8223203`): created static `BookingFormSkeleton` (8 shape-only `bg-muted` blocks, NO `animate-pulse`, helper copy "Pick a time to continue") and wired it into the no-slot branch, replacing the bare-text placeholder. Wave 3 (`c3108b3` + `0595108`): wrapped `<BookingForm>` (no `key` prop) in `animate-in fade-in slide-in-from-bottom-2 duration-[220ms] ease-out motion-reduce:animate-none` div + added `@media (prefers-reduced-motion: reduce)` belt-and-suspenders override in `app/globals.css`. Each plan checkpoint live-verified by Andrew: V15-MP-05 lock holds (form absent pre-pick, persists across re-pick on same date, unmounts on date change per design), skeleton renders cleanly on desktop + mobile (no false loading spinner), animation smooth + CLS = 0, reduced-motion fully suppresses, Turnstile token does not stale on re-pick. Verifier 4/4 PASS — BOOKER-06..09 marked Complete.
 
-**Stopped at:** Phase 38 complete. Verifier next, then ROADMAP/REQUIREMENTS update by orchestrator.
+**Stopped at:** Phase 39 complete. ROADMAP/STATE/REQUIREMENTS updated. Ready for Phase 40 (dead-code audit + final manual QA).
 
 **Resume file:** None
 
 ## ▶ Next session — start here
 
-**Phase 38 COMPLETE.** All three plans shipped and live-verified on `https://booking.nsintegrations.com`. AUTH-24 (delivery), AUTH-28 (5/hour silent throttle), AUTH-29 (enumeration safety) all observable on production. Verifier next, then orchestrator updates ROADMAP.md and REQUIREMENTS.md.
+**Phase 39 COMPLETE.** All three plans shipped and live-verified on `https://booking.nsintegrations.com`. BOOKER-06 (entry animation), BOOKER-07 (skeleton placeholder), BOOKER-08 (reduced-motion respected), BOOKER-09 (V15-MP-05 lock + CLS = 0) all observable on production. Verifier 4/4 PASS.
 
-### Path A: Phase 39 (BOOKER polish) — next recommended step
+### Path A: Phase 40 (dead-code audit + final manual QA) — final v1.7 phase
 
-Zero backend dependencies. Pure UI work. Plan file does not yet exist; orchestrator will scaffold via `/gsd:plan-phase`.
+Closes v1.7. Tasks: install `knip` as devDependency, configure `knip.json` with explicit ignore list (must include `slot-picker.tsx` per Plan 30-01 Rule 4, test mock helpers, `__mocks__/`), generate report (markdown + JSON committed to phase folder), Andrew reviews each removal candidate item-by-item with REMOVE / KEEP / INVESTIGATE decision, atomic surgical commits with `next build` green between batches, SQL migration files untouched. Also includes regression re-runs of Phase 38 A-D and Phase 39 A-C as part of the broader v1.7 manual QA pass.
 
-### Path B: Phase 40 (final manual QA + dead-code audit) — final v1.7 phase
+**Recommended next command:** `/gsd:plan-phase 40` (after `/clear` for fresh context).
 
-Includes the canonical Phase 38 regression sub-tests (re-run A-D from `38-03-PLAN.md`) as part of the broader v1.7 manual QA pass. `slot-picker.tsx` knip ignore-list audit lives here. Will close v1.7.
+### Path B: Pause v1.7 and do something else
+
+Phase 40 is optional — current production state is fully shippable. Decide based on whether dead-code surgical removal and final QA are worth the time investment now vs. moving to v1.8 work.
 
 ### PREREQ-03 — still required for Phase 36 live activation
 

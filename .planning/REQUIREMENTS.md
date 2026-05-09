@@ -40,10 +40,10 @@
 
 ### Booker Polish
 
-- [ ] **BOOKER-06**: After slot pick, the form column animates in (200–250ms ease-out, `transform`/`opacity` only via existing `tw-animate-css`)
-- [ ] **BOOKER-07**: Before slot pick (`selectedSlot === null`), the empty form column shows a shape-only skeleton placeholder (no false-positive "loading" implication)
-- [ ] **BOOKER-08**: Animation respects `prefers-reduced-motion` (no animation when user has OS reduced-motion enabled)
-- [ ] **BOOKER-09**: V15-MP-05 Turnstile lifecycle lock preserved (`BookingForm` absent from DOM before `selectedSlot !== null`); Chrome CLS = 0.0 verified after slot-pick animation
+- [x] **BOOKER-06**: After slot pick, the form column animates in (200–250ms ease-out, `transform`/`opacity` only via existing `tw-animate-css`)
+- [x] **BOOKER-07**: Before slot pick (`selectedSlot === null`), the empty form column shows a shape-only skeleton placeholder (no false-positive "loading" implication)
+- [x] **BOOKER-08**: Animation respects `prefers-reduced-motion` (no animation when user has OS reduced-motion enabled)
+- [x] **BOOKER-09**: V15-MP-05 Turnstile lifecycle lock preserved (`BookingForm` absent from DOM before `selectedSlot !== null`); Chrome CLS = 0.0 verified after slot-pick animation
 
 ### Dead-Code Audit
 
@@ -129,10 +129,10 @@ These block specific phases. Andrew action required before phase can ship.
 | UPGRADE-04 | Phase 37 | Complete |
 | UPGRADE-05 | Phase 36 | Complete (framework — live activation deferred per PREREQ-03) |
 | UPGRADE-06 | Phase 36 | Complete (framework — live activation deferred per PREREQ-03) |
-| BOOKER-06 | Phase 39 | Pending |
-| BOOKER-07 | Phase 39 | Pending |
-| BOOKER-08 | Phase 39 | Pending |
-| BOOKER-09 | Phase 39 | Pending |
+| BOOKER-06 | Phase 39 | Complete |
+| BOOKER-07 | Phase 39 | Complete |
+| BOOKER-08 | Phase 39 | Complete |
+| BOOKER-09 | Phase 39 | Complete |
 | DEBT-09 | Phase 40 | Pending |
 | DEBT-10 | Phase 40 | Pending |
 | DEBT-11 | Phase 40 | Pending |
