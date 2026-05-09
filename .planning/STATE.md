@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 40 Plan 03 COMPLETE.** Three orphaned dependencies removed in single atomic chore commit (`14fb48c`): `nodemailer`, `@eslint/eslintrc`, `@types/nodemailer`. Pre-flight greps confirmed zero source-level imports for all three. Build green (`next build` ~20s, exit 0); pushed to origin/main (`b00b112..14fb48c`); Vercel auto-deploy triggered. **Watermark correction:** vitest baseline confirmed at 2 failing tests (`tests/bookings-api.test.ts` + `tests/slots-api.test.ts`), NOT 1 — both fail on pre-commit state too (verified via temporary `git checkout 6b1c3b0 -- package.json package-lock.json` rollback test). Dep removal does NOT cause either failure; both are pre-existing test-fixture date-sensitivity issues. Wave 4 (Plan 04 — duplicate exports) is next; per DECISIONS.md, that wave is empty (`_None._`) and will auto-skip with a documentation-only commit. Plan 05 (23 export REMOVEs) is the next substantive batch.
+**Last updated:** 2026-05-09 — **Phase 40 Plan 04 COMPLETE (no-op wave).** Per `40-KNIP-DECISIONS.md` `### Duplicate Exports (Plan 04 target)` = `_None._`, knip found zero duplicates in baseline; plan trivially satisfied. No source-level changes, no `chore(40)` commit, no build/test gate run (nothing to validate). Single `docs(40-04)` metadata commit preserves the wave boundary in git history. SUMMARY codifies the no-op path. Wave 5 (Plan 05 — 23 export REMOVEs across 17 whole-symbol + 6 export-keyword-only) is unblocked and is the next substantive batch. Watermark unchanged: vitest ≤2 failing tests (pre-existing `tests/bookings-api.test.ts` + `tests/slots-api.test.ts` date-sensitive fixtures); `next build` exit 0.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 + 03 COMPLETE** (baseline + decisions locked + 3 unused deps removed). Wave 4 (Plan 04: duplicate exports) is unblocked but is empty per DECISIONS.md and will auto-skip. Plan 05 will execute the largest batch (23 export removals across whole-symbol vs export-keyword-only modes).
+**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 + 03 + 04 COMPLETE** (baseline + decisions locked + 3 unused deps removed + duplicate-exports no-op wave). Wave 5 (Plan 05: 23 unused-export REMOVEs) is now next — the largest blast-radius batch.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-03 done)
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-04 done)
 **Phase:** 40 — Dead-code audit — IN PROGRESS
-**Plan:** 3 of 7 complete (knip install + baseline audit report + decisions lock + dep removal). Wave 4 (Plan 04 — duplicate exports, empty) is next.
-**Status:** Plans 40-01 + 40-02 + 40-03 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP; first 3 REMOVEs (npm deps) executed. Remaining: Plan 04 (empty wave — duplicates: 0 items; documentation skip), Plan 05 (23 export REMOVEs across whole-symbol + export-keyword-only categories), Plan 06 (1 file delete: `components/welcome-card.tsx`), Plan 07 (CI gate + `knip.json` ignore wiring per DECISIONS.md KEEP list); final v1.7 manual QA pass closes milestone.
-**Last activity:** 2026-05-08 — Plan 40-03 removed `nodemailer`, `@eslint/eslintrc`, `@types/nodemailer` via single `npm uninstall`. Build green (~20s); pushed to origin/main. Latest commits: `96f4033`, `d5cfe61`, `d94e3c6`, `18ff367`, `6b1c3b0`, `14fb48c`.
+**Plan:** 4 of 7 complete (knip install + baseline audit report + decisions lock + dep removal + duplicate-exports no-op wave). Wave 5 (Plan 05 — 23 export REMOVEs) is next.
+**Status:** Plans 40-01 + 40-02 + 40-03 + 40-04 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP; first 3 REMOVEs (npm deps) executed in Plan 03; Plan 04 was the empty duplicate-exports wave (zero source changes, single `docs(40-04)` metadata commit only). Remaining: Plan 05 (23 export REMOVEs across whole-symbol + export-keyword-only categories), Plan 06 (1 file delete: `components/welcome-card.tsx`), Plan 07 (CI gate + `knip.json` ignore wiring per DECISIONS.md KEEP list); final v1.7 manual QA pass closes milestone.
+**Last activity:** 2026-05-09 — Plan 40-04 executed as no-op per DECISIONS.md (duplicate-exports target = `_None._`). SUMMARY + STATE update only; no source/test/build changes. Plan-metadata commit (about to land): `docs(40-04): complete remove-duplicate-exports plan (no-op — zero duplicates)`.
 
-Progress (Phase 40): ███░░░░ 3/7 plans complete (Plan 04 next — empty wave, will auto-skip; Plan 05 is next substantive batch)
+Progress (Phase 40): ████░░░ 4/7 plans complete (Plan 05 is next — substantive 23-export batch)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -123,29 +123,28 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 40 Plan 03 executed autonomously. Pre-flight greps run for all 3 packages across `*.{ts,tsx,js,mjs}` source + config files; zero real-consumer hits surfaced (only stale comments in `eslint.config.mjs:9` and email-stack source files, plus `package.json`/`package-lock.json` self-refs). `npm uninstall nodemailer @eslint/eslintrc @types/nodemailer` removed 2 packages from the tree. `git diff package.json` showed only the 3 expected line removals. Atomic commit `14fb48c` ("chore(40): remove unused dependencies") landed; build gate green (`next build` ~20s, exit 0); vitest gate showed 2 failures vs documented watermark of 1, but rollback-test confirmed both failures are pre-existing (not caused by removal) — watermark corrected from 1 → 2 in Open Tech Debt section. Pushed to origin/main (`b00b112..14fb48c`). Vercel CLI not available in session; deploy-status verification deferred to Andrew. Three pre-existing-drift VERIFICATION/CONTEXT files left untouched per plan instruction.
+**Last session:** 2026-05-09 — Phase 40 Plan 04 executed as documented no-op. Read `40-KNIP-DECISIONS.md` and confirmed `### Duplicate Exports (Plan 04 target)` = `_None._` (matches Plan 02's audit verdict that knip reported zero duplicates in baseline `40-KNIP-REPORT.md`). Skipped Task 1's surgical-removal flow (nothing to remove). Skipped Task 2's `chore(40)` commit (would be empty). Skipped build + test gate (no change to validate; vitest watermark of ≤2 trivially preserved). Created `40-04-SUMMARY.md` codifying the no-op path; updated this STATE.md. Three pre-existing-drift VERIFICATION/CONTEXT files left untouched per plan instruction.
 
-**Stopped at:** Plan 40-03 complete. Plan 04 (Wave 4 — duplicate exports) is empty per DECISIONS.md ("_None._") and will auto-skip with a documentation-only commit. Plan 05 (Wave 5 — 23 export REMOVEs) is the next substantive batch.
+**Stopped at:** Plan 40-04 complete (no-op wave). Plan 05 (Wave 5 — 23 export REMOVEs across 17 whole-symbol + 6 export-keyword-only modes) is the next substantive batch.
 
-**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 04.
+**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 05.
 
 ## ▶ Next session — start here
 
-**Phase 40 Plans 01 + 02 + 03 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. First 3 REMOVEs (npm deps) executed — `nodemailer`, `@eslint/eslintrc`, `@types/nodemailer` removed in commit `14fb48c`, pushed to origin/main. `40-KNIP-DECISIONS.md` is the locked contract for Plans 04-06.
+**Phase 40 Plans 01 + 02 + 03 + 04 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. First 3 REMOVEs (npm deps) executed in Plan 03 (`14fb48c`); Plan 04 was the documented no-op duplicate-exports wave. `40-KNIP-DECISIONS.md` is the locked contract for Plans 05-06.
 
-### Path A: Resume Plan 04 (empty wave — auto-skips)
+### Path A: Resume at Plan 05 (substantive 23-export batch)
 
-1. Run `/gsd:execute-phase 40` — Plan 04 (duplicate exports) is empty per DECISIONS.md and will auto-skip with a documentation-only commit; orchestrator advances to Plan 05.
-2. Plan 05 (exports): 17 whole-symbol REMOVEs + 6 export-keyword-only REMOVEs. Largest blast radius — auto-execute with green-build verification per batch.
-3. Plan 06 (files): 1 file delete (`components/welcome-card.tsx`).
-4. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`).
-5. Final v1.7 manual QA pass closes the milestone.
+1. Run `/gsd:execute-phase 40` — Plan 05 (exports) executes next: 17 whole-symbol REMOVEs + 6 export-keyword-only REMOVEs. Largest blast radius — auto-execute with green-build verification per batch.
+2. Plan 06 (files): 1 file delete (`components/welcome-card.tsx`).
+3. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`).
+4. Final v1.7 manual QA pass closes the milestone.
 
 **Final-decision summary (per `40-KNIP-DECISIONS.md`):**
 - 27 REMOVE: 3 deps (nodemailer + 2 supporting), 17 whole-symbol exports, 6 export-keyword-only exports, 1 file (welcome-card.tsx).
 - 53 KEEP: 5 deps (CSS/CLI consumers + JSDoc-only), 42 shadcn/ui primitives, 3 internal type-graph nodes (lib/email-sender/types.ts), 2 internal-cross-component (usePushbackDialog, customQuestionSchema), 1 dev-tool (generateKey).
 
-**Recommended next command:** `/gsd:execute-phase 40` — Plan 04 (empty wave, auto-skips) then Plan 05 (23 export REMOVEs) starts immediately.
+**Recommended next command:** `/gsd:execute-phase 40` — Plan 05 (23 export REMOVEs) starts immediately.
 
 ### Path B: Pause v1.7 and do something else
 
