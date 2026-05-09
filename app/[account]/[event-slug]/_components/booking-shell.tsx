@@ -251,11 +251,12 @@ export function BookingShell({ account, eventType }: BookingShellProps) {
                 {/* Col 3: Form column — fixed 320px reserved at all times.
                     V15-MP-05 LOCK: placeholder is a <div>, NOT a mounted <BookingForm>.
                     Turnstile mounts on BookingForm mount (~2-min token expiry).
-                    key={selectedSlot.start_at} forces RHF reset on slot change. */}
+                    BookingForm has NO `key` prop — once mounted on first slot pick, it must
+                    remain mounted across re-picks so RHF field values and the Turnstile
+                    token persist (Phase 39 field-persistence guarantee + V15-MP-05). */}
                 <div>
                   {selectedSlot ? (
                     <BookingForm
-                      key={selectedSlot.start_at}
                       accountSlug={account.slug}
                       eventType={eventType}
                       selectedSlot={selectedSlot}
