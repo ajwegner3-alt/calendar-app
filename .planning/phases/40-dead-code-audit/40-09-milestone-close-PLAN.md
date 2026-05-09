@@ -15,7 +15,7 @@ must_haves:
     - "v1.7 milestone archived to .planning/milestones/v1.7-ROADMAP.md (mirrors v1.0-v1.6 archive pattern)"
     - "Top-level ROADMAP.md updated: v1.7 row marked shipped with date; Phases 34-40 collapsed under <details> like prior milestones"
     - "STATE.md updated: current milestone is v1.8 (or 'between milestones'); Phase 40 marked complete"
-    - "Andrew has run `/gsd:complete-milestone` and confirmed the archive output"
+    - "v1.7 is archived to `.planning/milestones/v1.7-ROADMAP.md` (via `/gsd:complete-milestone` or manual reconciliation if the command fails)"
   artifacts:
     - path: ".planning/milestones/v1.7-ROADMAP.md"
       provides: "Archived v1.7 phase-by-phase record"

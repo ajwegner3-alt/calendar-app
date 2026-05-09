@@ -13,7 +13,7 @@ must_haves:
   truths:
     - "Every file listed under '### Unused Files (Plan 06 target)' in 40-KNIP-DECISIONS.md is deleted"
     - "SQL migration files in supabase/migrations/ are NOT touched"
-    - "After deletion + final knip.json sync, `npx knip` reports zero issues in target categories (modulo the locked KEEP list which is now in knip.json `ignore` / `ignoreDependencies`)"
+    - "After deletion + final knip.json sync (plus per-symbol `knip-ignore-line` comments or `ignoreExportsUsedInFile` entries for KEEP-listed exports), `npx knip` exits 0 across ALL categories — file/dep/export KEEP residue is fully resolved in Plan 06; Plan 07 inherits a clean tree"
     - "`next build` exits 0 after removal"
     - "`vitest run` failing-test count remains <=1"
     - "Single chore commit `chore(40): remove unused files` lands the deletions atomically; knip.json sync may be a separate prep commit if needed"
@@ -84,31 +84,32 @@ File deletions staged; type-check clean; SQL migrations untouched.
 </task>
 
 <task type="auto">
-  <name>Task 2: Sync knip.json with locked KEEP list, then build+test gate, then commit</name>
+  <name>Task 2: Sync knip.json with locked KEEP list, commit atomically, then run build + test gate</name>
   <files>knip.json</files>
   <action>
-Read the "## Final KEEP list" section of `40-KNIP-DECISIONS.md` and update `knip.json` so:
+**Framing note:** Additions to `knip.json` `ignore` / `ignoreDependencies` / `ignoreExportsUsedInFile` in this task are **post-review residue** from Andrew's KEEP decisions, NOT preemptive ignores. CONTEXT.md's preemptive-ignore restriction (slot-picker + tests/__mocks__ + helpers only) does not apply at this stage — Claude's discretion clause covers post-review sync.
 
-- Every KEEP-listed **file** is in the `"ignore"` array (preserving the existing `app/[account]/[event-slug]/_components/slot-picker.tsx` entry).
-- Every KEEP-listed **dependency** is added to `"ignoreDependencies"` (create the array if it doesn't exist).
-- KEEP-listed **exports** can stay flagged by knip (they are exports, not files; usual approach is to leave them and accept the residue, OR add `"ignoreExportsUsedInFile"` if appropriate — Andrew's call). Default: leave them as residue and document in DECISIONS.md why the CI gate is allowed to flag them (it won't, because if Plan 07's CI command is `knip --no-progress --reporter compact` and exit code is what we gate on, ANY remaining issue fails CI). To handle this cleanly: if there ARE KEEP-listed exports, add a `"ignoreExportsUsedInFile"` block or add explicit per-symbol comments in source AND surface to Andrew during Plan 07 setup. For now in Plan 06, mirror the file/dep KEEP entries into knip.json and leave export-level KEEP residue for Plan 07 to address.
+Read the "## Final KEEP list" section of `40-KNIP-DECISIONS.md` and update `knip.json` so **all three categories of KEEP residue are fully resolved before this plan ends** (so `npx knip` exits 0 and Plan 07's CI gate can land):
 
-After updating knip.json, run `npx knip` and confirm exit code 0 (zero issues across all categories).
+1. **KEEP-listed files** → add to the `"ignore"` array (preserving the existing `app/[account]/[event-slug]/_components/slot-picker.tsx` entry).
 
-If `npx knip` STILL reports issues:
-- If it's an export-level KEEP residue: that's a Plan 07 concern. Note in summary; Plan 07 will adjust knip.json or migrate the export to a different ignore mechanism.
-- If it's a NEW finding (not in DECISIONS.md): means a previous plan missed something OR removing a file orphaned an export elsewhere. Investigate, surface to Andrew, decide whether to extend this commit's deletion list or flip the new finding to KEEP.
+2. **KEEP-listed dependencies** → add to `"ignoreDependencies"` (create the array if it doesn't exist).
 
-Build + test gate (per CONTEXT.md):
-1. `npm run build` — MUST exit 0.
-2. `npx vitest run` — failing count MUST be <=1.
+3. **KEEP-listed exports** → resolve fully here (do NOT defer to Plan 07). Pick per-residue size:
+   - **Option A — per-symbol `// knip-ignore-line` comment** at the export site. Best when there are only a handful of KEEP-listed exports (≤5) and they're spread across different files; the comment lives next to the symbol, so future-Claude sees the rationale in context.
+   - **Option B — `ignoreExportsUsedInFile: true`** per file in `knip.json` (use the file-keyed object form: `"ignoreExportsUsedInFile": { "path/to/file.ts": true }`). Best when many KEEP exports cluster in a few files (e.g., a barrel or a util module with several intentionally-public-but-unused-yet symbols). One config edit covers the file.
+   - Document the chosen mechanism per export in `40-KNIP-DECISIONS.md` (extend the "Final KEEP list → Exports" entries with `(suppressed via: knip-ignore-line)` or `(suppressed via: ignoreExportsUsedInFile in knip.json)`).
 
-Failure recovery: `git checkout -- {files}` (or `git restore --staged --worktree {files}` for staged deletions), edit DECISIONS.md to flip offending file to KEEP with rationale, re-attempt.
+After updating knip.json (and any in-source `knip-ignore-line` comments), run `npx knip` and confirm **exit code 0** across ALL categories. This is a hard requirement — Plan 07's CI gate cannot land if `npx knip` is non-zero at the end of Plan 06.
 
-If gate green, commit atomically:
+If `npx knip` still reports issues:
+- If it's an export-level KEEP residue not yet suppressed: keep iterating on Option A / Option B until clean. Do NOT punt to Plan 07.
+- If it's a NEW finding (not in DECISIONS.md): means a previous plan missed something OR removing a file orphaned an export elsewhere. Investigate, surface to Andrew, decide whether to extend this commit's deletion list or flip the new finding to KEEP (then re-suppress per the same Option A/B mechanism).
+
+Step 1 — Commit atomically (deletions from Task 1 + knip.json sync + any in-source knip-ignore-line comments):
 
 ```bash
-git add -A {deleted files paths} knip.json
+git add -A {deleted files paths} knip.json {files-with-knip-ignore-line-comments}
 git commit -m "chore(40): remove unused files
 
 Removed per 40-KNIP-DECISIONS.md:
@@ -116,18 +117,27 @@ Removed per 40-KNIP-DECISIONS.md:
 - {path2}
 - ...
 
-Synced knip.json ignore list with locked KEEP residue.
+Synced knip.json ignore / ignoreDependencies / ignoreExportsUsedInFile with locked KEEP residue.
+Per-symbol knip-ignore-line comments added where applicable (see DECISIONS.md).
 SQL migrations untouched (supabase/migrations/** excluded from project glob).
 
-Audit log: .planning/phases/40-dead-code-audit/40-KNIP-DECISIONS.md
-Build + vitest gate: PASS
-npx knip: zero issues in target categories"
+Audit log: .planning/phases/40-dead-code-audit/40-KNIP-DECISIONS.md"
 ```
 
-Push immediately. Verify Vercel deploy green.
+Step 2 — Run the build + test gate AFTER the commit (per CONTEXT.md "Commit cadence"):
+
+1. `npm run build` — MUST exit 0.
+2. `npx vitest run` — failing count MUST be <=1.
+3. `npx knip` — MUST exit 0 (no residual issues; this is the gate Plan 07 inherits).
+
+Step 3 — Outcome:
+
+- **If green:** push immediately. Verify Vercel deploy green. Plan 07 (CI gate) can proceed.
+
+- **If red:** `git revert HEAD --no-edit` to undo the commit cleanly (preserves history per CONTEXT.md). Edit `40-KNIP-DECISIONS.md` to flip the offending file(s) to KEEP with rationale `"build/test failure: {error}"`. Update knip.json (and source comments) accordingly so the new KEEP item is suppressed under the same Option A / Option B framework. Re-attempt the batch from Task 1 with the trimmed REMOVE list (a fresh commit). Document the revert + KEEP flip in DECISIONS.md.
   </action>
   <verify>
-- `npx knip` exits 0 (or has only the export-level KEEP residue documented for Plan 07 handling).
+- `npx knip` exits 0 across ALL categories (file, dep, AND export KEEP residue fully resolved in this plan — no residue punted to Plan 07).
 - `git log -1 --oneline` shows the chore commit.
 - `git diff HEAD~1 -- supabase/migrations/` shows zero changes.
 - Vercel deploy green.
@@ -144,14 +154,14 @@ All four removal commits landed (40-03 through 40-06). Codebase is knip-clean (o
 - Single `chore(40): remove unused files` commit covering deletions + knip.json sync.
 - `next build` + `vitest run` watermark held.
 - SQL migrations verified untouched.
-- `npx knip` reports zero issues (or only documented residue).
+- `npx knip` exits 0 (zero issues across all categories — KEEP residue suppressed via knip.json + optional per-symbol comments).
 - All four removal commits exist on `main` (`git log --oneline | grep "chore(40):"` shows: deps, duplicate exports, unused exports, unused files).
 </verification>
 
 <success_criteria>
 - File deletions surgical and staged via `git rm`.
 - knip.json synced with KEEP residue.
-- `npx knip` exit 0 (or documented exception).
+- `npx knip` exit 0 across all categories (KEEP residue fully resolved in this plan).
 - Atomic commit.
 - Build + test gate green.
 </success_criteria>

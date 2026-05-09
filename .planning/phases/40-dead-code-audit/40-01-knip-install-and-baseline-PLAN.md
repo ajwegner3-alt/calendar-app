@@ -99,10 +99,13 @@ Notes (do NOT deviate from this config without an explicit reason recorded in 40
 Add the four scripts to `package.json` `"scripts"` block (preserve all existing scripts):
 
 ```json
-"knip": "knip",
-"knip:report": "knip --reporter markdown > .planning/phases/40-dead-code-audit/40-KNIP-REPORT.md",
-"knip:json": "knip --reporter json > .planning/phases/40-dead-code-audit/40-KNIP-REPORT.json",
-"knip:ci": "knip --no-progress --reporter compact"
+{
+  "knip": "knip",
+  "knip:report": "knip --reporter markdown > .planning/phases/40-dead-code-audit/40-KNIP-REPORT.md",
+  "knip:json": "knip --reporter json > .planning/phases/40-dead-code-audit/40-KNIP-REPORT.json",
+  "knip:ci": "knip --no-progress --reporter compact"
+}
+```
   </action>
   <verify>
 - `npx knip --version` prints a 6.x version.

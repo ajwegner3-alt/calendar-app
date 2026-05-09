@@ -94,7 +94,7 @@ Then surface to Andrew:
 WAIT for Andrew's response. He edits the file again, replacing INVESTIGATE with REMOVE or KEEP based on your findings. After his "investigations decided" signal, re-read the file and confirm zero INVESTIGATE rows remain. If any do, return to Andrew with the offending row and re-prompt.
   </action>
   <verify>
-- After Andrew's "investigations decided" reply: `grep -c "INVESTIGATE" .planning/phases/40-dead-code-audit/40-KNIP-REPORT.md` returns 0 inside table cells (the word may still appear in the "How to use this file" preamble — that's fine; what matters is no Decision cell still says INVESTIGATE).
+- After Andrew's "investigations decided" reply: `grep -c "| INVESTIGATE |" .planning/phases/40-dead-code-audit/40-KNIP-REPORT.md` returns 0 (matches only pipe-delimited table cells, so the preamble word does not false-positive). What matters is no Decision cell still says INVESTIGATE.
 - Every former INVESTIGATE row has a Claude "Investigation:" sub-row with a concrete finding.
   </verify>
   <done>

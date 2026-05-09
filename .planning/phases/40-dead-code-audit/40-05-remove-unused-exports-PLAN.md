@@ -84,20 +84,12 @@ Every unused export removed; type-check clean.
 </task>
 
 <task type="auto">
-  <name>Task 2: Build + test gate, then commit atomically</name>
+  <name>Task 2: Commit atomically, then run build + test gate</name>
   <files>(no file changes; commit only)</files>
   <action>
-Run the build + test gate:
+Per CONTEXT.md "Commit cadence" — commit FIRST (the commit is the batch boundary), then run the gate, then recover via `git revert` if red.
 
-1. `npm run build` — MUST exit 0.
-2. `npx vitest run` — failing count MUST be <=1.
-
-Failure recovery (per CONTEXT.md):
-- `git checkout -- {modified files}` to discard removals (or `git revert` if already committed in error).
-- Edit `40-KNIP-DECISIONS.md` to flip the offending export(s) to KEEP with rationale `"build/test failure: {error}"`. Granularity: try to identify the single offending export rather than reverting the whole batch (a failing tsc error usually names the symbol). If unable to bisect, flip the entire commit's batch to KEEP and surface to Andrew.
-- Re-attempt with the reduced REMOVE list.
-
-If green:
+Step 1 — Commit the removals atomically:
 
 ```bash
 git add {modified files}
@@ -107,11 +99,19 @@ Removed per 40-KNIP-DECISIONS.md:
 - {file}:{line} {symbol}
 - ...
 
-Audit log: .planning/phases/40-dead-code-audit/40-KNIP-DECISIONS.md
-Build + vitest gate: PASS"
+Audit log: .planning/phases/40-dead-code-audit/40-KNIP-DECISIONS.md"
 ```
 
-Push immediately. Verify Vercel deploy green.
+Step 2 — Run the build + test gate AFTER the commit:
+
+1. `npm run build` — MUST exit 0.
+2. `npx vitest run` — failing count MUST be <=1.
+
+Step 3 — Outcome:
+
+- **If green:** push immediately. Verify Vercel deploy green. Continue to Plan 06.
+
+- **If red:** `git revert HEAD --no-edit` to undo the commit cleanly (preserves history per CONTEXT.md). Edit `40-KNIP-DECISIONS.md` to flip the offending export(s) to KEEP with rationale `"build/test failure: {error}"`. Granularity: try to identify the single offending export rather than reverting the whole batch (a failing tsc error usually names the symbol). If unable to bisect, flip the entire commit's batch to KEEP and surface to Andrew. Re-run knip if needed to confirm the reduced scope, then re-attempt the batch from Task 1 with the trimmed REMOVE list (a fresh commit). Document the revert + KEEP flip in DECISIONS.md.
   </action>
   <verify>
 - `git log -1 --oneline` shows the chore commit.

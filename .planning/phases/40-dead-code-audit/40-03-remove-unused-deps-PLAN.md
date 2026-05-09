@@ -77,19 +77,12 @@ package.json + package-lock.json reflect the trimmed dep list. No source files m
 </task>
 
 <task type="auto">
-  <name>Task 2: Build + test gate, then commit atomically</name>
+  <name>Task 2: Commit atomically, then run build + test gate</name>
   <files>(no file changes; commit only)</files>
   <action>
-Run the build + test gate per CONTEXT.md "Commit cadence":
+Per CONTEXT.md "Commit cadence" — the commit IS the batch boundary. Order: **commit first, then run the gate, then recover via `git revert` if red.**
 
-1. `npm run build` (Next.js production build) — MUST exit 0.
-2. `npx vitest run` — failing-test count MUST be <=1 (the pre-existing `tests/bookings-api.test.ts` fixture-mismatch watermark per STATE.md "Open tech debt").
-
-If build fails: read the error, identify which removed dep was actually consumed (likely a config-file-only consumer that the seeding pass missed). `git checkout package.json package-lock.json` to discard the removal, edit `40-KNIP-DECISIONS.md` to flip the offending package from REMOVE to KEEP with rationale `"build failure on uninstall: {error message}"`, then re-run from Task 1 with the trimmed REMOVE list.
-
-If vitest failures > 1: same recovery — identify the regression-causing dep, flip to KEEP in DECISIONS.md, re-attempt.
-
-If build+test gate green: commit atomically.
+Step 1 — Commit the removal atomically:
 
 ```bash
 git add package.json package-lock.json
@@ -100,13 +93,19 @@ Removed per 40-KNIP-DECISIONS.md:
 - {pkg2}
 - ...
 
-Audit log: .planning/phases/40-dead-code-audit/40-KNIP-DECISIONS.md
-Build + vitest gate: PASS"
+Audit log: .planning/phases/40-dead-code-audit/40-KNIP-DECISIONS.md"
 ```
 
-Push immediately per global rule "All testing is done live. Once a section or update is complete, push to GitHub immediately to deploy."
+Step 2 — Run the build + test gate AFTER the commit:
 
-Confirm Vercel deploy succeeds (check deployment URL or the Vercel dashboard; if Vercel CLI is available, `vercel ls` to see latest deploy status).
+1. `npm run build` (Next.js production build) — MUST exit 0.
+2. `npx vitest run` — failing-test count MUST be <=1 (the pre-existing `tests/bookings-api.test.ts` fixture-mismatch watermark per STATE.md "Open tech debt").
+
+Step 3 — Outcome:
+
+- **If green:** push immediately per global rule "All testing is done live. Once a section or update is complete, push to GitHub immediately to deploy." Confirm Vercel deploy succeeds (check deployment URL or the Vercel dashboard; if Vercel CLI is available, `vercel ls` to see latest deploy status). Continue to Plan 04.
+
+- **If red:** `git revert HEAD --no-edit` to undo the commit cleanly (preserves history per CONTEXT.md). Edit `40-KNIP-DECISIONS.md` to flip the regression-causing package(s) from REMOVE to KEEP with rationale `"build/test failure: {error}"`. Re-run knip if needed to confirm the reduced scope, then re-attempt the batch from Task 1 with the trimmed REMOVE list (a fresh commit). Document the revert + KEEP flip in DECISIONS.md.
   </action>
   <verify>
 - `git log -1 --oneline` shows the chore commit.
