@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-08 — **Phase 40 Plan 01 COMPLETE.** Dead-code audit baseline established. `knip@6.12.1` installed as devDependency; `knip.json` at repo root with locked ignore (slot-picker.tsx) and explicit entry list (tests/setup.ts + tests/helpers/**); 4 npm scripts added (`knip` / `knip:report` / `knip:json` / `knip:ci`). Baseline reports generated: `40-KNIP-REPORT.json` (raw machine-readable) + `40-KNIP-REPORT.md` (curated 80-row table with REMOVE/KEEP/INVESTIGATE pre-seeded, Decision column blank for Andrew). 80 findings: 1 unused file + 3 unused deps + 4 unused devDeps + 1 unlisted + 58 unused exports + 13 unused exported types + 0 duplicates. slot-picker.tsx correctly suppressed; Phase 39 still 4/4 PASS. Latest commits: `96f4033` (knip install + config), `d5cfe61` (baseline reports). Now waiting on Andrew checkpoint (Plan 02) to fill Decision column.
+**Last updated:** 2026-05-08 — **Phase 40 Plan 02 COMPLETE.** Andrew delegated final REMOVE/KEEP calls to Claude ("I trust what you recommend. Go ahead."); pre-seeded recommendations applied as final decisions for non-INVESTIGATE rows; 21 INVESTIGATE items deep-dived per Plan 02 Task 2 methodology with conservative bias. Final scope: **27 REMOVE + 53 KEEP = 80 findings, zero unresolved INVESTIGATE.** `40-KNIP-REPORT.md` finalized with per-row Investigation: sub-rows. `40-KNIP-DECISIONS.md` created as machine-readable contract for Plans 03-06: REMOVE list split into whole-symbol-deletion (17 items) vs export-keyword-only (6 items) categories; KEEP list with rationales feeds Plan 07 `knip.json` ignore wiring; recovery protocol documented per plan spec. Latest commits: `96f4033` (knip install + config), `d5cfe61` (baseline reports), `18ff367` (decisions log lock). Wave 3 (Plan 03 — remove unused deps: `nodemailer` + `@eslint/eslintrc` + `@types/nodemailer`) is now unblocked.
 
 ## Project Reference
 
@@ -8,19 +8,19 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 after v1.7 kickoff)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plan 01 COMPLETE** (knip installed + baseline reports generated). Plan 02 is an Andrew checkpoint: open `40-KNIP-REPORT.md`, fill the Decision column (REMOVE/KEEP/INVESTIGATE per row), then Plan 03+ executes the per-category removal commits.
+**Current focus:** v1.7 Phase 40 (dead-code audit) — **Plans 01 + 02 COMPLETE** (baseline + decisions locked). Wave 3 (Plan 03: remove 3 unused npm deps) is unblocked. Plan 05 will execute the largest batch (23 export removals across whole-symbol vs export-keyword-only modes).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plan 01 of N done)
+**Milestone:** v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code — IN PROGRESS (Phase 40 in flight; Plans 01-02 done)
 **Phase:** 40 — Dead-code audit — IN PROGRESS
-**Plan:** 1 of N complete (knip install + baseline audit report). Plan 02 = Andrew checkpoint (fill Decision column in `40-KNIP-REPORT.md`).
-**Status:** Plan 40-01 complete. 80 baseline findings enumerated with seeded recommendations. Awaiting Andrew checkpoint for Plan 02 to convert recommendations → decisions; then Plans 03–06 execute per-category removals (deps → exports → files), then Plan 07 adds CI gate, then final v1.7 manual QA pass closes milestone.
-**Last activity:** 2026-05-08 — Plan 40-01 generated `.planning/phases/40-dead-code-audit/40-KNIP-REPORT.md` + `.json` baseline. Latest commits: `96f4033`, `d5cfe61`.
+**Plan:** 2 of 7 complete (knip install + baseline audit report + Andrew-delegated decisions lock). Wave 3 (Plan 03 — npm uninstall of 3 dead deps) is next.
+**Status:** Plans 40-01 + 40-02 complete. 80 baseline findings finalized to 27 REMOVE / 53 KEEP. `40-KNIP-DECISIONS.md` is the locked contract for Plans 03-06 deletion targets and Plan 07 `knip.json` ignore wiring. Plans 03-06 execute per-category removals (deps → [duplicates: empty] → exports → files); Plan 07 adds CI gate + ignore-list expansion; final v1.7 manual QA pass closes milestone.
+**Last activity:** 2026-05-08 — Plan 40-02 produced `40-KNIP-DECISIONS.md` and finalized `40-KNIP-REPORT.md`. Latest commits: `96f4033`, `d5cfe61`, `d94e3c6`, `18ff367`.
 
-Progress (Phase 40): █░░░░░ 1/N plans complete (Plan 02 unblocked, awaiting Andrew)
+Progress (Phase 40): ██░░░░░ 2/7 plans complete (Plan 03 unblocked — auto-runnable, no checkpoints needed)
 
 ⚠ **Production cutover risk now mitigated:** nsi has Gmail connected on production — booking emails are working live. Other accounts (nsi-test, nsi-rls-test, etc.) have no active customers, no impact.
 
@@ -123,32 +123,30 @@ See PROJECT.md Key Decisions for full table. Key ones relevant to v1.7:
 
 ## Session Continuity
 
-**Last session:** 2026-05-08 — Phase 40 Plan 01 (knip install + baseline audit report) executed in two atomic tasks. Task 1 (`96f4033`): `npm install --save-dev knip@6` resolved to v6.12.1; created `knip.json` at repo root with locked config per RESEARCH.md (ignore: `app/[account]/[event-slug]/_components/slot-picker.tsx`; entry: `tests/setup.ts` + `tests/helpers/**/*.ts`; project excludes `.planning/`, `tmp/`, `supabase/`); added 4 npm scripts (`knip`, `knip:report`, `knip:json`, `knip:ci`). Task 2 (`d5cfe61`): generated `40-KNIP-REPORT.json` raw + curated `40-KNIP-REPORT.md` (80 rows across 4 sections: 1a unused deps, 1b unused devDeps, 1c unlisted, 2 duplicates [_None._], 3a unused exports, 3b unused exported types, 4 unused files). Each row has REMOVE/KEEP/INVESTIGATE pre-seeded with 1-line rationale per RESEARCH.md methodology (git log + grep + filename semantics + neighbor checks). Decision column left as `_____` for Andrew. slot-picker.tsx correctly suppressed by ignore (knip emitted "Remove from ignore" hint, kept as policy per Plan 30-01 Rule 4). 33 of 80 findings are shadcn/ui primitives (`components/ui/*`) seeded as KEEP — installed-as-library convention.
+**Last session:** 2026-05-08 — Phase 40 Plan 02 (Andrew-delegated decisions checkpoint) executed under "I trust what you recommend. Go ahead." authority. Task 1 wait-for-Andrew step skipped per delegation. Pre-seeded REMOVE/KEEP recommendations applied as final decisions for 59 non-INVESTIGATE rows. 21 INVESTIGATE rows deep-dived per Task 2 methodology: grep across `app/`/`lib/`/`tests/`, dynamic-import / config-side checks, internal-cross-reference scans. Each former INVESTIGATE row got an inline `Investigation:` sub-row capturing the search performed and final call. Conservative bias rule applied (when in doubt, KEEP). Resolution: 13 INVESTIGATE → REMOVE, 8 INVESTIGATE → KEEP. Final scope: 27 REMOVE + 53 KEEP. `40-KNIP-DECISIONS.md` produced per Task 3 with whole-symbol vs export-keyword-only REMOVE separation, per-KEEP rationales for Plan 07, INVESTIGATE-→-KEEP audit-trail (8 entries), INVESTIGATE-→-REMOVE audit-trail (11 entries), and recovery protocol. Single commit `18ff367` covers both file finalizations per plan spec.
 
-**Stopped at:** Plan 40-01 complete. Reports committed to phase folder. Awaiting Andrew checkpoint to fill Decision column for Plan 02 input.
+**Stopped at:** Plan 40-02 complete. Plan 03 (Wave 3 — `npm uninstall nodemailer @eslint/eslintrc @types/nodemailer`) is unblocked and fully autonomous (zero checkpoints).
 
-**Resume file:** None — Andrew opens `.planning/phases/40-dead-code-audit/40-KNIP-REPORT.md` directly.
+**Resume file:** None — `/gsd:execute-phase 40` resumes from Plan 03.
 
 ## ▶ Next session — start here
 
-**Phase 40 Plan 01 COMPLETE.** Knip baseline audit generated; 80 findings across 4 categories pre-seeded with recommendations. Plan 02 is an Andrew checkpoint.
+**Phase 40 Plans 01 + 02 COMPLETE.** 80 findings finalized to 27 REMOVE / 53 KEEP via Andrew-delegated authority. `40-KNIP-DECISIONS.md` is the locked contract for Plans 03-06.
 
-### Path A: Andrew fills Decision column → Plan 02 reads it back
+### Path A: Resume Plan 03 (auto-runnable, no checkpoint)
 
-1. Open `.planning/phases/40-dead-code-audit/40-KNIP-REPORT.md`.
-2. For each row, edit the Decision cell (`_____`) to `REMOVE`, `KEEP`, or `INVESTIGATE`.
-3. Save the file.
-4. Run `/gsd:execute-phase 40` (or invoke Plan 02 directly) — Plan 02 reads the filled file and produces `40-KNIP-DECISIONS.md`.
-5. Plans 03–06 execute the per-category removal commits (deps → exports → files; build+test green between batches).
-6. Plan 07 adds the CI gate (`.github/workflows/knip.yml`).
-7. Final v1.7 manual QA pass closes the milestone.
+1. Run `/gsd:execute-phase 40` — Plan 03 reads `40-KNIP-DECISIONS.md` Unused Dependencies section, runs `npm uninstall nodemailer @eslint/eslintrc @types/nodemailer`, verifies `next build` + `vitest run` green, commits.
+2. Plan 04 (duplicates): empty wave; auto-skips.
+3. Plan 05 (exports): 17 whole-symbol REMOVEs + 6 export-keyword-only REMOVEs. Largest blast radius — auto-execute with green-build verification per batch.
+4. Plan 06 (files): 1 file delete (`components/welcome-card.tsx`).
+5. Plan 07 (CI gate + ignore wiring): create `.github/workflows/knip.yml`; expand `knip.json` with the KEEP-list spec from DECISIONS.md (ignoreDependencies for CSS/CLI consumers; `components/ui/**` ignore glob; `ignoreExportsUsedInFile` for `lib/email-sender/types.ts`).
+6. Final v1.7 manual QA pass closes the milestone.
 
-**Pre-seeded recommendation summary (Andrew can override any row):**
-- 14 REMOVE seeds (welcome-card, nodemailer, @types/nodemailer, @eslint/eslintrc, lib/email-sender barrel re-exports, renderEmailLogoHeader [@deprecated], canonical escapeHtml export with no consumers)
-- 41 KEEP seeds (33× shadcn/ui primitives, supabase CLI, tailwindcss CLI surface, tw-animate-css [used in CSS])
-- 25 INVESTIGATE seeds (duplicate `DEFAULT_BRAND_PRIMARY`, internal-only `export` keywords on `isPastEod`/`AUTH_RATE_LIMITS`, server-action input types, schema files, Zod-derived form types, `shadcn` CLI dep, `postcss-load-config` unlisted)
+**Final-decision summary (per `40-KNIP-DECISIONS.md`):**
+- 27 REMOVE: 3 deps (nodemailer + 2 supporting), 17 whole-symbol exports, 6 export-keyword-only exports, 1 file (welcome-card.tsx).
+- 53 KEEP: 5 deps (CSS/CLI consumers + JSDoc-only), 42 shadcn/ui primitives, 3 internal type-graph nodes (lib/email-sender/types.ts), 2 internal-cross-component (usePushbackDialog, customQuestionSchema), 1 dev-tool (generateKey).
 
-**Recommended next command:** None — wait for Andrew. When ready, `/gsd:execute-phase 40` resumes from Plan 02.
+**Recommended next command:** `/gsd:execute-phase 40` — Plan 03 starts immediately.
 
 ### Path B: Pause v1.7 and do something else
 
