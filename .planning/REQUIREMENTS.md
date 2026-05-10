@@ -147,49 +147,58 @@ These are NOT requirements — they're external setup tasks Andrew must complete
 
 ## Traceability
 
-Updated during roadmap creation.
+Updated: 2026-05-10 — v1.8 roadmap created; all 32 requirements mapped.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BILL-01 | Phase TBD | Pending |
-| BILL-02 | Phase TBD | Pending |
-| BILL-03 | Phase TBD | Pending |
-| BILL-04 | Phase TBD | Pending |
-| BILL-05 | Phase TBD | Pending |
-| BILL-06 | Phase TBD | Pending |
-| BILL-07 | Phase TBD | Pending |
-| BILL-08 | Phase TBD | Pending |
-| BILL-09 | Phase TBD | Pending |
-| BILL-10 | Phase TBD | Pending |
-| BILL-11 | Phase TBD | Pending |
-| BILL-12 | Phase TBD | Pending |
-| BILL-13 | Phase TBD | Pending |
-| BILL-14 | Phase TBD | Pending |
-| BILL-15 | Phase TBD | Pending |
-| BILL-16 | Phase TBD | Pending |
-| BILL-17 | Phase TBD | Pending |
-| BILL-18 | Phase TBD | Pending |
-| BILL-19 | Phase TBD | Pending |
-| BILL-20 | Phase TBD | Pending |
-| BILL-21 | Phase TBD | Pending |
-| BILL-22 | Phase TBD | Pending |
-| BILL-23 | Phase TBD | Pending |
-| BILL-24 | Phase TBD | Pending |
-| AUTH-33 | Phase TBD | Pending |
-| AUTH-34 | Phase TBD | Pending |
-| AUTH-35 | Phase TBD | Pending |
-| AUTH-36 | Phase TBD | Pending |
-| AUTH-37 | Phase TBD | Pending |
-| AUTH-38 | Phase TBD | Pending |
-| AUTH-39 | Phase TBD | Pending |
-| EMAIL-35 | Phase TBD | Pending |
+| BILL-01 | Phase 41 | Pending |
+| BILL-02 | Phase 41 | Pending |
+| BILL-03 | Phase 41 | Pending |
+| BILL-04 | Phase 41 | Pending |
+| BILL-05 | Phase 41 | Pending |
+| BILL-06 | Phase 41 | Pending |
+| BILL-07 | Phase 41 | Pending |
+| BILL-08 | Phase 41 | Pending |
+| BILL-09 | Phase 42 | Pending |
+| BILL-10 | Phase 42 | Pending |
+| BILL-11 | Phase 42 | Pending |
+| BILL-12 | Phase 43 | Pending |
+| BILL-13 | Phase 43 | Pending |
+| BILL-14 | Phase 43 | Pending |
+| BILL-15 | Phase 43 | Pending |
+| BILL-16 | Phase 43 | Pending |
+| BILL-17 | Phase 43 | Pending |
+| BILL-18 | Phase 43 | Pending |
+| BILL-19 | Phase 43 | Pending |
+| BILL-20 | Phase 43 | Pending |
+| BILL-21 | Phase 44 | Pending |
+| BILL-22 | Phase 44 | Pending |
+| BILL-23 | Phase 44 | Pending |
+| BILL-24 | Phase 44 | Pending |
+| AUTH-33 | Phase 45 | Pending |
+| AUTH-34 | Phase 45 | Pending |
+| AUTH-35 | Phase 45 | Pending |
+| AUTH-36 | Phase 45 | Pending |
+| AUTH-37 | Phase 45 | Pending |
+| AUTH-38 | Phase 45 | Pending |
+| AUTH-39 | Phase 45 | Pending |
+| EMAIL-35 | Phase 45 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 32 total (24 BILL + 7 AUTH + 1 EMAIL)
-- Mapped to phases: 0 (roadmap creation pending)
-- Unmapped: 32 ⚠️
+- Mapped to phases: 32 / 32 ✓
+- Unmapped: 0
+
+| Phase | Requirements | Count |
+|-------|-------------|-------|
+| 41 — Stripe SDK + Schema + Webhook Skeleton | BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07, BILL-08 | 8 |
+| 42 — Checkout Flow + Plan Selection | BILL-09, BILL-10, BILL-11 | 3 |
+| 43 — Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12, BILL-13, BILL-14, BILL-15, BILL-16, BILL-17, BILL-18, BILL-19, BILL-20 | 9 |
+| 44 — Customer Portal + Billing Polish + Stripe Emails | BILL-21, BILL-22, BILL-23, BILL-24 | 4 |
+| 45 — Login UX Polish + Gmail Quota Raise | AUTH-33, AUTH-34, AUTH-35, AUTH-36, AUTH-37, AUTH-38, AUTH-39, EMAIL-35 | 8 |
+| 46 — Andrew Ship Sign-Off | (ship sign-off — no discrete requirement IDs) | 0 |
 
 ---
 
 *Requirements defined: 2026-05-10*
-*Last updated: 2026-05-10 after initial definition*
+*Last updated: 2026-05-10 — traceability complete after roadmap creation*
