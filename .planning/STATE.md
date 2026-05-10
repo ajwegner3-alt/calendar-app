@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **v1.8 roadmap created.** 6 phases (41-46) mapped, 32 requirements covered. Ready to plan Phase 41.
+**Last updated:** 2026-05-10 — **Plan 41-01 complete.** stripe@22.1.1 installed; lib/stripe/client.ts singleton created.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 (Stripe SDK + Schema + Webhook Skeleton) is next.
+**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 in progress (Plan 01 complete).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 41 of 46 — ready to plan
-**Plan:** —
-**Status:** Roadmap created — awaiting Andrew review then `/gsd:plan-phase 41`
-**Last activity:** 2026-05-10 — roadmap created; all 32 v1.8 requirements mapped to phases 41-46.
+**Phase:** 41 of 46 — in progress
+**Plan:** 01 of N — complete
+**Status:** Plan 41-01 complete — stripe@22.1.1 installed, lib/stripe/client.ts created
+**Last activity:** 2026-05-10 — Executed Plan 41-01: stripe SDK install + client singleton.
 
 ## Cumulative project progress
 
@@ -69,7 +69,7 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 - `getSenderForAccount` factory fail-closed contract — Stripe webhook email dispatch uses same pattern
 - `isRefusedSend(error)` dual-prefix helper — reuse for billing email error handling
 - 5xx-only formError gate for enumeration-safe actions — preserved in magic-link helper (Phase 45)
-- Knip CI gate is active — new `lib/stripe/` paths each need their own Vitest `resolve.alias` entry
+- Knip CI gate is active — RESOLVED for lib/stripe: tsconfigPaths() + tsconfig @/* -> ./* covers @/lib/stripe/* generically (no explicit alias needed)
 
 ### Open tech debt (carried unchanged)
 
@@ -89,11 +89,11 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — v1.8 roadmap created after requirements + research were finalized.
+**Last session:** 2026-05-10 — Executed Plan 41-01 (stripe SDK + client singleton). 2 tasks, 3 files, 4 min.
 
-**Stopped at:** Roadmap written; REQUIREMENTS.md traceability updated; STATE.md updated. Awaiting Andrew review of ROADMAP.md, then start Phase 41 planning.
+**Stopped at:** Plan 41-01 complete. Next: Plan 41-02 (database schema migration).
 
-**Resume file:** None — next action is `/gsd:plan-phase 41` (Andrew must complete PREREQ-A + PREREQ-D before Phase 41 can deploy to production, but planning can start).
+**Resume file:** None — next action is execute Plan 41-02.
 
 ## Files of record
 
