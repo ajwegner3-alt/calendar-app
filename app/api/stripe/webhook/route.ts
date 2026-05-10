@@ -1,0 +1,290 @@
+/**
+ * POST /api/stripe/webhook — Stripe lifecycle event handler.
+ *
+ * V18-CP-01: The raw request body MUST be read via `await req.text()` — NEVER
+ * the JSON body-reader variant. Stripe signature verification requires byte-identical
+ * body bytes; JSON-parsing destroys that guarantee (different whitespace normalisation).
+ *
+ * Idempotency: enforced via the `stripe_webhook_events` table. Every verified
+ * event is upserted with onConflict='stripe_event_id' + ignoreDuplicates=true
+ * before routing. Duplicate delivery returns 200 immediately without re-processing.
+ */
+
+import { headers } from "next/headers";
+import type Stripe from "stripe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { stripe } from "@/lib/stripe/client";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const NO_STORE = { "Cache-Control": "no-store" } as const;
+
+export async function POST(req: Request) {
+  // V18-CP-01: signature verification requires byte-identical body. Use req.text() — NEVER the JSON reader.
+  const body = await req.text();
+
+  const headersList = await headers();
+  const signature = headersList.get("stripe-signature");
+  if (!signature) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    console.error("[stripe-webhook] missing signature", { ip, ts: new Date().toISOString() });
+    return new Response("missing_signature", { status: 400, headers: NO_STORE });
+  }
+
+  // ── Signature verification ───────────────────────────────────────────────
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!,
+    );
+  } catch (err) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[stripe-webhook] signature verification failed", {
+      ip,
+      ts: new Date().toISOString(),
+      err: message,
+    });
+    return new Response("signature_failed", { status: 400, headers: NO_STORE });
+  }
+
+  // ── Create admin client + dedupe upsert ──────────────────────────────────
+  const admin = createAdminClient();
+
+  const { data: dedupeRow, error: dedupeErr } = await admin
+    .from("stripe_webhook_events")
+    .upsert(
+      {
+        stripe_event_id: event.id,
+        event_type: event.type,
+        received_at: new Date().toISOString(),
+      },
+      { onConflict: "stripe_event_id", ignoreDuplicates: true },
+    )
+    .select("stripe_event_id")
+    .maybeSingle();
+
+  if (dedupeErr) {
+    console.error("[stripe-webhook] dedupe upsert failed", {
+      stripe_event_id: event.id,
+      event_type: event.type,
+      err: dedupeErr.message,
+    });
+    return new Response("dedupe_error", { status: 500, headers: NO_STORE });
+  }
+
+  if (dedupeRow == null) {
+    // event.id already existed in stripe_webhook_events — this is a duplicate delivery.
+    console.log("[stripe-webhook] duplicate event skipped", {
+      stripe_event_id: event.id,
+      event_type: event.type,
+      outcome: "duplicate",
+    });
+    return new Response("ok_duplicate", { status: 200, headers: NO_STORE });
+  }
+
+  // ── Per-event routing ────────────────────────────────────────────────────
+  let accountId: string | null = null;
+  let stripeSubscriptionId: string | null = null;
+  let outcome = "handled";
+
+  try {
+    switch (event.type) {
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+      case "customer.subscription.trial_will_end": {
+        const sub = event.data.object as Stripe.Subscription;
+        const result = await handleSubscriptionEvent(admin, event.type, sub);
+        accountId = result.accountId;
+        stripeSubscriptionId = sub.id;
+        break;
+      }
+
+      case "invoice.payment_succeeded":
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const result = await handleInvoiceEvent(admin, event.type, invoice);
+        accountId = result.accountId;
+        stripeSubscriptionId = result.stripeSubscriptionId;
+        break;
+      }
+
+      default: {
+        outcome = "unknown";
+        console.log("[stripe-webhook] unhandled event type (audit preserved)", {
+          stripe_event_id: event.id,
+          event_type: event.type,
+        });
+        break;
+      }
+    }
+  } catch (err) {
+    // DB-write failure after dedupe insert — delete the dedupe row so Stripe
+    // will retry and we can reprocess cleanly on the next attempt.
+    await admin
+      .from("stripe_webhook_events")
+      .delete()
+      .eq("stripe_event_id", event.id);
+
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[stripe-webhook] handler error — dedupe row rolled back", {
+      stripe_event_id: event.id,
+      event_type: event.type,
+      err: message,
+    });
+    return new Response("handler_error", { status: 500, headers: NO_STORE });
+  }
+
+  console.log("[stripe-webhook] event processed", {
+    stripe_event_id: event.id,
+    event_type: event.type,
+    account_id: accountId,
+    stripe_subscription_id: stripeSubscriptionId,
+    outcome,
+  });
+
+  return new Response("ok", { status: 200, headers: NO_STORE });
+}
+
+// ── handleSubscriptionEvent ──────────────────────────────────────────────────
+// Handles customer.subscription.{created,updated,deleted,trial_will_end}.
+// Writes a single-row atomic UPDATE to accounts.
+// V18-CP-11: subscription_status is read from sub.status (payload), NOT
+// inferred from event_type — handles out-of-order event delivery correctly.
+
+async function handleSubscriptionEvent(
+  admin: SupabaseClient,
+  eventType: string,
+  sub: Stripe.Subscription,
+): Promise<{ accountId: string | null }> {
+  const customerId =
+    typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+
+  const { data: account, error: lookupErr } = await admin
+    .from("accounts")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (lookupErr) {
+    console.error("[stripe-webhook] account lookup failed", {
+      customerId,
+      err: lookupErr.message,
+    });
+    throw new Error("account_lookup_db_error");
+  }
+  if (!account) {
+    console.error("[stripe-webhook] no account for customer", {
+      customerId,
+      eventType,
+    });
+    throw new Error("account_not_found");
+  }
+
+  const updates: Record<string, unknown> = {};
+
+  if (eventType === "customer.subscription.trial_will_end") {
+    updates.trial_warning_sent_at = new Date().toISOString();
+  } else {
+    updates.subscription_status = sub.status; // CONTEXT-locked: trust payload status, NOT event type (V18-CP-11)
+    updates.stripe_subscription_id = sub.id;
+    // In Stripe API 2026-04-22.dahlia, current_period_end moved from Subscription to SubscriptionItem.
+    // Read it from the first item — that's the canonical billing period boundary for single-price subscriptions.
+    const periodEnd = sub.items.data[0]?.current_period_end ?? null;
+    updates.current_period_end = periodEnd
+      ? new Date(periodEnd * 1000).toISOString() // Stripe gives Unix SECONDS — multiply by 1000
+      : null;
+    updates.plan_interval =
+      sub.items.data[0]?.price.recurring?.interval ?? null;
+  }
+
+  const { error: updateErr } = await admin
+    .from("accounts")
+    .update(updates)
+    .eq("id", account.id);
+
+  if (updateErr) {
+    console.error("[stripe-webhook] account update failed", {
+      account_id: account.id,
+      stripe_subscription_id: sub.id,
+      eventType,
+      err: updateErr.message,
+    });
+    throw new Error("account_update_failed");
+  }
+
+  return { accountId: account.id };
+}
+
+// ── handleInvoiceEvent ───────────────────────────────────────────────────────
+// Handles invoice.payment_succeeded and invoice.payment_failed.
+// Derives subscription_status from event outcome:
+//   invoice.payment_succeeded → 'active'
+//   invoice.payment_failed    → 'past_due'
+// (No Stripe API roundtrip — avoids extra latency + failure mode.)
+
+async function handleInvoiceEvent(
+  admin: SupabaseClient,
+  eventType: string,
+  invoice: Stripe.Invoice,
+): Promise<{ accountId: string | null; stripeSubscriptionId: string | null }> {
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id ?? null;
+  // In Stripe API 2026-04-22.dahlia, invoice.subscription moved to invoice.parent.subscription_details.subscription.
+  const rawSub = invoice.parent?.subscription_details?.subscription ?? null;
+  const subscriptionId =
+    typeof rawSub === "string"
+      ? rawSub
+      : rawSub?.id ?? null;
+
+  if (!customerId) {
+    console.error("[stripe-webhook] invoice has no customer", {
+      eventType,
+      invoiceId: invoice.id,
+    });
+    throw new Error("invoice_no_customer");
+  }
+
+  const { data: account, error: lookupErr } = await admin
+    .from("accounts")
+    .select("id, stripe_subscription_id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (lookupErr || !account) {
+    console.error("[stripe-webhook] no account for invoice customer", {
+      customerId,
+      eventType,
+    });
+    throw new Error("account_not_found");
+  }
+
+  // Invoice events: payment_succeeded => 'active', payment_failed => 'past_due'.
+  // CONTEXT says "update subscription_status per payload" — interpret as: derive from event outcome.
+  // Do NOT make a Stripe API roundtrip to retrieve subscription status (latency + extra failure mode).
+  const newStatus =
+    eventType === "invoice.payment_succeeded" ? "active" : "past_due";
+
+  const { error: updateErr } = await admin
+    .from("accounts")
+    .update({ subscription_status: newStatus })
+    .eq("id", account.id);
+
+  if (updateErr) {
+    console.error("[stripe-webhook] invoice-driven update failed", {
+      account_id: account.id,
+      eventType,
+      err: updateErr.message,
+    });
+    throw new Error("account_update_failed");
+  }
+
+  return { accountId: account.id, stripeSubscriptionId: subscriptionId };
+}
