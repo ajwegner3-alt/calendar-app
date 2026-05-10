@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **Phase 41 SHIPPED.** Stripe SDK + schema + webhook skeleton live in production. 4 plans, 9 commits (8 phase + 1 phase-completion). BILL-01..08 marked Complete. Andrew sign-off received. Ready to plan Phase 42 (Checkout Flow + Plan Selection Page).
+**Last updated:** 2026-05-10 — **Phase 42 Plan 03 complete.** /app/billing UI shipped: Server Component (4-state derivation), plan-selection card (monthly/annual toggle, dynamic savings badge, Subscribe → POST + redirect), checkout-return poller (2s/30s, auto-redirect to /app), billing-state-views (locked-state tonal anchor, trial countdown). 3 tasks, 3 commits. Ready for 42-04 manual QA.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 42 of 46 — ready to plan
-**Plan:** —
-**Status:** Phase 41 shipped — Andrew approved live verification 2026-05-10. Awaiting `/gsd:plan-phase 42`.
-**Last activity:** 2026-05-10 — Phase 41 (Stripe SDK + schema + webhook skeleton) shipped end-to-end. Sandbox webhook live at `we_1TVfOTJ7PLcBbY73Groz1G13`. 5 v1.7 accounts grandfathered to trialing with `trial_ends_at = 2026-05-24 14:53:30 UTC`. BILL-01..08 marked Complete in REQUIREMENTS.md.
+**Phase:** 42 of 46 — in progress
+**Plan:** 03 of 04 complete (42-01 + 42-02 + 42-03 shipped; 42-04 manual QA pending)
+**Status:** In progress — 42-03 billing UI complete. 42-04 is manual QA (requires PREREQ-B + PREREQ-E env vars set, then sign-off from Andrew).
+**Last activity:** 2026-05-10 — 42-03 (billing page UI) complete. 3 tasks, 4 files created (page.tsx, billing-state-views.tsx, plan-selection-card.tsx, checkout-return-poller.tsx). All CONTEXT-locked decisions honored. Build passing, tsc clean, lint clean.
 
 ## Cumulative project progress
 
@@ -100,9 +100,11 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phase 41 shipped 2026-05-10
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Phase 41 executed end-to-end. 4 plans shipped wave-by-wave (41-01 SDK + client → 41-02 schema migration + 41-03 webhook handler in parallel → 41-04 E2E verification with checkpoints). Andrew sign-off received. Verifier passed (4/5 SCs verified directly; SC-5 deferred to Phase 42 first-checkout natural exercise).
+**Last session:** 2026-05-10 — Phase 42 Plans 01+02+03 executed. Wave 1 (42-01 prices + checkout APIs + 42-02 webhook handler) shipped. Wave 2 (42-03 billing page UI) shipped. 3 tasks, 4 files created, 3 commits. tsc clean, lint clean, build passes.
 
-**Stopped at:** Phase 41 shipped, all docs updated, BILL-01..08 marked Complete in REQUIREMENTS.md. Ready for Phase 42 planning.
+**Stopped at:** 42-03 complete. Next: 42-04 manual QA verification (sign-off from Andrew). Requires PREREQ-B (Stripe Price IDs) + PREREQ-E (pricing amounts) in `.env.local` to test Subscribe end-to-end.
+
+**Resume file:** None — next action is `/gsd:execute-phase 42 04` or Andrew populating PREREQ-B/PREREQ-E and running 42-04 QA checkpoint.
 
 **Resume file:** None — next action is `/gsd:plan-phase 42` (Checkout Flow + Plan Selection Page). Andrew should complete PREREQ-B (create Product + monthly + annual Prices in Stripe sandbox) and PREREQ-E (decide pricing amounts) before Phase 42 deploys, but planning can start with placeholders.
 
