@@ -1,26 +1,24 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-09 — **v1.7 SHIPPED.** All 7 phases (34-40) and 32 plans complete; 30 of 30 requirements shipped; archived to `.planning/milestones/v1.7-ROADMAP.md` + `.planning/milestones/v1.7-REQUIREMENTS.md`. Git tag `v1.7` created. Project is between milestones; next step is `/gsd:new-milestone` to define v1.8 scope.
+**Last updated:** 2026-05-09 — **v1.8 IN FLIGHT.** Started same day as v1.7 close. Scope locked: Stripe paywall (14-day free trial → owner-app lockout, single plan monthly+annual) + login UX polish (Google button reorder, password-first tabs, 3-fail in-memory magic-link nudge) + magic-link inline helper line (AUTH-29 enumeration-safety invariant preserved) + Gmail per-account quota 200 → 450/day. Currently in research phase.
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-09 after v1.7 milestone completion)
+See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone section)
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** Between milestones — v1.7 closed; next step `/gsd:new-milestone` for v1.8 definition.
+**Current focus:** v1.8 — Stripe Paywall + Login UX Polish (research phase).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
-**Milestone:** between milestones (v1.7 closed)
-**Phase:** n/a — no active phase
-**Plan:** not started
-**Status:** Ready to plan v1.8
-**Last activity:** 2026-05-09 — v1.7 milestone close commit + tag.
-
-Project status: ████████ v1.7 closed (7/7 phases shipped). Awaiting v1.8 scope definition.
+**Milestone:** v1.8 Stripe Paywall + Login UX Polish
+**Phase:** Not started (research → requirements → roadmap pending)
+**Plan:** —
+**Status:** Researching domain (4 parallel researchers spawning)
+**Last activity:** 2026-05-09 — v1.8 questioning complete; scope locked across 5 themes; research phase started.
 
 ## Cumulative project progress
 
@@ -33,78 +31,80 @@ v1.4 [X] Slot Correctness + Polish    (Phases 25-27, 8 plans, 50 commits, shippe
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30, 6 plans, 31 commits, shipped 2026-05-05 — ~2 days)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans, 53 commits, shipped 2026-05-06 — ~2 days)
 v1.7 [X] Auth + Email + Polish + Debt (Phases 34-40, 32 plans, 129 commits, shipped 2026-05-09 — 3 days)
-v1.8 [ ]                              (Phases 41+, plans TBD — milestone goals undefined)
+v1.8 [ ] Stripe Paywall + Login UX    (Phases 41+, plans TBD — researching)
 ```
 
 **Total shipped:** 7 milestones archived (v1.0–v1.7), 40 phases completed, 170 plans, ~692 commits
 
+## v1.8 Locked Scope (5 themes)
+
+1. **Login button reorder** — Google OAuth button moved BELOW password form on `/app/login` and `/app/signup`.
+2. **Password-first tabs + 3-fail magic-link nudge** — Password tab is default; per-session in-memory counter; after 3 failed password attempts inline prompt offers magic-link. Counter resets on tab close.
+3. **Per-account Gmail quota 200 → 450/day** — Single constant change in `lib/email-sender/quota-guard.ts`. 50-msg buffer below Google's 500/day free-Gmail limit.
+4. **Magic-link inline helper line** — Adds "Make sure you're using the email you signed up with" (or similar) under email field on magic-link tab. Identical wording for all users — AUTH-29 four-way enumeration-safety ambiguity invariant preserved.
+5. **Stripe paywall (dominant theme)** — 14-day free trial from signup → owner-app lockout. Single plan with monthly + annual billing toggle. Locks `/app/*` only (public booker `/[account]/*` keeps working regardless). Global "Head over to payments to get set up" banner during trial + after lockout. `/app/billing` is the only unlocked owner-app surface when locked.
+
+## Carryover backlog NOT in v1.8 scope (intentional defer)
+
+- PREREQ-03 Resend live activation (Andrew action; flip flag whenever Resend domain DNS verified)
+- Lockfile regeneration under Node 20 (knip CI gate stays dormant)
+- Vercel env-var cleanup of inert GMAIL_* keys (Andrew action; no redeploy needed)
+- Resend abuse hard cap + bounce handling (defer until usage justifies)
+- BRAND-22 NSI logo asset
+- BOOKER-10 page-transition animations
+- AUTH-31 Microsoft OAuth, AUTH-32 SAML/SSO
+- CAL-SYNC-01/02 Google Calendar sync
+- EMAIL-34 per-account custom Resend domain
+
 ## Accumulated Context
 
-### Patterns established in v1.7 (summary)
+### Patterns established in v1.7 (still relevant for v1.8)
 
-Full Key Decisions table lives in PROJECT.md. Headline patterns from v1.7:
+- **AUTH-29 four-way enumeration-safety ambiguity invariant** — 5xx-only formError gate preserves byte-identical UI across (unknown email, our 5/hr bucket, Supabase ~60s cooldown, genuine send). v1.8 magic-link inline helper MUST preserve this invariant; same wording for everyone.
+- **5xx-only formError gate for enumeration-safe Supabase actions** — reusable pattern for any passwordless/OTP-style endpoint.
+- **AES-256-GCM at rest pattern** (`lib/oauth/encrypt.ts`) — reusable for Stripe-related secrets if any need encrypted storage server-side (likely not — Stripe customer ID is the public reference).
+- **`getSenderForAccount` factory routing fail-closed contract** — factory never throws; every error path returns `refusedSender`. Stripe webhook → email flows should reuse this pattern.
+- **`isRefusedSend(error)` dual-prefix helper** — single source of truth across providers.
+- **Knip CI gate as PR-level dead-code regression gate** — repo's first GitHub Actions workflow; future Stripe-related workflows should follow node-20-strict-install shape.
+- **7th consecutive yolo-mode milestone close with no formal audit** — deploy-and-eyeball is canonically the operating model.
 
-- **5xx-only formError gate for enumeration-safe Supabase actions** (Phase 38) — direct cause of the four-way enumeration-safety ambiguity invariant; reusable for any passwordless/OTP-style endpoint.
-- **Direct-Google OAuth replaces Supabase `linkIdentity` for token capture** (Phase 35 deviation, commit `ab02a23`) — reusable for any future provider-token-capture flow.
-- **Gmail REST API (not SMTP+OAuth2) for `gmail.send`-scoped sends** (Phase 35 deviation, commit `cb82b6f`) — when scope is endpoint-specific, never use a generic relay layer that silently swallows scope mismatches.
-- **AES-256-GCM at rest for refresh tokens with lazy env-var read** (Phase 34) — pattern reused across Phase 35 `fetchGoogleAccessToken`, Phase 36 `createResendClient`, Phase 37 `requestUpgradeAction`.
-- **`getSenderForAccount` factory routing fail-closed contract** (Phase 35) — factory never throws; every error path returns a `refusedSender`; activation is one SQL UPDATE per account.
-- **`isRefusedSend(error)` dual-prefix helper** (Phase 36) — single source of truth for refused-send detection across providers.
-- **`@public` JSDoc tag for knip suppression** (Phase 40) — knip 6.x officially-supported locality-preserving suppression; preferred over global `ignore` array entries because the tag lives at the suppression site.
-- **Four-way enumeration-safety ambiguity invariant** (Phase 38) — unknown email + our rate-limit + Supabase's internal cooldown + genuine send all return byte-identical UI; preserved by the 5xx-only formError gate.
-- **Knip CI gate as PR-level dead-code regression gate** (Phase 40, commit `d94ca07`) — repo's first GitHub Actions workflow; future workflows should follow node-20-strict-install shape.
-- **7th consecutive yolo-mode milestone close with no formal audit** — Plan 40-08 final manual QA served as audit-equivalent; deploy-and-eyeball is canonically the operating model.
+### Patterns established / locked through v1.6 (still relevant)
 
-### Patterns established / locked through v1.6
+- Refuse-send fail-closed across all 7 senders (Phase 31, v1.6) — Stripe webhook-driven emails (e.g., trial-ending, payment-failed) must thread account_id through the same `getSenderForAccount` factory.
+- Two-step deploy protocol CP-03 strangler-fig — applies for any Stripe schema changes that retire columns.
+- Vitest `resolve.alias` array/regex exact-match (LD-14, v1.6) — new Stripe lib paths each get their own alias entry.
+- `slot-picker.tsx` kept on disk per Plan 30-01 Rule 4 + DECISIONS.md ignore list.
+- Deploy-and-eyeball as canonical production gate (now 7 consecutive milestones).
 
-See PROJECT.md Key Decisions for full table. Key ones still relevant:
+### Known v1.8 sensitive surfaces
 
-- Refuse-send fail-closed across all 7 senders (Phase 31, v1.6)
-- Vitest `resolve.alias` array/regex exact-match (LD-14, v1.6)
-- Two-step deploy protocol CP-03 strangler-fig (used in v1.7 Phase 35 SMTP retirement)
-- `slot-picker.tsx` kept on disk per Plan 30-01 Rule 4 + DECISIONS.md ignore list
-- Deploy-and-eyeball as canonical production gate (now 7 consecutive milestones)
+- **AUTH-29 invariant** — magic-link inline helper must NOT differentiate wording per user. The whole point of v1.7 Phase 38 work.
+- **Public booker neutrality (LD-07)** — Stripe paywall must NOT bleed into `/[account]/*` surfaces. Bookers don't see billing state, account branding stays clean.
+- **V15-MP-05 Turnstile lifecycle lock** — preserve through any login form refactor.
+- **Quota guard centralization (Phase 36 OQ-1)** — quota raise is one constant; do NOT scatter per-caller branches.
 
-### Open tech debt (carried into v1.8)
+### Open tech debt (carried into v1.8 unchanged)
 
-- **PREREQ-03 (Resend live activation)** — Phase 36/37 framework shipped; Andrew creates Resend account, verifies NSI domain DNS via Namecheap, adds `RESEND_API_KEY` to Vercel; live activation is one SQL UPDATE per account.
-- **Lockfile regeneration under Node 20** — knip CI gate dormant until `package-lock.json` regenerated from a Node 20 / npm 10 environment to satisfy `npm ci` strict-install.
-- **Vercel env-var cleanup** — delete inert `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME` (Preview + Production); no redeploy needed.
-- **`slot-picker.tsx` on disk** — Plan 30-01 Rule 4; resolve when reschedule UI is itself redesigned.
-- **Pre-existing test fixture failures** — `tests/bookings-api.test.ts` + `tests/slots-api.test.ts` fail on date-sensitive fixtures (test expects Monday 9-17 window seeded data; actual run-time may be a Friday). Watermark formally corrected to "2" during Plan 40-03.
-- **Pre-existing working-tree drift** — `.planning/phases/02-owner-auth-and-dashboard-shell/02-VERIFICATION.md`, `.planning/phases/23-public-booking-fixes/23-VERIFICATION.md`, `.planning/phases/33-day-level-pushback-cascade/33-CONTEXT.md` — pre-existing, not addressed during v1.7.
+- PREREQ-03 (Resend live activation) — framework shipped; live activation gated on DNS.
+- Lockfile regeneration under Node 20 — knip CI gate dormant.
+- Vercel env-var cleanup — delete inert `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FROM_NAME`.
+- `slot-picker.tsx` on disk — Plan 30-01 Rule 4.
+- Pre-existing test fixture failures — `tests/bookings-api.test.ts` + `tests/slots-api.test.ts` date-sensitive fixtures.
+- Pre-existing working-tree drift — three pre-existing modified files (Phase 02/23/33 docs) — not addressed during v1.7, carry forward.
 
 ## Session Continuity
 
-**Last session:** 2026-05-09 — v1.7 milestone close. Created `.planning/milestones/v1.7-ROADMAP.md` and `.planning/milestones/v1.7-REQUIREMENTS.md`; deleted `.planning/REQUIREMENTS.md`; collapsed Phases 34-40 inline detail in `.planning/ROADMAP.md` to a `<details>` summary; updated `.planning/MILESTONES.md` with v1.7 entry; updated `.planning/PROJECT.md` (Validated section + Key Decisions table + Current State + What This Is + Core Value); rewrote this STATE.md as between-milestones reset. Commit + git tag `v1.7` created.
+**Last session:** 2026-05-09 — v1.7 milestone closed in morning; v1.8 questioning + scope-lock + research kickoff in afternoon. Locked 5-theme scope (Login reorder + password-first 3-fail nudge + Gmail quota 200→450 + magic-link inline helper preserving AUTH-29 + Stripe paywall full-scope with 14-day trial / single plan monthly+annual / owner-app-only lockout). Updated PROJECT.md Current State + Current Milestone sections; rewrote this STATE.md.
 
-**Stopped at:** v1.7 milestone close commit + tag.
+**Stopped at:** Research kickoff — about to spawn 4 parallel gsd-project-researcher agents (Stack, Features, Architecture, Pitfalls) under sonnet (balanced profile).
 
-**Resume file:** None. Project is between milestones.
+**Resume file:** None — research is in progress; if interrupted, re-spawn researchers via the `/gsd:new-milestone` flow.
 
 ## ▶ Next session — start here
 
-**v1.7 SHIPPED. Ready to plan v1.8.**
+If interrupted before research synthesizer runs: re-spawn 4 researchers focused on Stripe SaaS paywall integration with existing Supabase auth + accounts schema, login UX patterns, and pitfalls. Then synthesizer to SUMMARY.md, then requirements, then roadmap.
 
-### Recommended next command
-
-`/gsd:new-milestone` — questioning → research → requirements → roadmap for v1.8 scope definition.
-
-`/clear` first → fresh context window.
-
-### v1.8 candidate scope (carryover backlog from v1.7 + earlier)
-
-- **PREREQ-03 + Resend live activation** — flip `accounts.email_provider='resend'` for upgraded accounts (Andrew bills customer above Resend cost)
-- **Lockfile regeneration** — make CI knip gate green
-- **Resend abuse hard cap + bounce handling** — deferred from Phase 36
-- **EMAIL-34** — per-account custom Resend domain (currently shared NSI domain)
-- **AUTH-31** — Microsoft OAuth signup
-- **AUTH-32** — SAML/SSO (enterprise)
-- **CAL-SYNC-01/02** — Google Calendar read/write sync (extends `gmail.send` → full Workspace integration)
-- **BRAND-22** — NSI logo asset (currently text-only "Powered by North Star Integrations")
-- **BOOKER-10** — page-transition animations between event-types index and event-page
-
-Live-use feedback on the new auth + email cap-hit upgrade flows will drive v1.8 scope.
+If interrupted after roadmap: `/gsd:plan-phase [N]` for first v1.8 phase.
 
 ## Files of record
 
@@ -112,6 +112,6 @@ Live-use feedback on the new auth + email cap-hit upgrade flows will drive v1.8 
 - `.planning/ROADMAP.md` — milestone summary + Phase progress table
 - `.planning/MILESTONES.md` — chronological history of shipped milestones
 - `.planning/STATE.md` — this file
+- `.planning/research/` — v1.8 research outputs (will be regenerated; v1.7's SUMMARY.md remains for reference)
 - `.planning/milestones/v1.7-ROADMAP.md` — v1.7 archive (full phase details)
 - `.planning/milestones/v1.7-REQUIREMENTS.md` — v1.7 requirements archive
-- `.planning/phases/35-per-account-gmail-oauth-send/35-DEVIATION-DIRECT-OAUTH.md` — canonical v1.7 architectural-pivot post-mortem (linkIdentity → direct-OAuth + SMTP → REST API)

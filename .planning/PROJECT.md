@@ -12,15 +12,27 @@ A visitor lands on a service business's website, picks an available time slot in
 
 ## Current State
 
-**v1.7 SHIPPED 2026-05-09 — see `.planning/milestones/v1.7-ROADMAP.md` for archive.**
+**v1.8 IN FLIGHT — milestone started 2026-05-09 (same day as v1.7 close).**
 
-Project is between milestones. Next step: `/gsd:new-milestone` to define v1.8 scope.
+Theme: introduce Stripe SaaS billing (14-day free trial → owner-app paywall, single-plan monthly+annual) as the dominant pivot of v1.8, alongside login UX polish (Google OAuth re-positioned below the password form, password-first tabs with a 3-fail in-memory counter that nudges users toward magic-link), a per-account Gmail quota raise from 200 → 450 (50-msg buffer below Google's 500/day free-Gmail ceiling), and a magic-link inline helper hint that holds the AUTH-29 four-way enumeration-safety ambiguity invariant. Public booker stays free regardless of payment status — only `/app/*` gets locked when the trial expires.
+
+## Current Milestone: v1.8 Stripe Paywall + Login UX Polish
+
+**Goal:** Convert the free single-tenant tool into a paid multi-tenant SaaS via Stripe (14-day trial → owner-app paywall, single-plan monthly+annual) while polishing the login form's Google/password ordering + 3-fail magic-link nudge and lifting the per-account Gmail cap to 450/day.
+
+**Target features:**
+
+- Login form reorders Google OAuth button below the password form (`/app/login` + `/app/signup` for parity)
+- `/app/login` defaults to password tab; magic-link is secondary; per-session in-memory counter prompts "Try a magic link instead" after 3 failed password attempts (resets on tab close)
+- Per-account Gmail quota raised from 200 → 450/day (single constant in `quota-guard.ts`)
+- Magic-link tab gains an inline helper line ("Make sure you're using the email you signed up with") — same wording for everyone, AUTH-29 ambiguity invariant preserved
+- Stripe paywall: 14-day free trial from signup, single plan with monthly + annual billing toggle, locked owner app + global banner on trial expiry, public booker unaffected
 
 ## Requirements
 
 ### Active
 
-(Between milestones — `.planning/REQUIREMENTS.md` will be created during `/gsd:new-milestone` for v1.8.)
+(See `.planning/REQUIREMENTS.md` — populated during the v1.8 requirements phase.)
 
 ### Validated
 
