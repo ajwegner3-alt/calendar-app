@@ -154,11 +154,12 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - Webhook idempotency: replay duplicate `stripe_event_id` → confirms `stripe_webhook_events` has exactly 1 row and `accounts` was updated exactly once (V18-CP-02 check).
 - Existing-account grandfather: Andrew's `nsi` test account has `subscription_status = 'trialing'` and `trial_ends_at` approximately 14 days from deploy time after migration runs (V18-CP-06 check).
 
-**Plans:** TBD
+**Plans:** 4 plans
 
-- [ ] 41-01: TBD
-- [ ] 41-02: TBD
-- [ ] 41-03: TBD
+- [ ] 41-01-stripe-sdk-and-client-PLAN.md — Install stripe@22.1.1 + create lib/stripe/client.ts singleton (apiVersion 2026-04-22.dahlia)
+- [ ] 41-02-billing-schema-migration-PLAN.md — Single-transaction migration: 7 columns on accounts + stripe_webhook_events table + trigger update + grandfather backfill (preview-branch validate then production apply) + co-shipped rollback file
+- [ ] 41-03-webhook-route-handler-PLAN.md — POST /api/stripe/webhook: raw-body signature verify, dedupe upsert, atomic per-event UPDATEs, dedupe-rollback on DB failure
+- [ ] 41-04-end-to-end-verification-PLAN.md — PREREQ-F handoff + Stripe CLI trigger + idempotency replay + nsi canary + bad-signature curl + Andrew sign-off (manual QA wave)
 
 ---
 
