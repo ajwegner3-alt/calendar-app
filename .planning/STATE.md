@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **Plan 41-03 complete.** POST /api/stripe/webhook created with raw-body signature verification, stripe_webhook_events dedupe, and routing for 6 lifecycle events.
+**Last updated:** 2026-05-10 — **Plans 41-02 + 41-03 complete.** Billing schema migration applied to production (7 columns + stripe_webhook_events + LD-09 grandfather backfill for 5 accounts). POST /api/stripe/webhook created with raw-body signature verification, stripe_webhook_events dedupe, and routing for 6 lifecycle events.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 in progress (Plans 01 + 03 complete; Plan 02 in parallel).
+**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 in progress (Plans 01, 02, 03 complete).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,9 +16,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
 **Phase:** 41 of 46 — in progress
-**Plan:** 03 of N — complete (Plan 02 executing in parallel)
-**Status:** Plan 41-03 complete — app/api/stripe/webhook/route.ts created with full POST handler
-**Last activity:** 2026-05-10 — Executed Plan 41-03: Stripe webhook route handler skeleton.
+**Plan:** 03 of N — complete (Plans 02 + 03 both complete)
+**Status:** Plans 41-02 + 41-03 complete — billing schema in production + webhook route handler created
+**Last activity:** 2026-05-10 — Executed Plan 41-02: billing schema migration (7 columns, idempotency table, LD-09 grandfather).
 
 ## Cumulative project progress
 
@@ -64,6 +64,13 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 - **LD-11** Stripe-triggered emails route through `getSenderForAccount(accountId)`; Stripe receipts complement for dollar-amount emails
 - **LD-12** AUTH-29 four-way enumeration-safety invariant preserved; magic-link helper identical wording for all users
 
+### Phase 41-02 decisions (billing schema migration)
+
+- **plan_interval CHECK:** Accepts both Stripe payload values (`month`/`year`) AND CONTEXT vocabulary (`monthly`/`annual`). Phase 42 normalizes.
+- **LD-09 proven:** 5 existing v1.7 accounts backfilled at deploy time. NSI canary: `trial_ends_at = 2026-05-24 14:53:30 UTC`. WHERE stripe_customer_id IS NULL is the correct idiomatic guard.
+- **stripe_webhook_events:** RLS enabled with zero policies = service-role-only access (no anon/authenticated reads).
+- **Trigger function (production):** INSERT cols: `owner_user_id, owner_email, slug, name, timezone, onboarding_complete, onboarding_step, subscription_status, trial_ends_at`. All Phase 10 columns preserved.
+
 ### Phase 41-03 decisions (webhook route)
 
 - **Stripe API 2026-04-22.dahlia field migration:** `current_period_end` moved from `Stripe.Subscription` to `Stripe.SubscriptionItem` — access via `sub.items.data[0]?.current_period_end`. Invoice subscription reference moved from `invoice.subscription` to `invoice.parent?.subscription_details?.subscription`. Any future Stripe code must use the new paths.
@@ -95,11 +102,11 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Executed Plan 41-03 (Stripe webhook route handler). 1 task, 1 file (+ gitignored .env.local), 9 min.
+**Last session:** 2026-05-10 — Executed Plan 41-02 (Stripe billing schema migration). 2 tasks, 2 SQL files, 14 min. All 5 production verifications passed. NSI canary: trialing, trial_ends_at=2026-05-24.
 
-**Stopped at:** Plan 41-03 complete. Plan 41-02 (database schema migration) executing in parallel. Next when both complete: Plan 41-04 (live webhook test + PREREQ-F registration).
+**Stopped at:** Plans 41-02 and 41-03 both complete. Next: Plan 41-04 (live webhook test + PREREQ-F registration) — gated on PREREQ-A (Stripe account) + PREREQ-D (Vercel env vars).
 
-**Resume file:** None — next action is Plan 41-04 after Plans 41-02 and 41-03 are both merged.
+**Resume file:** None — next action is Plan 41-04 after PREREQ-A + PREREQ-D satisfied.
 
 ## Files of record
 
