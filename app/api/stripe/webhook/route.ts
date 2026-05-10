@@ -114,6 +114,14 @@ export async function POST(req: Request) {
         break;
       }
 
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const result = await handleCheckoutSessionCompleted(admin, session);
+        accountId = result.accountId;
+        stripeSubscriptionId = null; // subscription ID arrives via customer.subscription.created
+        break;
+      }
+
       default: {
         outcome = "unknown";
         console.log("[stripe-webhook] unhandled event type (audit preserved)", {
@@ -287,4 +295,65 @@ async function handleInvoiceEvent(
   }
 
   return { accountId: account.id, stripeSubscriptionId: subscriptionId };
+}
+
+// ── handleCheckoutSessionCompleted ──────────────────────────────────────────
+// SC-5 safety net: if 42-01's checkout route failed to write stripe_customer_id
+// before redirect, this handler corrects it using session.client_reference_id
+// (= account.id, set in 42-01's session.create call) to find the account.
+//
+// Idempotent: the .is("stripe_customer_id", null) conditional UPDATE means this
+// is a no-op when the column is already populated (the common case — 42-01's
+// pre-create write succeeded for the same session).
+//
+// LD-10: does NOT write billing status columns — those come from subscription.*
+// and invoice.* events only (canonical source of truth per LD-10 + Phase 41 carry).
+
+async function handleCheckoutSessionCompleted(
+  admin: SupabaseClient,
+  session: Stripe.Checkout.Session,
+): Promise<{ accountId: string | null }> {
+  const accountId = session.client_reference_id;
+  const stripeCustomerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id ?? null;
+
+  if (!accountId) {
+    // Defensive — if 42-01 ever sends a session without client_reference_id, log + skip.
+    // Don't throw (would trigger Stripe retry loop with no path to recovery).
+    console.warn("[stripe-webhook] checkout.session.completed missing client_reference_id", {
+      sessionId: session.id,
+    });
+    return { accountId: null };
+  }
+
+  if (!stripeCustomerId) {
+    console.warn("[stripe-webhook] checkout.session.completed missing customer", {
+      sessionId: session.id,
+      accountId,
+    });
+    return { accountId };
+  }
+
+  // Conditional update — only writes if column is still NULL (idempotent / race-safe).
+  const { error: writeErr } = await admin
+    .from("accounts")
+    .update({ stripe_customer_id: stripeCustomerId })
+    .eq("id", accountId)
+    .is("stripe_customer_id", null);
+
+  if (writeErr) {
+    // Don't throw — this is a safety net, not the primary write. Log and let the
+    // subscription event handler proceed; it can resolve via the customer ID
+    // that was likely already written by 42-01.
+    console.error("[stripe-webhook] checkout.session.completed write failed", {
+      sessionId: session.id,
+      accountId,
+      stripeCustomerId,
+      err: writeErr.message,
+    });
+  }
+
+  return { accountId };
 }
