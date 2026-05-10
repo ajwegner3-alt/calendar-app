@@ -177,10 +177,12 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 3. After completing Checkout in test mode, the return URL (`/app/billing?session_id=...`) polls status and transitions to a "subscription active" UI state once the webhook updates `subscription_status` to `active` — without any optimistic update (webhook is canonical).
 4. If the poll times out (30s without webhook confirmation), the page shows a fallback message rather than hanging or showing an incorrect state.
 
-**Plans:** TBD
+**Plans:** 4 plans
 
-- [ ] 42-01: TBD
-- [ ] 42-02: TBD
+- [ ] 42-01-PLAN.md — Backend: prices config + POST /api/stripe/checkout (SC-5 customer linkage) + GET /api/stripe/checkout/status
+- [ ] 42-02-PLAN.md — Webhook: add checkout.session.completed handler (SC-5 safety net)
+- [ ] 42-03-PLAN.md — UI: /app/billing page + plan selection card + return-flow poller (with locked-state copy for Phase 43)
+- [ ] 42-04-PLAN.md — Manual QA + SC-5 sign-off (live Stripe test card, end-to-end pipeline verification)
 
 ---
 
