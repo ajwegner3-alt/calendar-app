@@ -29,7 +29,7 @@ Out of scope for this phase: paywall middleware enforcement (Phase 43), Customer
 
 ### Post-checkout return UX (`/app/billing?session_id=...`)
 - **Polling state (within 30s window):** Claude's discretion — pick presentation that doesn't feel broken during a ~5-30s wait. Spinner with reassuring single line OR multi-step indicator both acceptable.
-- **Success state (when `subscription_status` flips to `active`):** Brief "You're all set!" confirmation, then **auto-redirect to `/app/dashboard` after ~2s**. Don't strand the user on `/app/billing` after success.
+- **Success state (when `subscription_status` flips to `active`):** Brief "You're all set!" confirmation, then **auto-redirect to `/app` after ~2s** (note: `/app` IS the dashboard route in this codebase — there is no separate `/app/dashboard` page). Don't strand the user on `/app/billing` after success.
 - **Timeout fallback (30s exceeded, no webhook):** Claude's discretion on copy — must be reassuring (payment is safe), non-alarming, and offer clear next action (continue silent slow polling OR manual refresh CTA). User must not see "failed" framing during webhook lag.
 - **Cancel return (user closes Checkout / Stripe `cancel_url`):** Claude's discretion — non-judgmental return to plan-selection card. No error state, no nag.
 
