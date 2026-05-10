@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **Plans 41-02 + 41-03 complete.** Billing schema migration applied to production (7 columns + stripe_webhook_events + LD-09 grandfather backfill for 5 accounts). POST /api/stripe/webhook created with raw-body signature verification, stripe_webhook_events dedupe, and routing for 6 lifecycle events.
+**Last updated:** 2026-05-10 — **Phase 41 SHIPPED.** Stripe SDK + schema + webhook skeleton live in production. 4 plans, 9 commits (8 phase + 1 phase-completion). BILL-01..08 marked Complete. Andrew sign-off received. Ready to plan Phase 42 (Checkout Flow + Plan Selection Page).
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 in progress (Plans 01, 02, 03 complete).
+**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 shipped 2026-05-10. Phase 42 (Checkout Flow + Plan Selection Page) is next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 41 of 46 — in progress
-**Plan:** 03 of N — complete (Plans 02 + 03 both complete)
-**Status:** Plans 41-02 + 41-03 complete — billing schema in production + webhook route handler created
-**Last activity:** 2026-05-10 — Executed Plan 41-02: billing schema migration (7 columns, idempotency table, LD-09 grandfather).
+**Phase:** 42 of 46 — ready to plan
+**Plan:** —
+**Status:** Phase 41 shipped — Andrew approved live verification 2026-05-10. Awaiting `/gsd:plan-phase 42`.
+**Last activity:** 2026-05-10 — Phase 41 (Stripe SDK + schema + webhook skeleton) shipped end-to-end. Sandbox webhook live at `we_1TVfOTJ7PLcBbY73Groz1G13`. 5 v1.7 accounts grandfathered to trialing with `trial_ends_at = 2026-05-24 14:53:30 UTC`. BILL-01..08 marked Complete in REQUIREMENTS.md.
 
 ## Cumulative project progress
 
@@ -31,17 +31,17 @@ v1.4 [X] Slot Correctness + Polish    (Phases 25-27,  8 plans,  50 commits, ship
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30,  6 plans,  31 commits, shipped 2026-05-05)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans,  53 commits, shipped 2026-05-06)
 v1.7 [X] Auth + Email + Polish + Debt (Phases 34-40, 32 plans, 129 commits, shipped 2026-05-09)
-v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap created 2026-05-10)
+v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phase 41 shipped 2026-05-10 — 4 plans, 9 commits; phases 42-46 remain)
 ```
 
-**Total shipped:** 7 milestones archived (v1.0–v1.7), 40 phases completed, 170 plans, ~692 commits
+**Total shipped:** 7 milestones archived (v1.0–v1.7) + Phase 41 of v1.8 = 41 phases, 174 plans, ~701 commits
 
 ## v1.8 Phase Map
 
-| Phase | Name | Requirements | Key Gate |
-|-------|------|--------------|----------|
-| 41 | Stripe SDK + Schema + Webhook Skeleton | BILL-01..08 | PREREQ-A + PREREQ-D (test keys); PREREQ-F after deploy |
-| 42 | Checkout Flow + Plan Selection | BILL-09..11 | PREREQ-B (Price IDs) + PREREQ-E (pricing) |
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 41 | Stripe SDK + Schema + Webhook Skeleton | BILL-01..08 ✅ | ✅ Shipped 2026-05-10 |
+| 42 | Checkout Flow + Plan Selection | BILL-09..11 | Next — blocked on PREREQ-B + PREREQ-E |
 | 43 | Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12..20 | Phase 42 must ship first; LD-07 verification mandatory |
 | 44 | Customer Portal + Billing Polish + Stripe Emails | BILL-21..24 | PREREQ-C (Portal config); can develop parallel to 43 |
 | 45 | Login UX Polish + Gmail Quota Raise | AUTH-33..39 + EMAIL-35 | Fully independent of 41-44 |
@@ -64,22 +64,20 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 - **LD-11** Stripe-triggered emails route through `getSenderForAccount(accountId)`; Stripe receipts complement for dollar-amount emails
 - **LD-12** AUTH-29 four-way enumeration-safety invariant preserved; magic-link helper identical wording for all users
 
-### Phase 41-02 decisions (billing schema migration)
+### Phase 41 decisions (carry into Phase 42+)
 
-- **plan_interval CHECK:** Accepts both Stripe payload values (`month`/`year`) AND CONTEXT vocabulary (`monthly`/`annual`). Phase 42 normalizes.
-- **LD-09 proven:** 5 existing v1.7 accounts backfilled at deploy time. NSI canary: `trial_ends_at = 2026-05-24 14:53:30 UTC`. WHERE stripe_customer_id IS NULL is the correct idiomatic guard.
+- **plan_interval CHECK:** Accepts both Stripe payload values (`month`/`year`) AND CONTEXT vocabulary (`monthly`/`annual`). Phase 42 normalizes (don't write `monthly`/`annual` from checkout — write what Stripe gives back via webhook).
 - **stripe_webhook_events:** RLS enabled with zero policies = service-role-only access (no anon/authenticated reads).
 - **Trigger function (production):** INSERT cols: `owner_user_id, owner_email, slug, name, timezone, onboarding_complete, onboarding_step, subscription_status, trial_ends_at`. All Phase 10 columns preserved.
-
-### Phase 41-03 decisions (webhook route)
-
-- **Stripe API 2026-04-22.dahlia field migration:** `current_period_end` moved from `Stripe.Subscription` to `Stripe.SubscriptionItem` — access via `sub.items.data[0]?.current_period_end`. Invoice subscription reference moved from `invoice.subscription` to `invoice.parent?.subscription_details?.subscription`. Any future Stripe code must use the new paths.
-- **Phase 43 invariant:** `/api/stripe/webhook` MUST be exempt from the paywall middleware auth gate (invoked by Stripe servers, not authenticated users). Failing to exempt will break billing state machine.
+- **Stripe API 2026-04-22.dahlia field migration:** `current_period_end` moved from `Stripe.Subscription` to `Stripe.SubscriptionItem` — access via `sub.items.data[0]?.current_period_end`. Invoice subscription reference moved from `invoice.subscription` to `invoice.parent?.subscription_details?.subscription`. Phase 42 checkout code referencing these fields must use the new paths.
+- **Phase 43 invariant:** `/api/stripe/webhook` MUST be exempt from the paywall middleware auth gate (invoked by Stripe servers, not authenticated users). Failing to exempt will break the billing state machine.
 - **Local build placeholder:** `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` placeholder values added to `.env.local` (gitignored). Stripe SDK throws at module init if key is absent; placeholder is never used in API calls.
+- **Stripe Dashboard v2 UI restriction:** Stripe's "+ Add destination" UI defaults to v2/Event Destinations source which doesn't include `customer.subscription.*` or `invoice.*`. Workaround: `stripe webhook_endpoints create` CLI bypasses the UI restriction. Phase 44+ may need same workaround for additional endpoints.
+- **SC-5 deferred to Phase 42:** Phase 41's "real Stripe trigger writes to a real accounts row" success criterion was not exercised because no `accounts` row has `stripe_customer_id` set yet. Phase 42's first checkout naturally creates this linkage. Phase 42 verification should include a "first checkout end-to-end" sign-off that captures this.
 
 ### Carried patterns from v1.7
 
-- `getSenderForAccount` factory fail-closed contract — Stripe webhook email dispatch uses same pattern
+- `getSenderForAccount` factory fail-closed contract — Stripe webhook email dispatch (Phase 44) uses same pattern
 - `isRefusedSend(error)` dual-prefix helper — reuse for billing email error handling
 - 5xx-only formError gate for enumeration-safe actions — preserved in magic-link helper (Phase 45)
 - Knip CI gate is active — RESOLVED for lib/stripe: tsconfigPaths() + tsconfig @/* -> ./* covers @/lib/stripe/* generically (no explicit alias needed)
@@ -95,24 +93,25 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 
 ### Blockers
 
-- Phase 41 deploy blocked on: PREREQ-A (Stripe account) + PREREQ-D (env vars in Vercel)
-- Phase 42 blocked on: PREREQ-B (Price IDs) + PREREQ-E (pricing decision)
+- ~~Phase 41 deploy: PREREQ-A + PREREQ-D~~ ✅ Resolved 2026-05-10 (sandbox `NSI Calendar — v1.8 dev`; sk_test + whsec in Vercel)
+- ~~Phase 41 live test: PREREQ-F~~ ✅ Resolved 2026-05-10 (webhook `we_1TVfOTJ7PLcBbY73Groz1G13` registered via Stripe CLI; api_version `2026-04-22.dahlia`)
+- Phase 42 blocked on: PREREQ-B (create Product + monthly Price + annual Price in Stripe sandbox; capture Price IDs) + PREREQ-E (decide pricing amounts)
 - Phase 44 blocked on: PREREQ-C (Customer Portal config in Stripe dashboard)
-- Phase 41 live webhook test blocked on: PREREQ-F (webhook endpoint registration after Phase 41 deploy)
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Executed Plan 41-02 (Stripe billing schema migration). 2 tasks, 2 SQL files, 14 min. All 5 production verifications passed. NSI canary: trialing, trial_ends_at=2026-05-24.
+**Last session:** 2026-05-10 — Phase 41 executed end-to-end. 4 plans shipped wave-by-wave (41-01 SDK + client → 41-02 schema migration + 41-03 webhook handler in parallel → 41-04 E2E verification with checkpoints). Andrew sign-off received. Verifier passed (4/5 SCs verified directly; SC-5 deferred to Phase 42 first-checkout natural exercise).
 
-**Stopped at:** Plans 41-02 and 41-03 both complete. Next: Plan 41-04 (live webhook test + PREREQ-F registration) — gated on PREREQ-A (Stripe account) + PREREQ-D (Vercel env vars).
+**Stopped at:** Phase 41 shipped, all docs updated, BILL-01..08 marked Complete in REQUIREMENTS.md. Ready for Phase 42 planning.
 
-**Resume file:** None — next action is Plan 41-04 after PREREQ-A + PREREQ-D satisfied.
+**Resume file:** None — next action is `/gsd:plan-phase 42` (Checkout Flow + Plan Selection Page). Andrew should complete PREREQ-B (create Product + monthly + annual Prices in Stripe sandbox) and PREREQ-E (decide pricing amounts) before Phase 42 deploys, but planning can start with placeholders.
 
 ## Files of record
 
 - `.planning/PROJECT.md` — vision, requirements, key decisions, evolution log
-- `.planning/ROADMAP.md` — milestone summary + Phase progress table (v1.8 phases 41-46 now appended)
-- `.planning/REQUIREMENTS.md` — v1.8 requirements with traceability
+- `.planning/ROADMAP.md` — milestone summary + Phase progress table (Phase 41 marked shipped)
+- `.planning/REQUIREMENTS.md` — v1.8 requirements with traceability (BILL-01..08 marked Complete)
 - `.planning/STATE.md` — this file
+- `.planning/phases/41-stripe-sdk-schema-webhook-skeleton/` — Phase 41 plans, summaries, VERIFICATION.md
 - `.planning/research/` — v1.8 research outputs (STACK, FEATURES, ARCHITECTURE, PITFALLS, SUMMARY)
 - `.planning/milestones/v1.7-ROADMAP.md` — v1.7 archive

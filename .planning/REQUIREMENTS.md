@@ -27,17 +27,17 @@ Requirements for v1.8. Each maps to one roadmap phase.
 
 ### BILL — Stripe Paywall (Schema + Foundation)
 
-- [ ] **BILL-01**: `accounts` table extended with billing columns: `stripe_customer_id text unique`, `stripe_subscription_id text`, `subscription_status text DEFAULT 'trialing'`, `trial_ends_at timestamptz`, `current_period_end timestamptz`, `plan_interval text` (`'monthly' | 'annual' | null`)
-- [ ] **BILL-02**: `stripe_webhook_events` table created with `stripe_event_id text PRIMARY KEY` for idempotency; `received_at timestamptz`, `event_type text`, `processed_at timestamptz nullable`
-- [ ] **BILL-03**: Migration grandfathers existing v1.7 accounts at v1.8 deploy time: `trial_ends_at = NOW() + interval '14 days'` (anchored to deploy timestamp, NOT `created_at` — prevents instant lockout of older accounts)
-- [ ] **BILL-04**: New signups via `provision_account_for_new_user` trigger receive `trial_ends_at = NOW() + interval '14 days'` and `subscription_status = 'trialing'` automatically
+- [x] **BILL-01**: `accounts` table extended with billing columns: `stripe_customer_id text unique`, `stripe_subscription_id text`, `subscription_status text DEFAULT 'trialing'`, `trial_ends_at timestamptz`, `current_period_end timestamptz`, `plan_interval text` (`'monthly' | 'annual' | null`)
+- [x] **BILL-02**: `stripe_webhook_events` table created with `stripe_event_id text PRIMARY KEY` for idempotency; `received_at timestamptz`, `event_type text`, `processed_at timestamptz nullable`
+- [x] **BILL-03**: Migration grandfathers existing v1.7 accounts at v1.8 deploy time: `trial_ends_at = NOW() + interval '14 days'` (anchored to deploy timestamp, NOT `created_at` — prevents instant lockout of older accounts)
+- [x] **BILL-04**: New signups via `provision_account_for_new_user` trigger receive `trial_ends_at = NOW() + interval '14 days'` and `subscription_status = 'trialing'` automatically
 
 ### BILL — Webhook Handler
 
-- [ ] **BILL-05**: `app/api/stripe/webhook/route.ts` verifies signatures via `stripe.webhooks.constructEvent(body, sig, secret)` with `body` obtained via `await req.text()` (App Router raw-body pattern; NEVER `req.json()` first)
-- [ ] **BILL-06**: Webhook handler is idempotent: `INSERT INTO stripe_webhook_events (stripe_event_id, ...) ON CONFLICT DO NOTHING`; returns 200 immediately if event already processed
-- [ ] **BILL-07**: Webhook handler processes the canonical Stripe lifecycle events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.trial_will_end`
-- [ ] **BILL-08**: Webhook handler updates `accounts.subscription_status`, `current_period_end`, `plan_interval`, `stripe_subscription_id` in response to subscription events; commutative under arbitrary event arrival order
+- [x] **BILL-05**: `app/api/stripe/webhook/route.ts` verifies signatures via `stripe.webhooks.constructEvent(body, sig, secret)` with `body` obtained via `await req.text()` (App Router raw-body pattern; NEVER `req.json()` first)
+- [x] **BILL-06**: Webhook handler is idempotent: `INSERT INTO stripe_webhook_events (stripe_event_id, ...) ON CONFLICT DO NOTHING`; returns 200 immediately if event already processed
+- [x] **BILL-07**: Webhook handler processes the canonical Stripe lifecycle events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.trial_will_end`
+- [x] **BILL-08**: Webhook handler updates `accounts.subscription_status`, `current_period_end`, `plan_interval`, `stripe_subscription_id` in response to subscription events; commutative under arbitrary event arrival order
 
 ### BILL — Checkout Flow
 
@@ -147,18 +147,18 @@ These are NOT requirements — they're external setup tasks Andrew must complete
 
 ## Traceability
 
-Updated: 2026-05-10 — v1.8 roadmap created; all 32 requirements mapped.
+Updated: 2026-05-10 — Phase 41 complete (BILL-01..08 → Complete); 24 requirements remain pending across phases 42-45.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BILL-01 | Phase 41 | Pending |
-| BILL-02 | Phase 41 | Pending |
-| BILL-03 | Phase 41 | Pending |
-| BILL-04 | Phase 41 | Pending |
-| BILL-05 | Phase 41 | Pending |
-| BILL-06 | Phase 41 | Pending |
-| BILL-07 | Phase 41 | Pending |
-| BILL-08 | Phase 41 | Pending |
+| BILL-01 | Phase 41 | Complete |
+| BILL-02 | Phase 41 | Complete |
+| BILL-03 | Phase 41 | Complete |
+| BILL-04 | Phase 41 | Complete |
+| BILL-05 | Phase 41 | Complete |
+| BILL-06 | Phase 41 | Complete |
+| BILL-07 | Phase 41 | Complete |
+| BILL-08 | Phase 41 | Complete |
 | BILL-09 | Phase 42 | Pending |
 | BILL-10 | Phase 42 | Pending |
 | BILL-11 | Phase 42 | Pending |

@@ -10,7 +10,7 @@
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
 - ✅ **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (32 plans across 7 phases) — shipped 2026-05-09. Full archive: [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md).
-- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 (plans TBD — roadmap 2026-05-10).
+- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 (Phase 41 shipped 2026-05-10; phases 42-46 in progress).
 
 ## Phases
 
@@ -156,10 +156,10 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Plans:** 4 plans
 
-- [ ] 41-01-stripe-sdk-and-client-PLAN.md — Install stripe@22.1.1 + create lib/stripe/client.ts singleton (apiVersion 2026-04-22.dahlia)
-- [ ] 41-02-billing-schema-migration-PLAN.md — Single-transaction migration: 7 columns on accounts + stripe_webhook_events table + trigger update + grandfather backfill (preview-branch validate then production apply) + co-shipped rollback file
-- [ ] 41-03-webhook-route-handler-PLAN.md — POST /api/stripe/webhook: raw-body signature verify, dedupe upsert, atomic per-event UPDATEs, dedupe-rollback on DB failure
-- [ ] 41-04-end-to-end-verification-PLAN.md — PREREQ-F handoff + Stripe CLI trigger + idempotency replay + nsi canary + bad-signature curl + Andrew sign-off (manual QA wave)
+- [x] 41-01-stripe-sdk-and-client-PLAN.md — Install stripe@22.1.1 + create lib/stripe/client.ts singleton (apiVersion 2026-04-22.dahlia) ✓ shipped 2026-05-10
+- [x] 41-02-billing-schema-migration-PLAN.md — Single-transaction migration: 7 columns on accounts + stripe_webhook_events table + trigger update + grandfather backfill ✓ shipped 2026-05-10 (5 existing accounts grandfathered to trialing with trial_ends_at = 2026-05-24)
+- [x] 41-03-webhook-route-handler-PLAN.md — POST /api/stripe/webhook with raw-body signature verify, dedupe upsert, atomic per-event UPDATEs, dedupe-rollback on DB failure ✓ shipped 2026-05-10 (291 lines; adapted to apiVersion 2026-04-22.dahlia type changes)
+- [x] 41-04-end-to-end-verification-PLAN.md — PREREQ-F handoff + idempotency proof + nsi canary + bad-signature curl + Andrew sign-off ✓ shipped 2026-05-10 (Stripe-CLI workaround for v2-only Dashboard UI; SC-5 deferred to Phase 42 first-checkout natural exercise)
 
 ---
 
@@ -319,7 +319,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 38 | v1.7 | 3 / 3 | ✅ Shipped — verifier 19/19 PASS; Andrew live-verified A/B/C/D against production (`booking.nsintegrations.com`); two non-blocking deviations captured (Site URL fix, Supabase inner-cooldown observation) | 2026-05-08 |
 | 39 | v1.7 | 3 / 3 | ✅ Shipped — verifier 4/4 PASS; Andrew live-verified all three checkpoints (key-prop removal, skeleton, animation+reduced-motion) on production | 2026-05-08 |
 | 40 | v1.7 | 9 / 9 | ✅ Shipped — knip 6.12.1; 27 REMOVE / 53 KEEP; 4 atomic chore commits (deps `14fb48c`, dups n/a, exports `1cbb273`, files `2a1b665`); CI gate `d94ca07`; final QA all PASS `c42529d` | 2026-05-09 |
-| 41 | v1.8 | 0 / TBD | Not started | - |
+| 41 | v1.8 | 4 / 4 | ✅ Shipped — verifier passed; SC-1..4 verified live (7 columns + dedupe table + trigger + 5/5 grandfathered + handler spec compliance); SC-5 (real Stripe trigger to linked account) deferred to Phase 42 first-checkout natural exercise; Andrew sign-off received | 2026-05-10 |
 | 42 | v1.8 | 0 / TBD | Not started | - |
 | 43 | v1.8 | 0 / TBD | Not started | - |
 | 44 | v1.8 | 0 / TBD | Not started | - |
@@ -332,8 +332,8 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - **Total phases shipped:** 40 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30 + 31-33 + 34-40)
 - **Total plans shipped:** 170 (52 + 34 + 22 + 6 + 8 + 6 + 10 + 32)
 - **Total commits:** ~692 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + 31 v1.5 + 53 v1.6 + 129 v1.7)
-- **v1.8 in progress:** 6 phases planned (41-46), plans TBD, 32 requirements mapped
+- **v1.8 in progress:** Phase 41 shipped 2026-05-10 (4 plans, 8 commits); phases 42-46 remain (5 phases, plans TBD)
 
 ---
 
-*Roadmap last updated: 2026-05-10 — v1.8 roadmap created. 6 phases (41-46): Stripe schema + webhook skeleton (41), Checkout + plan selection (42), Paywall enforcement + banners (43), Customer Portal + emails (44), Login UX polish + Gmail quota raise (45), Andrew ship sign-off (46). 32 requirements mapped (24 BILL + 7 AUTH + 1 EMAIL), 100% coverage. Build-order constraints: schema before handler code (41→42→43); billing page before enforcement (42→43); portal phase can parallelize with 43 at file level; login/email (45) fully independent. Per CLAUDE.md convention: phase 46 is the final manual QA + project-completion gate.*
+*Roadmap last updated: 2026-05-10 — Phase 41 shipped (Stripe SDK + schema + webhook skeleton). 4 plans, 8 commits. Sandbox webhook live at we_1TVfOTJ7PLcBbY73Groz1G13 (api_version 2026-04-22.dahlia). 5 existing accounts grandfathered to trialing with trial_ends_at = 2026-05-24. Stripe Dashboard "+ Add destination" UI defaulted to v2/Event Destinations only — endpoint creation done via `stripe webhook_endpoints create` CLI as a workaround. SC-5 (real Stripe trigger to linked account) deferred to Phase 42 first-checkout natural exercise. Next: /gsd:plan-phase 42 (Checkout Flow + Plan Selection Page).*
