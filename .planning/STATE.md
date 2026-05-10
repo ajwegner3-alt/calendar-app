@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **Plan 41-01 complete.** stripe@22.1.1 installed; lib/stripe/client.ts singleton created.
+**Last updated:** 2026-05-10 — **Plan 41-03 complete.** POST /api/stripe/webhook created with raw-body signature verification, stripe_webhook_events dedupe, and routing for 6 lifecycle events.
 
 ## Project Reference
 
@@ -8,7 +8,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 in progress (Plan 01 complete).
+**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 in progress (Plans 01 + 03 complete; Plan 02 in parallel).
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
@@ -16,9 +16,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
 **Phase:** 41 of 46 — in progress
-**Plan:** 01 of N — complete
-**Status:** Plan 41-01 complete — stripe@22.1.1 installed, lib/stripe/client.ts created
-**Last activity:** 2026-05-10 — Executed Plan 41-01: stripe SDK install + client singleton.
+**Plan:** 03 of N — complete (Plan 02 executing in parallel)
+**Status:** Plan 41-03 complete — app/api/stripe/webhook/route.ts created with full POST handler
+**Last activity:** 2026-05-10 — Executed Plan 41-03: Stripe webhook route handler skeleton.
 
 ## Cumulative project progress
 
@@ -64,6 +64,12 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 - **LD-11** Stripe-triggered emails route through `getSenderForAccount(accountId)`; Stripe receipts complement for dollar-amount emails
 - **LD-12** AUTH-29 four-way enumeration-safety invariant preserved; magic-link helper identical wording for all users
 
+### Phase 41-03 decisions (webhook route)
+
+- **Stripe API 2026-04-22.dahlia field migration:** `current_period_end` moved from `Stripe.Subscription` to `Stripe.SubscriptionItem` — access via `sub.items.data[0]?.current_period_end`. Invoice subscription reference moved from `invoice.subscription` to `invoice.parent?.subscription_details?.subscription`. Any future Stripe code must use the new paths.
+- **Phase 43 invariant:** `/api/stripe/webhook` MUST be exempt from the paywall middleware auth gate (invoked by Stripe servers, not authenticated users). Failing to exempt will break billing state machine.
+- **Local build placeholder:** `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` placeholder values added to `.env.local` (gitignored). Stripe SDK throws at module init if key is absent; placeholder is never used in API calls.
+
 ### Carried patterns from v1.7
 
 - `getSenderForAccount` factory fail-closed contract — Stripe webhook email dispatch uses same pattern
@@ -89,11 +95,11 @@ v1.8 [ ] Stripe Paywall + Login UX    (Phases 41-46, plans TBD — roadmap creat
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Executed Plan 41-01 (stripe SDK + client singleton). 2 tasks, 3 files, 4 min.
+**Last session:** 2026-05-10 — Executed Plan 41-03 (Stripe webhook route handler). 1 task, 1 file (+ gitignored .env.local), 9 min.
 
-**Stopped at:** Plan 41-01 complete. Next: Plan 41-02 (database schema migration).
+**Stopped at:** Plan 41-03 complete. Plan 41-02 (database schema migration) executing in parallel. Next when both complete: Plan 41-04 (live webhook test + PREREQ-F registration).
 
-**Resume file:** None — next action is execute Plan 41-02.
+**Resume file:** None — next action is Plan 41-04 after Plans 41-02 and 41-03 are both merged.
 
 ## Files of record
 
