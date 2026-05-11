@@ -211,10 +211,14 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - Tier inference: webhook resolves `plan_tier` by matching `session.line_items[0].price.id` against the 4-SKU map in `lib/stripe/prices.ts` (not by reading metadata, not by hardcoding).
 - Trial defaults: new signups still get `trialing` + `trial_ends_at = NOW()+14d` + `plan_tier = NULL`; column defaulting to NULL doesn't break the trigger.
 
-**Plans:** TBD — run `/gsd:plan-phase 42.5`
+**Plans:** 6 plans
 
-- [ ] 42.5-01: TBD
-- [ ] 42.5-02: TBD
+- [ ] 42.5-01-PLAN.md — Schema migration: add accounts.plan_tier column with CHECK constraint
+- [ ] 42.5-02-PLAN.md — Refactor lib/stripe/prices.ts to 4-SKU map + helpers + .env.local.example update
+- [ ] 42.5-03-PLAN.md — Checkout route accepts {tier, interval}; rejects branding + unknown tier
+- [ ] 42.5-04-PLAN.md — Webhook derives plan_tier via listLineItems and writes to accounts
+- [ ] 42.5-05-PLAN.md — Replace PlanSelectionCard with 3-card TierGrid + Branding consult link
+- [ ] 42.5-06-PLAN.md — Manual QA / UAT: end-to-end SC-1..SC-6 with real Stripe test mode
 
 ---
 
