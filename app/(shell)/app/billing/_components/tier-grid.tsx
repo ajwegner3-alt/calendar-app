@@ -3,7 +3,7 @@
 /**
  * TierGrid — Client Component (Phase 42.5-05, LD-13/15/16/18)
  *
- * The 3-card layout that replaces the legacy single PlanSelectionCard:
+ * The 3-card layout that replaces the legacy single tier-selection card:
  *   [ Basic ]  [ Widget — Most popular ]  [ Branding ]
  *
  * Owns the single global Monthly/Annual toggle that drives BOTH Stripe cards in

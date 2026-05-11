@@ -58,8 +58,8 @@ export function ActiveView() {
 // LockedView — shown for canceled / unpaid / incomplete / incomplete_expired
 // CONTEXT.md tonal anchor — warm, non-punitive framing.
 // Phase 43 wires the redirect here; Phase 42 owns the copy.
-// The PlanSelectionCard renders below this in page.tsx so the owner can
-// re-subscribe from the same page.
+// The TierGrid renders below this in page.tsx so the owner can
+// re-subscribe (or book a Branding consult) from the same page.
 // ---------------------------------------------------------------------------
 
 export function LockedView() {

@@ -7,7 +7,7 @@
  * Submits {tier, interval} to /api/stripe/checkout and redirects the browser to
  * the hosted Checkout URL on success.
  *
- * Invariants preserved from the legacy single-card PlanSelectionCard (LD-18):
+ * Invariants preserved from the legacy single tier-selection card (LD-18):
  *   - No `@stripe/stripe-js` (LD-02) — hosted Checkout via window.location.assign.
  *   - No optimistic `subscription_status` write (LD-10) — webhook is canonical.
  *   - Cross-domain redirect uses window.location.assign, NOT router.push.

@@ -6,7 +6,7 @@ import {
   ActiveView,
   LockedView,
 } from "./_components/billing-state-views";
-import { PlanSelectionCard } from "./_components/plan-selection-card";
+import { TierGrid, type TierGridProps } from "./_components/tier-grid";
 import { CheckoutReturnPoller } from "./_components/checkout-return-poller";
 
 export const metadata = { title: "Billing | Calendar" };
@@ -102,14 +102,32 @@ export default async function BillingPage({
   }
 
   // ---------------------------------------------------------------------------
-  // Pricing props — server-side from PRICES (env-var-driven, no Stripe API call)
+  // Pricing + tier-grid props — server-side from PRICES (env-var-driven,
+  // no Stripe API call). Phase 42.5 multi-tier shape — see lib/stripe/prices.ts
+  // for the nested {basic,widget}.{monthly,annual} structure.
+  //
+  // brandingBookingUrl is read here (server boundary) per LD-16: env var must
+  // NEVER leak to the client bundle. ConsultTierCard receives the resolved URL
+  // as a prop. The hardcoded fallback matches the Calendly/booking destination
+  // documented in LD-16 so the dev server boots even without .env.local.
   // ---------------------------------------------------------------------------
 
-  const priceProps = {
-    monthlyLabel: PRICES.monthly.label,
-    annualTotalLabel: PRICES.annual.totalLabel,
-    annualMonthlyEquivalentLabel: PRICES.annual.monthlyEquivalentLabel,
-    savingsPct: PRICES.annual.savingsPct,
+  const brandingBookingUrl =
+    process.env.NSI_BRANDING_BOOKING_URL ??
+    "https://booking.nsintegrations.com/nsi/branding-consultation";
+
+  const tierGridProps: TierGridProps = {
+    basicMonthlyLabel: PRICES.basic.monthly.label,
+    basicAnnualMonthlyEquivalentLabel:
+      PRICES.basic.annual.monthlyEquivalentLabel,
+    basicAnnualTotalLabel: PRICES.basic.annual.totalLabel,
+    basicSavingsPct: PRICES.basic.annual.savingsPct,
+    widgetMonthlyLabel: PRICES.widget.monthly.label,
+    widgetAnnualMonthlyEquivalentLabel:
+      PRICES.widget.annual.monthlyEquivalentLabel,
+    widgetAnnualTotalLabel: PRICES.widget.annual.totalLabel,
+    widgetSavingsPct: PRICES.widget.annual.savingsPct,
+    brandingBookingUrl,
   };
 
   // ---------------------------------------------------------------------------
@@ -134,7 +152,11 @@ export default async function BillingPage({
 
   if (state.type === "plan_selection") {
     return (
-      <div className="container mx-auto max-w-2xl py-8 space-y-6">
+      // max-w-5xl (1024px) widens the container for the 3-card grid so that
+      // md:grid-cols-3 actually renders three columns at desktop breakpoints
+      // — the legacy max-w-2xl (672px) fit the previous single tier-selection
+      // card and would compress the new grid below the 1024px-no-scroll gate.
+      <div className="container mx-auto max-w-5xl py-8 space-y-6">
         {/* Trial countdown ONLY for trialing accounts. past_due falls into
             plan_selection too but does NOT get the TrialingHeader.
             Gate on raw subscription_status, not trialDaysLeft, so that
@@ -143,16 +165,17 @@ export default async function BillingPage({
         {account.subscription_status === "trialing" && (
           <TrialingHeader daysLeft={state.trialDaysLeft} />
         )}
-        <PlanSelectionCard {...priceProps} />
+        <TierGrid {...tierGridProps} />
       </div>
     );
   }
 
-  // locked state — show the tonal anchor + plan card for re-subscribe path
+  // locked state — show the tonal anchor + plan grid for re-subscribe path
+  // max-w-5xl: same rationale as the plan_selection branch above (3-card grid).
   return (
-    <div className="container mx-auto max-w-2xl py-8 space-y-6">
+    <div className="container mx-auto max-w-5xl py-8 space-y-6">
       <LockedView />
-      <PlanSelectionCard {...priceProps} />
+      <TierGrid {...tierGridProps} />
     </div>
   );
 }
