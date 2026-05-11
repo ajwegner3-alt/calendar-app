@@ -17,6 +17,7 @@ import { stripe } from "@/lib/stripe/client";
 import { priceIdToTier } from "@/lib/stripe/prices";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTrialEndingEmail } from "@/lib/email/send-trial-ending-email";
+import { sendPaymentFailedEmail } from "@/lib/email/send-payment-failed-email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -323,7 +324,7 @@ async function handleInvoiceEvent(
 
   const { data: account, error: lookupErr } = await admin
     .from("accounts")
-    .select("id, stripe_subscription_id")
+    .select("id, stripe_subscription_id, name, logo_url, brand_primary, owner_email")
     .eq("stripe_customer_id", customerId)
     .maybeSingle();
 
@@ -353,6 +354,54 @@ async function handleInvoiceEvent(
       err: updateErr.message,
     });
     throw new Error("account_update_failed");
+  }
+
+  // Phase 44 (BILL-24 — payment-failed): dispatch the payment-failed email on
+  // EVERY retry attempt (resolved open question Q1 — see 44-00-PLANNER-NOTES.md).
+  // The stripe_webhook_events PK + ON CONFLICT DO NOTHING already prevents
+  // duplicate processing per Stripe event ID. Each retry is a distinct Stripe
+  // event with a distinct ID, so each retry gets exactly one email.
+  //
+  // Email copy adapts to attemptCount + nextPaymentAttempt (null = final attempt).
+  if (eventType === "invoice.payment_failed" && account.owner_email) {
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (process.env.NEXT_PUBLIC_VERCEL_URL
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : "http://localhost:3000");
+
+    try {
+      const emailResult = await sendPaymentFailedEmail({
+        accountId: account.id,
+        account: {
+          id: account.id,
+          name: account.name,
+          logo_url: account.logo_url,
+          brand_primary: account.brand_primary,
+          owner_email: account.owner_email,
+        },
+        attemptCount: invoice.attempt_count ?? 1,
+        nextPaymentAttempt: invoice.next_payment_attempt ?? null,
+        amountDueCents: invoice.amount_due ?? 0,
+        hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+        appUrl,
+      });
+      if (!emailResult.success) {
+        console.error("[stripe-webhook] payment-failed email send failed", {
+          account_id: account.id,
+          attempt_count: invoice.attempt_count,
+          error: emailResult.error,
+        });
+      }
+    } catch (emailErr) {
+      // Defensive — sendPaymentFailedEmail is documented as never-throw, but
+      // any rogue throw here must NOT propagate to the outer dedupe-rollback.
+      console.error("[stripe-webhook] payment-failed email threw unexpectedly", {
+        account_id: account.id,
+        attempt_count: invoice.attempt_count,
+        err: emailErr instanceof Error ? emailErr.message : String(emailErr),
+      });
+    }
   }
 
   return { accountId: account.id, stripeSubscriptionId: subscriptionId };
