@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — Phase 42.5 SHIPPED. Plan 42.5-06 UAT closed via Andrew's verbal "approved" sign-off in chat. UAT.md frontmatter flipped to `status: passed`, `completed_at: 2026-05-10`, `signoff_by: Andrew`. All 6 SCs (SC-1 plan_tier column + CHECK; SC-2 3-card TierGrid render; SC-3 Branding consult link with no POST; SC-4 `{tier, interval}` validation incl. `use_consult_link`/`unknown_tier`/auth-precedence; SC-5 webhook plan_tier write — Basic-Monthly + Widget-Annual end-to-end; SC-6 Phase 41 SC-5 carry-over derived pass), all 3 verification gates (1024px no-scroll; tier inference via `priceIdToTier(listLineItems)` not metadata; trial defaults unchanged), and all regression checks accepted. **Phase 41 SC-5 carry-over is OFFICIALLY CLOSED** — Test 5a (Basic-Monthly) + Test 5b (Widget-Annual) each independently proved a real Stripe trigger lands all 4 billing columns (`stripe_customer_id`, `stripe_subscription_id`, `plan_tier`, `subscription_status`) on a real accounts row. Per-SC evidence rows in 42.5-UAT.md remain blank by design — Andrew owns audit-trail backfill in his own copy if needed (verbal-signoff pattern). Phase 42.5 closes BILL-09 (full closure of paywall checkout flow), BILL-10b (new — `accounts.plan_tier` column + webhook write), and BILL-25 (new — Branding consultation CTA via `NSI_BRANDING_BOOKING_URL` same-window navigation). Next: Phase 42.6 (Widget Feature Gating — BILL-26 + BILL-27) is unblocked and ready to research/plan.
+**Last updated:** 2026-05-11 — Phase 42.6 Plan 01 (Wave 1) COMPLETE. Pure `requireWidgetTier(account)` helper landed at `lib/stripe/widget-gate.ts` with 12-case branch-coverage test suite at `tests/widget-gate.test.ts` — all 12 passing, zero new tsc errors. Trialing-first branch ordering preserved (critical invariant for Plans 02/03): trialing always allowed regardless of plan_tier (including NULL during the pre-first-checkout window), past_due+widget allowed (LD-08 mirror), basic+active/past_due denied with reason 'basic_tier', everything else denied with reason 'no_subscription'. Helper imports `PriceTier` from `lib/stripe/prices.ts` (no redefinition). Wave 2 (Plans 42.6-02 public embed + 42.6-03 owner dialog) is unblocked and can run in parallel — both consume `requireWidgetTier` unmodified. SUMMARY at `.planning/phases/42.6-widget-feature-gating/42.6-01-SUMMARY.md`, commit `61b65ba`. Previous status: Phase 42.5 SHIPPED 2026-05-10 (multi-tier Stripe paywall foundation), Plan 42.5-06 UAT closed via Andrew's verbal "approved" sign-off.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — **COMPLETE** (Wave 4 UAT signed off by Andrew 2026-05-10)
-**Plan:** 42.5-01..42.5-06 all complete; next phase = 42.6 Widget Feature Gating
-**Status:** Phase 42.5 SHIPPED. Plan 42.5-06 UAT closed via Andrew's verbal "approved" sign-off in chat. `42.5-UAT.md` frontmatter flipped to `status: passed` / `completed_at: 2026-05-10` / `signoff_by: Andrew` (per-SC evidence rows intentionally left blank — verbal-signoff pattern, Andrew owns backfill if audit trail needed). All 6 SCs accepted (SC-1 plan_tier column + CHECK constraint, SC-2 3-card TierGrid render, SC-3 Branding consult link with no POST, SC-4 `{tier, interval}` validation incl. `use_consult_link`/`unknown_tier`/auth-precedence, SC-5 webhook plan_tier write — Basic-Monthly + Widget-Annual end-to-end, SC-6 Phase 41 SC-5 carry-over derived pass). All 3 verification gates accepted (1024px no-scroll; tier inference via `priceIdToTier(listLineItems)` not metadata; trial defaults unchanged — new signups still get `subscription_status='trialing'` + `trial_ends_at ≈ NOW()+14d` + `plan_tier IS NULL`). All regression checks accepted (polling state machine identical to Phase 42; grandfathered v1.7 accounts see 3-card layout on trial expiry; booker `/{account}/{slug}` non-gated per LD-07/LD-17; webhook still middleware-exempt). **Phase 41 SC-5 carry-over OFFICIALLY CLOSED** — Tests 5a + 5b each independently proved a real Stripe trigger lands all 4 billing columns on a real accounts row. Phase 42.5 closes BILL-09 (full closure), BILL-10b (new — `accounts.plan_tier` column + webhook write), BILL-25 (new — Branding consult CTA). SUMMARY at `.planning/phases/42.5-multi-tier-stripe-and-schema/42.5-06-SUMMARY.md`.
-**Last activity:** 2026-05-10 — Phase 42.5 shipped (multi-tier Stripe paywall foundation). Plan 42.5-06 UAT executed: scaffolded 42.5-UAT.md (Task 1, commit `5e493b1`), Andrew completed walkthrough offline and signaled "approved" in orchestrator chat (Task 2 checkpoint:human-verify), UAT.md frontmatter updated, SUMMARY committed.
+**Phase:** 42.6 of 46 (+ inserted 42.5/42.6) — **IN PROGRESS** (Wave 1 complete; Wave 2 unblocked)
+**Plan:** 42.6-01 complete; next = 42.6-02 (public embed gate) + 42.6-03 (owner dialog gate) in parallel
+**Status:** Phase 42.6 Wave 1 COMPLETE. Pure widget-gate helper landed at `lib/stripe/widget-gate.ts` with 12-case vitest branch-coverage suite at `tests/widget-gate.test.ts` — all 12 passing, zero new tsc errors. Exports `requireWidgetTier(account: AccountGateInput): WidgetGateResult` plus the `WidgetGateResult` discriminated union (`{ allowed: true }` | `{ allowed: false; reason: 'basic_tier' | 'no_subscription' }`). Trialing-first branch ordering is the critical invariant locked in for Plans 02/03 — new accounts during 14-day trial have `plan_tier = NULL` (webhook writes plan_tier only on first paid checkout, per Phase 42.5) and MUST be allowed; the gate would otherwise fail every trialing user through to `'no_subscription'`. Branches in order: (1) trialing → allowed regardless of plan_tier; (2) widget + active/past_due → allowed (LD-08 mirror); (3) basic + active/past_due → denied:'basic_tier'; (4) fallthrough → denied:'no_subscription'. Helper imports `PriceTier` from `lib/stripe/prices.ts` (no redefinition — single source of truth for tier vocabulary). Pure function, no DB/network/async — callers own UX shaping. SUMMARY at `.planning/phases/42.6-widget-feature-gating/42.6-01-SUMMARY.md`, commit `61b65ba`. Wave 2 (Plans 42.6-02 public embed + 42.6-03 owner dialog) can now run in parallel — both consume `requireWidgetTier` unmodified.
+**Last activity:** 2026-05-11 — Executed Plan 42.6-01 (autonomous, no checkpoints). Created `lib/stripe/widget-gate.ts` (87 lines) + `tests/widget-gate.test.ts` (127 lines), committed atomically as `feat(42.6-01)`. `npm test -- widget-gate` → 12/12 passing in ~5ms. Pre-existing 42-line tsc noise in `tests/reminder-cron.test.ts` + `tests/upgrade-action.test.ts` confirmed unchanged (documented tech debt) — Plan 01 introduces zero new tsc errors.
 
 ## Cumulative project progress
 
@@ -31,7 +31,7 @@ v1.4 [X] Slot Correctness + Polish    (Phases 25-27,  8 plans,  50 commits, ship
 v1.5 [X] Buffer + Rebrand + Booker    (Phases 28-30,  6 plans,  31 commits, shipped 2026-05-05)
 v1.6 [X] Day-of-Disruption Tools      (Phases 31-33, 10 plans,  53 commits, shipped 2026-05-06)
 v1.7 [X] Auth + Email + Polish + Debt (Phases 34-40, 32 plans, 129 commits, shipped 2026-05-09)
-v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 shipped 2026-05-10; phases 42.6/43/44/45/46 remain)
+v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 shipped 2026-05-10; Phase 42.6 Wave 1 complete 2026-05-11; Waves 2-N of 42.6 + phases 43/44/45/46 remain)
 ```
 
 **Total shipped:** 7 milestones archived (v1.0–v1.7) + Phase 41 of v1.8 = 41 phases, 174 plans, ~701 commits
@@ -43,7 +43,7 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 shipped 20
 | 41 | Stripe SDK + Schema + Webhook Skeleton | BILL-01..08 ✅ | ✅ Shipped 2026-05-10 |
 | 42 | Checkout Flow Plumbing | BILL-09 (partial) + BILL-10/11 | ⚠ Code-complete 2026-05-10; 3/4 plans shipped; 42-04 UAT superseded by 42.5 |
 | **42.5** | **Multi-Tier Stripe + Schema** (INSERTED) | BILL-09 (full) + BILL-10b + BILL-25 | ✅ Shipped 2026-05-10 |
-| **42.6** | **Widget Feature Gating** (INSERTED) | BILL-26 + BILL-27 | Unblocked — ready to research/plan |
+| **42.6** | **Widget Feature Gating** (INSERTED) | BILL-26 + BILL-27 | ⚠ In progress 2026-05-11 — Plan 01 (helper) complete; Plans 02 + 03 unblocked |
 | 43 | Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12..20 | 42.5 must ship first; LD-07 verification mandatory |
 | 44 | Customer Portal + Billing Polish + Stripe Emails | BILL-21..24 | PREREQ-C (Portal config — 4-Price plan-switching); can develop parallel to 43 |
 | 45 | Login UX Polish + Gmail Quota Raise | AUTH-33..39 + EMAIL-35 | Fully independent |
@@ -79,6 +79,7 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 shipped 20
 - **LD-16** Branding CTA destination is `process.env.NSI_BRANDING_BOOKING_URL` (= `https://booking.nsintegrations.com/nsi/branding-consultation`). Same-window navigation, no API call, no DB write.
 - **LD-17** Widget tier gating happens on TWO surfaces: public `/embed/[account]/[slug]` (renders gated message, NOT 404 — must not break iframes) + owner-side embed-code settings page (replaces embed code with upgrade CTA). The bare booker `/{account}/{slug}` is NEVER gated (LD-07 extension).
 - **LD-18** Phase 42 single-plan UI on disk is to be refactored in-place by Phase 42.5 — not thrown away. SC-5 plumbing (customer linkage, no-store cache, 2s/30s polling, return flow) is preserved.
+- **LD-19** Widget-gate helper `requireWidgetTier(account)` lives at `lib/stripe/widget-gate.ts` and is the ONLY gate logic for widget access — both public `/embed/[account]/[slug]` (Plan 42.6-02) and owner-side embed-code dialog (Plan 42.6-03) MUST consume it unmodified. Branch order is locked: trialing checked FIRST (allowed regardless of plan_tier — covers NULL plan_tier during pre-first-checkout trial), then widget+active/past_due (allowed), then basic+active/past_due (denied:'basic_tier'), then fallthrough (denied:'no_subscription'). Return shape is a discriminated union `{ allowed: true } | { allowed: false, reason: 'basic_tier' | 'no_subscription' }` — callers MUST branch on `result.allowed` first. Helper is pure (no DB/network/async); callers fetch the account row and own UX shaping.
 
 ### Phase 41 decisions (carry into Phase 42+)
 
@@ -118,11 +119,11 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 shipped 20
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Executed Plan 42.5-06 (UAT). Task 1 scaffolded `42.5-UAT.md` (commit `5e493b1`). Task 2 was a `checkpoint:human-verify` — Andrew ran the UAT walkthrough offline (live deploy with real Stripe test mode against the live Supabase project) and signaled "approved" in orchestrator chat. Updated UAT.md frontmatter (`status: passed`, `completed_at: 2026-05-10`, `signoff_by: Andrew`); per-SC evidence rows intentionally left blank (verbal-signoff pattern). Authored `42.5-06-SUMMARY.md`. Phase 42.5 is now SHIPPED — all 6 SCs + 3 gates + regression checks accepted; Phase 41 SC-5 carry-over closed by SC-5 Tests 5a + 5b.
+**Last session:** 2026-05-11 — Executed Plan 42.6-01 (Wave 1, autonomous, no checkpoints). Created `lib/stripe/widget-gate.ts` (pure `requireWidgetTier` helper) + `tests/widget-gate.test.ts` (12-case branch-coverage suite). Atomic commit `61b65ba` — `feat(42.6-01): add requireWidgetTier helper + unit tests`. `npm test -- widget-gate` → 12 passed. Authored `42.6-01-SUMMARY.md`. Pre-existing 42-line tsc noise in unrelated test files confirmed unchanged (documented tech debt). Previous session 2026-05-10: Phase 42.5 shipped.
 
-**Stopped at:** Phase 42.5 ship-complete. Phase 42.6 (Widget Feature Gating, BILL-26 + BILL-27) is unblocked and ready to research/plan. Phase 43 (Paywall Enforcement) is also unblocked and can proceed in parallel with 42.6.
+**Stopped at:** Completed Plan 42.6-01. Phase 42.6 Wave 2 (Plans 42.6-02 public embed gate + 42.6-03 owner-side embed dialog gate) is unblocked and can run in parallel — both consume `requireWidgetTier` unmodified. Phase 43 (Paywall Enforcement) also remains unblocked and can proceed in parallel with the rest of Phase 42.6.
 
-**Resume file:** None — next action is to begin Phase 42.6 research (`/gsd:research-phase 42.6`) or plan (`/gsd:plan-phase 42.6`) per Andrew's preference. Phase 43 may be sequenced before, after, or in parallel with 42.6.
+**Resume file:** None — next action is to execute Plans 42.6-02 and 42.6-03 (Wave 2) in parallel via `/gsd:execute-phase 42.6` or `/gsd:execute-plan 42.6-02` / `42.6-03` per Andrew's preference.
 
 ## Files of record
 
