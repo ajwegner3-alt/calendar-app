@@ -21,11 +21,13 @@ export function EventTypesTable({
   showArchived: _showArchived,
   accountSlug,
   appUrl,
+  isWidgetAllowed,
 }: {
   eventTypes: EventTypeListItem[];
   showArchived: boolean;
   accountSlug: string;
   appUrl: string;
+  isWidgetAllowed: boolean; // Phase 42.6 — server-side widget-tier gate
 }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
@@ -85,6 +87,7 @@ export function EventTypesTable({
                       isArchived={!!et.deleted_at}
                       accountSlug={accountSlug}
                       appUrl={appUrl}
+                      isWidgetAllowed={isWidgetAllowed}
                     />
                   </div>
                 </TableCell>

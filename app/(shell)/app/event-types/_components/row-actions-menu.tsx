@@ -29,6 +29,7 @@ export function RowActionsMenu({
   isArchived,
   accountSlug,
   appUrl,
+  isWidgetAllowed,
 }: {
   id: string;
   name: string;
@@ -37,6 +38,7 @@ export function RowActionsMenu({
   isArchived: boolean;
   accountSlug: string;
   appUrl: string;
+  isWidgetAllowed: boolean; // Phase 42.6 — server-side widget-tier gate
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -155,6 +157,7 @@ export function RowActionsMenu({
         accountSlug={accountSlug}
         eventSlug={slug}
         eventName={name}
+        isWidgetAllowed={isWidgetAllowed}
       />
     </>
   );
