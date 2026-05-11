@@ -72,5 +72,42 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Phase 43 (BILL-12..BILL-15, BILL-20): subscription paywall gate.
+  // Locked accounts (status NOT in {trialing, active, past_due}) redirect to
+  // /app/billing. /app/billing itself is exempt (loop prevention — BILL-20).
+  // past_due retains access (LD-08). Public booker /[account]/* and /embed/*
+  // are untouched because this lives inside the pathname.startsWith("/app")
+  // branch (LD-07 booker-neutrality).
+  const SUBSCRIPTION_ALLOWED_STATUSES = [
+    "trialing",
+    "active",
+    "past_due",
+  ] as const;
+
+  if (
+    user &&
+    pathname.startsWith("/app") &&
+    !publicAuthPaths.includes(pathname) &&
+    pathname !== "/app/billing"
+  ) {
+    const { data: accountRow } = await supabase
+      .from("accounts")
+      .select("subscription_status")
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    const status = accountRow?.subscription_status;
+    if (
+      status &&
+      !SUBSCRIPTION_ALLOWED_STATUSES.includes(
+        status as (typeof SUBSCRIPTION_ALLOWED_STATUSES)[number],
+      )
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/app/billing";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return supabaseResponse;
 }
