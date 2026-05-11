@@ -10,6 +10,7 @@ import {
   Palette,
   Settings,
   Home,
+  CreditCard,
   ChevronDown,
   LogOut,
 } from "lucide-react";
@@ -45,6 +46,7 @@ const TOP_ITEMS = [
   { label: "Availability", href: "/app/availability",  Icon: Clock },
   { label: "Bookings",     href: "/app/bookings",      Icon: CalendarDays },
   { label: "Branding",     href: "/app/branding",      Icon: Palette },
+  { label: "Billing",      href: "/app/billing",       Icon: CreditCard },
 ] as const;
 
 interface AppSidebarProps {
