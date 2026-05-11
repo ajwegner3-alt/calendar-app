@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
+import { requireWidgetTier } from "@/lib/stripe/widget-gate";
 import type { EventTypeListItem } from "./_lib/types";
 import { EventTypesTable } from "./_components/event-types-table";
 import { EmptyState } from "./_components/empty-state";
@@ -28,13 +29,24 @@ export default async function EventTypesPage({
   const { data: accountIds } = await supabase.rpc("current_owner_account_ids");
   const ids = Array.isArray(accountIds) ? accountIds : [];
   let accountSlug = "nsi"; // safe fallback; replaced below if DB resolves
+  // Phase 42.6: gate the "Get embed code" dialog on plan_tier. Page itself and
+  // menu item remain accessible — only the dialog body is gated. If account is
+  // null (defensive), default to FALSE (no widget access) so we never leak the
+  // embed snippets to an unresolved account state.
+  let isWidgetAllowed = false;
   if (ids.length > 0) {
     const { data: account } = await supabase
       .from("accounts")
-      .select("slug")
+      .select("slug, plan_tier, subscription_status")
       .eq("id", ids[0])
       .maybeSingle();
     if (account?.slug) accountSlug = account.slug;
+    isWidgetAllowed = account
+      ? requireWidgetTier({
+          plan_tier: (account.plan_tier ?? null) as "basic" | "widget" | null,
+          subscription_status: account.subscription_status ?? null,
+        }).allowed
+      : false;
   }
 
   // Soft-delete filter — RESEARCH §"Soft-Delete Query Filter":
@@ -86,6 +98,7 @@ export default async function EventTypesPage({
           showArchived={showArchived}
           accountSlug={accountSlug}
           appUrl={appUrl}
+          isWidgetAllowed={isWidgetAllowed}
         />
       )}
     </div>
