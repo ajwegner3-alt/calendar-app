@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **MID-EXECUTION SCOPE PIVOT.** Phase 42 plumbing landed (42-01/02/03 = 15 commits, 3 plans shipped); Phase 42-04 UAT scaffolded but **superseded** before running. New 3-tier product model locked: Basic (Stripe, no widget) + Widget (Stripe, full app) + Branding (consult CTA, no Stripe). Phases 42.5 + 42.6 inserted. ROADMAP.md updated. Next: `/gsd:plan-phase 42.5`.
+**Last updated:** 2026-05-11 — Phase 42.5 Plan 01 (plan_tier schema migration) executed. Forward + rollback SQL shipped in `feat(42.5-01) e890334`. Awaiting Andrew to run `npx supabase db push --linked` (manual handoff per CLAUDE.md "live testing" rule). Next: Plan 42.5-02 (prices.ts refactor, DB-independent) can begin in parallel.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — ready to plan
-**Plan:** —
-**Status:** Phase 42 plumbing code-complete (42-01 + 42-02 + 42-03 = 15 commits pushed to origin/main); 42-04 UAT scaffolded but superseded by 42.5 UAT before running. Phase 42.5 (multi-tier expansion) and 42.6 (widget gating) inserted into ROADMAP. Awaiting `/gsd:plan-phase 42.5`.
-**Last activity:** 2026-05-10 — Mid-execution pivot: single-plan → 3-tier model. Existing on-disk code (`lib/stripe/prices.ts`, `app/api/stripe/checkout/route.ts`, `app/api/stripe/checkout/status/route.ts`, webhook handler, `/app/billing/page.tsx` + 3 client components) will be refactored in-place by 42.5 — none thrown away. 5 grandfathered v1.7 accounts unchanged.
+**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — in progress
+**Plan:** 42.5-01 complete; 42.5-02..04 pending
+**Status:** Plan 42.5-01 (plan_tier schema migration) shipped as `feat(42.5-01) e890334`. Forward migration `20260510130000_phase42_5_plan_tier.sql` and rollback authored, committed locally. Remote `supabase db push --linked` deferred to Andrew (manual handoff). Plan 42.5-02 (prices.ts refactor) is unblocked and DB-independent; 42.5-04 (webhook plan_tier write) needs the manual push to land before its UPDATE will succeed.
+**Last activity:** 2026-05-11 — Plan 42.5-01 executed: created `supabase/migrations/20260510130000_phase42_5_plan_tier.sql` + ROLLBACK with `CHECK (plan_tier IS NULL OR plan_tier IN ('basic','widget'))`, no DEFAULT, no NOT NULL. Trigger compat verified by inspection of `provision_account_for_new_user` source.
 
 ## Cumulative project progress
 
@@ -112,15 +112,16 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phase 41 shipped 2026-05-10
 - ~~Phase 41 deploy: PREREQ-A + PREREQ-D~~ ✅ Resolved 2026-05-10
 - ~~Phase 41 live test: PREREQ-F~~ ✅ Resolved 2026-05-10
 - Phase 42.5 blocked on: PREREQ-B revised (create 1 Product with 4 Prices: Basic-Monthly, Basic-Annual, Widget-Monthly, Widget-Annual; capture all 4 Price IDs) + PREREQ-D revised (10 env vars: 4 Price IDs + 4 cents amounts + `NSI_BRANDING_BOOKING_URL` + Vercel deploy) + PREREQ-E revised (4 pricing amounts) + PREREQ-G new (`checkout.session.completed` added to webhook `we_1TVfOTJ7PLcBbY73Groz1G13` enabled_events list)
+- Plan 42.5-04 (webhook plan_tier write) blocked on: Andrew running `npx supabase db push --linked` to apply Plan 42.5-01's migration `20260510130000_phase42_5_plan_tier.sql` to the live Supabase project. Plan 42.5-02 is NOT blocked.
 - Phase 44 blocked on: PREREQ-C (Customer Portal config — must enable plan-switching across all 4 Prices)
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Phase 42 executed Waves 1+2 (42-01/02/03) shipped 15 commits, pushed to origin/main. Wave 3 (42-04 UAT) hit checkpoint; before Andrew ran UAT, a scope conversation revealed the actual product model is 3-tier (Basic / Widget / Branding) not single-plan. Phase 42-04 UAT abandoned; Phase 42.5 + 42.6 inserted into roadmap. STATE + ROADMAP updated.
+**Last session:** 2026-05-11 — Executed Plan 42.5-01 (plan_tier schema migration). Created forward + rollback SQL, verified trigger compat by reading Phase 41 trigger source, committed as `feat(42.5-01) e890334`. Local Supabase Docker stack unavailable (privilege issue); remote `db push --linked` deferred to Andrew per "live testing" handoff convention. SUMMARY.md written with full manual-verification checklist.
 
-**Stopped at:** 42-04 UAT pre-empted by scope pivot. Phase 42 plumbing remains in working order; UI will be refactored by 42.5.
+**Stopped at:** Plan 42.5-01 SUMMARY committed. Awaiting (a) Andrew running `npx supabase db push --linked` to apply the migration to live Supabase, AND/OR (b) kicking off Plan 42.5-02 (`prices.ts` 4-SKU refactor) which is DB-independent.
 
-**Resume file:** None — next action is `/gsd:plan-phase 42.5` (Multi-Tier Stripe + Schema). Andrew should kick off PREREQ-B revised (create 4 Prices in Stripe), PREREQ-D revised (add 10 env vars to Vercel + push redeploy), PREREQ-E revised (decide 4 amounts), and PREREQ-G (add `checkout.session.completed` to webhook events) in parallel — planning can begin with placeholders.
+**Resume file:** None — next action is either `/gsd:execute-plan 42.5-02` (parallel-safe) or wait for Andrew to confirm the live migration applied before starting 42.5-04.
 
 ## Files of record
 
