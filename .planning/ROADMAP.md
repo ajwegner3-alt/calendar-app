@@ -271,11 +271,10 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - Redirect loop prevention: a locked account navigating directly to `/app/billing` gets the locked-state card, not an infinite redirect.
 - `past_due` is NOT a lockout trigger: confirm `past_due` account reaches `/app/dashboard` (V18-CP-07 check).
 
-**Plans:** TBD
+**Plans:** 2 plans
 
-- [ ] 43-01: TBD
-- [ ] 43-02: TBD
-- [ ] 43-03: TBD
+- [ ] 43-01-PLAN.md — Middleware subscription gate in `lib/supabase/proxy.ts` (BILL-12, BILL-13, BILL-14, BILL-15, BILL-20)
+- [ ] 43-02-PLAN.md — Shell layout query expansion + `SubscriptionBanner` server component for trial neutral/urgent + past-due (BILL-16, BILL-17, BILL-18)
 
 ---
 
