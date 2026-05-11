@@ -3,11 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { PRICES } from "@/lib/stripe/prices";
 import {
   TrialingHeader,
-  ActiveView,
   LockedView,
 } from "./_components/billing-state-views";
 import { TierGrid, type TierGridProps } from "./_components/tier-grid";
 import { CheckoutReturnPoller } from "./_components/checkout-return-poller";
+import { StatusCard } from "./_components/status-card";
 
 export const metadata = { title: "Billing | Calendar" };
 
@@ -17,7 +17,9 @@ export const metadata = { title: "Billing | Calendar" };
 
 type BillingPageState =
   | { type: "polling"; sessionId: string }
-  | { type: "active" }
+  | { type: "active"; planTier: "basic" | "widget" | null; planInterval: string | null; renewalDate: string | null }
+  | { type: "cancel_scheduled"; planTier: "basic" | "widget" | null; periodEndDate: string | null }
+  | { type: "past_due" }
   | { type: "plan_selection"; trialDaysLeft: number | null }
   | { type: "locked" };
 
@@ -33,6 +35,24 @@ function deriveTrialDaysLeft(trialEndsAt: string | null): number | null {
       (new Date(trialEndsAt).getTime() - Date.now()) / 86_400_000,
     ),
   );
+}
+
+// ---------------------------------------------------------------------------
+// formatBillingDate — pure helper (Phase 44 BILL-21/23)
+//
+// Formats Stripe's ISO timestamps (current_period_end) into a human-readable
+// "Month D, YYYY" string for the Status Card. Returns null on null input so
+// the StatusCard variants can omit the renewal-date line when the column has
+// not yet been hydrated (pre-first-webhook trialing accounts).
+// ---------------------------------------------------------------------------
+
+function formatBillingDate(timestamp: string | null): string | null {
+  if (!timestamp) return null;
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +73,7 @@ export default async function BillingPage({
   // Account fetch (RLS-scoped: only the owner's row is returned)
   const { data: account } = await supabase
     .from("accounts")
-    .select("id, subscription_status, trial_ends_at")
+    .select("id, subscription_status, trial_ends_at, plan_tier, cancel_at_period_end, current_period_end, plan_interval, stripe_customer_id")
     .is("deleted_at", null)
     .maybeSingle();
 
@@ -63,17 +83,24 @@ export default async function BillingPage({
   const { session_id } = await searchParams;
 
   // ---------------------------------------------------------------------------
-  // State derivation — RESEARCH Pattern 7
+  // State derivation — RESEARCH Pattern 7 (Phase 44 extended)
   //
   // Priority order:
-  //   1. session_id present  → polling state (Checkout just completed)
-  //   2. active              → show ActiveView (no plan card needed)
-  //   3. trialing            → plan_selection with trial countdown
-  //   4. past_due            → plan_selection (no trial header, allow re-subscribe)
-  //                            LD-08: past_due is NOT lockout — banner only (Phase 43)
-  //   5. everything else     → locked (canceled / unpaid / incomplete / incomplete_expired)
-  //                            LD-04: locked states show LockedView + plan card so owner
-  //                            can re-subscribe from the same page
+  //   1. session_id present                           → polling (Checkout just completed)
+  //   2. active && cancel_at_period_end === true      → cancel_scheduled (Pitfall 4:
+  //                                                     MUST be checked before generic
+  //                                                     active — both share status=active)
+  //   3. active                                       → Status Card (active variant)
+  //   4. trialing                                     → plan_selection with trial countdown
+  //   5. past_due                                     → Status Card (past_due variant)
+  //                                                     LD-08: past_due is NOT lockout —
+  //                                                     banner only (Phase 43) + payment-
+  //                                                     method deep-link card (Phase 44)
+  //   6. everything else                              → locked (canceled / unpaid /
+  //                                                     incomplete / incomplete_expired).
+  //                                                     LD-04: locked states show LockedView
+  //                                                     + plan card so owner can re-subscribe
+  //                                                     from the same page.
   //
   // Note: account is always non-null here — the redirect() above exits if null,
   // but TypeScript needs the account variable in scope, so we reference it below.
@@ -83,8 +110,27 @@ export default async function BillingPage({
 
   if (session_id) {
     state = { type: "polling", sessionId: session_id };
+  } else if (
+    account.subscription_status === "active" &&
+    account.cancel_at_period_end === true
+  ) {
+    // Pitfall 4 (state machine priority): cancel_scheduled MUST be checked BEFORE
+    // the generic active branch below. Both share subscription_status='active' —
+    // only the cancel_at_period_end boolean distinguishes them. If the order were
+    // reversed, the green Active card would render even for owners who scheduled
+    // cancellation in the Stripe Portal (silent UX bug).
+    state = {
+      type: "cancel_scheduled",
+      planTier: account.plan_tier as "basic" | "widget" | null,
+      periodEndDate: formatBillingDate(account.current_period_end),
+    };
   } else if (account.subscription_status === "active") {
-    state = { type: "active" };
+    state = {
+      type: "active",
+      planTier: account.plan_tier as "basic" | "widget" | null,
+      planInterval: account.plan_interval,
+      renewalDate: formatBillingDate(account.current_period_end),
+    };
   } else if (account.subscription_status === "trialing") {
     // Compute days remaining. If trial_ends_at is NULL we cannot compute a
     // numeric countdown — deriveTrialDaysLeft returns null so TrialingHeader
@@ -92,9 +138,11 @@ export default async function BillingPage({
     const trialDaysLeft = deriveTrialDaysLeft(account.trial_ends_at);
     state = { type: "plan_selection", trialDaysLeft };
   } else if (account.subscription_status === "past_due") {
-    // Phase 43 concern: past_due gets a banner but NOT a lockout.
-    // Show the plan card so the owner can update payment / re-subscribe.
-    state = { type: "plan_selection", trialDaysLeft: null };
+    // Phase 44 (BILL-22): past_due now gets its own Status Card variant with
+    // payment-method deep-link. Previously fell into plan_selection (Phase 42.5).
+    // LD-08 invariant still honored — past_due is NOT a lockout, just a friendly
+    // amber card surfacing the Portal's payment-method-update flow.
+    state = { type: "past_due" };
   } else {
     // canceled / unpaid / incomplete / incomplete_expired → locked
     // Owner still needs a path to re-subscribe (plan card renders below LockedView).
@@ -145,7 +193,32 @@ export default async function BillingPage({
   if (state.type === "active") {
     return (
       <div className="container mx-auto max-w-2xl py-8 space-y-6">
-        <ActiveView />
+        <StatusCard
+          variant="active"
+          planTier={state.planTier}
+          planInterval={state.planInterval}
+          renewalDate={state.renewalDate}
+        />
+      </div>
+    );
+  }
+
+  if (state.type === "cancel_scheduled") {
+    return (
+      <div className="container mx-auto max-w-2xl py-8 space-y-6">
+        <StatusCard
+          variant="cancel_scheduled"
+          planTier={state.planTier}
+          periodEndDate={state.periodEndDate}
+        />
+      </div>
+    );
+  }
+
+  if (state.type === "past_due") {
+    return (
+      <div className="container mx-auto max-w-2xl py-8 space-y-6">
+        <StatusCard variant="past_due" />
       </div>
     );
   }
