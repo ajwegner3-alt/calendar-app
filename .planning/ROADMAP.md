@@ -10,7 +10,7 @@
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
 - ✅ **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (32 plans across 7 phases) — shipped 2026-05-09. Full archive: [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md).
-- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phase 41 shipped 2026-05-10; Phase 42 plumbing code-complete with UI superseded by 42.5; 42.5/42.6/43-46 in progress).
+- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phases 41 + 42.5 + 42.6 shipped 2026-05-10..11; Phase 42 plumbing code-complete with UI superseded by 42.5; 43-46 in progress).
 
 ## Phases
 
@@ -244,9 +244,9 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Plans:** 3 plans
 
-- [ ] 42.6-01-PLAN.md — requireWidgetTier helper + unit tests (Wave 1)
-- [ ] 42.6-02-PLAN.md — Gate /embed/* public route + EmbedGatedMessage component (Wave 2)
-- [ ] 42.6-03-PLAN.md — Gate owner embed-code dialog (prop threading + upgrade card) (Wave 2)
+- [x] 42.6-01-PLAN.md — requireWidgetTier helper + unit tests (Wave 1) ✓ shipped 2026-05-11
+- [x] 42.6-02-PLAN.md — Gate /embed/* public route + EmbedGatedMessage component (Wave 2) ✓ shipped 2026-05-11
+- [x] 42.6-03-PLAN.md — Gate owner embed-code dialog (prop threading + upgrade card) (Wave 2) ✓ shipped 2026-05-11
 
 ---
 
@@ -390,7 +390,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 41 | v1.8 | 4 / 4 | ✅ Shipped — verifier passed; SC-1..4 verified live; SC-5 deferred to Phase 42.5 first-checkout natural exercise; Andrew sign-off received | 2026-05-10 |
 | 42 | v1.8 | 3 / 4 | ⚠ Plumbing code-complete (42-01/02/03 shipped, 15 commits); UI superseded by 42.5; 42-04 UAT replaced by 42.5 UAT | 2026-05-10 (partial) |
 | 42.5 | v1.8 | 6 / 6 | ✅ Shipped — verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off; closes BILL-09 (full) + BILL-10b + BILL-25; Phase 41 SC-5 carry-over closed | 2026-05-10 |
-| 42.6 | v1.8 | 0 / TBD | INSERTED — widget feature gating; depends on 42.5 | - |
+| 42.6 | v1.8 | 3 / 3 | ✅ Shipped — verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off; closes BILL-26 + BILL-27 | 2026-05-11 |
 | 43 | v1.8 | 0 / TBD | Not started | - |
 | 44 | v1.8 | 0 / TBD | Not started | - |
 | 45 | v1.8 | 0 / TBD | Not started | - |
@@ -402,8 +402,10 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - **Total phases shipped:** 40 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30 + 31-33 + 34-40)
 - **Total plans shipped:** 170 (52 + 34 + 22 + 6 + 8 + 6 + 10 + 32)
 - **Total commits:** ~692 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + 31 v1.5 + 53 v1.6 + 129 v1.7)
-- **v1.8 in progress:** Phases 41 + 42.5 shipped 2026-05-10 (4 + 6 plans); Phase 42 plumbing shipped 3/4 (UI superseded by 42.5); phases 42.6/43/44/45/46 remain
+- **v1.8 in progress:** Phases 41 + 42.5 + 42.6 shipped 2026-05-10..11 (4 + 6 + 3 plans); Phase 42 plumbing shipped 3/4 (UI superseded by 42.5); phases 43/44/45/46 remain
 
 ---
 
-*Roadmap last updated: 2026-05-10 — Phase 42.5 SHIPPED. Verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off received. Closes BILL-09 (full), BILL-10b (new — `accounts.plan_tier` column + webhook write), BILL-25 (new — Branding consult CTA via `NSI_BRANDING_BOOKING_URL`). Phase 41 SC-5 carry-over OFFICIALLY CLOSED — Tests 5a (Basic-Monthly) + 5b (Widget-Annual) each independently proved a real Stripe trigger lands all 4 billing columns. Commits: `e890334` (42.5-01 schema), `6238b3e`+`185b2d0`+`637bbf2` (42.5-02 prices), `39054a8`+`9c8e42b` (42.5-03 checkout), `1d9aac3`+`0a1ae5d` (42.5-04 webhook), `74e1d91`+`a7db58c`+`53646eb` (42.5-05 TierGrid UI), `5e493b1`+`8178344` (42.5-06 UAT). Next: Phase 42.6 (Widget Feature Gating — BILL-26 + BILL-27) unblocked. Phase 43 (Paywall Enforcement) also unblocked and can develop in parallel.*
+*Roadmap last updated: 2026-05-11 — Phase 42.6 SHIPPED. Verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off. Closes BILL-26 (`/embed/*` route gated by `plan_tier`) + BILL-27 (owner embed-code dialog gated by `plan_tier`). 12 atomic commits across Wave 1 (`61b65ba`, `a4fbe27`) + Wave 2 (`57a8bce`, `596bd56`, `82502d4`, `eac0e41`, `6e826c8`, `0a1b647`, `3b8df3f`, `734d31a`). Next: Phase 43 (Paywall Enforcement + Locked-State UX + Trial Banners) unblocked.*
+
+*Prior: 2026-05-10 — Phase 42.5 SHIPPED. Verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off received. Closes BILL-09 (full), BILL-10b (new — `accounts.plan_tier` column + webhook write), BILL-25 (new — Branding consult CTA via `NSI_BRANDING_BOOKING_URL`). Phase 41 SC-5 carry-over OFFICIALLY CLOSED — Tests 5a (Basic-Monthly) + 5b (Widget-Annual) each independently proved a real Stripe trigger lands all 4 billing columns. Commits: `e890334` (42.5-01 schema), `6238b3e`+`185b2d0`+`637bbf2` (42.5-02 prices), `39054a8`+`9c8e42b` (42.5-03 checkout), `1d9aac3`+`0a1ae5d` (42.5-04 webhook), `74e1d91`+`a7db58c`+`53646eb` (42.5-05 TierGrid UI), `5e493b1`+`8178344` (42.5-06 UAT). Next: Phase 42.6 (Widget Feature Gating — BILL-26 + BILL-27) unblocked. Phase 43 (Paywall Enforcement) also unblocked and can develop in parallel.*

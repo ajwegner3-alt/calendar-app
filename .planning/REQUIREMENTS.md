@@ -147,7 +147,7 @@ These are NOT requirements — they're external setup tasks Andrew must complete
 
 ## Traceability
 
-Updated: 2026-05-10 — Phase 41 complete (BILL-01..08 → Complete); 24 requirements remain pending across phases 42-45.
+Updated: 2026-05-11 — Phases 41 + 42 (plumbing) + 42.5 + 42.6 complete (BILL-01..11 + BILL-10b + BILL-25..27 → Complete); 21 requirements remain pending across phases 43-45.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -164,6 +164,8 @@ Updated: 2026-05-10 — Phase 41 complete (BILL-01..08 → Complete); 24 require
 | BILL-10b | Phase 42.5 | Complete |
 | BILL-11 | Phase 42 | Complete |
 | BILL-25 | Phase 42.5 | Complete |
+| BILL-26 | Phase 42.6 | Complete |
+| BILL-27 | Phase 42.6 | Complete |
 | BILL-12 | Phase 43 | Pending |
 | BILL-13 | Phase 43 | Pending |
 | BILL-14 | Phase 43 | Pending |
@@ -196,6 +198,7 @@ Updated: 2026-05-10 — Phase 41 complete (BILL-01..08 → Complete); 24 require
 | 41 — Stripe SDK + Schema + Webhook Skeleton | BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07, BILL-08 | 8 |
 | 42 — Checkout Flow Plumbing | BILL-10, BILL-11 (BILL-09 partial — full closure in 42.5) | 2 |
 | 42.5 — Multi-Tier Stripe + Schema | BILL-09 (full), BILL-10b, BILL-25 | 3 |
+| 42.6 — Widget Feature Gating | BILL-26, BILL-27 | 2 |
 | 43 — Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12, BILL-13, BILL-14, BILL-15, BILL-16, BILL-17, BILL-18, BILL-19, BILL-20 | 9 |
 | 44 — Customer Portal + Billing Polish + Stripe Emails | BILL-21, BILL-22, BILL-23, BILL-24 | 4 |
 | 45 — Login UX Polish + Gmail Quota Raise | AUTH-33, AUTH-34, AUTH-35, AUTH-36, AUTH-37, AUTH-38, AUTH-39, EMAIL-35 | 8 |
