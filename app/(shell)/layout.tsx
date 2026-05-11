@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/app-sidebar";
 import { BackgroundGlow } from "@/app/_components/background-glow";
 import { Header } from "@/app/_components/header";
+import { SubscriptionBanner } from "@/app/(shell)/app/_components/subscription-banner";
 
 export default async function ShellLayout({
   children,
@@ -37,9 +38,12 @@ export default async function ShellLayout({
   // OWNER-11: Trimmed to id only — slug not referenced in this layout.
   // Columns removed: sidebar_color, sidebar_text_color, background_color,
   // background_shade, chrome_tint_intensity, brand_primary (Phase 15 cleanup).
+  // Phase 43: expanded to include subscription_status + trial_ends_at for the
+  // global SubscriptionBanner (BILL-16/17/18). Banner is a server component;
+  // state flows as props, not via a client fetch.
   const { data: accounts } = await supabase
     .from("accounts")
-    .select("id")
+    .select("id, subscription_status, trial_ends_at")
     .eq("owner_user_id", claimsData.claims.sub)
     .is("deleted_at", null)
     .limit(1);
@@ -48,6 +52,8 @@ export default async function ShellLayout({
     redirect("/app/unlinked");
   }
 
+  const account = accounts[0];
+
   return (
     <TooltipProvider delayDuration={0}>
       <SidebarProvider defaultOpen={sidebarOpen}>
@@ -55,6 +61,10 @@ export default async function ShellLayout({
         <SidebarInset className="relative overflow-hidden bg-gray-50">
           <BackgroundGlow />
           <Header />
+          <SubscriptionBanner
+            subscriptionStatus={(account.subscription_status as string | null) ?? null}
+            trialEndsAt={(account.trial_ends_at as string | null) ?? null}
+          />
           <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-20 sm:px-6 md:pt-24 pb-12">
             {children}
           </main>
