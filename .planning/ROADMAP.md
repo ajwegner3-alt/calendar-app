@@ -10,7 +10,7 @@
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
 - ✅ **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (32 plans across 7 phases) — shipped 2026-05-09. Full archive: [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md).
-- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 (Phase 41 shipped 2026-05-10; phases 42-46 in progress).
+- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phase 41 shipped 2026-05-10; Phase 42 plumbing code-complete with UI superseded by 42.5; 42.5/42.6/43-46 in progress).
 
 ## Phases
 
@@ -123,15 +123,21 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 <details>
 <summary>🚧 v1.8 Stripe Paywall + Login UX Polish (Phases 41-46) — IN PROGRESS</summary>
 
-**Milestone Goal:** Convert the free single-tenant tool into a paid multi-tenant SaaS. Owners get a 14-day free trial from first signup; after expiry the owner app (`/app/*`) locks behind a Stripe paywall (single plan, monthly + annual). The public booker (`/[account]/*`) remains fully functional regardless of any account's payment state. Login UX is polished independently of billing.
+**Milestone Goal:** Convert the free single-tenant tool into a paid multi-tenant SaaS with **three tiers**: Basic (full app except booking widget), Widget (full current app capability), and Branding (consult CTA — non-Stripe, links to NSI booking page for personal onboarding). Owners get a 14-day free trial of the Widget tier from first signup; after expiry the owner app (`/app/*`) locks behind a paywall and owner picks a tier on the 3-card billing page. The public booker (`/[account]/*`) remains fully functional regardless of any account's payment state. Login UX is polished independently of billing.
+
+**Tier model (locked as of 2026-05-10):**
+- **Basic** (Stripe) — Everything in `/app/*` except booking widget. 1 Product, 2 Prices (monthly + annual).
+- **Widget** (Stripe) — Everything currently built. Same Product as Basic, 2 different Prices. *Default trial tier.*
+- **Branding** (non-Stripe) — Consult CTA. Links to `https://booking.nsintegrations.com/nsi/branding-consultation`. No DB state change, no `plan_tier` value. Personal onboarding by Andrew. Build-out is post-v1.8.
 
 **Manual prerequisites Andrew must complete before specific phases:**
-- **PREREQ-A** — Create Stripe account *(blocks Phase 41 deploy)*
-- **PREREQ-B** — Create Product + monthly Price + annual Price in Stripe dashboard; capture Price IDs *(blocks Phase 42)*
-- **PREREQ-C** — Configure Customer Portal in Stripe dashboard (cancel-at-period-end, plan switching, invoice history, payment-method updates) *(blocks Phase 44)*
-- **PREREQ-D** — Add env vars to Vercel: `STRIPE_SECRET_KEY` (test + live), `STRIPE_WEBHOOK_SECRET` (test + live), `STRIPE_PRICE_ID_MONTHLY`, `STRIPE_PRICE_ID_ANNUAL`; verify `NEXT_PUBLIC_APP_URL` exists *(blocks Phase 41 deploy)*
-- **PREREQ-E** — Decide monthly + annual pricing amounts *(blocks Phase 42 final numbers; Phase 42 can start with placeholders)*
-- **PREREQ-F** — Register Stripe webhook endpoint (`https://booking.nsintegrations.com/api/stripe/webhook`) after Phase 41 deploys to production; capture `whsec_...` signing secret into PREREQ-D *(required before Phase 41 live test)*
+- **PREREQ-A** — Create Stripe account *(blocks Phase 41 deploy)* ✅
+- **PREREQ-B** *(revised 2026-05-10)* — Create ONE Product with **four Prices** in Stripe dashboard: Basic-Monthly, Basic-Annual, Widget-Monthly, Widget-Annual. Capture all 4 Price IDs *(blocks Phase 42.5)*
+- **PREREQ-C** — Configure Customer Portal in Stripe dashboard (cancel-at-period-end, plan switching across all 4 Prices, invoice history, payment-method updates) *(blocks Phase 44)*
+- **PREREQ-D** *(revised 2026-05-10)* — Add env vars to Vercel: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_BASIC_MONTHLY`, `STRIPE_PRICE_ID_BASIC_ANNUAL`, `STRIPE_PRICE_ID_WIDGET_MONTHLY`, `STRIPE_PRICE_ID_WIDGET_ANNUAL`, `STRIPE_PRICE_BASIC_MONTHLY_CENTS`, `STRIPE_PRICE_BASIC_ANNUAL_CENTS`, `STRIPE_PRICE_WIDGET_MONTHLY_CENTS`, `STRIPE_PRICE_WIDGET_ANNUAL_CENTS`, `NSI_BRANDING_BOOKING_URL`; verify `NEXT_PUBLIC_APP_URL` exists *(blocks Phase 42.5 deploy)*
+- **PREREQ-E** *(revised 2026-05-10)* — Decide pricing amounts for all 4 SKUs (Basic-Monthly, Basic-Annual, Widget-Monthly, Widget-Annual) *(blocks Phase 42.5 final numbers; placeholders work for development)*
+- **PREREQ-F** — Register Stripe webhook endpoint after Phase 41 deploys; capture `whsec_...` *(required before Phase 41 live test)* ✅
+- **PREREQ-G** *(new 2026-05-10)* — Verify webhook `enabled_events` includes `checkout.session.completed` (Phase 42-02 needs it; Phase 41 only registered 6 events) *(blocks Phase 42.5 UAT)*
 
 ---
 
@@ -163,26 +169,79 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 ---
 
-### Phase 42: Checkout Flow + Plan Selection Page
+### Phase 42: Checkout Flow Plumbing (single-tier — UI superseded by 42.5)
 
-**Goal:** An owner can visit `/app/billing`, choose monthly or annual billing, and complete a Stripe Checkout session — arriving back in the app with `subscription_status = 'active'` once the webhook confirms payment.
+**Status:** Code-complete 2026-05-10. UI/UAT superseded by Phase 42.5 multi-tier expansion.
 
-**Depends on:** Phase 41 (billing columns + webhook handler must exist) + PREREQ-B (Price IDs) + PREREQ-E (pricing decision — can use placeholders for UI development, must be final before live test).
+**Goal (original):** An owner can visit `/app/billing`, choose monthly or annual billing, and complete a Stripe Checkout session — arriving back in the app with `subscription_status = 'active'` once the webhook confirms payment.
 
-**Requirements:** BILL-09, BILL-10, BILL-11
+**Outcome:** Plumbing landed correctly (customer linkage, webhook safety net, no-store polling, return flow), but the single-tier UI does not match the actual product surface decided after Phase 42-03 shipped. Phase 42.5 refactors `prices.ts`, the checkout route body, and the billing page UI to support 3 tiers. The Phase 42 plumbing files (`lib/stripe/prices.ts`, `app/api/stripe/checkout/route.ts`, `app/api/stripe/checkout/status/route.ts`, the webhook `checkout.session.completed` handler, and the `/app/billing` Server Component shell) are reused and extended — none thrown away.
 
-**Success Criteria** (what must be TRUE when this phase ships):
-1. `/app/billing` renders a plan-selection card with a monthly ↔ annual toggle showing the correct pricing and annual savings percentage.
-2. Clicking "Subscribe" redirects the owner to Stripe-hosted Checkout (stripe.com URL) — no payment form is rendered within the app.
-3. After completing Checkout in test mode, the return URL (`/app/billing?session_id=...`) polls status and transitions to a "subscription active" UI state once the webhook updates `subscription_status` to `active` — without any optimistic update (webhook is canonical).
-4. If the poll times out (30s without webhook confirmation), the page shows a fallback message rather than hanging or showing an incorrect state.
+**Depends on:** Phase 41 ✅
+
+**Requirements:** BILL-09 (partial — checkout route exists), BILL-10 ✅ (webhook handler), BILL-11 ✅ (status poller); BILL-09 full closure deferred to Phase 42.5 (3-tier UI).
 
 **Plans:** 4 plans
 
-- [ ] 42-01-PLAN.md — Backend: prices config + POST /api/stripe/checkout (SC-5 customer linkage) + GET /api/stripe/checkout/status
-- [ ] 42-02-PLAN.md — Webhook: add checkout.session.completed handler (SC-5 safety net)
-- [ ] 42-03-PLAN.md — UI: /app/billing page + plan selection card + return-flow poller (with locked-state copy for Phase 43)
-- [ ] 42-04-PLAN.md — Manual QA + SC-5 sign-off (live Stripe test card, end-to-end pipeline verification)
+- [x] 42-01-PLAN.md — Backend: prices config + POST /api/stripe/checkout + GET /api/stripe/checkout/status ✓ shipped 2026-05-10
+- [x] 42-02-PLAN.md — Webhook: checkout.session.completed handler (SC-5 safety net) ✓ shipped 2026-05-10
+- [x] 42-03-PLAN.md — UI: /app/billing page + single plan selection card + return-flow poller ✓ shipped 2026-05-10 *(card to be replaced by 3-card TierGrid in 42.5)*
+- [⊘] 42-04-PLAN.md — Manual QA + SC-5 sign-off **SUPERSEDED** by 42.5 UAT (single-tier UI never deployed/verified; multi-tier UAT replaces it)
+
+---
+
+### Phase 42.5: Multi-Tier Stripe + Schema (INSERTED 2026-05-10)
+
+**Goal:** The `/app/billing` page presents three tier cards — Basic (Stripe), Widget (Stripe), Branding (consult CTA) — each Stripe card with a monthly/annual toggle. The `accounts` table has a new `plan_tier` column. The webhook derives `plan_tier` from the returned Price ID and writes it. A first-checkout end-to-end (any tier, any interval) lands `stripe_customer_id` + `stripe_subscription_id` + `plan_tier` + `subscription_status='active'` on the row.
+
+**Depends on:** Phase 42 (plumbing) + PREREQ-B (revised — 4 Price IDs) + PREREQ-D (revised — 10 env vars + `NSI_BRANDING_BOOKING_URL`) + PREREQ-E (revised — 4 pricing amounts) + PREREQ-G (webhook `checkout.session.completed` enabled).
+
+**Requirements:** BILL-09 (full closure — 3-tier card), BILL-10b *(new — `plan_tier` column + webhook write)*, BILL-25 *(new — Branding consult CTA renders + links correctly)*
+
+**Success Criteria** (what must be TRUE when this phase ships):
+1. `accounts.plan_tier` column exists with CHECK constraint (`'basic'` | `'widget'`) + NULL allowed (trialing accounts before first checkout); all existing v1.7 grandfathered accounts have `plan_tier = NULL` and remain `trialing`.
+2. `/app/billing` renders three side-by-side cards: Basic (Subscribe button), Widget (Subscribe button, marked "Most popular" or equivalent), Branding (link button styled distinctly from Subscribe). Each Stripe card has its own monthly/annual toggle (or one global toggle — designer's call; both are CONTEXT-compatible).
+3. Branding card "Book a consultation" link points to `process.env.NSI_BRANDING_BOOKING_URL` (= `https://booking.nsintegrations.com/nsi/branding-consultation`). Click opens in same window. No POST, no API call, no DB state change.
+4. `POST /api/stripe/checkout` accepts `{tier: 'basic' | 'widget', interval: 'monthly' | 'annual'}`; rejects `{tier: 'branding'}` with 400 `{error: 'use_consult_link'}`; rejects unknown tier with 400 `{error: 'unknown_tier'}`.
+5. After completing Checkout in test mode for *any* (tier, interval) combination, the webhook writes the correct `plan_tier` ("basic" or "widget") onto the accounts row alongside the existing `stripe_subscription_id`, `subscription_status='active'`, `plan_interval`, `current_period_end` writes.
+6. SC-5 carry-over from Phase 41 is closed: a real Stripe trigger has written to a real `accounts` row with all four billing columns populated.
+
+**Verification gates (not requirements — pre-merge checks):**
+- Card visual: all three cards visible without horizontal scroll at 1024px viewport.
+- Tier inference: webhook resolves `plan_tier` by matching `session.line_items[0].price.id` against the 4-SKU map in `lib/stripe/prices.ts` (not by reading metadata, not by hardcoding).
+- Trial defaults: new signups still get `trialing` + `trial_ends_at = NOW()+14d` + `plan_tier = NULL`; column defaulting to NULL doesn't break the trigger.
+
+**Plans:** TBD — run `/gsd:plan-phase 42.5`
+
+- [ ] 42.5-01: TBD
+- [ ] 42.5-02: TBD
+
+---
+
+### Phase 42.6: Widget Feature Gating (INSERTED 2026-05-10)
+
+**Goal:** The booking widget (`/embed/[account]/[slug]` public render + the owner-side embed-code page) is gated by `account.plan_tier === 'widget'`. Basic-tier accounts see an "Upgrade to Widget" prompt where the widget would have appeared and cannot generate working embed codes. Widget-tier and `trialing` accounts retain current behavior.
+
+**Depends on:** Phase 42.5 (`plan_tier` column must exist + be written by webhook).
+
+**Requirements:** BILL-26 *(new — `/embed/...` route gated by plan_tier)*, BILL-27 *(new — owner embed-code page gated by plan_tier)*
+
+**Success Criteria** (what must be TRUE when this phase ships):
+1. A server helper `requireWidgetTier(account)` returns `{ allowed: true }` when `plan_tier === 'widget'` OR `subscription_status === 'trialing'`; otherwise returns `{ allowed: false, reason: 'basic_tier' | 'no_subscription' }`.
+2. `/embed/[account]/[slug]` public route: when the account's owner has `plan_tier === 'basic'` and a non-`trialing` subscription, the route renders a small "This booking widget is no longer available" message (NOT a full 404, NOT a redirect — must not break iframes silently). When the account is `trialing` or `plan_tier === 'widget'` (or `active`+widget), renders the booker normally.
+3. Owner-side embed-code page (the existing settings/widget page wherever it lives in `/app/*`): for Basic-tier owners, replaces the embed code with an "Upgrade to Widget" card linking to `/app/billing`. For Widget/trialing owners, shows the embed code as today.
+4. Booker route under `/{account}/{slug}` (non-embedded direct visit) is NOT gated — it works regardless of tier (it's the booker, not the widget).
+5. Existing `trialing` accounts (the 5 v1.7 grandfathered + any new signups during trial) experience zero feature change while in trial.
+
+**Verification gates (not requirements — pre-merge checks):**
+- Booker neutrality (LD-07 invariant extension): `/{account}/{slug}` returns 200 regardless of `plan_tier`.
+- Trial-to-Basic regression: an account that trials, expires, then subscribes to Basic has working `/[account]/{slug}` but a gated `/embed/...` — verified end-to-end in the UAT.
+- Iframe degradation: when an existing third-party page has embedded a Basic-tier account's widget, the iframe loads (200 not 404) and displays the gated message — not a broken X icon.
+
+**Plans:** TBD — run `/gsd:plan-phase 42.6`
+
+- [ ] 42.6-01: TBD
+- [ ] 42.6-02: TBD
 
 ---
 
@@ -190,14 +249,14 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Goal:** The middleware enforces subscription gating: trialing and active owners have full `/app/*` access with an appropriate banner; expired/canceled/unpaid owners are redirected to `/app/billing`; past_due owners see a banner but retain access; the public booker is structurally unaffected.
 
-**Depends on:** Phase 42 (`/app/billing` must exist before middleware can redirect locked owners there).
+**Depends on:** Phase 42 + Phase 42.5 (`/app/billing` 3-card UI must exist before middleware can redirect locked owners there). Tier is irrelevant to the paywall gate — paywall is tier-agnostic per the v1.8 milestone goal.
 
 **Requirements:** BILL-12, BILL-13, BILL-14, BILL-15, BILL-16, BILL-17, BILL-18, BILL-19, BILL-20
 
 **Success Criteria** (what must be TRUE when this phase ships):
 1. An owner whose `subscription_status = 'trialing'` and `trial_ends_at` is more than 3 days away sees a neutral trial banner on every `/app/*` page and has full access to all app features.
 2. An owner whose trial expires in 3 days or fewer sees a visually distinct (color/copy-intensified) urgency banner on every `/app/*` page.
-3. An owner whose `subscription_status` is not `trialing` or `active` (e.g., `canceled`, `unpaid`) is redirected to `/app/billing` for any `/app/*` path — and `/app/billing` itself loads without redirect loop, showing the "Everything is waiting for you! Head over to payments to get set up." message with the plan-selection card.
+3. An owner whose `subscription_status` is not `trialing` or `active` (e.g., `canceled`, `unpaid`) is redirected to `/app/billing` for any `/app/*` path — and `/app/billing` itself loads without redirect loop, showing the "Everything is waiting for you! Head over to payments to get set up." message with the 3-tier card grid (Basic + Widget Stripe cards + Branding consult card).
 4. An owner whose `subscription_status = 'past_due'` can reach all `/app/*` pages normally and sees only a non-blocking banner indicating payment retry is in progress — they are NOT redirected.
 5. An unauthenticated GET to any `/{account}/{slug}` public booker URL returns HTTP 200 and renders the booking page normally — the paywall middleware has no effect on public routes.
 
@@ -219,7 +278,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Goal:** A subscribed owner can manage their subscription (cancel, update payment method, view invoices, switch plan interval) entirely through the Stripe Customer Portal with one click from `/app/billing`. Stripe lifecycle events trigger transactional emails through the existing `getSenderForAccount` factory.
 
-**Depends on:** Phase 41 (webhook handler — email dispatch wired to subscription events) + Phase 42 (`/app/billing` page exists) + PREREQ-C (Customer Portal configured in Stripe dashboard).
+**Depends on:** Phase 41 (webhook handler — email dispatch wired to subscription events) + Phase 42.5 (`/app/billing` 3-card UI exists with `plan_tier` data path) + PREREQ-C (Customer Portal configured in Stripe dashboard — must enable plan-switching across all 4 Prices since they live on one Product).
 
 **Requirements:** BILL-21, BILL-22, BILL-23, BILL-24
 
@@ -272,7 +331,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Goal:** Andrew live-verifies the full v1.8 Stripe paywall end-to-end in Stripe test mode and approves v1.8 as shipped. `FUTURE_DIRECTIONS.md` is updated to reflect v1.8 scope and known limitations.
 
-**Depends on:** All of Phases 41-45.
+**Depends on:** All of Phases 41-45 + 42.5 + 42.6.
 
 **Requirements:** v1.8 ship sign-off (no discrete requirement IDs — this is the per-milestone Andrew approval gate per CLAUDE.md project-completion convention).
 
@@ -286,8 +345,10 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 **Full QA checklist (sourced from PITFALLS.md Looks-Done-But-Isnt section):**
 - Trial flow: new signup → 14-day trial counter correct; `nsi` test account NOT instantly locked
 - Lockout: trial-expired account → redirected to `/app/billing`; `/app/billing` not redirect-looping
-- Checkout: plan selection → Stripe Checkout → return URL polling → `subscription_status = 'active'`
-- Customer Portal: "Manage subscription" button → Portal loads; cancel-at-period-end behavior confirmed
+- Checkout (Basic + Widget, monthly + annual = 4 paths): plan selection → Stripe Checkout → return URL polling → `subscription_status = 'active'` with correct `plan_tier` written
+- Branding card: CTA links to `booking.nsintegrations.com/nsi/branding-consultation`; no DB write
+- Widget gating: Basic-tier account → `/embed/...` shows gated message; owner embed-code page shows upgrade CTA. Widget-tier or trialing account → both work normally.
+- Customer Portal: "Manage subscription" button → Portal loads; cancel-at-period-end behavior confirmed; plan-switching across all 4 Prices visible
 - `past_due`: non-blocking banner on `/app/*`; no redirect to `/app/billing`
 - Reactivation: resubscribe after cancel → access restored after webhook fires
 - Public booker: `/{account}/{slug}` returns 200 and works regardless of account subscription state
@@ -321,8 +382,10 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 38 | v1.7 | 3 / 3 | ✅ Shipped — verifier 19/19 PASS; Andrew live-verified A/B/C/D against production (`booking.nsintegrations.com`); two non-blocking deviations captured (Site URL fix, Supabase inner-cooldown observation) | 2026-05-08 |
 | 39 | v1.7 | 3 / 3 | ✅ Shipped — verifier 4/4 PASS; Andrew live-verified all three checkpoints (key-prop removal, skeleton, animation+reduced-motion) on production | 2026-05-08 |
 | 40 | v1.7 | 9 / 9 | ✅ Shipped — knip 6.12.1; 27 REMOVE / 53 KEEP; 4 atomic chore commits (deps `14fb48c`, dups n/a, exports `1cbb273`, files `2a1b665`); CI gate `d94ca07`; final QA all PASS `c42529d` | 2026-05-09 |
-| 41 | v1.8 | 4 / 4 | ✅ Shipped — verifier passed; SC-1..4 verified live (7 columns + dedupe table + trigger + 5/5 grandfathered + handler spec compliance); SC-5 (real Stripe trigger to linked account) deferred to Phase 42 first-checkout natural exercise; Andrew sign-off received | 2026-05-10 |
-| 42 | v1.8 | 0 / TBD | Not started | - |
+| 41 | v1.8 | 4 / 4 | ✅ Shipped — verifier passed; SC-1..4 verified live; SC-5 deferred to Phase 42.5 first-checkout natural exercise; Andrew sign-off received | 2026-05-10 |
+| 42 | v1.8 | 3 / 4 | ⚠ Plumbing code-complete (42-01/02/03 shipped, 15 commits); UI superseded by 42.5; 42-04 UAT replaced by 42.5 UAT | 2026-05-10 (partial) |
+| 42.5 | v1.8 | 0 / TBD | INSERTED — multi-tier Stripe + schema; blocked on revised PREREQ-B/D/E + PREREQ-G | - |
+| 42.6 | v1.8 | 0 / TBD | INSERTED — widget feature gating; depends on 42.5 | - |
 | 43 | v1.8 | 0 / TBD | Not started | - |
 | 44 | v1.8 | 0 / TBD | Not started | - |
 | 45 | v1.8 | 0 / TBD | Not started | - |
@@ -338,4 +401,4 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 ---
 
-*Roadmap last updated: 2026-05-10 — Phase 41 shipped (Stripe SDK + schema + webhook skeleton). 4 plans, 8 commits. Sandbox webhook live at we_1TVfOTJ7PLcBbY73Groz1G13 (api_version 2026-04-22.dahlia). 5 existing accounts grandfathered to trialing with trial_ends_at = 2026-05-24. Stripe Dashboard "+ Add destination" UI defaulted to v2/Event Destinations only — endpoint creation done via `stripe webhook_endpoints create` CLI as a workaround. SC-5 (real Stripe trigger to linked account) deferred to Phase 42 first-checkout natural exercise. Next: /gsd:plan-phase 42 (Checkout Flow + Plan Selection Page).*
+*Roadmap last updated: 2026-05-10 — Phase 42 plumbing shipped (4 plans → 3 shipped + 1 superseded; 15 commits including `feat(42-01)`/`feat(42-02)`/`feat(42-03)`). Mid-execution scope pivot: single-plan model → 3-tier model (Basic / Widget / Branding). Phase 42.5 INSERTED for multi-tier Stripe + `plan_tier` schema + 3-card UI; Phase 42.6 INSERTED for widget feature gating. Phase 42 UI is on-disk but does not match the actual product surface; 42.5 will refactor `prices.ts`, `/api/stripe/checkout`, and `/app/billing` in place. PREREQs B/D/E revised for 4 Stripe SKUs; PREREQ-G added for webhook `checkout.session.completed` event subscription. Existing 5 grandfathered v1.7 accounts unchanged — trial ends 2026-05-24, then pick-a-tier flow. Next: /gsd:plan-phase 42.5 (Multi-Tier Stripe + Schema).*

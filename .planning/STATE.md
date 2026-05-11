@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-10 — **Phase 42 Plan 03 complete.** /app/billing UI shipped: Server Component (4-state derivation), plan-selection card (monthly/annual toggle, dynamic savings badge, Subscribe → POST + redirect), checkout-return poller (2s/30s, auto-redirect to /app), billing-state-views (locked-state tonal anchor, trial countdown). 3 tasks, 3 commits. Ready for 42-04 manual QA.
+**Last updated:** 2026-05-10 — **MID-EXECUTION SCOPE PIVOT.** Phase 42 plumbing landed (42-01/02/03 = 15 commits, 3 plans shipped); Phase 42-04 UAT scaffolded but **superseded** before running. New 3-tier product model locked: Basic (Stripe, no widget) + Widget (Stripe, full app) + Branding (consult CTA, no Stripe). Phases 42.5 + 42.6 inserted. ROADMAP.md updated. Next: `/gsd:plan-phase 42.5`.
 
 ## Project Reference
 
@@ -8,17 +8,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 
 **Core value:** A visitor lands on a service business's website, picks an available time slot in a branded widget, and walks away with a confirmed booking in their inbox — no phone tag, no back-and-forth.
 
-**Current focus:** v1.8 — Stripe Paywall + Login UX Polish. Phase 41 shipped 2026-05-10. Phase 42 (Checkout Flow + Plan Selection Page) is next.
+**Current focus:** v1.8 — Stripe Paywall + Login UX Polish (3-tier model). Phase 41 shipped 2026-05-10. Phase 42 plumbing code-complete 2026-05-10. Phase 42.5 (Multi-Tier Stripe + Schema) is next.
 
 **Mode:** yolo | **Depth:** standard | **Parallelization:** enabled
 
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 42 of 46 — in progress
-**Plan:** 03 of 04 complete (42-01 + 42-02 + 42-03 shipped; 42-04 manual QA pending)
-**Status:** In progress — 42-03 billing UI complete. 42-04 is manual QA (requires PREREQ-B + PREREQ-E env vars set, then sign-off from Andrew).
-**Last activity:** 2026-05-10 — 42-03 (billing page UI) complete. 3 tasks, 4 files created (page.tsx, billing-state-views.tsx, plan-selection-card.tsx, checkout-return-poller.tsx). All CONTEXT-locked decisions honored. Build passing, tsc clean, lint clean.
+**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — ready to plan
+**Plan:** —
+**Status:** Phase 42 plumbing code-complete (42-01 + 42-02 + 42-03 = 15 commits pushed to origin/main); 42-04 UAT scaffolded but superseded by 42.5 UAT before running. Phase 42.5 (multi-tier expansion) and 42.6 (widget gating) inserted into ROADMAP. Awaiting `/gsd:plan-phase 42.5`.
+**Last activity:** 2026-05-10 — Mid-execution pivot: single-plan → 3-tier model. Existing on-disk code (`lib/stripe/prices.ts`, `app/api/stripe/checkout/route.ts`, `app/api/stripe/checkout/status/route.ts`, webhook handler, `/app/billing/page.tsx` + 3 client components) will be refactored in-place by 42.5 — none thrown away. 5 grandfathered v1.7 accounts unchanged.
 
 ## Cumulative project progress
 
@@ -41,11 +41,13 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phase 41 shipped 2026-05-10
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 41 | Stripe SDK + Schema + Webhook Skeleton | BILL-01..08 ✅ | ✅ Shipped 2026-05-10 |
-| 42 | Checkout Flow + Plan Selection | BILL-09..11 | Next — blocked on PREREQ-B + PREREQ-E |
-| 43 | Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12..20 | Phase 42 must ship first; LD-07 verification mandatory |
-| 44 | Customer Portal + Billing Polish + Stripe Emails | BILL-21..24 | PREREQ-C (Portal config); can develop parallel to 43 |
-| 45 | Login UX Polish + Gmail Quota Raise | AUTH-33..39 + EMAIL-35 | Fully independent of 41-44 |
-| 46 | Andrew Ship Sign-Off | (sign-off) | All of 41-45 complete |
+| 42 | Checkout Flow Plumbing | BILL-09 (partial) + BILL-10/11 | ⚠ Code-complete 2026-05-10; 3/4 plans shipped; 42-04 UAT superseded by 42.5 |
+| **42.5** | **Multi-Tier Stripe + Schema** (INSERTED) | BILL-09 (full) + BILL-10b + BILL-25 | Ready to plan — blocked on revised PREREQ-B/D/E + PREREQ-G |
+| **42.6** | **Widget Feature Gating** (INSERTED) | BILL-26 + BILL-27 | Depends on 42.5 |
+| 43 | Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12..20 | 42.5 must ship first; LD-07 verification mandatory |
+| 44 | Customer Portal + Billing Polish + Stripe Emails | BILL-21..24 | PREREQ-C (Portal config — 4-Price plan-switching); can develop parallel to 43 |
+| 45 | Login UX Polish + Gmail Quota Raise | AUTH-33..39 + EMAIL-35 | Fully independent |
+| 46 | Andrew Ship Sign-Off | (sign-off) | All of 41-45 + 42.5 + 42.6 complete |
 
 ## Accumulated Context
 
@@ -63,6 +65,20 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phase 41 shipped 2026-05-10
 - **LD-10** Checkout return lag-window uses polling; webhook is canonical source of truth; no optimistic update
 - **LD-11** Stripe-triggered emails route through `getSenderForAccount(accountId)`; Stripe receipts complement for dollar-amount emails
 - **LD-12** AUTH-29 four-way enumeration-safety invariant preserved; magic-link helper identical wording for all users
+
+### Roadmap Evolution
+
+- **2026-05-10** — Phase 42.5 INSERTED after Phase 42 (Multi-Tier Stripe + Schema). Reason: mid-execution scope pivot from single-plan to 3-tier model (Basic / Widget / Branding). Phase 42 plumbing remains correct and is reused; only the prices map, checkout body, and billing UI need refactoring.
+- **2026-05-10** — Phase 42.6 INSERTED after Phase 42.5 (Widget Feature Gating). Reason: Basic tier excludes the booking widget; need server-side gate on `/embed/[account]/[slug]` + owner embed-code page based on `plan_tier`.
+
+### Locked decisions (3-tier model, 2026-05-10)
+
+- **LD-13** Three tiers: Basic (Stripe), Widget (Stripe), Branding (consult CTA, non-Stripe). 1 Stripe Product, 4 Prices. Branding never writes to `accounts.plan_tier`.
+- **LD-14** `accounts.plan_tier` column: text, CHECK `('basic','widget')`, NULL allowed (trialing accounts before first checkout). Webhook derives from Price ID matched against `lib/stripe/prices.ts`.
+- **LD-15** Trial default tier = Widget (full app capability during trial). On trial expiry, account is locked and must pick a tier on the 3-card billing page. Existing 5 v1.7 grandfathered accounts follow the same path — no special-casing.
+- **LD-16** Branding CTA destination is `process.env.NSI_BRANDING_BOOKING_URL` (= `https://booking.nsintegrations.com/nsi/branding-consultation`). Same-window navigation, no API call, no DB write.
+- **LD-17** Widget tier gating happens on TWO surfaces: public `/embed/[account]/[slug]` (renders gated message, NOT 404 — must not break iframes) + owner-side embed-code settings page (replaces embed code with upgrade CTA). The bare booker `/{account}/{slug}` is NEVER gated (LD-07 extension).
+- **LD-18** Phase 42 single-plan UI on disk is to be refactored in-place by Phase 42.5 — not thrown away. SC-5 plumbing (customer linkage, no-store cache, 2s/30s polling, return flow) is preserved.
 
 ### Phase 41 decisions (carry into Phase 42+)
 
@@ -93,20 +109,18 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phase 41 shipped 2026-05-10
 
 ### Blockers
 
-- ~~Phase 41 deploy: PREREQ-A + PREREQ-D~~ ✅ Resolved 2026-05-10 (sandbox `NSI Calendar — v1.8 dev`; sk_test + whsec in Vercel)
-- ~~Phase 41 live test: PREREQ-F~~ ✅ Resolved 2026-05-10 (webhook `we_1TVfOTJ7PLcBbY73Groz1G13` registered via Stripe CLI; api_version `2026-04-22.dahlia`)
-- Phase 42 blocked on: PREREQ-B (create Product + monthly Price + annual Price in Stripe sandbox; capture Price IDs) + PREREQ-E (decide pricing amounts)
-- Phase 44 blocked on: PREREQ-C (Customer Portal config in Stripe dashboard)
+- ~~Phase 41 deploy: PREREQ-A + PREREQ-D~~ ✅ Resolved 2026-05-10
+- ~~Phase 41 live test: PREREQ-F~~ ✅ Resolved 2026-05-10
+- Phase 42.5 blocked on: PREREQ-B revised (create 1 Product with 4 Prices: Basic-Monthly, Basic-Annual, Widget-Monthly, Widget-Annual; capture all 4 Price IDs) + PREREQ-D revised (10 env vars: 4 Price IDs + 4 cents amounts + `NSI_BRANDING_BOOKING_URL` + Vercel deploy) + PREREQ-E revised (4 pricing amounts) + PREREQ-G new (`checkout.session.completed` added to webhook `we_1TVfOTJ7PLcBbY73Groz1G13` enabled_events list)
+- Phase 44 blocked on: PREREQ-C (Customer Portal config — must enable plan-switching across all 4 Prices)
 
 ## Session Continuity
 
-**Last session:** 2026-05-10 — Phase 42 Plans 01+02+03 executed. Wave 1 (42-01 prices + checkout APIs + 42-02 webhook handler) shipped. Wave 2 (42-03 billing page UI) shipped. 3 tasks, 4 files created, 3 commits. tsc clean, lint clean, build passes.
+**Last session:** 2026-05-10 — Phase 42 executed Waves 1+2 (42-01/02/03) shipped 15 commits, pushed to origin/main. Wave 3 (42-04 UAT) hit checkpoint; before Andrew ran UAT, a scope conversation revealed the actual product model is 3-tier (Basic / Widget / Branding) not single-plan. Phase 42-04 UAT abandoned; Phase 42.5 + 42.6 inserted into roadmap. STATE + ROADMAP updated.
 
-**Stopped at:** 42-03 complete. Next: 42-04 manual QA verification (sign-off from Andrew). Requires PREREQ-B (Stripe Price IDs) + PREREQ-E (pricing amounts) in `.env.local` to test Subscribe end-to-end.
+**Stopped at:** 42-04 UAT pre-empted by scope pivot. Phase 42 plumbing remains in working order; UI will be refactored by 42.5.
 
-**Resume file:** None — next action is `/gsd:execute-phase 42 04` or Andrew populating PREREQ-B/PREREQ-E and running 42-04 QA checkpoint.
-
-**Resume file:** None — next action is `/gsd:plan-phase 42` (Checkout Flow + Plan Selection Page). Andrew should complete PREREQ-B (create Product + monthly + annual Prices in Stripe sandbox) and PREREQ-E (decide pricing amounts) before Phase 42 deploys, but planning can start with placeholders.
+**Resume file:** None — next action is `/gsd:plan-phase 42.5` (Multi-Tier Stripe + Schema). Andrew should kick off PREREQ-B revised (create 4 Prices in Stripe), PREREQ-D revised (add 10 env vars to Vercel + push redeploy), PREREQ-E revised (decide 4 amounts), and PREREQ-G (add `checkout.session.completed` to webhook events) in parallel — planning can begin with placeholders.
 
 ## Files of record
 
