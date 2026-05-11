@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { loadEventTypeForBookingPage } from "@/app/[account]/[event-slug]/_lib/load-event-type";
+import { requireWidgetTier } from "@/lib/stripe/widget-gate";
 import { EmbedShell } from "./_components/embed-shell";
+import { EmbedGatedMessage } from "./_components/embed-gated-message";
 
 interface RouteParams {
   account: string;
@@ -45,6 +47,21 @@ export default async function EmbedBookingPage({
 
   const data = await loadEventTypeForBookingPage(account, eventSlug);
   if (!data) notFound();
+
+  // Phase 42.6: widget gating. Must return HTTP 200 with a message component —
+  // NEVER call notFound() here (third-party iframes would render a broken X).
+  // The route stays fully dynamic (no `export const dynamic` change).
+  const gate = requireWidgetTier({
+    plan_tier: data.account.plan_tier,
+    subscription_status: data.account.subscription_status,
+  });
+  if (!gate.allowed) {
+    return (
+      <main className="mx-auto max-w-3xl">
+        <EmbedGatedMessage />
+      </main>
+    );
+  }
 
   // Sanitize preview overrides server-side — only accept #RRGGBB hex and https:// URLs.
   // Prevents querystring injection if someone shares the embed URL with custom params.
