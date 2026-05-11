@@ -10,6 +10,12 @@ export interface AccountSummary {
   // Phase 7: branding columns — additive; existing Phase 5/6 callers unaffected
   logo_url: string | null;
   brand_primary: string | null;
+  // Phase 42.6 gating columns — additive. Bare booker /{account}/{slug} does NOT
+  // call requireWidgetTier(), so these fields are unused there. Only the embed
+  // route at /embed/{account}/{slug} consumes them. DO NOT add gate logic to the
+  // shared loader itself — gating must remain at the route level (LD-07).
+  plan_tier: "basic" | "widget" | null;
+  subscription_status: string | null;
 }
 
 export interface CustomQuestion {

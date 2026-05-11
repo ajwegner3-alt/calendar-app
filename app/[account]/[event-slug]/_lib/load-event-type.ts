@@ -22,9 +22,15 @@ export async function loadEventTypeForBookingPage(
   // 1. Account — filter soft-deleted accounts (ACCT-03, Plan 10-07).
   // This loader is shared by /[account]/[event-slug] AND /embed/[account]/[event-slug],
   // so a single .is('deleted_at', null) here covers all three public surfaces.
+  // Phase 42.6: plan_tier + subscription_status are fetched here (shared loader)
+  // but ONLY consumed in /embed/[account]/[event-slug]/page.tsx. The bare booker
+  // /[account]/[event-slug]/page.tsx ignores these fields. DO NOT add a gate
+  // call inside this loader — gating belongs at the route level (LD-07).
   const { data: accountRow, error: accountError } = await supabase
     .from("accounts")
-    .select("id, slug, name, timezone, owner_email, logo_url, brand_primary")
+    .select(
+      "id, slug, name, timezone, owner_email, logo_url, brand_primary, plan_tier, subscription_status",
+    )
     .eq("slug", accountSlug)
     .is("deleted_at", null)
     .maybeSingle();
@@ -60,6 +66,9 @@ export async function loadEventTypeForBookingPage(
       // Phase 7 branding fields — additive; downstream callers may ignore
       logo_url: accountRow.logo_url ?? null,
       brand_primary: accountRow.brand_primary ?? null,
+      // Phase 42.6 gating fields — additive; only consumed by /embed route
+      plan_tier: (accountRow.plan_tier ?? null) as "basic" | "widget" | null,
+      subscription_status: accountRow.subscription_status ?? null,
     },
     eventType: {
       id: eventTypeRow.id,
