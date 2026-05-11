@@ -10,7 +10,7 @@
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
 - ✅ **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (32 plans across 7 phases) — shipped 2026-05-09. Full archive: [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md).
-- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phases 41 + 42.5 + 42.6 shipped 2026-05-10..11; Phase 42 plumbing code-complete with UI superseded by 42.5; 43-46 in progress).
+- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phases 41 + 42.5 + 42.6 + 43 shipped 2026-05-10..11; Phase 42 plumbing code-complete with UI superseded by 42.5; 44-46 in progress).
 
 ## Phases
 
@@ -273,8 +273,13 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Plans:** 2 plans
 
-- [ ] 43-01-PLAN.md — Middleware subscription gate in `lib/supabase/proxy.ts` (BILL-12, BILL-13, BILL-14, BILL-15, BILL-20)
-- [ ] 43-02-PLAN.md — Shell layout query expansion + `SubscriptionBanner` server component for trial neutral/urgent + past-due (BILL-16, BILL-17, BILL-18)
+- [x] 43-01-PLAN.md — Middleware subscription gate in `lib/supabase/proxy.ts` (BILL-12, BILL-13, BILL-14, BILL-15, BILL-20) ✓ shipped 2026-05-11
+- [x] 43-02-PLAN.md — Shell layout query expansion + `SubscriptionBanner` server component for trial neutral/urgent + past-due (BILL-16, BILL-17, BILL-18) ✓ shipped 2026-05-11
+
+**Post-merge corrections (committed during live verification):**
+- `fb909f9` fix(43): SubscriptionBanner moved inside `<main>` to inherit `pt-20 md:pt-24` header clearance — fixed Header was hiding the banner
+- `b9fa84e` feat(43): Billing entry added to sidebar nav (Phase 42.5 shipped `/app/billing` without a nav entry)
+- Migration applied to live DB: `phase42_5_plan_tier` (Phase 42.5-01 column was never registered in `schema_migrations` and never reached production — public booker `/[account]/[event-slug]` was returning 404 to all customers because shared loader selects `plan_tier`. Applied during Phase 43 UAT.)
 
 ---
 
@@ -390,7 +395,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 42 | v1.8 | 3 / 4 | ⚠ Plumbing code-complete (42-01/02/03 shipped, 15 commits); UI superseded by 42.5; 42-04 UAT replaced by 42.5 UAT | 2026-05-10 (partial) |
 | 42.5 | v1.8 | 6 / 6 | ✅ Shipped — verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off; closes BILL-09 (full) + BILL-10b + BILL-25; Phase 41 SC-5 carry-over closed | 2026-05-10 |
 | 42.6 | v1.8 | 3 / 3 | ✅ Shipped — verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off; closes BILL-26 + BILL-27 | 2026-05-11 |
-| 43 | v1.8 | 0 / TBD | Not started | - |
+| 43 | v1.8 | 2 / 2 | ✅ Shipped — verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios; 2 post-merge fixes (banner positioning, sidebar nav) + 1 production migration applied during UAT (`plan_tier` column — fixed booker outage) | 2026-05-11 |
 | 44 | v1.8 | 0 / TBD | Not started | - |
 | 45 | v1.8 | 0 / TBD | Not started | - |
 | 46 | v1.8 | 0 / TBD | Not started | - |
@@ -405,6 +410,8 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 ---
 
-*Roadmap last updated: 2026-05-11 — Phase 42.6 SHIPPED. Verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off. Closes BILL-26 (`/embed/*` route gated by `plan_tier`) + BILL-27 (owner embed-code dialog gated by `plan_tier`). 12 atomic commits across Wave 1 (`61b65ba`, `a4fbe27`) + Wave 2 (`57a8bce`, `596bd56`, `82502d4`, `eac0e41`, `6e826c8`, `0a1b647`, `3b8df3f`, `734d31a`). Next: Phase 43 (Paywall Enforcement + Locked-State UX + Trial Banners) unblocked.*
+*Roadmap last updated: 2026-05-11 — Phase 43 SHIPPED. Verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios on production. Closes BILL-12..BILL-20. Two post-merge fixes during UAT: `fb909f9` (banner positioning — moved inside `<main>` to clear fixed Header) + `b9fa84e` (Billing entry added to sidebar nav, top-level CreditCard icon — Phase 42.5 had shipped `/app/billing` without a nav entry). One production database fix applied during UAT: `phase42_5_plan_tier` migration (Phase 42.5-01 column was never registered in `schema_migrations` and never reached production — public booker `/[account]/[event-slug]` was returning 404 to all customers because shared loader selects `plan_tier`. Outage resolved by MCP `apply_migration`). Plan commits: `d559305`, `1fbbaab` (43-01); `fd59b7d`, `3ca0868`, `e1f35c2` (43-02). Next: Phase 44 (Customer Portal + Billing Polish + Stripe Emails) unblocked, plus Phase 45 (Login UX Polish) which is fully independent and can develop in parallel.*
+
+*Prior: 2026-05-11 — Phase 42.6 SHIPPED. Verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off. Closes BILL-26 (`/embed/*` route gated by `plan_tier`) + BILL-27 (owner embed-code dialog gated by `plan_tier`). 12 atomic commits across Wave 1 (`61b65ba`, `a4fbe27`) + Wave 2 (`57a8bce`, `596bd56`, `82502d4`, `eac0e41`, `6e826c8`, `0a1b647`, `3b8df3f`, `734d31a`). Next: Phase 43 (Paywall Enforcement + Locked-State UX + Trial Banners) unblocked.*
 
 *Prior: 2026-05-10 — Phase 42.5 SHIPPED. Verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off received. Closes BILL-09 (full), BILL-10b (new — `accounts.plan_tier` column + webhook write), BILL-25 (new — Branding consult CTA via `NSI_BRANDING_BOOKING_URL`). Phase 41 SC-5 carry-over OFFICIALLY CLOSED — Tests 5a (Basic-Monthly) + 5b (Widget-Annual) each independently proved a real Stripe trigger lands all 4 billing columns. Commits: `e890334` (42.5-01 schema), `6238b3e`+`185b2d0`+`637bbf2` (42.5-02 prices), `39054a8`+`9c8e42b` (42.5-03 checkout), `1d9aac3`+`0a1ae5d` (42.5-04 webhook), `74e1d91`+`a7db58c`+`53646eb` (42.5-05 TierGrid UI), `5e493b1`+`8178344` (42.5-06 UAT). Next: Phase 42.6 (Widget Feature Gating — BILL-26 + BILL-27) unblocked. Phase 43 (Paywall Enforcement) also unblocked and can develop in parallel.*

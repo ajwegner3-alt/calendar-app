@@ -47,18 +47,18 @@ Requirements for v1.8. Each maps to one roadmap phase.
 
 ### BILL — Paywall Enforcement
 
-- [ ] **BILL-12**: Middleware extension at `lib/supabase/proxy.ts` reads `subscription_status` from `accounts` when request path matches `/app/*` AND is NOT `/app/billing`
-- [ ] **BILL-13**: Locked accounts (`subscription_status` not in `'trialing' | 'active'`) redirect to `/app/billing`
-- [ ] **BILL-14**: `past_due` does NOT trigger lockout — banner only; Stripe-managed dunning retry window (~3 weeks) preserves owner access
-- [ ] **BILL-15**: Public booker `/[account]/*` and `/embed/*` routes are NEVER subject to the paywall middleware (LD-07 booker-neutrality preserved structurally — paywall lives inside the existing `pathname.startsWith('/app')` branch)
+- [x] **BILL-12**: Middleware extension at `lib/supabase/proxy.ts` reads `subscription_status` from `accounts` when request path matches `/app/*` AND is NOT `/app/billing`
+- [x] **BILL-13**: Locked accounts (`subscription_status` not in `'trialing' | 'active'`) redirect to `/app/billing`
+- [x] **BILL-14**: `past_due` does NOT trigger lockout — banner only; Stripe-managed dunning retry window (~3 weeks) preserves owner access
+- [x] **BILL-15**: Public booker `/[account]/*` and `/embed/*` routes are NEVER subject to the paywall middleware (LD-07 booker-neutrality preserved structurally — paywall lives inside the existing `pathname.startsWith('/app')` branch)
 
 ### BILL — UX (Banners + Locked State)
 
-- [ ] **BILL-16**: Global trial banner displays on all `/app/*` pages during 14-day trial — copy direction: "Trial ends in N days. Head over to payments to get set up." (final wording in plan)
-- [ ] **BILL-17**: Trial banner shifts tone/urgency in the last 3 days of trial (color and/or copy intensification)
-- [ ] **BILL-18**: `past_due` state displays a non-blocking banner on `/app/*` pages indicating payment retry in progress
-- [ ] **BILL-19**: Locked-state `/app/billing` page renders Andrew's spec messaging: "Everything is waiting for you! Head over to payments to get set up." with the plan-selection card directly below
-- [ ] **BILL-20**: Locked accounts can access `/app/billing` only; all other `/app/*` paths redirect there (single unlocked owner-app surface when locked)
+- [x] **BILL-16**: Global trial banner displays on all `/app/*` pages during 14-day trial — copy direction: "Trial ends in N days. Head over to payments to get set up." (final wording in plan)
+- [x] **BILL-17**: Trial banner shifts tone/urgency in the last 3 days of trial (color and/or copy intensification)
+- [x] **BILL-18**: `past_due` state displays a non-blocking banner on `/app/*` pages indicating payment retry in progress
+- [x] **BILL-19**: Locked-state `/app/billing` page renders Andrew's spec messaging: "Everything is waiting for you! Head over to payments to get set up." with the plan-selection card directly below
+- [x] **BILL-20**: Locked accounts can access `/app/billing` only; all other `/app/*` paths redirect there (single unlocked owner-app surface when locked)
 
 ### BILL — Customer Portal
 
@@ -166,15 +166,15 @@ Updated: 2026-05-11 — Phases 41 + 42 (plumbing) + 42.5 + 42.6 complete (BILL-0
 | BILL-25 | Phase 42.5 | Complete |
 | BILL-26 | Phase 42.6 | Complete |
 | BILL-27 | Phase 42.6 | Complete |
-| BILL-12 | Phase 43 | Pending |
-| BILL-13 | Phase 43 | Pending |
-| BILL-14 | Phase 43 | Pending |
-| BILL-15 | Phase 43 | Pending |
-| BILL-16 | Phase 43 | Pending |
-| BILL-17 | Phase 43 | Pending |
-| BILL-18 | Phase 43 | Pending |
-| BILL-19 | Phase 43 | Pending |
-| BILL-20 | Phase 43 | Pending |
+| BILL-12 | Phase 43 | Complete |
+| BILL-13 | Phase 43 | Complete |
+| BILL-14 | Phase 43 | Complete |
+| BILL-15 | Phase 43 | Complete |
+| BILL-16 | Phase 43 | Complete |
+| BILL-17 | Phase 43 | Complete |
+| BILL-18 | Phase 43 | Complete |
+| BILL-19 | Phase 43 | Complete |
+| BILL-20 | Phase 43 | Complete |
 | BILL-21 | Phase 44 | Pending |
 | BILL-22 | Phase 44 | Pending |
 | BILL-23 | Phase 44 | Pending |
