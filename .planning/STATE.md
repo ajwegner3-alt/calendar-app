@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-11 — Phase 42.5 Plan 01 (plan_tier schema migration) executed. Forward + rollback SQL shipped in `feat(42.5-01) e890334`. Awaiting Andrew to run `npx supabase db push --linked` (manual handoff per CLAUDE.md "live testing" rule). Next: Plan 42.5-02 (prices.ts refactor, DB-independent) can begin in parallel.
+**Last updated:** 2026-05-11 — Phase 42.5 Plan 02 (prices.ts refactor) executed. 4-SKU nested map + reverse lookup + helpers shipped (`refactor(42.5-02) 6238b3e`); env-var contract refresh shipped (`refactor(42.5-02) 185b2d0`). Repo typecheck intentionally broken at 5 callsites in `app/(shell)/app/billing/page.tsx` (4) and `app/api/stripe/checkout/route.ts` (1) — owned by Wave 2 plans 42.5-03/05. Plan 42.5-01 manual `supabase db push --linked` still pending Andrew's handoff. Next: Wave 2 (Plans 42.5-03 checkout, 42.5-04 webhook, 42.5-05 billing UI) can run in parallel.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — in progress
-**Plan:** 42.5-01 complete; 42.5-02..04 pending
-**Status:** Plan 42.5-01 (plan_tier schema migration) shipped as `feat(42.5-01) e890334`. Forward migration `20260510130000_phase42_5_plan_tier.sql` and rollback authored, committed locally. Remote `supabase db push --linked` deferred to Andrew (manual handoff). Plan 42.5-02 (prices.ts refactor) is unblocked and DB-independent; 42.5-04 (webhook plan_tier write) needs the manual push to land before its UPDATE will succeed.
-**Last activity:** 2026-05-11 — Plan 42.5-01 executed: created `supabase/migrations/20260510130000_phase42_5_plan_tier.sql` + ROLLBACK with `CHECK (plan_tier IS NULL OR plan_tier IN ('basic','widget'))`, no DEFAULT, no NOT NULL. Trigger compat verified by inspection of `provision_account_for_new_user` source.
+**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — in progress (Wave 1 complete)
+**Plan:** 42.5-01 + 42.5-02 complete; 42.5-03/04/05 pending (Wave 2)
+**Status:** Wave 1 of Phase 42.5 complete. Plan 42.5-01 (plan_tier schema migration) shipped as `feat(42.5-01) e890334` — manual `supabase db push --linked` still owed by Andrew. Plan 42.5-02 (prices.ts refactor + env-var contract) shipped as `refactor(42.5-02) 6238b3e` + `refactor(42.5-02) 185b2d0` — `lib/stripe/prices.ts` rebuilt as 4-SKU nested map with `PRICE_ID_TO_TIER` reverse lookup and `getPriceId`/`priceIdToTier` helpers; `.env.local.example` documents 9 new env vars. Repo typecheck intentionally broken at 5 callsites — addressed by Wave 2. Wave 2 (Plans 42.5-03 checkout route, 42.5-04 webhook tier derivation, 42.5-05 billing 3-card UI) is unblocked and parallelizable.
+**Last activity:** 2026-05-11 — Plan 42.5-02 executed: rebuilt `lib/stripe/prices.ts` with 6 named exports (`PRICES`, `PRICE_ID_TO_TIER`, `PriceTier`, `PriceInterval`, `getPriceId`, `priceIdToTier`); replaced 4 obsolete env vars with 9 new ones (4 PRICE_IDs + 4 *_CENTS + `NSI_BRANDING_BOOKING_URL`). Smoke test confirmed 4 distinct keys in reverse map, `priceIdToTier(unknown) === null`, server-only directive preserved.
 
 ## Cumulative project progress
 
