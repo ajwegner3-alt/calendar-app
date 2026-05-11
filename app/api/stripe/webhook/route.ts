@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe/client";
 import { priceIdToTier } from "@/lib/stripe/prices";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendTrialEndingEmail } from "@/lib/email/send-trial-ending-email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -176,7 +177,7 @@ async function handleSubscriptionEvent(
 
   const { data: account, error: lookupErr } = await admin
     .from("accounts")
-    .select("id")
+    .select("id, name, logo_url, brand_primary, owner_email, trial_warning_sent_at")
     .eq("stripe_customer_id", customerId)
     .maybeSingle();
 
@@ -198,6 +199,62 @@ async function handleSubscriptionEvent(
   const updates: Record<string, unknown> = {};
 
   if (eventType === "customer.subscription.trial_will_end") {
+    // Phase 44 (BILL-24 — trial-ending-3-days-out): dispatch the trial-ending email
+    // via getSenderForAccount (LD-11 strict). Gated by trial_warning_sent_at IS NULL
+    // for extra idempotency beyond the stripe_webhook_events dedupe table.
+    //
+    // Email send happens BEFORE the trial_warning_sent_at UPDATE so a send failure
+    // does NOT lock the account out of future retries (Stripe re-fires trial_will_end
+    // if our webhook returns non-200; we always return 200 — see V18-CP-12 below).
+    if (!account.trial_warning_sent_at && account.owner_email) {
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL ??
+        (process.env.NEXT_PUBLIC_VERCEL_URL
+          ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+          : "http://localhost:3000");
+
+      // sendTrialEndingEmail NEVER throws — it returns {success, error} so we
+      // log + continue. Email failures must NOT block the webhook from returning 200.
+      // V18-CP-12: Stripe Dashboard / Customer Portal is the authoritative source
+      // of subscription state; an email failure is a UX degradation, not a state error.
+      try {
+        const emailResult = await sendTrialEndingEmail({
+          accountId: account.id,
+          account: {
+            id: account.id,
+            name: account.name,
+            logo_url: account.logo_url,
+            brand_primary: account.brand_primary,
+            owner_email: account.owner_email,
+          },
+          trialEndAt: sub.trial_end
+            ? new Date(sub.trial_end * 1000)
+            : new Date(),
+          appUrl,
+        });
+        if (!emailResult.success) {
+          console.error("[stripe-webhook] trial-ending email send failed", {
+            account_id: account.id,
+            error: emailResult.error,
+          });
+        }
+      } catch (emailErr) {
+        // Defensive catch even though sendTrialEndingEmail is documented as never-throw.
+        // Any throw here would propagate to the outer try/catch in POST() and trigger
+        // dedupe rollback + Stripe retry — which we explicitly do NOT want for an
+        // email-only failure. Log and continue.
+        console.error("[stripe-webhook] trial-ending email threw unexpectedly", {
+          account_id: account.id,
+          err: emailErr instanceof Error ? emailErr.message : String(emailErr),
+        });
+      }
+    } else {
+      console.log("[stripe-webhook] trial-ending email skipped", {
+        account_id: account.id,
+        reason: !account.owner_email ? "no_owner_email" : "already_sent",
+      });
+    }
+
     updates.trial_warning_sent_at = new Date().toISOString();
   } else {
     updates.subscription_status = sub.status; // CONTEXT-locked: trust payload status, NOT event type (V18-CP-11)
