@@ -301,10 +301,15 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - Customer Portal URL is never logged server-side (V18-CP-09 check).
 - `cancel_at_period_end` behavior verified: owner retains access after clicking cancel until period end (BILL-23 check).
 
-**Plans:** TBD
+**Plans:** 5 plans
 
-- [ ] 44-01: TBD
-- [ ] 44-02: TBD
+- [ ] 44-01-PLAN.md — Schema migration: add accounts.cancel_at_period_end column (Wave 1)
+- [ ] 44-02-PLAN.md — Email senders: send-trial-ending-email.ts + send-payment-failed-email.ts (Wave 1)
+- [ ] 44-03-PLAN.md — Stripe Customer Portal route: POST /api/stripe/portal (Wave 1)
+- [ ] 44-04-PLAN.md — Webhook integration: cancel_at_period_end write + trial-ending + payment-failed email dispatch (Wave 2)
+- [ ] 44-05-PLAN.md — Billing page Status Card + state-aware rendering (active / cancel_scheduled / past_due) (Wave 2)
+
+**Planner notes:** see 44-00-PLANNER-NOTES.md for BILL-24 partial-closure traceability (2 of 4 emails per CONTEXT.md scope narrowing), PREREQ-C blocking gate (Customer Portal config), and LD-11 sender identity reality.
 
 ---
 
@@ -396,7 +401,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 42.5 | v1.8 | 6 / 6 | ✅ Shipped — verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off; closes BILL-09 (full) + BILL-10b + BILL-25; Phase 41 SC-5 carry-over closed | 2026-05-10 |
 | 42.6 | v1.8 | 3 / 3 | ✅ Shipped — verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off; closes BILL-26 + BILL-27 | 2026-05-11 |
 | 43 | v1.8 | 2 / 2 | ✅ Shipped — verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios; 2 post-merge fixes (banner positioning, sidebar nav) + 1 production migration applied during UAT (`plan_tier` column — fixed booker outage) | 2026-05-11 |
-| 44 | v1.8 | 0 / TBD | Not started | - |
+| 44 | v1.8 | 0 / 5 | Planned — 5 plans across 2 waves; blocked on PREREQ-C (Customer Portal config) | - |
 | 45 | v1.8 | 0 / TBD | Not started | - |
 | 46 | v1.8 | 0 / TBD | Not started | - |
 
