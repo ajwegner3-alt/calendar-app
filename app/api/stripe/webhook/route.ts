@@ -210,6 +210,9 @@ async function handleSubscriptionEvent(
       : null;
     updates.plan_interval =
       sub.items.data[0]?.price.recurring?.interval ?? null;
+    // Phase 44 (BILL-23): mirror Stripe subscription.cancel_at_period_end.
+    // True when owner schedules cancellation via Customer Portal; access continues until current_period_end.
+    updates.cancel_at_period_end = sub.cancel_at_period_end ?? false;
   }
 
   const { error: updateErr } = await admin
