@@ -213,12 +213,12 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Plans:** 6 plans
 
-- [ ] 42.5-01-PLAN.md — Schema migration: add accounts.plan_tier column with CHECK constraint
-- [ ] 42.5-02-PLAN.md — Refactor lib/stripe/prices.ts to 4-SKU map + helpers + .env.local.example update
-- [ ] 42.5-03-PLAN.md — Checkout route accepts {tier, interval}; rejects branding + unknown tier
-- [ ] 42.5-04-PLAN.md — Webhook derives plan_tier via listLineItems and writes to accounts
-- [ ] 42.5-05-PLAN.md — Replace PlanSelectionCard with 3-card TierGrid + Branding consult link
-- [ ] 42.5-06-PLAN.md — Manual QA / UAT: end-to-end SC-1..SC-6 with real Stripe test mode
+- [x] 42.5-01-PLAN.md — Schema migration: add accounts.plan_tier column with CHECK constraint ✓ shipped 2026-05-10
+- [x] 42.5-02-PLAN.md — Refactor lib/stripe/prices.ts to 4-SKU map + helpers + .env.local.example update ✓ shipped 2026-05-10
+- [x] 42.5-03-PLAN.md — Checkout route accepts {tier, interval}; rejects branding + unknown tier ✓ shipped 2026-05-10
+- [x] 42.5-04-PLAN.md — Webhook derives plan_tier via listLineItems and writes to accounts ✓ shipped 2026-05-10
+- [x] 42.5-05-PLAN.md — Replace PlanSelectionCard with 3-card TierGrid + Branding consult link ✓ shipped 2026-05-10
+- [x] 42.5-06-PLAN.md — Manual QA / UAT: end-to-end SC-1..SC-6 with real Stripe test mode ✓ Andrew approved 2026-05-10
 
 ---
 
@@ -388,7 +388,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 40 | v1.7 | 9 / 9 | ✅ Shipped — knip 6.12.1; 27 REMOVE / 53 KEEP; 4 atomic chore commits (deps `14fb48c`, dups n/a, exports `1cbb273`, files `2a1b665`); CI gate `d94ca07`; final QA all PASS `c42529d` | 2026-05-09 |
 | 41 | v1.8 | 4 / 4 | ✅ Shipped — verifier passed; SC-1..4 verified live; SC-5 deferred to Phase 42.5 first-checkout natural exercise; Andrew sign-off received | 2026-05-10 |
 | 42 | v1.8 | 3 / 4 | ⚠ Plumbing code-complete (42-01/02/03 shipped, 15 commits); UI superseded by 42.5; 42-04 UAT replaced by 42.5 UAT | 2026-05-10 (partial) |
-| 42.5 | v1.8 | 0 / TBD | INSERTED — multi-tier Stripe + schema; blocked on revised PREREQ-B/D/E + PREREQ-G | - |
+| 42.5 | v1.8 | 6 / 6 | ✅ Shipped — verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off; closes BILL-09 (full) + BILL-10b + BILL-25; Phase 41 SC-5 carry-over closed | 2026-05-10 |
 | 42.6 | v1.8 | 0 / TBD | INSERTED — widget feature gating; depends on 42.5 | - |
 | 43 | v1.8 | 0 / TBD | Not started | - |
 | 44 | v1.8 | 0 / TBD | Not started | - |
@@ -401,8 +401,8 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - **Total phases shipped:** 40 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30 + 31-33 + 34-40)
 - **Total plans shipped:** 170 (52 + 34 + 22 + 6 + 8 + 6 + 10 + 32)
 - **Total commits:** ~692 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + 31 v1.5 + 53 v1.6 + 129 v1.7)
-- **v1.8 in progress:** Phase 41 shipped 2026-05-10 (4 plans, 8 commits); phases 42-46 remain (5 phases, plans TBD)
+- **v1.8 in progress:** Phases 41 + 42.5 shipped 2026-05-10 (4 + 6 plans); Phase 42 plumbing shipped 3/4 (UI superseded by 42.5); phases 42.6/43/44/45/46 remain
 
 ---
 
-*Roadmap last updated: 2026-05-10 — Phase 42 plumbing shipped (4 plans → 3 shipped + 1 superseded; 15 commits including `feat(42-01)`/`feat(42-02)`/`feat(42-03)`). Mid-execution scope pivot: single-plan model → 3-tier model (Basic / Widget / Branding). Phase 42.5 INSERTED for multi-tier Stripe + `plan_tier` schema + 3-card UI; Phase 42.6 INSERTED for widget feature gating. Phase 42 UI is on-disk but does not match the actual product surface; 42.5 will refactor `prices.ts`, `/api/stripe/checkout`, and `/app/billing` in place. PREREQs B/D/E revised for 4 Stripe SKUs; PREREQ-G added for webhook `checkout.session.completed` event subscription. Existing 5 grandfathered v1.7 accounts unchanged — trial ends 2026-05-24, then pick-a-tier flow. Next: /gsd:plan-phase 42.5 (Multi-Tier Stripe + Schema).*
+*Roadmap last updated: 2026-05-10 — Phase 42.5 SHIPPED. Verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off received. Closes BILL-09 (full), BILL-10b (new — `accounts.plan_tier` column + webhook write), BILL-25 (new — Branding consult CTA via `NSI_BRANDING_BOOKING_URL`). Phase 41 SC-5 carry-over OFFICIALLY CLOSED — Tests 5a (Basic-Monthly) + 5b (Widget-Annual) each independently proved a real Stripe trigger lands all 4 billing columns. Commits: `e890334` (42.5-01 schema), `6238b3e`+`185b2d0`+`637bbf2` (42.5-02 prices), `39054a8`+`9c8e42b` (42.5-03 checkout), `1d9aac3`+`0a1ae5d` (42.5-04 webhook), `74e1d91`+`a7db58c`+`53646eb` (42.5-05 TierGrid UI), `5e493b1`+`8178344` (42.5-06 UAT). Next: Phase 42.6 (Widget Feature Gating — BILL-26 + BILL-27) unblocked. Phase 43 (Paywall Enforcement) also unblocked and can develop in parallel.*

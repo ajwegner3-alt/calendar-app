@@ -159,9 +159,11 @@ Updated: 2026-05-10 — Phase 41 complete (BILL-01..08 → Complete); 24 require
 | BILL-06 | Phase 41 | Complete |
 | BILL-07 | Phase 41 | Complete |
 | BILL-08 | Phase 41 | Complete |
-| BILL-09 | Phase 42 | Pending |
-| BILL-10 | Phase 42 | Pending |
-| BILL-11 | Phase 42 | Pending |
+| BILL-09 | Phase 42.5 | Complete |
+| BILL-10 | Phase 42 | Complete |
+| BILL-10b | Phase 42.5 | Complete |
+| BILL-11 | Phase 42 | Complete |
+| BILL-25 | Phase 42.5 | Complete |
 | BILL-12 | Phase 43 | Pending |
 | BILL-13 | Phase 43 | Pending |
 | BILL-14 | Phase 43 | Pending |
@@ -192,7 +194,8 @@ Updated: 2026-05-10 — Phase 41 complete (BILL-01..08 → Complete); 24 require
 | Phase | Requirements | Count |
 |-------|-------------|-------|
 | 41 — Stripe SDK + Schema + Webhook Skeleton | BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07, BILL-08 | 8 |
-| 42 — Checkout Flow + Plan Selection | BILL-09, BILL-10, BILL-11 | 3 |
+| 42 — Checkout Flow Plumbing | BILL-10, BILL-11 (BILL-09 partial — full closure in 42.5) | 2 |
+| 42.5 — Multi-Tier Stripe + Schema | BILL-09 (full), BILL-10b, BILL-25 | 3 |
 | 43 — Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12, BILL-13, BILL-14, BILL-15, BILL-16, BILL-17, BILL-18, BILL-19, BILL-20 | 9 |
 | 44 — Customer Portal + Billing Polish + Stripe Emails | BILL-21, BILL-22, BILL-23, BILL-24 | 4 |
 | 45 — Login UX Polish + Gmail Quota Raise | AUTH-33, AUTH-34, AUTH-35, AUTH-36, AUTH-37, AUTH-38, AUTH-39, EMAIL-35 | 8 |
