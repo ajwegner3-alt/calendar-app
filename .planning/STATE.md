@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 43 of 46 — **SHIPPED** 2026-05-11 (verifier 9/9 SC + 4/4 gates static PASS; Andrew live-verified all 7 scenarios on production deploy)
-**Plan:** 43-01 + 43-02 both shipped; next phase = 44 Customer Portal (or 45 Login UX Polish — independent, parallelizable)
-**Status:** Phase 43 COMPLETE. Middleware paywall gate live (allowed-set `{trialing, active, past_due}`; `/app/billing` exempt; LD-07/LD-08/grandfather/BILL-20 preserved). SubscriptionBanner renders neutral-blue >3d / amber-urgent ≤3d / amber non-blocking past_due / null-for-active. Sidebar Billing entry added (top-level CreditCard icon). All BILL-12..BILL-20 closed.
-**Last activity:** 2026-05-11 — Live UAT against production via Supabase MCP state-flips. Scenarios: trial >3d (nsi default state) → urgent ≤3d (`trial_ends_at = NOW() + 2d`) → canceled redirect (`subscription_status = 'canceled'` triggered redirect to `/app/billing` on sign-in) → no redirect loop on `/app/billing` (LockedView + 3-tier TierGrid rendered cleanly) → past_due banner non-blocking. Two post-merge fixes during UAT: `fb909f9` SubscriptionBanner moved inside `<main>` (fixed Header was hiding banner — banner outer max-w wrapper stripped), `b9fa84e` Billing sidebar entry added (Phase 42.5 had shipped /app/billing without nav link). One production migration applied via MCP `apply_migration`: `phase42_5_plan_tier` (Phase 42.5-01 column was missing from production — public booker was 404'ing all customers; outage resolved). nsi state restored to original `trialing` + `trial_ends_at = '2026-05-24 14:53:30 UTC'`.
+**Phase:** 44 of 46 — **IN PROGRESS** (Customer Portal + Billing Polish + Stripe Emails). Plan 44-01 (schema) code-complete 2026-05-11; migration application to production PENDING (checkpoint surfaced — executor agent did not have Supabase MCP tools, so Andrew must apply via MCP `apply_migration` or Dashboard SQL editor before Plans 44-04/44-05 run).
+**Plan:** 44-01 SQL files committed (`894119b`); next = apply migration to production, then unblock 44-02 / 44-03 (Wave 1 parallel — email senders + Customer Portal route)
+**Status:** Phase 44 Wave 1 underway. 44-01 storage half of BILL-23 (cancel_at_period_end column) shipped to repo with idempotent `ADD COLUMN IF NOT EXISTS` + matching rollback + COMMENT documenting write path (Plan 44-04 webhook) and read path (Plan 44-05 billing UI). All 7 plan-specified static grep checks PASS. Migration is purely additive (`BOOLEAN NOT NULL DEFAULT FALSE`) — no backfill UPDATE needed, no trigger changes, no RLS changes. Phase 43 remains SHIPPED.
+**Last activity:** 2026-05-11 — Plan 44-01 executed. Created `supabase/migrations/20260511120000_phase44_cancel_at_period_end.sql` + `_ROLLBACK.sql`. Committed atomically as `894119b`. SUMMARY.md surfaces a human-action checkpoint for Andrew to apply migration to production Supabase via MCP `apply_migration` (preferred) or Dashboard SQL editor (fallback). Working tree retains only the three pre-existing Phase 02/23/33 doc drifts.
 
 ## Cumulative project progress
 
@@ -45,7 +45,7 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 + 42.6 shi
 | **42.5** | **Multi-Tier Stripe + Schema** (INSERTED) | BILL-09 (full) + BILL-10b + BILL-25 | ✅ Shipped 2026-05-10 |
 | **42.6** | **Widget Feature Gating** (INSERTED) | BILL-26 + BILL-27 | ✅ Shipped 2026-05-11 |
 | 43 | Paywall Enforcement + Locked-State UX + Trial Banners | BILL-12..20 ✅ | ✅ Shipped 2026-05-11 |
-| 44 | Customer Portal + Billing Polish + Stripe Emails | BILL-21..24 | PREREQ-C (Portal config — 4-Price plan-switching); can develop parallel to 43 |
+| 44 | Customer Portal + Billing Polish + Stripe Emails | BILL-21..24 | ⏳ In progress — Plan 44-01 (cancel_at_period_end schema) code-complete 2026-05-11 (`894119b`); migration application to production PENDING (human-action checkpoint). PREREQ-C still required for Plan 44-03 (Portal route). |
 | 45 | Login UX Polish + Gmail Quota Raise | AUTH-33..39 + EMAIL-35 | Fully independent |
 | 46 | Andrew Ship Sign-Off | (sign-off) | All of 41-45 + 42.5 + 42.6 complete |
 
@@ -116,15 +116,20 @@ v1.8 [-] Stripe Paywall + Login UX    (Phases 41-46, Phases 41 + 42.5 + 42.6 shi
 - ~~Phase 41 SC-5 carry-over (real Stripe trigger writes to real accounts row)~~ ✅ Closed by Phase 42.5 SC-5 Tests 5a + 5b on 2026-05-10
 - ~~Phase 42.5 blocked on: PREREQ-B/D/E revised + PREREQ-G~~ ✅ Resolved 2026-05-10 (verified during UAT walkthrough)
 - ~~Plan 42.5-04 blocked on Andrew running `npx supabase db push --linked`~~ ✅ Resolved 2026-05-10 (verified during UAT — webhook write of `plan_tier` exercised end-to-end in SC-5)
-- Phase 44 blocked on: PREREQ-C (Customer Portal config — must enable plan-switching across all 4 Prices)
+- Phase 44 blocked on: PREREQ-C (Customer Portal config — must enable plan-switching across all 4 Prices) [still required for Plan 44-03 Portal route]
+- Plan 44-01 cancel_at_period_end migration application to production — PENDING (human-action checkpoint surfaced in `.planning/phases/44-customer-portal-billing-polish-stripe-emails/44-01-SUMMARY.md`); Andrew to apply via MCP `apply_migration` or Dashboard SQL editor before Plans 44-04 (webhook write) and 44-05 (billing UI read) execute.
 
 ## Session Continuity
 
-**Last session:** 2026-05-11 — Phase 43 SHIPPED. Verifier passed 9/9 SC + 4/4 gates static. Andrew live-verified all 7 scenarios on production deploy via in-conversation Supabase MCP state-flips. Two post-merge corrections committed during UAT: `fb909f9` SubscriptionBanner moved inside `<main>` (header clearance), `b9fa84e` Billing entry added to sidebar nav. One production migration applied during UAT to fix booker outage: `phase42_5_plan_tier` (Phase 42.5-01 column was missing from production). nsi state restored to original `trialing` + `trial_ends_at = '2026-05-24 14:53:30 UTC'` post-UAT. Plan commits: `d559305`+`1fbbaab` (43-01 middleware gate); `fd59b7d`+`3ca0868`+`e1f35c2` (43-02 SubscriptionBanner).
+**Last session:** 2026-05-11 — Plan 44-01 executed (cancel_at_period_end schema migration). Created `supabase/migrations/20260511120000_phase44_cancel_at_period_end.sql` + matching `_ROLLBACK.sql`. All 7 plan-specified static grep checks pass: forward + rollback file existence; `ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE` present; `DROP COLUMN IF EXISTS` present; exactly one `BEGIN;` + one `COMMIT;` in forward; zero `UPDATE ` statements; zero `provision_account_for_new_user` references. Single atomic commit `894119b` (`feat(44-01): add cancel_at_period_end column to accounts`). Executor agent did NOT have Supabase MCP tools available, so live application to production is surfaced as a human-action checkpoint in the SUMMARY. Prior session: Phase 43 SHIPPED 2026-05-11.
 
-**Stopped at:** Phase 43 SHIPPED. All 9 must-haves (BILL-12..BILL-20) verified live by Andrew on production. VERIFICATION.md frontmatter flipped to `status: passed`, `signoff_by: Andrew`, `signoff_at: 2026-05-11`. Tech debt for next session: production migration registry sync (Phases 36/37/41 columns exist in DB but not in `schema_migrations`).
+**Stopped at:** Plan 44-01 SQL committed; migration NOT YET applied to production. Awaiting Andrew to apply via Supabase MCP `apply_migration` (preferred, registers in `schema_migrations`) or Dashboard SQL editor (fallback, does not register). Both paths and exact queries are documented in `.planning/phases/44-customer-portal-billing-polish-stripe-emails/44-01-SUMMARY.md` under "CHECKPOINT — Migration Application Required (Manual)".
 
-**Resume file:** None — next action is Phase 44 (Customer Portal + Billing Polish + Stripe Emails) — blocked on PREREQ-C only (Customer Portal config in Stripe dashboard with plan-switching across all 4 Prices). Phase 45 (Login UX Polish + Gmail Quota Raise) is fully independent of Phases 41-44 and can develop in parallel. Use `/gsd:discuss-phase 44` or `/gsd:plan-phase 45`.
+**Resume file:** None. Two parallel paths available:
+1. Apply 44-01 migration to production (15-second task, unblocks Plans 44-04 + 44-05 later).
+2. Continue Wave 1: Plans 44-02 (email senders) and 44-03 (Customer Portal route) touch no overlapping files with 44-01 and can run in parallel with the migration application. Plan 44-03 still blocked on PREREQ-C.
+
+Plan 44-04 (webhook cancel_at_period_end write) and 44-05 (billing UI cancel-scheduled card) are downstream of the migration application — they will read/write the new column and must wait for it to exist in production.
 
 ## Files of record
 
