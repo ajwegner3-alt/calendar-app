@@ -72,17 +72,15 @@ export function SubscriptionBanner({
       return (
         <div
           role="status"
-          className="mx-auto w-full max-w-6xl px-4 sm:px-6"
+          className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"
         >
-          <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            You&rsquo;re on the free trial.{" "}
-            <Link
-              href="/app/billing"
-              className="font-medium underline underline-offset-2 hover:text-blue-700"
-            >
-              Head over to payments to get set up.
-            </Link>
-          </div>
+          You&rsquo;re on the free trial.{" "}
+          <Link
+            href="/app/billing"
+            className="font-medium underline underline-offset-2 hover:text-blue-700"
+          >
+            Head over to payments to get set up.
+          </Link>
         </div>
       );
     }
@@ -96,20 +94,18 @@ export function SubscriptionBanner({
     else copy = `Trial ends in ${daysLeft} days.`;
 
     const classes = isUrgent
-      ? "mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-      : "mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900";
+      ? "mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      : "mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900";
     const linkClasses = isUrgent
       ? "font-semibold underline underline-offset-2 hover:text-amber-700"
       : "font-medium underline underline-offset-2 hover:text-blue-700";
 
     return (
-      <div role="status" className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <div className={classes}>
-          {copy}{" "}
-          <Link href="/app/billing" className={linkClasses}>
-            Head over to payments to get set up.
-          </Link>
-        </div>
+      <div role="status" className={classes}>
+        {copy}{" "}
+        <Link href="/app/billing" className={linkClasses}>
+          Head over to payments to get set up.
+        </Link>
       </div>
     );
   }
@@ -117,17 +113,18 @@ export function SubscriptionBanner({
   // past_due — non-blocking amber banner (LD-08; BILL-18).
   // No "Manage payment" Portal CTA (Phase 44 owns that).
   return (
-    <div role="status" className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-      <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Your payment is past due. Stripe is retrying &mdash;{" "}
-        <Link
-          href="/app/billing"
-          className="font-medium underline underline-offset-2 hover:text-amber-700"
-        >
-          update your billing information
-        </Link>{" "}
-        to keep your account active.
-      </div>
+    <div
+      role="status"
+      className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+    >
+      Your payment is past due. Stripe is retrying &mdash;{" "}
+      <Link
+        href="/app/billing"
+        className="font-medium underline underline-offset-2 hover:text-amber-700"
+      >
+        update your billing information
+      </Link>{" "}
+      to keep your account active.
     </div>
   );
 }

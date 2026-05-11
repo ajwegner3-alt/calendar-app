@@ -61,11 +61,11 @@ export default async function ShellLayout({
         <SidebarInset className="relative overflow-hidden bg-gray-50">
           <BackgroundGlow />
           <Header />
-          <SubscriptionBanner
-            subscriptionStatus={(account.subscription_status as string | null) ?? null}
-            trialEndsAt={(account.trial_ends_at as string | null) ?? null}
-          />
           <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-20 sm:px-6 md:pt-24 pb-12">
+            <SubscriptionBanner
+              subscriptionStatus={(account.subscription_status as string | null) ?? null}
+              trialEndsAt={(account.trial_ends_at as string | null) ?? null}
+            />
             {children}
           </main>
         </SidebarInset>
