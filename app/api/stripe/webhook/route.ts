@@ -14,6 +14,7 @@ import { headers } from "next/headers";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe/client";
+import { priceIdToTier } from "@/lib/stripe/prices";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -352,6 +353,68 @@ async function handleCheckoutSessionCompleted(
       accountId,
       stripeCustomerId,
       err: writeErr.message,
+    });
+  }
+
+  // === Phase 42.5: derive plan_tier from line items ===
+  // The checkout.session.completed event payload does NOT include line_items by default
+  // (field is `line_items?: ApiList<LineItem>` — optional, absent unless explicitly fetched).
+  // Stripe's official fulfillment docs require this listLineItems call to access them.
+  // The ROADMAP verification gate explicitly forbids metadata-based or hardcoded tier inference.
+
+  let lineItems: Stripe.ApiList<Stripe.LineItem>;
+  try {
+    lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+      limit: 1,
+      expand: ["data.price"],
+    });
+  } catch (err) {
+    // Stripe API failure — throw so dedupe row rolls back + Stripe retries the entire event.
+    // The stripe_customer_id write above is idempotent on retry (.is('stripe_customer_id', null) guard).
+    console.error("[stripe-webhook] checkout.session.completed: listLineItems failed", {
+      sessionId: session.id,
+      accountId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw new Error("listLineItems_failed");
+  }
+
+  const priceId = lineItems.data[0]?.price?.id ?? null;
+  const planTier = priceId ? priceIdToTier(priceId) : null;
+
+  if (!planTier) {
+    // Unknown/unmapped Price ID — log a clear warning and skip plan_tier write.
+    // The subscription will still transition to active via subsequent events;
+    // plan_tier remains NULL (Phase 42.6 gating treats NULL as trialing — allowed access).
+    // This is non-fatal: do NOT throw, return 200 to Stripe.
+    console.warn("[stripe-webhook] checkout.session.completed: could not derive plan_tier", {
+      sessionId: session.id,
+      priceId,
+      accountId,
+    });
+  } else {
+    const { error: tierWriteErr } = await admin
+      .from("accounts")
+      .update({ plan_tier: planTier })
+      .eq("id", accountId);
+
+    if (tierWriteErr) {
+      // DB write failure — throw so dedupe rolls back and Stripe retries.
+      // UPDATE is idempotent (writing the same plan_tier value twice is harmless).
+      console.error("[stripe-webhook] checkout.session.completed: plan_tier write failed", {
+        sessionId: session.id,
+        accountId,
+        planTier,
+        error: tierWriteErr.message,
+      });
+      throw new Error("plan_tier_write_failed");
+    }
+
+    console.log("[stripe-webhook] checkout.session.completed: plan_tier set", {
+      sessionId: session.id,
+      accountId,
+      priceId,
+      planTier,
     });
   }
 
