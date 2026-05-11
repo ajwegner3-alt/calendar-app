@@ -1,6 +1,6 @@
 # Project State: Calendar App (NSI Booking Tool)
 
-**Last updated:** 2026-05-11 — Phase 42.5 Plan 02 (prices.ts refactor) executed. 4-SKU nested map + reverse lookup + helpers shipped (`refactor(42.5-02) 6238b3e`); env-var contract refresh shipped (`refactor(42.5-02) 185b2d0`). Repo typecheck intentionally broken at 5 callsites in `app/(shell)/app/billing/page.tsx` (4) and `app/api/stripe/checkout/route.ts` (1) — owned by Wave 2 plans 42.5-03/05. Plan 42.5-01 manual `supabase db push --linked` still pending Andrew's handoff. Next: Wave 2 (Plans 42.5-03 checkout, 42.5-04 webhook, 42.5-05 billing UI) can run in parallel.
+**Last updated:** 2026-05-11 — Phase 42.5 Plan 04 (webhook plan_tier write) executed. `handleCheckoutSessionCompleted` now calls `stripe.checkout.sessions.listLineItems` after the existing `stripe_customer_id` race-guard, derives tier via `priceIdToTier`, and UPDATEs `accounts.plan_tier` (`feat(42.5-04) 1d9aac3`). Phase 41 invariants preserved (handleSubscriptionEvent/handleInvoiceEvent/signature verify/dedupe untouched). Plan 42.5-01 manual `supabase db push --linked` still pending Andrew. Next: Wave 2 sibling 42.5-03 (checkout route) + 42.5-05 (billing UI), then 42.5-06 UAT closes SC-5.
 
 ## Project Reference
 
@@ -15,10 +15,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-09 with v1.8 Current Milestone sect
 ## Current Position
 
 **Milestone:** v1.8 Stripe Paywall + Login UX Polish
-**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — in progress (Wave 1 complete)
-**Plan:** 42.5-01 + 42.5-02 complete; 42.5-03/04/05 pending (Wave 2)
-**Status:** Wave 1 of Phase 42.5 complete. Plan 42.5-01 (plan_tier schema migration) shipped as `feat(42.5-01) e890334` — manual `supabase db push --linked` still owed by Andrew. Plan 42.5-02 (prices.ts refactor + env-var contract) shipped as `refactor(42.5-02) 6238b3e` + `refactor(42.5-02) 185b2d0` — `lib/stripe/prices.ts` rebuilt as 4-SKU nested map with `PRICE_ID_TO_TIER` reverse lookup and `getPriceId`/`priceIdToTier` helpers; `.env.local.example` documents 9 new env vars. Repo typecheck intentionally broken at 5 callsites — addressed by Wave 2. Wave 2 (Plans 42.5-03 checkout route, 42.5-04 webhook tier derivation, 42.5-05 billing 3-card UI) is unblocked and parallelizable.
-**Last activity:** 2026-05-11 — Plan 42.5-02 executed: rebuilt `lib/stripe/prices.ts` with 6 named exports (`PRICES`, `PRICE_ID_TO_TIER`, `PriceTier`, `PriceInterval`, `getPriceId`, `priceIdToTier`); replaced 4 obsolete env vars with 9 new ones (4 PRICE_IDs + 4 *_CENTS + `NSI_BRANDING_BOOKING_URL`). Smoke test confirmed 4 distinct keys in reverse map, `priceIdToTier(unknown) === null`, server-only directive preserved.
+**Phase:** 42.5 of 46 (+ inserted 42.5/42.6) — in progress (Wave 2 partial)
+**Plan:** 42.5-01 + 42.5-02 + 42.5-04 complete; 42.5-03/05 pending (Wave 2 siblings)
+**Status:** Wave 2 partial. Plan 42.5-04 (webhook tier derivation) shipped as `feat(42.5-04) 1d9aac3` — `app/api/stripe/webhook/route.ts` `handleCheckoutSessionCompleted` extended with `listLineItems({limit:1, expand:['data.price']})` + `priceIdToTier` lookup + `accounts.plan_tier` UPDATE; three paths wired (known-Price UPDATE / unknown-Price warn-no-throw / API-failure throw-and-retry). Phase 41 invariants preserved (`handleSubscriptionEvent`, `handleInvoiceEvent`, signature verify, dedupe insert/rollback, middleware exemption all UNTOUCHED). TypeScript clean for the modified file; pre-existing 5 callsite errors (4 in `app/(shell)/app/billing/page.tsx`, 1 in `app/api/stripe/checkout/route.ts`) remain — owned by Wave 2 siblings 42.5-05 and 42.5-03 respectively. Plan 42.5-01 manual `supabase db push --linked` still owed by Andrew (column does not yet exist on live DB; new UPDATE will throw and Stripe will retry until migration lands — no data loss). Wave 2 sibling 42.5-03 (checkout route) is in flight in parallel; uncommitted changes observed in `app/api/stripe/checkout/route.ts` during this run, staging was scoped to webhook only.
+**Last activity:** 2026-05-11 — Plan 42.5-04 executed: appended 63-line plan_tier derivation block to `handleCheckoutSessionCompleted` after the existing `stripe_customer_id` race-guard; added `priceIdToTier` import; verified zero new typecheck errors and zero modifications to `handleSubscriptionEvent`/`handleInvoiceEvent`. SUMMARY at `.planning/phases/42.5-multi-tier-stripe-and-schema/42.5-04-SUMMARY.md`.
 
 ## Cumulative project progress
 
