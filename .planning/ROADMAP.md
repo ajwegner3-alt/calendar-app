@@ -242,10 +242,11 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - Trial-to-Basic regression: an account that trials, expires, then subscribes to Basic has working `/[account]/{slug}` but a gated `/embed/...` — verified end-to-end in the UAT.
 - Iframe degradation: when an existing third-party page has embedded a Basic-tier account's widget, the iframe loads (200 not 404) and displays the gated message — not a broken X icon.
 
-**Plans:** TBD — run `/gsd:plan-phase 42.6`
+**Plans:** 3 plans
 
-- [ ] 42.6-01: TBD
-- [ ] 42.6-02: TBD
+- [ ] 42.6-01-PLAN.md — requireWidgetTier helper + unit tests (Wave 1)
+- [ ] 42.6-02-PLAN.md — Gate /embed/* public route + EmbedGatedMessage component (Wave 2)
+- [ ] 42.6-03-PLAN.md — Gate owner embed-code dialog (prop threading + upgrade card) (Wave 2)
 
 ---
 
