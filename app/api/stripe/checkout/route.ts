@@ -17,8 +17,13 @@
  * Stripe charges immediately on checkout completion; subscription_status flips from
  * 'trialing' to 'active' via webhook on invoice.payment_succeeded.
  *
+ * Request body (Phase 42.5):
+ *   { tier: 'basic' | 'widget' | 'branding', interval: 'monthly' | 'annual' }
+ *
  * Response shapes:
  *   200 → { url: string }                         checkout.stripe.com URL
+ *   400 → { error: "use_consult_link" }           tier=branding (LD-16: consult CTA, not Stripe)
+ *   400 → { error: "unknown_tier" }               tier missing or not 'basic'|'widget'|'branding'
  *   400 → { error: "missing_price_id" }           placeholder price in production
  *   401 → { error: "unauthorized" }               no auth session
  *   404 → { error: "account_not_found" }          no accounts row for authed user
@@ -30,7 +35,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
-import { PRICES, type PriceInterval } from "@/lib/stripe/prices";
+import {
+  getPriceId,
+  type PriceInterval,
+  type PriceTier,
+} from "@/lib/stripe/prices";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,30 +58,10 @@ export async function POST(req: Request) {
     );
   }
 
-  // ── 2. Parse body + resolve price ────────────────────────────────────────
-  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-  const interval: PriceInterval =
-    body?.interval === "annual" ? "annual" : "monthly";
-  const priceId = PRICES[interval].priceId;
-
-  // Production safety net: reject placeholder price IDs so a misconfigured
-  // production env doesn't create broken Checkout sessions.
-  if (
-    priceId.startsWith("price_placeholder_") &&
-    process.env.NODE_ENV === "production"
-  ) {
-    console.log("[stripe-checkout] placeholder priceId in production", {
-      interval,
-      priceId,
-      outcome: "missing_price_id",
-    });
-    return NextResponse.json(
-      { error: "missing_price_id" },
-      { status: 400, headers: NO_STORE },
-    );
-  }
-
-  // ── 3. Fetch account (RLS-scoped — only the authed owner's row) ──────────
+  // ── 2. Fetch account (RLS-scoped — only the authed owner's row) ──────────
+  // Account lookup runs BEFORE body parsing per plan invariant: existing
+  // auth (401) and account-not-found (404) checks must still fire before tier
+  // validation (LD-18: Phase 42 plumbing preserved).
   const { data: account, error: accountErr } = await supabase
     .from("accounts")
     .select("id, owner_email, stripe_customer_id")
@@ -91,6 +80,64 @@ export async function POST(req: Request) {
   }
 
   const accountId = account.id;
+
+  // ── 3. Parse body + resolve price ────────────────────────────────────────
+  // Body shape (Phase 42.5): { tier: 'basic' | 'widget' | 'branding', interval: 'monthly' | 'annual' }
+  // Order of validations: auth (401, above) → account (404, above) → branding-reject (400)
+  // → unknown-tier-reject (400) → placeholder-price-reject (400 in prod) → stripe call.
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const rawTier = body?.tier;
+  const rawInterval = body?.interval;
+
+  // Reject Branding tier immediately — it uses the consult link (LD-16), not Stripe.
+  // The UI should never POST this; if it does, we surface a stable error code so
+  // the client can route the user to the consult booking URL.
+  if (rawTier === "branding") {
+    console.log("[stripe-checkout] branding tier rejected", {
+      account_id: accountId,
+      outcome: "use_consult_link",
+    });
+    return NextResponse.json(
+      { error: "use_consult_link" },
+      { status: 400, headers: NO_STORE },
+    );
+  }
+
+  // Validate tier is one of the two Stripe-backed tiers.
+  if (rawTier !== "basic" && rawTier !== "widget") {
+    console.log("[stripe-checkout] unknown tier rejected", {
+      account_id: accountId,
+      rawTier,
+      outcome: "unknown_tier",
+    });
+    return NextResponse.json(
+      { error: "unknown_tier" },
+      { status: 400, headers: NO_STORE },
+    );
+  }
+  const tier: PriceTier = rawTier;
+  const interval: PriceInterval = rawInterval === "annual" ? "annual" : "monthly";
+
+  const priceId = getPriceId(tier, interval);
+
+  // Production safety net: reject placeholder price IDs so a misconfigured
+  // production env doesn't create broken Checkout sessions.
+  if (
+    priceId.startsWith("price_placeholder_") &&
+    process.env.NODE_ENV === "production"
+  ) {
+    console.log("[stripe-checkout] placeholder priceId in production", {
+      account_id: accountId,
+      tier,
+      interval,
+      priceId,
+      outcome: "missing_price_id",
+    });
+    return NextResponse.json(
+      { error: "missing_price_id" },
+      { status: 400, headers: NO_STORE },
+    );
+  }
 
   // ── 4. Stripe Customer upsert (SC-5 closure — RESEARCH Pitfall 1 + 2) ───
   // If the account already has a customer ID, reuse it (idempotent subscribe).
@@ -177,6 +224,9 @@ export async function POST(req: Request) {
       // belt-and-suspenders for checkout.session.completed webhook handler (42-02)
       client_reference_id: accountId,
       line_items: [{ price: priceId, quantity: 1 }],
+      // Debug breadcrumb only — webhook tier-derivation (42.5-04) uses Price ID
+      // reverse-lookup against PRICE_ID_TO_TIER, NOT this metadata field.
+      metadata: { accountId, tier, interval },
       success_url: `${origin}/app/billing?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/app/billing`,
     });
@@ -186,6 +236,7 @@ export async function POST(req: Request) {
     console.error("[stripe-checkout] stripe.checkout.sessions.create failed", {
       account_id: accountId,
       customer_id: customerId,
+      tier,
       interval,
       err: message,
       outcome: "stripe_error",
@@ -203,6 +254,7 @@ export async function POST(req: Request) {
       account_id: accountId,
       customer_id: customerId,
       session_id: session.id,
+      tier,
       interval,
       outcome: "no_session_url",
     });
@@ -217,6 +269,7 @@ export async function POST(req: Request) {
     account_id: accountId,
     customer_id: customerId,
     session_id: session.id,
+    tier,
     interval,
     outcome: "success",
   });
