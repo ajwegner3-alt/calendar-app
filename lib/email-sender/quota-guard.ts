@@ -2,20 +2,22 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Daily cap on Gmail transactional sends per account. 200/day = 40% of Gmail's
+ * Daily cap on Gmail transactional sends per account. 400/day = 80% of Gmail's
  * ~500/day soft limit, leaving headroom for booking + reminder volume.
  *
  * As of Phase 35 (EMAIL-27), the cap is per-account: each account has its own
- * independent 200/day limit. Account A exhausting its quota does NOT affect
+ * independent 400/day limit. Account A exhausting its quota does NOT affect
  * Account B. Signup-side paths (welcome email) currently pass the new account's
  * id post-creation; pre-account signup-verify/password-reset pass null and
  * remain on a global fallback until Phase 36 (Resend migration).
  *
- * Phase 36: Resend accounts bypass the 200/day cap entirely. The cap only
+ * Phase 36: Resend accounts bypass the 400/day cap entirely. The cap only
  * applies to Gmail (email_provider='gmail' or missing account row). Resend
  * accounts still log each send via email_send_log with provider='resend'.
+ *
+ * Phase 45 (EMAIL-35): per-account cap raised to 400/day (previously half this).
  */
-export const SIGNUP_DAILY_EMAIL_CAP = 200;
+export const SIGNUP_DAILY_EMAIL_CAP = 400;
 const WARN_THRESHOLD_PCT = 0.8;
 
 export type EmailCategory =
@@ -47,7 +49,7 @@ export class QuotaExceededError extends Error {
  * Returns the count of email_send_log rows for the given account in the current
  * calendar day (UTC). Day boundary: UTC midnight.
  *
- * Phase 35 (EMAIL-27): filter is now per-account so each account's 200/day
+ * Phase 35 (EMAIL-27): filter is now per-account so each account's daily
  * limit is independent. Pass the account's UUID; legacy rows without account_id
  * are excluded from the per-account count (they pre-date Phase 35).
  */
@@ -74,7 +76,7 @@ export async function getDailySendCount(accountId: string): Promise<number> {
  *   catch (e) { if (e instanceof QuotaExceededError) ...handle... else throw; }
  *
  * Phase 36 (OQ-1): internally reads accounts.email_provider to decide whether
- * to enforce the 200/day Gmail cap. Resend accounts bypass the cap but still
+ * to enforce the per-account Gmail cap. Resend accounts bypass the cap but still
  * insert an email_send_log row with provider='resend'. Centralizing here means
  * none of the 7 leaf callers need to change.
  *
@@ -96,7 +98,7 @@ export async function checkAndConsumeQuota(
   const admin = createAdminClient();
 
   // Phase 36: read email_provider so we know whether to enforce the
-  // 200/day Gmail cap. Resend accounts bypass the cap entirely (CONTEXT
+  // per-account Gmail cap. Resend accounts bypass the cap entirely (CONTEXT
   // decision — they have NSI's verified domain and a separate volume model).
   // The signup-side nil-UUID sentinel ('00000000-...') won't match any row
   // here; the maybeSingle() returns null and we fall through to the Gmail
