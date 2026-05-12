@@ -250,6 +250,9 @@ function MagicLinkTabContent() {
           <p className="text-sm text-destructive">{magicState.fieldErrors.email[0]}</p>
         )}
       </div>
+      <p className="text-xs text-muted-foreground" data-testid="magic-link-helper">
+        We&apos;ll email you a one-time sign-in link. Open it on this device to log in.
+      </p>
       <Button type="submit" disabled={magicPending} className="w-full">
         {magicPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {magicPending ? "Sending…" : "Send login link"}

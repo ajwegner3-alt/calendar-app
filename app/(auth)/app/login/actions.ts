@@ -10,6 +10,12 @@ import { loginSchema, magicLinkSchema } from "./schema";
 export type LoginState = {
   fieldErrors?: Partial<Record<"email" | "password", string[]>>;
   formError?: string;
+  /**
+   * Phase 45 (AUTH-38): which class of error fired, used by the client
+   * to gate the 3-fail magic-link nudge counter on credentials-only.
+   * Undefined on success or on rate-limit/server error branches.
+   */
+  errorKind?: "credentials" | "rateLimit" | "server";
 };
 
 export async function loginAction(
@@ -33,7 +39,7 @@ export async function loginAction(
     "unknown";
   const rl = await checkAuthRateLimit("login", ip);
   if (!rl.allowed) {
-    return { formError: "Too many login attempts. Please wait a few minutes and try again." };
+    return { formError: "Too many login attempts. Please wait a few minutes and try again.", errorKind: "rateLimit" };
   }
 
   // 3. Supabase auth. createClient is async (Phase 1 uses await cookies()).
@@ -51,7 +57,14 @@ export async function loginAction(
     } else if (!error.status || error.status >= 500) {
       formError = "Something went wrong. Please try again.";
     }
-    return { formError };
+    // Phase 45 (AUTH-38): emit errorKind discriminant so the client can gate
+    // the 3-fail magic-link nudge counter on credentials-only. Order of the
+    // ternaries matches the formError if-chain above so the two stay in sync.
+    const errorKind: "credentials" | "rateLimit" | "server" =
+      error.status === 429 ? "rateLimit"
+      : (!error.status || error.status >= 500) ? "server"
+      : "credentials";
+    return { formError, errorKind };
   }
 
   // 4. Success. revalidatePath busts the root layout cache so the shell
