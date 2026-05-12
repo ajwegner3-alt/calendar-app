@@ -76,7 +76,7 @@ Create the file with the following structure (do not deviate from the section or
 phase: 46-andrew-ship-sign-off
 verified: <leave as TBD until UAT completes>
 status: in_progress
-score: 0/14 scenarios passed (+ rolled-up deferred items)
+score: "0/28 scenarios passed (14 ROADMAP QA + 3 Phase 44 deferred + 4 Phase 45 deferred + 7 supporting)"
 signoff_by: Andrew
 signoff_at: <TBD>
 post_signoff_corrections: []
@@ -103,7 +103,9 @@ human_verification_results: []
 **Andrew action only. Claude cannot complete this step. Do not proceed past this block until all four boxes are checked.**
 ```
 
-**3. Setup SQL — Read nsi Stripe Customer ID** (first SQL Andrew runs; surfaces the `cus_XXXXX` needed for Stripe Dashboard lookups in later scenarios; RESEARCH.md §9 Open Question 2):
+**3. Setup SQL — Read nsi Stripe Customer ID** (first SQL Andrew runs; surfaces the `cus_XXXXX` needed for Stripe Dashboard lookups in later scenarios; RESEARCH.md §9 Open Question 2).
+
+> **Run ONLY after all four PREREQ-C boxes are confirmed checked.** Do not proceed to this Setup SQL until Section 2 (PREREQ-C) is fully complete.
 
 ```sql
 SELECT stripe_customer_id, stripe_subscription_id, subscription_status, plan_tier, trial_ends_at, cancel_at_period_end

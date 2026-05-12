@@ -16,7 +16,7 @@ must_haves:
     - "The v1.8 section captures the schema_migrations Technical Debt resolution (Phase 46-01)"
     - "`.planning/milestones/v1.8-ROADMAP.md` exists and mirrors the v1.7-ROADMAP.md structure (top-level # heading, Status SHIPPED, Phases range, Total Plans count, Overview, per-phase blocks)"
     - "ROADMAP.md v1.8 section is collapsed to a one-line entry matching the v1.0..v1.7 pattern, with the in-progress 🚧 marker flipped to ✅"
-    - "Total v1.8 plan count = 30 (Phase 41 4 + Phase 42 4 + Phase 42.5 6 + Phase 42.6 3 + Phase 43 2 + Phase 44 5 + Phase 45 3 + Phase 46 3) — verify by re-tallying from ROADMAP.md before writing"
+    - "Total v1.8 plan count = 32 (Phase 41 4 + Phase 42 4 + Phase 42.5 6 + Phase 42.6 3 + Phase 43 2 + Phase 44 5 + Phase 45 3 + Phase 46 5) — verify by re-tallying from ROADMAP.md before writing"
   artifacts:
     - path: "FUTURE_DIRECTIONS.md"
       provides: "v1.8 delta section appended with Known Limitations + Technical Debt"

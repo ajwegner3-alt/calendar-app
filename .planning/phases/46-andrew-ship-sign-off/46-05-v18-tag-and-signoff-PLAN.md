@@ -111,7 +111,7 @@ Run `git status` first to confirm what's pending. Expect to see:
 - New: `.planning/milestones/v1.8-ROADMAP.md`, `.planning/phases/46-andrew-ship-sign-off/46-{01,02,03,04}-SUMMARY.md`, all Phase 46 PLAN.md files (if not committed during planning)
 - Possibly: any pre-existing modified files from before Phase 46 (e.g., the `.planning/phases/02/02-VERIFICATION.md` / `23/23-VERIFICATION.md` / `33/33-CONTEXT.md` modifications shown in git status at planning time — DO NOT include these in the Phase 46 commit unless they relate to v1.8)
 
-Stage only Phase 46 + archival files explicitly by name (no `git add -A` or `git add .`):
+Stage only Phase 46 + archival files explicitly by name (no `git add -A` or `git add .`). **Stage 46-VERIFICATION.md (uncommitted from 46-03) as part of this archival commit** — its `status: passed` frontmatter flip was written to disk by 46-03 Task 3 but intentionally left uncommitted so the v1.8.0 tag lands on a single commit containing both the signed-off VERIFICATION.md and all archival files.
 
 ```bash
 git add .planning/STATE.md
@@ -120,6 +120,8 @@ git add FUTURE_DIRECTIONS.md
 git add .planning/milestones/v1.8-ROADMAP.md
 git add .planning/phases/46-andrew-ship-sign-off/
 ```
+
+**After `git add`, run `git diff --cached --name-only` and verify only expected Phase 46 files are staged. The pre-existing modifications in `.planning/phases/02|23|33/...` from the workspace baseline MUST NOT appear in the staged set (they live in different directories so this is structurally safe — verify anyway). Confirm 46-VERIFICATION.md, 46-NN-SUMMARY.md files, and any expected Phase 46 PLAN.md updates are present.**
 
 Commit with a message capturing v1.8 closure:
 
@@ -184,6 +186,8 @@ Reply "claude-tags" (Claude runs `git tag -a` and `git push origin v1.8.0`) or "
   <name>Task 4: Create + push the v1.8.0 annotated tag (or print command for Andrew)</name>
   <files>(none — git operation)</files>
   <action>
+**Pre-task verification (footer file reference):** Before drafting the tag message body, run `ls .planning/MILESTONES.md` to verify the file exists. If it does NOT exist, change the footer line in the tag body below from `See .planning/MILESTONES.md for full details.` to `See .planning/milestones/v1.8-ROADMAP.md for full details.` If it DOES exist, keep the existing footer (matches prior v1.0..v1.7 convention).
+
 Use this exact annotated-tag command. The HEREDOC keeps single-quoted to avoid PowerShell/bash interpolation.
 
 ```bash

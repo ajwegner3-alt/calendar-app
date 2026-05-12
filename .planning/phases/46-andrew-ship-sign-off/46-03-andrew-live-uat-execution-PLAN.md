@@ -123,6 +123,8 @@ Reply "All scenarios PASS — sign off" (Claude flips frontmatter to `status: pa
   <action>
 Only run this task after Andrew confirms 100% PASS at the end of Task 2.
 
+**Commit ownership note:** Write 46-VERIFICATION.md frontmatter changes to disk only. DO NOT commit — the commit is owned by Plan 46-05 Task 2, which stages both the archival files and the signed-off VERIFICATION.md in a single commit so the v1.8.0 tag lands on a commit that contains all archival evidence.
+
 Edit the frontmatter:
 - `verified:` set to current ISO timestamp (UTC, e.g., `2026-05-12T20:30:00Z`).
 - `status:` flip from `in_progress` to `passed`.

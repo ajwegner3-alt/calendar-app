@@ -8,10 +8,11 @@ files_modified: []
 autonomous: true
 must_haves:
   truths:
-    - "`supabase_migrations.schema_migrations` contains `version` rows for every dormant Phase 36/37/41 migration file currently absent from production"
+    - "`supabase_migrations.schema_migrations` contains `version` rows for every dormant Phase 36/37/41 migration file whose signature column(s)/table(s) are confirmed present in production"
+    - "Any migration whose signature column(s)/table(s) are ABSENT in production is SKIPPED (not registered) and documented in `## Skipped Migrations (signature absent)` of 46-01-SUMMARY.md"
     - "No existing `schema_migrations` row is modified, duplicated, or deleted (additive-only repair)"
     - "The three pre-existing orphan rows (20251223162516, 20260419144234, 20260419144302) remain untouched"
-    - "Post-repair SELECT shows every `supabase/migrations/*.sql` filename's version prefix is present in `schema_migrations`, with the exception of any newer file the planner did not target"
+    - "Post-repair SELECT shows every `supabase/migrations/*.sql` filename's version prefix that passed the signature check is present in `schema_migrations`, with the exception of any newer file the planner did not target"
   artifacts:
     - path: ".planning/phases/46-andrew-ship-sign-off/46-01-SUMMARY.md"
       provides: "Audit log of pre-repair SELECT output, the exact `supabase migration repair` invocations run, and post-repair SELECT output"
@@ -92,15 +93,55 @@ Expected dormant versions per RESEARCH.md §3 (confirmation, not assumption):
 If the SELECT shows additional dormant versions (e.g., Phase 42.5, 42.6, 43, 44 migrations), include them in the to-repair list. If the SELECT shows that some of the three above are ALREADY registered (unexpected), exclude them from the to-repair list.
 
 If the SELECT shows ZERO dormant entries (everything already registered): record that finding in 46-01-SUMMARY.md and skip Task 2. The plan is complete.
+
+Step 5 — **Production-column signature verification (CONTEXT.md decision: "only register entries whose columns are present in production").** For each version on the to-repair list, query `information_schema.columns` (and `information_schema.tables` where relevant) via Supabase MCP `execute_sql` to confirm the migration's signature column(s)/table(s) actually exist in production. This proves the migration was genuinely applied (just unrecorded) rather than skipped entirely.
+
+Per-version signature checks:
+
+- **`20260507120000` (phase36_resend_provider):** confirm `email_send_log.provider` column exists.
+  ```sql
+  SELECT column_name FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='email_send_log' AND column_name='provider';
+  ```
+
+- **`20260508120000` (phase37_last_upgrade_request_at):** open `supabase/migrations/20260508120000_phase37_last_upgrade_request_at.sql` to read the exact added column name (it adds `accounts.last_upgrade_request_at` based on filename, but VERIFY by reading the migration file's `ALTER TABLE ... ADD COLUMN` statement). Then:
+  ```sql
+  SELECT column_name FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='accounts' AND column_name='<actual_column_from_migration>';
+  ```
+
+- **`20260510120000` (phase41_stripe_billing_foundation):** confirm key signature columns/tables exist:
+  ```sql
+  -- accounts billing columns
+  SELECT column_name FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='accounts'
+    AND column_name IN ('subscription_status','trial_ends_at','stripe_customer_id','stripe_subscription_id');
+  -- expect 4 rows
+  
+  -- stripe_webhook_events table
+  SELECT table_name FROM information_schema.tables
+  WHERE table_schema='public' AND table_name='stripe_webhook_events';
+  -- expect 1 row
+  ```
+
+- **Any additional dormant version surfaced by Task 1 Step 3:** read its migration file to identify the signature column(s)/table(s) and run an equivalent `information_schema` check.
+
+**Decision rule (LOCKED from CONTEXT.md):**
+- Signature column(s)/table(s) PRESENT → migration was genuinely applied; KEEP on the to-repair list.
+- Signature column(s)/table(s) ABSENT → migration was genuinely NOT applied; SKIP and record a `## Skipped Migrations (signature absent)` section in 46-01-SUMMARY.md naming each skipped version + the missing signature. Do NOT register via `supabase migration repair` — registering would misrepresent state.
+
+Record the full signature-check output (per version) in 46-01-SUMMARY.md under a `## Production-Column Signature Verification` section before Task 2 runs.
   </action>
   <verify>
 46-01-SUMMARY.md exists with:
 - A `## Pre-Repair Dry-Run` section containing the raw SELECT output
 - A "to-repair" version list (may be empty)
 - An "orphans (do not touch)" list containing exactly the three pre-existing orphans (if they are still present)
+- A `## Production-Column Signature Verification` section with per-version `information_schema` query output
+- (If any version's signature was absent) A `## Skipped Migrations (signature absent)` section naming each skipped version and the missing column/table
   </verify>
   <done>
-The to-repair list is finalized, sourced from real SELECT output, with no version touched unless confirmed absent from `schema_migrations` and confirmed present as a file on disk.
+The to-repair list is finalized, sourced from real SELECT output, with no version touched unless (a) confirmed absent from `schema_migrations`, (b) confirmed present as a file on disk, AND (c) signature column(s)/table(s) confirmed present in production via `information_schema`.
   </done>
 </task>
 
