@@ -373,9 +373,13 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - 3-fail counter: advances on 400 auth-rejection only; not on network error / 5xx
 - Gmail quota: `quota-guard.ts` constant is 400; 80% threshold is 320
 
-**Plans:** TBD
+**Plans:** 5 plans
 
-- [ ] 46-01: TBD
+- [ ] 46-01-migration-sync-repair-PLAN.md — Repair dormant `schema_migrations` entries for Phases 36/37/41 (and any others surfaced by SELECT dry-run) via `supabase migration repair --linked --status applied`
+- [ ] 46-02-uat-checklist-authoring-PLAN.md — Author `46-VERIFICATION.md` linear UAT checklist (PREREQ-C hard block + 14 ROADMAP QA scenarios + Phase 44/45 deferred items + inlined SQL stubs)
+- [ ] 46-03-andrew-live-uat-execution-PLAN.md — Drive Andrew through 46-VERIFICATION.md end-to-end on production against the nsi account; Claude runs MCP SQL flips between scenarios; flip frontmatter to `status: passed` on 100% PASS
+- [ ] 46-04-v18-archival-documents-PLAN.md — Append v1.8 delta to `FUTURE_DIRECTIONS.md`; create `.planning/milestones/v1.8-ROADMAP.md`; collapse ROADMAP.md v1.8 section to one-liner
+- [ ] 46-05-v18-tag-and-signoff-PLAN.md — Update STATE.md; commit archival artifacts; create + push annotated `v1.8.0` git tag (Andrew or Claude based on checkpoint decision)
 
 </details>
 
