@@ -334,10 +334,11 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - V15-MP-05 Turnstile lifecycle: the Turnstile widget mounts exactly once per page load through Password ↔ Magic-link tab switching — no remount, no extra token fetches.
 - 3-fail counter: verify counter advances ONLY on auth-rejection (400 from Supabase), NOT on network error or 5xx.
 
-**Plans:** TBD
+**Plans:** 3 plans
 
-- [ ] 45-01: TBD
-- [ ] 45-02: TBD
+- [ ] 45-01-gmail-quota-raise-PLAN.md — Raise Gmail per-account daily cap 200 → 400 (single-constant change + test fixture migration)
+- [ ] 45-02-signup-oauth-reorder-PLAN.md — Move signup Google OAuth + divider below the email/password Card (pure DOM reorder)
+- [ ] 45-03-login-ux-polish-PLAN.md — Login OAuth below Card + controlled Tabs default to password + 3-fail magic-link nudge with email pre-fill + AUTH-29 byte-identical helper line
 
 ---
 
