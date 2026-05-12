@@ -54,6 +54,11 @@ function GoogleErrorAlerts() {
  *
  * Phase 34: Google OAuth button appears FIRST (CONTEXT.md lock), above email/password card.
  * useSearchParams is isolated in GoogleErrorAlerts wrapped in Suspense (Next.js requirement).
+ *
+ * Phase 45 (AUTH-34): Google OAuth visually demoted BELOW the email/password
+ * Card. Email/password is the primary CTA; OAuth is the secondary alternative
+ * below an OR divider. The OAuth FORM, divider markup, and GoogleErrorAlerts
+ * placement remain otherwise identical to Phase 34. Pure DOM reorder.
  */
 export function SignupForm() {
   const [state, formAction, isPending] = useActionState(
@@ -86,22 +91,7 @@ export function SignupForm() {
         <GoogleErrorAlerts />
       </Suspense>
 
-      {/* Google OAuth button — appears FIRST per CONTEXT.md lock */}
-      <form action={initiateGoogleOAuthAction}>
-        <GoogleOAuthButton type="submit" label="Sign up with Google" />
-      </form>
-
-      {/* Divider */}
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-3 text-gray-500">or</span>
-        </div>
-      </div>
-
-      {/* Email/password card — unchanged below divider */}
+      {/* Email/password card — primary CTA, appears ABOVE OAuth (Phase 45 AUTH-34) */}
       <Card>
         <CardHeader>
           <CardTitle>Create your account</CardTitle>
@@ -171,6 +161,21 @@ export function SignupForm() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Divider */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-white px-3 text-gray-500">or</span>
+        </div>
+      </div>
+
+      {/* Google OAuth button — appears BELOW Card per Phase 45 (AUTH-34) — demoted to secondary CTA */}
+      <form action={initiateGoogleOAuthAction}>
+        <GoogleOAuthButton type="submit" label="Sign up with Google" />
+      </form>
     </div>
   );
 }
