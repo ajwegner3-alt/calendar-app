@@ -10,7 +10,7 @@
 - ✅ **v1.5 Buffer Fix + Audience Rebrand + Booker Redesign** — Phases 28-30 (6 plans across 3 phases) — shipped 2026-05-05. Full archive: [`milestones/v1.5-ROADMAP.md`](./milestones/v1.5-ROADMAP.md).
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
 - ✅ **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (32 plans across 7 phases) — shipped 2026-05-09. Full archive: [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md).
-- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phases 41 + 42.5 + 42.6 + 43 shipped 2026-05-10..11; Phase 42 plumbing code-complete with UI superseded by 42.5; 44-46 in progress).
+- 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phases 41 + 42.5 + 42.6 + 43 + 45 shipped 2026-05-10..12; Phase 42 plumbing code-complete with UI superseded by 42.5; Phase 44 code-complete pending live Stripe UAT; Phase 46 sign-off remaining).
 
 ## Phases
 
@@ -336,9 +336,9 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Plans:** 3 plans
 
-- [ ] 45-01-gmail-quota-raise-PLAN.md — Raise Gmail per-account daily cap 200 → 400 (single-constant change + test fixture migration)
-- [ ] 45-02-signup-oauth-reorder-PLAN.md — Move signup Google OAuth + divider below the email/password Card (pure DOM reorder)
-- [ ] 45-03-login-ux-polish-PLAN.md — Login OAuth below Card + controlled Tabs default to password + 3-fail magic-link nudge with email pre-fill + AUTH-29 byte-identical helper line
+- [x] 45-01-gmail-quota-raise-PLAN.md — Raise Gmail per-account daily cap 200 → 400 (single-constant change + test fixture migration) ✓ shipped 2026-05-12
+- [x] 45-02-signup-oauth-reorder-PLAN.md — Move signup Google OAuth + divider below the email/password Card (pure DOM reorder) ✓ shipped 2026-05-12
+- [x] 45-03-login-ux-polish-PLAN.md — Login OAuth below Card + controlled Tabs default to password + 3-fail magic-link nudge with email pre-fill + AUTH-29 byte-identical helper line ✓ shipped 2026-05-12
 
 ---
 
@@ -403,7 +403,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 42.6 | v1.8 | 3 / 3 | ✅ Shipped — verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off; closes BILL-26 + BILL-27 | 2026-05-11 |
 | 43 | v1.8 | 2 / 2 | ✅ Shipped — verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios; 2 post-merge fixes (banner positioning, sidebar nav) + 1 production migration applied during UAT (`plan_tier` column — fixed booker outage) | 2026-05-11 |
 | 44 | v1.8 | 5 / 5 | ✅ Code-complete — verifier 4/4 SC + 2/2 gates static PASS; BILL-21/22/23 Complete; BILL-24 Partial (2/4 — `account-locked` + `welcome-to-paid` deferred per CONTEXT.md); live UAT (Portal end-to-end + email delivery) deferred to Phase 46 (requires PREREQ-C) | 2026-05-11 |
-| 45 | v1.8 | 0 / TBD | Not started | - |
+| 45 | v1.8 | 3 / 3 | ✅ Shipped — verifier 6/6 SC + 3/3 gates PASS (static); 39/39 tests across 4 suites green; closes AUTH-33..39 + EMAIL-35; live UAT (visual confirmation of OAuth-below-Card on both routes + 3-fail nudge end-to-end) deferred to Phase 46 | 2026-05-12 |
 | 46 | v1.8 | 0 / TBD | Not started | - |
 
 ## Cumulative Stats
@@ -412,11 +412,13 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 - **Total phases shipped:** 40 (Phases 1-9 + 10/11/12/12.5/12.6/13 + 14-21 + 22-24 + 25-27 + 28-30 + 31-33 + 34-40)
 - **Total plans shipped:** 170 (52 + 34 + 22 + 6 + 8 + 6 + 10 + 32)
 - **Total commits:** ~692 (222 v1.0 + 135 v1.1 + 91 v1.2 + 34 v1.3 + 50 v1.4 + 31 v1.5 + 53 v1.6 + 129 v1.7)
-- **v1.8 in progress:** Phases 41 + 42.5 + 42.6 shipped 2026-05-10..11 (4 + 6 + 3 plans); Phase 42 plumbing shipped 3/4 (UI superseded by 42.5); phases 43/44/45/46 remain
+- **v1.8 in progress:** Phases 41 + 42.5 + 42.6 + 43 + 45 shipped 2026-05-10..12 (4 + 6 + 3 + 2 + 3 plans); Phase 42 plumbing shipped 3/4 (UI superseded by 42.5); Phase 44 code-complete (live Stripe UAT deferred to Phase 46); Phase 46 sign-off remains
 
 ---
 
-*Roadmap last updated: 2026-05-11 — Phase 44 code-complete. Verifier 4/4 SC + 2/2 gates static PASS; status `human_needed` (3 live-Stripe UAT items deferred to Phase 46 as ROADMAP designed). BILL-21/22/23 Complete; BILL-24 Partial (2/4 — trial-ending + payment-failed shipped; account-locked + welcome-to-paid deferred per 44-00-PLANNER-NOTES.md). Plan commits across Wave 1 (`894119b`, `d2f54aa`, `6ad405e`, `cf4c723`, `c91b8de`, `9049389`, `8bbf027`) + Wave 2 (`ddcc316`, `1163a84`, `442767a`, `70e0f1a`, `4b793b1`, `421bcbd`, `8681ef9`, `673d1e1`). Production migration applied via MCP (`phase44_cancel_at_period_end`). Next: Phase 45 (Login UX Polish + Gmail Quota Raise — fully independent) unblocked. Phase 46 owns live Stripe + email UAT.*
+*Roadmap last updated: 2026-05-12 — Phase 45 SHIPPED. Verifier 6/6 SC + 3/3 gates PASS (static); 39/39 tests across 4 suites green (quota-guard 7/7, email-quota-refuse 21/21, login-form-auth-29 4/4, login-form-counter 7/7). Closes AUTH-33..AUTH-39 + EMAIL-35 (8 requirements). Plan commits: `048255f` + `2043a0b` + `268d9aa` (45-01 quota raise); `fbae4b3` + `d104ab4` (45-02 signup OAuth reorder); `78d60f6` + `054866b` + `74a9978` (45-03 login UX polish). One orchestrator correction during wave: `4e37b28` (sibling-plan collateral — `tests/email-quota-refuse.test.ts` had hardcoded fixtures derived from old 200 cap; migrated proportionally to 400). All 5 locked AUTH invariants enforced (AUTH-29 byte-identical helper, AUTH-35 password-default tab, AUTH-37 zero-storage, errorKind credentials-only gating, counter cap at 3). Live visual UAT (OAuth-below-Card on both routes + 3-fail nudge + Gmail quota at 400) deferred to Phase 46. Next: Phase 46 (Andrew Ship Sign-Off — final v1.8 milestone gate covering live Stripe + email + login UX UAT).*
+
+*Prior: 2026-05-11 — Phase 44 code-complete. Verifier 4/4 SC + 2/2 gates static PASS; status `human_needed` (3 live-Stripe UAT items deferred to Phase 46 as ROADMAP designed). BILL-21/22/23 Complete; BILL-24 Partial (2/4 — trial-ending + payment-failed shipped; account-locked + welcome-to-paid deferred per 44-00-PLANNER-NOTES.md). Plan commits across Wave 1 (`894119b`, `d2f54aa`, `6ad405e`, `cf4c723`, `c91b8de`, `9049389`, `8bbf027`) + Wave 2 (`ddcc316`, `1163a84`, `442767a`, `70e0f1a`, `4b793b1`, `421bcbd`, `8681ef9`, `673d1e1`). Production migration applied via MCP (`phase44_cancel_at_period_end`). Next: Phase 45 (Login UX Polish + Gmail Quota Raise — fully independent) unblocked. Phase 46 owns live Stripe + email UAT.*
 
 *Prior: 2026-05-11 — Phase 43 SHIPPED. Verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios on production. Closes BILL-12..BILL-20. Two post-merge fixes during UAT: `fb909f9` (banner positioning — moved inside `<main>` to clear fixed Header) + `b9fa84e` (Billing entry added to sidebar nav, top-level CreditCard icon — Phase 42.5 had shipped `/app/billing` without a nav entry). One production database fix applied during UAT: `phase42_5_plan_tier` migration (Phase 42.5-01 column was never registered in `schema_migrations` and never reached production — public booker `/[account]/[event-slug]` was returning 404 to all customers because shared loader selects `plan_tier`. Outage resolved by MCP `apply_migration`). Plan commits: `d559305`, `1fbbaab` (43-01); `fd59b7d`, `3ca0868`, `e1f35c2` (43-02). Next: Phase 44 (Customer Portal + Billing Polish + Stripe Emails) unblocked, plus Phase 45 (Login UX Polish) which is fully independent and can develop in parallel.*
 

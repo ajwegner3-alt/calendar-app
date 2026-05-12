@@ -13,17 +13,17 @@ Requirements for v1.8. Each maps to one roadmap phase.
 
 ### AUTH — Login UX Polish
 
-- [ ] **AUTH-33**: Login form moves the Google OAuth button BELOW the email/password form on `/app/login`
-- [ ] **AUTH-34**: Signup form moves the Google OAuth button BELOW the email/password form on `/app/signup` (parity with AUTH-33)
-- [ ] **AUTH-35**: `/app/login` Password tab is the default (verify-only — already shipped via `defaultValue="password"` at `login-form.tsx:125`; included to lock as v1.8 invariant against future regressions)
-- [ ] **AUTH-36**: After 3 consecutive failed password attempts in the current tab session, an inline prompt under the password form offers "Try a magic link instead" with a click-to-switch-tab affordance
-- [ ] **AUTH-37**: AUTH-36's failure counter is per-session in-memory (`useState`/`useRef`); resets on tab/window close (no `localStorage`/`sessionStorage` persistence); resets on successful login
-- [ ] **AUTH-38**: AUTH-36's counter advances ONLY on auth-rejection responses (e.g., `Invalid login credentials` 400) — NOT on network errors or 5xx; transient outages must not falsely advance the nudge
-- [ ] **AUTH-39**: Magic-link tab shows an inline helper line under the email field — identical wording for ALL users regardless of email validity, throttle state, or cooldown state (preserves the AUTH-29 four-way enumeration-safety ambiguity invariant)
+- [x] **AUTH-33**: Login form moves the Google OAuth button BELOW the email/password form on `/app/login`
+- [x] **AUTH-34**: Signup form moves the Google OAuth button BELOW the email/password form on `/app/signup` (parity with AUTH-33)
+- [x] **AUTH-35**: `/app/login` Password tab is the default (verify-only — already shipped via `defaultValue="password"` at `login-form.tsx:125`; included to lock as v1.8 invariant against future regressions)
+- [x] **AUTH-36**: After 3 consecutive failed password attempts in the current tab session, an inline prompt under the password form offers "Try a magic link instead" with a click-to-switch-tab affordance
+- [x] **AUTH-37**: AUTH-36's failure counter is per-session in-memory (`useState`/`useRef`); resets on tab/window close (no `localStorage`/`sessionStorage` persistence); resets on successful login
+- [x] **AUTH-38**: AUTH-36's counter advances ONLY on auth-rejection responses (e.g., `Invalid login credentials` 400) — NOT on network errors or 5xx; transient outages must not falsely advance the nudge
+- [x] **AUTH-39**: Magic-link tab shows an inline helper line under the email field — identical wording for ALL users regardless of email validity, throttle state, or cooldown state (preserves the AUTH-29 four-way enumeration-safety ambiguity invariant)
 
 ### EMAIL — Per-Account Quota Raise
 
-- [ ] **EMAIL-35**: Per-account Gmail send quota raised from 200/day to **400/day** in `lib/email-sender/quota-guard.ts`; 80% warning threshold scales proportionally to 320/day (Phase 36 OQ-1 quota-guard centralization preserved — single constant change, no per-caller branching)
+- [x] **EMAIL-35**: Per-account Gmail send quota raised from 200/day to **400/day** in `lib/email-sender/quota-guard.ts`; 80% warning threshold scales proportionally to 320/day (Phase 36 OQ-1 quota-guard centralization preserved — single constant change, no per-caller branching)
 
 ### BILL — Stripe Paywall (Schema + Foundation)
 
@@ -179,14 +179,14 @@ Updated: 2026-05-11 — Phases 41 + 42 (plumbing) + 42.5 + 42.6 complete (BILL-0
 | BILL-22 | Phase 44 | Complete |
 | BILL-23 | Phase 44 | Complete |
 | BILL-24 | Phase 44 | Partial (2/4 — trial-ending + payment-failed shipped; account-locked + welcome-to-paid deferred per 44-00-PLANNER-NOTES.md) |
-| AUTH-33 | Phase 45 | Pending |
-| AUTH-34 | Phase 45 | Pending |
-| AUTH-35 | Phase 45 | Pending |
-| AUTH-36 | Phase 45 | Pending |
-| AUTH-37 | Phase 45 | Pending |
-| AUTH-38 | Phase 45 | Pending |
-| AUTH-39 | Phase 45 | Pending |
-| EMAIL-35 | Phase 45 | Pending |
+| AUTH-33 | Phase 45 | Complete |
+| AUTH-34 | Phase 45 | Complete |
+| AUTH-35 | Phase 45 | Complete |
+| AUTH-36 | Phase 45 | Complete |
+| AUTH-37 | Phase 45 | Complete |
+| AUTH-38 | Phase 45 | Complete |
+| AUTH-39 | Phase 45 | Complete |
+| EMAIL-35 | Phase 45 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 32 total (24 BILL + 7 AUTH + 1 EMAIL)
