@@ -175,10 +175,10 @@ Updated: 2026-05-11 — Phases 41 + 42 (plumbing) + 42.5 + 42.6 complete (BILL-0
 | BILL-18 | Phase 43 | Complete |
 | BILL-19 | Phase 43 | Complete |
 | BILL-20 | Phase 43 | Complete |
-| BILL-21 | Phase 44 | Pending |
-| BILL-22 | Phase 44 | Pending |
-| BILL-23 | Phase 44 | Pending |
-| BILL-24 | Phase 44 | Pending |
+| BILL-21 | Phase 44 | Complete |
+| BILL-22 | Phase 44 | Complete |
+| BILL-23 | Phase 44 | Complete |
+| BILL-24 | Phase 44 | Partial (2/4 — trial-ending + payment-failed shipped; account-locked + welcome-to-paid deferred per 44-00-PLANNER-NOTES.md) |
 | AUTH-33 | Phase 45 | Pending |
 | AUTH-34 | Phase 45 | Pending |
 | AUTH-35 | Phase 45 | Pending |

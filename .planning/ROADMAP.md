@@ -303,11 +303,11 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 **Plans:** 5 plans
 
-- [ ] 44-01-PLAN.md — Schema migration: add accounts.cancel_at_period_end column (Wave 1)
-- [ ] 44-02-PLAN.md — Email senders: send-trial-ending-email.ts + send-payment-failed-email.ts (Wave 1)
-- [ ] 44-03-PLAN.md — Stripe Customer Portal route: POST /api/stripe/portal (Wave 1)
-- [ ] 44-04-PLAN.md — Webhook integration: cancel_at_period_end write + trial-ending + payment-failed email dispatch (Wave 2)
-- [ ] 44-05-PLAN.md — Billing page Status Card + state-aware rendering (active / cancel_scheduled / past_due) (Wave 2)
+- [x] 44-01-PLAN.md — Schema migration: add accounts.cancel_at_period_end column (Wave 1) ✓ shipped 2026-05-11 (migration applied to production via MCP)
+- [x] 44-02-PLAN.md — Email senders: send-trial-ending-email.ts + send-payment-failed-email.ts (Wave 1) ✓ shipped 2026-05-11
+- [x] 44-03-PLAN.md — Stripe Customer Portal route: POST /api/stripe/portal (Wave 1) ✓ shipped 2026-05-11
+- [x] 44-04-PLAN.md — Webhook integration: cancel_at_period_end write + trial-ending + payment-failed email dispatch (Wave 2) ✓ shipped 2026-05-11
+- [x] 44-05-PLAN.md — Billing page Status Card + state-aware rendering (active / cancel_scheduled / past_due) (Wave 2) ✓ shipped 2026-05-11
 
 **Planner notes:** see 44-00-PLANNER-NOTES.md for BILL-24 partial-closure traceability (2 of 4 emails per CONTEXT.md scope narrowing), PREREQ-C blocking gate (Customer Portal config), and LD-11 sender identity reality.
 
@@ -401,7 +401,7 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 | 42.5 | v1.8 | 6 / 6 | ✅ Shipped — verifier 6/6 SC + 3/3 gates PASS; Andrew UAT sign-off; closes BILL-09 (full) + BILL-10b + BILL-25; Phase 41 SC-5 carry-over closed | 2026-05-10 |
 | 42.6 | v1.8 | 3 / 3 | ✅ Shipped — verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off; closes BILL-26 + BILL-27 | 2026-05-11 |
 | 43 | v1.8 | 2 / 2 | ✅ Shipped — verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios; 2 post-merge fixes (banner positioning, sidebar nav) + 1 production migration applied during UAT (`plan_tier` column — fixed booker outage) | 2026-05-11 |
-| 44 | v1.8 | 0 / 5 | Planned — 5 plans across 2 waves; blocked on PREREQ-C (Customer Portal config) | - |
+| 44 | v1.8 | 5 / 5 | ✅ Code-complete — verifier 4/4 SC + 2/2 gates static PASS; BILL-21/22/23 Complete; BILL-24 Partial (2/4 — `account-locked` + `welcome-to-paid` deferred per CONTEXT.md); live UAT (Portal end-to-end + email delivery) deferred to Phase 46 (requires PREREQ-C) | 2026-05-11 |
 | 45 | v1.8 | 0 / TBD | Not started | - |
 | 46 | v1.8 | 0 / TBD | Not started | - |
 
@@ -415,7 +415,9 @@ See [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md) for full phase 
 
 ---
 
-*Roadmap last updated: 2026-05-11 — Phase 43 SHIPPED. Verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios on production. Closes BILL-12..BILL-20. Two post-merge fixes during UAT: `fb909f9` (banner positioning — moved inside `<main>` to clear fixed Header) + `b9fa84e` (Billing entry added to sidebar nav, top-level CreditCard icon — Phase 42.5 had shipped `/app/billing` without a nav entry). One production database fix applied during UAT: `phase42_5_plan_tier` migration (Phase 42.5-01 column was never registered in `schema_migrations` and never reached production — public booker `/[account]/[event-slug]` was returning 404 to all customers because shared loader selects `plan_tier`. Outage resolved by MCP `apply_migration`). Plan commits: `d559305`, `1fbbaab` (43-01); `fd59b7d`, `3ca0868`, `e1f35c2` (43-02). Next: Phase 44 (Customer Portal + Billing Polish + Stripe Emails) unblocked, plus Phase 45 (Login UX Polish) which is fully independent and can develop in parallel.*
+*Roadmap last updated: 2026-05-11 — Phase 44 code-complete. Verifier 4/4 SC + 2/2 gates static PASS; status `human_needed` (3 live-Stripe UAT items deferred to Phase 46 as ROADMAP designed). BILL-21/22/23 Complete; BILL-24 Partial (2/4 — trial-ending + payment-failed shipped; account-locked + welcome-to-paid deferred per 44-00-PLANNER-NOTES.md). Plan commits across Wave 1 (`894119b`, `d2f54aa`, `6ad405e`, `cf4c723`, `c91b8de`, `9049389`, `8bbf027`) + Wave 2 (`ddcc316`, `1163a84`, `442767a`, `70e0f1a`, `4b793b1`, `421bcbd`, `8681ef9`, `673d1e1`). Production migration applied via MCP (`phase44_cancel_at_period_end`). Next: Phase 45 (Login UX Polish + Gmail Quota Raise — fully independent) unblocked. Phase 46 owns live Stripe + email UAT.*
+
+*Prior: 2026-05-11 — Phase 43 SHIPPED. Verifier 9/9 SC + 4/4 gates PASS (static); Andrew live-verified all 7 scenarios on production. Closes BILL-12..BILL-20. Two post-merge fixes during UAT: `fb909f9` (banner positioning — moved inside `<main>` to clear fixed Header) + `b9fa84e` (Billing entry added to sidebar nav, top-level CreditCard icon — Phase 42.5 had shipped `/app/billing` without a nav entry). One production database fix applied during UAT: `phase42_5_plan_tier` migration (Phase 42.5-01 column was never registered in `schema_migrations` and never reached production — public booker `/[account]/[event-slug]` was returning 404 to all customers because shared loader selects `plan_tier`. Outage resolved by MCP `apply_migration`). Plan commits: `d559305`, `1fbbaab` (43-01); `fd59b7d`, `3ca0868`, `e1f35c2` (43-02). Next: Phase 44 (Customer Portal + Billing Polish + Stripe Emails) unblocked, plus Phase 45 (Login UX Polish) which is fully independent and can develop in parallel.*
 
 *Prior: 2026-05-11 — Phase 42.6 SHIPPED. Verifier 5/5 SC + 3/3 gates PASS (static); Andrew live walkthrough sign-off. Closes BILL-26 (`/embed/*` route gated by `plan_tier`) + BILL-27 (owner embed-code dialog gated by `plan_tier`). 12 atomic commits across Wave 1 (`61b65ba`, `a4fbe27`) + Wave 2 (`57a8bce`, `596bd56`, `82502d4`, `eac0e41`, `6e826c8`, `0a1b647`, `3b8df3f`, `734d31a`). Next: Phase 43 (Paywall Enforcement + Locked-State UX + Trial Banners) unblocked.*
 
