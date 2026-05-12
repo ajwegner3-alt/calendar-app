@@ -18,7 +18,7 @@
  * Four original cases:
  *   1. Below threshold (count < 80% of cap) — silently allows send and inserts row.
  *   2. At 80% threshold — allows send, inserts row, logs GMAIL_SMTP_QUOTA_APPROACHING.
- *   3. At cap (count >= 200) — throws QuotaExceededError, does NOT insert.
+ *   3. At cap (count >= 400) — throws QuotaExceededError, does NOT insert.
  *   4. DB error on count query — fails OPEN (returns 0, allows send).
  *
  * Phase 36 additions:
@@ -123,8 +123,8 @@ describe("quota-guard", () => {
   });
 
   it("[#1] below threshold: allows send silently, does not log warning", async () => {
-    // count = 100, cap = 200, threshold = 160 → below warn threshold
-    setCountResult(100);
+    // count = 200, cap = 400, threshold = 320 → below warn threshold
+    setCountResult(200);
 
     await expect(checkAndConsumeQuota("signup-verify", TEST_ACCOUNT_ID)).resolves.toBeUndefined();
 
@@ -136,8 +136,8 @@ describe("quota-guard", () => {
   });
 
   it("[#2] at 80% threshold: allows send and logs GMAIL_SMTP_QUOTA_APPROACHING", async () => {
-    // count = 160 = 80% of 200 → exactly at warn threshold
-    setCountResult(160);
+    // count = 320 = 80% of 400 → exactly at warn threshold
+    setCountResult(320);
 
     await expect(checkAndConsumeQuota("signup-welcome", TEST_ACCOUNT_ID)).resolves.toBeUndefined();
 
@@ -145,12 +145,12 @@ describe("quota-guard", () => {
       String(args[0]).includes("GMAIL_SMTP_QUOTA_APPROACHING"),
     );
     expect(warningCalls.length).toBeGreaterThanOrEqual(1);
-    expect(String(warningCalls[0][0])).toContain("160/200");
+    expect(String(warningCalls[0][0])).toContain("320/400");
   });
 
   it("[#3] at cap: throws QuotaExceededError and does NOT insert a row", async () => {
-    // count = 200 = cap → must throw
-    setCountResult(200);
+    // count = 400 = cap → must throw
+    setCountResult(400);
 
     let insertCalled = false;
     // Override insert to detect if it's called (it should NOT be)
@@ -177,10 +177,10 @@ describe("quota-guard", () => {
             select: (_cols: string, _opts?: object) => ({
               eq: (_col: string, _val: string) => ({
                 gte: (_col2: string, _val2: string) =>
-                  Promise.resolve({ count: 200, error: null }),
+                  Promise.resolve({ count: 400, error: null }),
               }),
               gte: (_col: string, _val: string) =>
-                Promise.resolve({ count: 200, error: null }),
+                Promise.resolve({ count: 400, error: null }),
             }),
             insert: insertSpy,
           };
@@ -198,9 +198,9 @@ describe("quota-guard", () => {
     // Primary assertion: QuotaExceededError is thrown.
     const err = await checkAndConsumeQuota("password-reset", TEST_ACCOUNT_ID).catch((e) => e);
     expect(err).toBeInstanceOf(QuotaExceededError);
-    expect(err.count).toBe(200);
+    expect(err.count).toBe(400);
     expect(err.cap).toBe(SIGNUP_DAILY_EMAIL_CAP);
-    expect(err.message).toContain("200/200");
+    expect(err.message).toContain("400/400");
     // Verify insertCalled is false by checking no insert error was logged
     const insertErrLogs = consoleErrorSpy.mock.calls.filter((args: unknown[]) =>
       String(args[0]).includes("insert failed"),
@@ -223,7 +223,7 @@ describe("quota-guard", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2099-12-31T12:00:00Z"));
     try {
-      setCountResult(170); // 170 = 85% of 200, above the 80% threshold
+      setCountResult(340); // 340 = 85% of 400, above the 80% threshold
 
       await expect(
         checkAndConsumeQuota("booking-confirmation", TEST_ACCOUNT_ID),
@@ -233,7 +233,7 @@ describe("quota-guard", () => {
         String(args[0]).includes("GMAIL_SMTP_QUOTA_APPROACHING"),
       );
       expect(warningCalls.length).toBeGreaterThanOrEqual(1);
-      expect(String(warningCalls[0][0])).toContain("170/200");
+      expect(String(warningCalls[0][0])).toContain("340/400");
     } finally {
       vi.useRealTimers();
     }
@@ -264,7 +264,7 @@ describe("quota-guard", () => {
   it("[#6 — Phase 36] Resend account: skips 200/day cap; inserts with provider='resend'", async () => {
     setEmailProvider("resend");
     // count is way above the Gmail cap — but cap should NOT be checked
-    setCountResult(500);
+    setCountResult(1000);
 
     // Track what was inserted
     const insertedRows: object[] = [];
@@ -286,7 +286,7 @@ describe("quota-guard", () => {
             select: (_cols: string, _opts?: object) => ({
               eq: (_col: string, _val: string) => ({
                 gte: (_col2: string, _val2: string) =>
-                  Promise.resolve({ count: 500, error: null }),
+                  Promise.resolve({ count: 1000, error: null }),
               }),
             }),
             insert: (row: object) => {
@@ -298,7 +298,7 @@ describe("quota-guard", () => {
       }),
     }));
 
-    // Must NOT throw QuotaExceededError even though count (500) >> cap (200)
+    // Must NOT throw QuotaExceededError even though count (1000) >> cap (400)
     await expect(
       checkAndConsumeQuota("booking-confirmation", TEST_ACCOUNT_ID),
     ).resolves.toBeUndefined();
@@ -313,9 +313,9 @@ describe("quota-guard", () => {
   it("[#7 — Phase 36] nil-UUID sentinel (no accounts row): falls through to Gmail path", async () => {
     // Simulate no matching accounts row (maybeSingle returns data:null)
     setEmailProvider(null);
-    setCountResult(50);
+    setCountResult(100);
 
-    // Should NOT throw — count 50 is well below the 200 cap
+    // Should NOT throw — count 100 is well below the 400 cap
     await expect(
       checkAndConsumeQuota("signup-verify", "00000000-0000-0000-0000-000000000000"),
     ).resolves.toBeUndefined();
