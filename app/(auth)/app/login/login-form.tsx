@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,13 +71,35 @@ interface LoginFormProps {
  * TabsContent — switching tabs resets the magic-link success state for free
  * (no `key` prop needed).
  *
+ * Phase 45 (AUTH-33, 35, 36, 37, 38, 39): Google OAuth + divider visually
+ * demoted BELOW the Card. Tabs is converted to controlled mode so a
+ * 3-fail-rejection nudge under the password field can switch the user
+ * to the Magic-link tab and pre-fill their email. Counter lives at
+ * LoginForm top level so it survives Tabs unmount of inactive content
+ * (RESEARCH P2). Magic-link tab gains a static byte-identical helper
+ * line under the email field (AUTH-29 preserved).
+ *
  * useSearchParams is isolated in GoogleErrorAlerts wrapped in Suspense (Next.js requirement).
  */
 export function LoginForm({ resetSuccess }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
+  // Phase 45 (AUTH-35 v1.8 invariant lock): controlled Tabs initialized to
+  // "password". This is the default-tab lock — DO NOT change the initial value.
+  const [activeTab, setActiveTab] = useState<"password" | "magic-link">("password");
+
+  // Phase 45 (AUTH-37, AUTH-38): session-scoped 3-fail counter + email pre-fill
+  // bridge. Counter is useState (NOT useRef) so the nudge re-renders on cross.
+  // Counter is session-wide (NOT email-keyed) per RESEARCH P6. AUTH-37 hard
+  // constraint: counter MUST NOT persist in any browser storage (RESEARCH P5).
+  // Test #7 in tests/login-form-counter.test.tsx locks this at runtime via
+  // a Storage.prototype.setItem spy.
+  const [failCount, setFailCount] = useState(0);
+  const [prefillEmail, setPrefillEmail] = useState("");
+
   const {
     register,
+    getValues,
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -94,6 +116,24 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
       : undefined,
   });
 
+  // Phase 45 (AUTH-38): advance counter ONLY on credentials errorKind.
+  // Gate on errorKind (not on formError presence) so 429 + 5xx + network errors
+  // do NOT advance the counter (RESEARCH P3). Depend on `[state]` reference so
+  // consecutive identical-shape returns still re-fire (RESEARCH P4). Cap at 3
+  // (RESEARCH P7) — once shown, the nudge stays shown until reset on unmount.
+  //
+  // The `react-hooks/set-state-in-effect` rule fires here, but this is the
+  // canonical pattern for "react to a fresh useActionState result with derived
+  // local state": we cannot derive failCount from `state` alone because the
+  // effect must increment, not replace. The same pattern is used in
+  // magic-link-success.tsx (line 42). RESEARCH P4 endorses this design.
+  useEffect(() => {
+    if (state.errorKind === "credentials") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- RESEARCH P4: derive cumulative count from a fresh useActionState result; cannot replace, must increment.
+      setFailCount((n) => Math.min(n + 1, 3));
+    }
+  }, [state]);
+
   return (
     <div className="flex flex-col gap-0">
       {/* Google error alerts — useSearchParams requires Suspense boundary */}
@@ -101,28 +141,13 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
         <GoogleErrorAlerts />
       </Suspense>
 
-      {/* Google OAuth button — appears FIRST per CONTEXT.md lock (mirrors signup) */}
-      <form action={initiateGoogleOAuthAction}>
-        <GoogleOAuthButton type="submit" label="Sign in with Google" />
-      </form>
-
-      {/* Divider */}
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-3 text-gray-500">or</span>
-        </div>
-      </div>
-
-      {/* Email auth card — Phase 38 adds Password | Magic-link Tabs inside CardContent */}
+      {/* Email auth card — primary CTA. Phase 38 Tabs (Password|Magic-link) inside CardContent. Phase 45 (AUTH-33) repositioned ABOVE OAuth. */}
       <Card>
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="password">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "password" | "magic-link")}>
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="password">Password</TabsTrigger>
               <TabsTrigger value="magic-link">Magic link</TabsTrigger>
@@ -169,6 +194,32 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
                   )}
                 </div>
 
+                {/* Phase 45 (AUTH-36 + AUTH-38): inline magic-link nudge. Renders
+                    after 3 consecutive credentials rejections (errorKind === "credentials").
+                    Click switches the visible tab to Magic-link AND pre-fills the
+                    email field with whatever was typed here. type="button" is
+                    REQUIRED — without it, clicking would submit the surrounding
+                    password form (RESEARCH critical). getValues is called AT
+                    CLICK TIME, NOT during render (RESEARCH P9). */}
+                {failCount >= 3 && (
+                  <p
+                    className="text-sm text-muted-foreground animate-in fade-in duration-200 ease-out motion-reduce:animate-none"
+                    data-testid="magic-link-nudge"
+                  >
+                    Trouble signing in?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrefillEmail(getValues("email") ?? "");
+                        setActiveTab("magic-link");
+                      }}
+                      className="underline underline-offset-4 hover:text-foreground"
+                    >
+                      Email me a sign-in link instead.
+                    </button>
+                  </p>
+                )}
+
                 <Button type="submit" disabled={isPending} className="w-full">
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isPending ? "Signing in…" : "Sign in"}
@@ -187,11 +238,26 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
             </TabsContent>
 
             <TabsContent value="magic-link">
-              <MagicLinkTabContent />
+              <MagicLinkTabContent prefillEmail={prefillEmail} />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Divider */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-white px-3 text-gray-500">or</span>
+        </div>
+      </div>
+
+      {/* Google OAuth button — appears BELOW Card per Phase 45 (AUTH-33) — demoted to secondary CTA */}
+      <form action={initiateGoogleOAuthAction}>
+        <GoogleOAuthButton type="submit" label="Sign in with Google" />
+      </form>
     </div>
   );
 }
@@ -208,7 +274,7 @@ export function LoginForm({ resetSuccess }: LoginFormProps) {
  * Tab switching unmounts this component (Radix default), resetting both
  * useActionState and submittedEmail — no `key` prop required.
  */
-function MagicLinkTabContent() {
+function MagicLinkTabContent({ prefillEmail }: { prefillEmail: string }) {
   const initialMagicState: MagicLinkState = {};
   const [magicState, magicFormAction, magicPending] = useActionState(
     requestMagicLinkAction,
@@ -244,6 +310,7 @@ function MagicLinkTabContent() {
           type="email"
           autoComplete="email"
           required
+          defaultValue={prefillEmail}
           aria-invalid={magicState.fieldErrors?.email ? true : undefined}
         />
         {magicState.fieldErrors?.email?.[0] && (
