@@ -11,7 +11,7 @@
  *   1. All 7 new EmailCategory values (booking-confirmation, owner-notification,
  *      reminder, cancel-booker, cancel-owner, reschedule-booker, reschedule-owner)
  *      — refused at cap, allowed below cap.
- *   2. getRemainingDailyQuota — returns 200 (zero sent), 50 (150 sent), and
+ *   2. getRemainingDailyQuota — returns 400 (zero sent), 100 (300 sent), and
  *      clamps to 0 when count >= cap.
  *   3. logQuotaRefusal — writes the 5 required PII-free fields and NO PII
  *      (booker_email / booker_name / booker_phone / ip).
@@ -127,18 +127,18 @@ describe("getRemainingDailyQuota", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("returns 200 when 0 sent today", async () => {
+  it("returns 400 when 0 sent today", async () => {
     setCountResult(0);
-    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(200);
+    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(400);
   });
 
-  it("returns 50 when 150 sent today", async () => {
-    setCountResult(150);
-    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(50);
+  it("returns 100 when 300 sent today", async () => {
+    setCountResult(300);
+    expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(100);
   });
 
   it("clamps to 0 when count exceeds cap", async () => {
-    setCountResult(250);
+    setCountResult(500);
     expect(await getRemainingDailyQuota(TEST_ACCOUNT_ID)).toBe(0);
   });
 });
@@ -150,16 +150,16 @@ describe("logQuotaRefusal — PII-free shape", () => {
     logQuotaRefusal({
       account_id: "acct-uuid-123",
       sender_type: "booking-confirmation",
-      count: 200,
-      cap: 200,
+      count: 400,
+      cap: 400,
     });
 
     expect(errSpy).toHaveBeenCalledWith("[EMAIL_QUOTA_EXCEEDED]", {
       code: "EMAIL_QUOTA_EXCEEDED",
       account_id: "acct-uuid-123",
       sender_type: "booking-confirmation",
-      count: 200,
-      cap: 200,
+      count: 400,
+      cap: 400,
     });
 
     // Negative assertions: confirm no PII fields snuck into the structured log.
@@ -183,8 +183,8 @@ describe("logQuotaRefusal — PII-free shape", () => {
     logQuotaRefusal({
       account_id: null,
       sender_type: "signup-verify",
-      count: 200,
-      cap: 200,
+      count: 400,
+      cap: 400,
     });
 
     const payload = errSpy.mock.calls[0][1] as Record<string, unknown>;
@@ -212,7 +212,7 @@ describe("cron loop — quota refusal is non-fatal", () => {
       try {
         // Each iteration "sends" but immediately hits the cap — same shape as
         // checkAndConsumeQuota throwing inside the per-booking sender.
-        throw new QuotaExceededError(200, 200);
+        throw new QuotaExceededError(400, 400);
       } catch (err) {
         if (err instanceof QuotaExceededError) {
           quotaRefused++;
