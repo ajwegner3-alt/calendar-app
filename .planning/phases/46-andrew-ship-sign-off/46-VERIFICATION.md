@@ -27,10 +27,10 @@ until the scenario is re-run after a fix.
 
 Complete all four items in Stripe Dashboard before proceeding to any scenario.
 
-- [ ] PREREQ-C.1 — Stripe Dashboard → Settings → Billing → Customer portal: **cancel-at-period-end ENABLED**
-- [ ] PREREQ-C.2 — Customer portal: **Plan switching ENABLED** with all 4 Prices visible (Basic-Monthly, Basic-Annual, Widget-Monthly, Widget-Annual)
-- [ ] PREREQ-C.3 — Customer portal: **Payment method updates ENABLED**
-- [ ] PREREQ-C.4 — Customer portal: **Invoice history ENABLED**
+- [x] PREREQ-C.1 — Stripe Dashboard → Settings → Billing → Customer portal: **cancel-at-period-end ENABLED** ✓ confirmed Andrew 2026-05-12
+- [x] PREREQ-C.2 — Customer portal: **Plan switching ENABLED** with all 4 Prices visible ✓ confirmed Andrew 2026-05-12
+- [x] PREREQ-C.3 — Customer portal: **Payment method updates ENABLED** (locked-on by Stripe; cannot be disabled) ✓ confirmed Andrew 2026-05-12
+- [x] PREREQ-C.4 — Customer portal: **Invoice history ENABLED** ✓ confirmed Andrew 2026-05-12
 
 **Andrew action only. Claude cannot complete this step. Do not proceed past this block until all four boxes are checked.**
 
@@ -48,9 +48,9 @@ FROM accounts
 WHERE slug = 'nsi';
 ```
 
-Record `stripe_customer_id` value here: `cus_____________` (Andrew fills in)
+Setup SQL result (2026-05-12, pre-UAT): `stripe_customer_id = NULL`, `stripe_subscription_id = NULL`, `subscription_status = 'trialing'`, `plan_tier = NULL`, `trial_ends_at = 2026-05-24 14:53:30 UTC`, `cancel_at_period_end = false`. The nsi account is in a clean pre-checkout trialing state — `cus_XXXXX` will be populated by the first Scenario 2.x checkout. Re-read after Scenario 2.x to capture the `cus_XXXXX` for use in Scenarios 6.1/6.2 (Stripe Dashboard customer lookup).
 
-Use this `cus_XXXXX` value when locating the nsi customer in Stripe Dashboard → Customers during email trigger scenarios.
+Captured `cus_XXXXX` value after first checkout: `cus_____________` (Claude fills in after Scenario 2.1).
 
 ---
 
@@ -73,7 +73,7 @@ WHERE slug = 'nsi';
 
 **Expected:** Banner shows "14 days left in trial" (or current day-count); no lockout; full app access.
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: Andrew confirmed "I can log in. I see the 14 days left." 2026-05-12_
 
 ---
 
@@ -91,7 +91,7 @@ WHERE slug = 'nsi';
 
 **Expected:** Banner upgrades to urgent amber style ("2 days left — upgrade now" or similar urgent copy); still no lockout.
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: Andrew confirmed PASS 2026-05-12_
 
 ---
 
@@ -122,7 +122,7 @@ WHERE slug = 'nsi';
 
 **Expected:** `subscription_status = 'active'`, `plan_tier = 'basic'`, `plan_interval = 'month'` (or `'monthly'`).
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: PASS after env-var + webhook-event fixes (Andrew 2026-05-12). Initial attempt failed with "Pricing not configured" because Vercel prod env was missing the 4 STRIPE_PRICE_ID_* vars + 4 *_CENTS vars + NSI_BRANDING_BOOKING_URL (PREREQ-B/D regression). Andrew added all 9 env vars and redeployed. Retry checkout completed successfully but plan_tier remained NULL because checkout.session.completed wasn't in webhook endpoint enabled_events (PREREQ-G regression — Phase 41 only subscribed 6 events, never picked up the 7th). Andrew added the event in Stripe Dashboard, then resent the event via Stripe CLI. Webhook then wrote plan_tier='basic' correctly. Final verified DB state: subscription_status='active', plan_tier='basic', plan_interval='month', stripe_customer_id=cus_UVR7kpncyAoDBp, stripe_subscription_id=sub_1TWQGJJ7PLcBbY73sBwlopNX, current_period_end=2026-06-13._
 
 ---
 
@@ -151,7 +151,7 @@ WHERE slug = 'nsi';
 
 **Expected:** `subscription_status = 'active'`, `plan_tier = 'basic'`, `plan_interval = 'year'` (or `'annual'`).
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: Andrew 2026-05-12 — DB verified: status=active, plan_tier=basic, plan_interval=year, current_period_end=2027-05-13 (1yr), stripe_customer_id reused (cus_UVR7kpncyAoDBp), new sub_1TWQj7J7PLcBbY737qBsFnBt_
 
 ---
 
@@ -180,7 +180,7 @@ WHERE slug = 'nsi';
 
 **Expected:** `subscription_status = 'active'`, `plan_tier = 'widget'`, `plan_interval = 'month'` (or `'monthly'`).
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: Andrew 2026-05-12 — DB verified: status=active, plan_tier=widget, plan_interval=month, sub_1TWQmTJ7PLcBbY73hc9Xjqii, current_period_end=2026-06-13_
 
 ---
 
@@ -209,7 +209,7 @@ WHERE slug = 'nsi';
 
 **Expected:** `subscription_status = 'active'`, `plan_tier = 'widget'`, `plan_interval = 'year'` (or `'annual'`).
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: Andrew 2026-05-12 — DB verified: status=active, plan_tier=widget, plan_interval=year, sub_1TWQoHJ7PLcBbY73y738n3Ht, current_period_end=2027-05-13 (1yr). All 4 checkout paths now verified end-to-end with webhook plan_tier+plan_interval writes._
 
 ---
 
@@ -228,7 +228,7 @@ WHERE slug = 'nsi';
 -- Must NOT be 'branding' — column CHECK constraint only allows NULL, 'basic', 'widget'
 ```
 
-**Result:** - [ ] PASS  - [ ] FAIL — _note: _________________________________
+**Result:** - [x] PASS  - [ ] FAIL — _note: Andrew 2026-05-12 — Same-window redirect to booking.nsintegrations.com/nsi/branding-consultation confirmed. Post-click plan_tier still NULL (no DB write). DB was temporarily flipped to trialing+NULL plan_tier so TierGrid would render against the existing active Widget-Annual sub; restored post-test._
 
 ---
 
