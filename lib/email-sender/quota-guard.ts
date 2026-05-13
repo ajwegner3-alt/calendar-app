@@ -2,22 +2,25 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Daily cap on Gmail transactional sends per account. 400/day = 80% of Gmail's
- * ~500/day soft limit, leaving headroom for booking + reminder volume.
+ * Daily cap on Gmail transactional sends per account. 450/day = 90% of Gmail's
+ * ~500/day soft limit, leaving a 50-msg buffer for booking + reminder volume.
  *
  * As of Phase 35 (EMAIL-27), the cap is per-account: each account has its own
- * independent 400/day limit. Account A exhausting its quota does NOT affect
+ * independent 450/day limit. Account A exhausting its quota does NOT affect
  * Account B. Signup-side paths (welcome email) currently pass the new account's
  * id post-creation; pre-account signup-verify/password-reset pass null and
  * remain on a global fallback until Phase 36 (Resend migration).
  *
- * Phase 36: Resend accounts bypass the 400/day cap entirely. The cap only
+ * Phase 36: Resend accounts bypass the 450/day cap entirely. The cap only
  * applies to Gmail (email_provider='gmail' or missing account row). Resend
  * accounts still log each send via email_send_log with provider='resend'.
  *
- * Phase 45 (EMAIL-35): per-account cap raised to 400/day (previously half this).
+ * Phase 45 (EMAIL-35): per-account cap raised to 450/day (PROJECT.md target —
+ * 50-msg buffer below Google's 500/day free-Gmail ceiling). Phase 46-03 UAT
+ * found the initial 45-01 implementation shipped at 400; corrected to 450
+ * per PROJECT.md spec.
  */
-export const SIGNUP_DAILY_EMAIL_CAP = 400;
+export const SIGNUP_DAILY_EMAIL_CAP = 450;
 const WARN_THRESHOLD_PCT = 0.8;
 
 export type EmailCategory =
