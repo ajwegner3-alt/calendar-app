@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { loadEventTypeForBookingPage } from "@/app/[account]/[event-slug]/_lib/load-event-type";
 import { requireWidgetTier } from "@/lib/stripe/widget-gate";
+import { BILLING_ENABLED } from "@/lib/stripe/billing-flag";
 import { EmbedShell } from "./_components/embed-shell";
 import { EmbedGatedMessage } from "./_components/embed-gated-message";
 
@@ -51,10 +52,14 @@ export default async function EmbedBookingPage({
   // Phase 42.6: widget gating. Must return HTTP 200 with a message component —
   // NEVER call notFound() here (third-party iframes would render a broken X).
   // The route stays fully dynamic (no `export const dynamic` change).
-  const gate = requireWidgetTier({
-    plan_tier: data.account.plan_tier,
-    subscription_status: data.account.subscription_status,
-  });
+  // v1.9 free-offering scope change: when BILLING_ENABLED is false the widget
+  // is available to every account — skip the tier gate entirely.
+  const gate = BILLING_ENABLED
+    ? requireWidgetTier({
+        plan_tier: data.account.plan_tier,
+        subscription_status: data.account.subscription_status,
+      })
+    : ({ allowed: true } as const);
   if (!gate.allowed) {
     return (
       <main className="mx-auto max-w-3xl">

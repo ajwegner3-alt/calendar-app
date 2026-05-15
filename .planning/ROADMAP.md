@@ -11,6 +11,7 @@
 - ✅ **v1.6 Day-of-Disruption Tools** — Phases 31-33 (10 plans, 3 phases) — shipped 2026-05-06. Full archive: [`milestones/v1.6-ROADMAP.md`](./milestones/v1.6-ROADMAP.md).
 - ✅ **v1.7 Auth Expansion + Per-Account Email + Polish + Dead Code** — Phases 34-40 (32 plans across 7 phases) — shipped 2026-05-09. Full archive: [`milestones/v1.7-ROADMAP.md`](./milestones/v1.7-ROADMAP.md).
 - 🚧 **v1.8 Stripe Paywall + Login UX Polish** — Phases 41-46 + inserted 42.5 + 42.6 (Phases 41 + 42.5 + 42.6 + 43 + 44 + 45 shipped + deployed 2026-05-10..12; Phase 42 plumbing code-complete with UI superseded by 42.5; **Phase 46 partial 2026-05-12 — 46-01/02/03 test-mode complete (22 PASS + 5 DEFERRED to live-mode UAT + 1 N/A); 46-04 archival + 46-05 v1.8.0 tag PAUSED pending live UAT**).
+  - ⏸️ **BILLING PARKED 2026-05-15 — scope change: app offered free for now.** All Stripe code preserved in place, gated behind `BILLING_ENABLED=false` in `lib/stripe/billing-flag.ts`. Paywall lockout, widget-tier gating, trial banners, and the Billing nav entry are all disabled; the app is fully free for every account. The login UX polish (Phase 45) and Gmail quota raise remain live. Remaining v1.8 billing ship work (live-mode Stripe stack, live UAT for the 5 deferred scenarios, v1.8.0 tag) is **suspended, not cancelled**. Re-enable: flip the flag + restore the live Stripe stack. Full inventory + checklist in [`BILLING_PARKED.md`](./BILLING_PARKED.md).
 
 ## Phases
 

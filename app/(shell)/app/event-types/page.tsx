@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { requireWidgetTier } from "@/lib/stripe/widget-gate";
+import { BILLING_ENABLED } from "@/lib/stripe/billing-flag";
 import type { EventTypeListItem } from "./_lib/types";
 import { EventTypesTable } from "./_components/event-types-table";
 import { EmptyState } from "./_components/empty-state";
@@ -33,7 +34,9 @@ export default async function EventTypesPage({
   // menu item remain accessible — only the dialog body is gated. If account is
   // null (defensive), default to FALSE (no widget access) so we never leak the
   // embed snippets to an unresolved account state.
-  let isWidgetAllowed = false;
+  // v1.9 free-offering scope change: when BILLING_ENABLED is false the embed
+  // code is available to every account — the tier gate is skipped.
+  let isWidgetAllowed = !BILLING_ENABLED;
   if (ids.length > 0) {
     const { data: account } = await supabase
       .from("accounts")
@@ -41,12 +44,14 @@ export default async function EventTypesPage({
       .eq("id", ids[0])
       .maybeSingle();
     if (account?.slug) accountSlug = account.slug;
-    isWidgetAllowed = account
-      ? requireWidgetTier({
-          plan_tier: (account.plan_tier ?? null) as "basic" | "widget" | null,
-          subscription_status: account.subscription_status ?? null,
-        }).allowed
-      : false;
+    if (BILLING_ENABLED) {
+      isWidgetAllowed = account
+        ? requireWidgetTier({
+            plan_tier: (account.plan_tier ?? null) as "basic" | "widget" | null,
+            subscription_status: account.subscription_status ?? null,
+          }).allowed
+        : false;
+    }
   }
 
   // Soft-delete filter — RESEARCH §"Soft-Delete Query Filter":

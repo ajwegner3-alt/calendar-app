@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { BILLING_ENABLED } from "@/lib/stripe/billing-flag";
 import { PRICES } from "@/lib/stripe/prices";
 import {
   TrialingHeader,
@@ -78,6 +79,27 @@ export default async function BillingPage({
     .maybeSingle();
 
   if (!account) redirect("/app/unlinked");
+
+  // v1.9 free-offering scope change (2026-05-15): billing is parked. The app
+  // is free for everyone, so the pricing grid / locked view / status card are
+  // not shown. Every paid-state branch below remains intact and re-activates
+  // when BILLING_ENABLED flips back to true (lib/stripe/billing-flag.ts).
+  if (!BILLING_ENABLED) {
+    return (
+      <div className="container mx-auto max-w-2xl py-8">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-6 py-8 text-center">
+          <h1 className="text-lg font-semibold text-blue-900">
+            Calendar is free to use
+          </h1>
+          <p className="mt-2 text-sm text-blue-800">
+            There&rsquo;s no subscription or payment required right now — every
+            feature is unlocked for your account. We&rsquo;ll give you plenty of
+            notice here if paid plans are introduced later.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Await searchParams (Next 16 invariant)
   const { session_id } = await searchParams;

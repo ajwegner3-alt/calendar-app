@@ -12,9 +12,11 @@ A visitor lands on a service business's website, picks an available time slot in
 
 ## Current State
 
-**v1.8 IN FLIGHT — milestone started 2026-05-09 (same day as v1.7 close).**
+**SCOPE CHANGE 2026-05-15 — billing parked; app offered free.** Andrew decided to offer the app for free for the time being. All Stripe payment code is **preserved in place, not deleted** — it is gated behind a single kill-switch constant `BILLING_ENABLED` in `lib/stripe/billing-flag.ts` (currently `false`). While the flag is off there is no paywall lockout, no widget-tier gating, no trial / past-due banners, and the Billing nav entry is hidden; the app is fully usable for free by every account. v1.8's remaining ship work (live-mode Stripe stack + live UAT + v1.8.0 tag) is **suspended**, not cancelled — flipping the flag back to `true` and restoring the live Stripe stack re-arms everything with zero code rewrite. See `.planning/BILLING_PARKED.md` for the full code inventory and re-enable checklist.
 
-Theme: introduce Stripe SaaS billing (14-day free trial → owner-app paywall, single-plan monthly+annual) as the dominant pivot of v1.8, alongside login UX polish (Google OAuth re-positioned below the password form, password-first tabs with a 3-fail in-memory counter that nudges users toward magic-link), a per-account Gmail quota raise from 200 → 450 (50-msg buffer below Google's 500/day free-Gmail ceiling), and a magic-link inline helper hint that holds the AUTH-29 four-way enumeration-safety ambiguity invariant. Public booker stays free regardless of payment status — only `/app/*` gets locked when the trial expires.
+**v1.8 IN FLIGHT — milestone started 2026-05-09 (same day as v1.7 close).** (Billing portion parked 2026-05-15 — see scope change above.)
+
+Theme: introduce Stripe SaaS billing (14-day free trial → owner-app paywall, single-plan monthly+annual) as the dominant pivot of v1.8, alongside login UX polish (Google OAuth re-positioned below the password form, password-first tabs with a 3-fail in-memory counter that nudges users toward magic-link), a per-account Gmail quota raise from 200 → 450 (50-msg buffer below Google's 500/day free-Gmail ceiling), and a magic-link inline helper hint that holds the AUTH-29 four-way enumeration-safety ambiguity invariant. Public booker stays free regardless of payment status — only `/app/*` gets locked when the trial expires. **(The paywall and tier-gating described here are code-complete but currently disabled via `BILLING_ENABLED=false` — the login UX polish and Gmail quota raise remain live.)**
 
 ## Current Milestone: v1.8 Stripe Paywall + Login UX Polish
 

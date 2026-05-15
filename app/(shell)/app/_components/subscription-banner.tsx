@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BILLING_ENABLED } from "@/lib/stripe/billing-flag";
 
 /**
  * Phase 43 (BILL-16/17/18) — SubscriptionBanner.
@@ -49,6 +50,12 @@ export function SubscriptionBanner({
   subscriptionStatus,
   trialEndsAt,
 }: SubscriptionBannerProps) {
+  // v1.9 free-offering scope change (2026-05-15): billing is parked, so there
+  // is no trial or past-due state worth nagging the owner about. Render nothing.
+  if (!BILLING_ENABLED) {
+    return null;
+  }
+
   // active / null → nothing
   if (subscriptionStatus === "active" || !subscriptionStatus) {
     return null;

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   LogOut,
 } from "lucide-react";
+import { BILLING_ENABLED } from "@/lib/stripe/billing-flag";
 import {
   Sidebar,
   SidebarContent,
@@ -40,14 +41,20 @@ import {
  * color props. Sidebar background is uniform translucent white (OWNER-02).
  */
 
+// v1.9 free-offering scope change (2026-05-15): the Billing entry is hidden
+// while BILLING_ENABLED is false — there is nothing to bill. The /app/billing
+// route still exists and renders a "Calendar is free" notice if reached
+// directly. Flip BILLING_ENABLED in lib/stripe/billing-flag.ts to restore it.
 const TOP_ITEMS = [
   { label: "Home",         href: "/app",               Icon: Home },
   { label: "Event Types",  href: "/app/event-types",   Icon: CalendarRange },
   { label: "Availability", href: "/app/availability",  Icon: Clock },
   { label: "Bookings",     href: "/app/bookings",      Icon: CalendarDays },
   { label: "Branding",     href: "/app/branding",      Icon: Palette },
-  { label: "Billing",      href: "/app/billing",       Icon: CreditCard },
-] as const;
+  ...(BILLING_ENABLED
+    ? [{ label: "Billing", href: "/app/billing", Icon: CreditCard }]
+    : []),
+];
 
 interface AppSidebarProps {
   email: string;

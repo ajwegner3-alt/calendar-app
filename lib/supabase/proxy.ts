@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { BILLING_ENABLED } from "@/lib/stripe/billing-flag";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -73,39 +74,46 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Phase 43 (BILL-12..BILL-15, BILL-20): subscription paywall gate.
+  // v1.9 free-offering scope change (2026-05-15): the entire paywall is
+  // bypassed while BILLING_ENABLED is false — the app is free for every
+  // account. Flip BILLING_ENABLED in lib/stripe/billing-flag.ts (and restore
+  // the live Stripe stack) to re-arm. Skipping the block also avoids the
+  // per-request accounts lookup below.
   // Locked accounts (status NOT in {trialing, active, past_due}) redirect to
   // /app/billing. /app/billing itself is exempt (loop prevention — BILL-20).
   // past_due retains access (LD-08). Public booker /[account]/* and /embed/*
   // are untouched because this lives inside the pathname.startsWith("/app")
   // branch (LD-07 booker-neutrality).
-  const SUBSCRIPTION_ALLOWED_STATUSES = [
-    "trialing",
-    "active",
-    "past_due",
-  ] as const;
+  if (BILLING_ENABLED) {
+    const SUBSCRIPTION_ALLOWED_STATUSES = [
+      "trialing",
+      "active",
+      "past_due",
+    ] as const;
 
-  if (
-    user &&
-    pathname.startsWith("/app") &&
-    !publicAuthPaths.includes(pathname) &&
-    pathname !== "/app/billing"
-  ) {
-    const { data: accountRow } = await supabase
-      .from("accounts")
-      .select("subscription_status")
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    const status = accountRow?.subscription_status;
     if (
-      status &&
-      !SUBSCRIPTION_ALLOWED_STATUSES.includes(
-        status as (typeof SUBSCRIPTION_ALLOWED_STATUSES)[number],
-      )
+      user &&
+      pathname.startsWith("/app") &&
+      !publicAuthPaths.includes(pathname) &&
+      pathname !== "/app/billing"
     ) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/app/billing";
-      return NextResponse.redirect(url);
+      const { data: accountRow } = await supabase
+        .from("accounts")
+        .select("subscription_status")
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      const status = accountRow?.subscription_status;
+      if (
+        status &&
+        !SUBSCRIPTION_ALLOWED_STATUSES.includes(
+          status as (typeof SUBSCRIPTION_ALLOWED_STATUSES)[number],
+        )
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/app/billing";
+        return NextResponse.redirect(url);
+      }
     }
   }
 
