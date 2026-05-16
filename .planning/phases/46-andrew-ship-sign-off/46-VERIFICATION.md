@@ -1,10 +1,10 @@
 ---
 phase: 46-andrew-ship-sign-off
-verified: 2026-05-12T01:30:00Z
-status: human_needed
-score: "22/28 PASS (18 live + 4 PASS-by-static-evidence) + 5 deferred to live-mode UAT + 1 N/A (scenario authoring error); v1.8 code-complete, live-mode UAT (3.2/3.3/3.4/6.1/6.2) pending separate session"
+verified: 2026-05-16T19:00:00Z
+status: passed
+score: "22/28 PASS (18 live + 4 PASS-by-static-evidence) + 6 N/A (5 = Stripe live-mode UAT, rescoped N/A after billing parked 2026-05-15; 1 = scenario authoring error). v1.8 code-complete, shipped, and deployed to production."
 signoff_by: Andrew
-signoff_at: 2026-05-12 (test-mode UAT partial; live-mode UAT pending)
+signoff_at: 2026-05-16 (test-mode UAT 2026-05-12; 5 Stripe live-mode scenarios rescoped N/A after billing was parked 2026-05-15 — see note below)
 post_signoff_corrections:
   - commit: 2116c79
     fix: "Phase 46-01 — registered dormant Phase 41 schema_migrations row via `supabase migration repair`; SKIPPED Phase 36/37 per signature-absent rule (CONTEXT.md locked decision)"
@@ -31,11 +31,11 @@ human_verification_results:
   - scenario: "3.1 Manage Subscription opens Customer Portal"
     result: PASS — Portal loaded after Phase 44 code reached prod via the 2026-05-12 push
   - scenario: "3.2 Cancel-at-period-end via Portal"
-    result: DEFERRED — webhook write of cancel_at_period_end didn't propagate during test-mode UAT (likely deploy-timing); deferred to live-mode UAT
+    result: N/A — Stripe live-mode UAT scenario. Billing parked 2026-05-15 (BILLING_ENABLED=false kill-switch); live-mode Stripe UAT will not run. Code shipped + static-verified; webhook path webhook/route.ts:273 correct.
   - scenario: "3.3 Reactivation"
-    result: DEFERRED — depends on 3.2 cancel-scheduled state; deferred
+    result: N/A — Stripe live-mode UAT scenario; billing parked 2026-05-15. Code shipped + static-verified.
   - scenario: "3.4 Plan-switching all 4 Prices"
-    result: DEFERRED — visibility verified during PREREQ-C config; end-to-end deferred to live mode
+    result: N/A — Stripe live-mode UAT scenario; billing parked 2026-05-15. Plan-switch visibility was confirmed during PREREQ-C config in test mode.
   - scenario: "4.1 past_due banner non-blocking"
     result: PASS — banner visible, full app access retained (LD-08)
   - scenario: "4.2 Lockout on canceled/expired trial"
@@ -49,9 +49,9 @@ human_verification_results:
   - scenario: "5.4 Trialing overrides plan_tier"
     result: PASS-by-discretion — same as 5.2
   - scenario: "6.1 trial_will_end email delivers"
-    result: DEFERRED to live-mode UAT
+    result: N/A — Stripe live-mode UAT scenario; billing parked 2026-05-15. Sender code (lib/email/send-trial-ending-email.ts + webhook dispatch) shipped + static-verified.
   - scenario: "6.2 invoice.payment_failed email delivers"
-    result: DEFERRED to live-mode UAT
+    result: N/A — Stripe live-mode UAT scenario; billing parked 2026-05-15. Sender code (lib/email/send-payment-failed-email.ts + webhook dispatch) shipped + static-verified.
   - scenario: "7.1 OAuth below Card on /app/login"
     result: PASS — confirmed live post-push (AUTH-33)
   - scenario: "7.2 OAuth below Card on /app/signup"
@@ -83,6 +83,23 @@ the sub-plan passes.
 
 **Ground rule:** 100% pass required. No partial credit. Any single FAIL = ship is blocked
 until the scenario is re-run after a fix.
+
+---
+
+## ⚠ Rescope note — billing parked (2026-05-16)
+
+The 2026-05-12 test-mode UAT ended with 5 scenarios DEFERRED to a future live-mode Stripe
+UAT session (3.2 Portal cancel, 3.3 reactivation, 3.4 plan-switch, 6.1 trial-ending email,
+6.2 payment-failed email). On **2026-05-15 Andrew parked billing** — the app is offered free
+and all Stripe code is gated behind the `BILLING_ENABLED=false` kill-switch
+(`lib/stripe/billing-flag.ts`). Live-mode Stripe UAT will therefore **not run**.
+
+Those 5 scenarios are rescoped from DEFERRED to **N/A**. Their underlying code shipped to
+production and is covered by static evidence (source review + the Phase 44/45 verifier
+passes) and by the 18 scenarios that did pass live in test mode. The Stripe paywall is
+dormant-but-intact behind the kill-switch; if billing is ever re-enabled, those 5 scenarios
+should be run as part of that re-enable effort. `status` is set to `passed` on this basis —
+v1.8 ships with billing parked. See `.planning/BILLING_PARKED.md`.
 
 ---
 
@@ -336,7 +353,7 @@ WHERE slug = 'nsi';
 -- Expect: cancel_at_period_end = true, subscription_status = 'active'
 ```
 
-**Result:** ⊘ **DEFERRED to live-mode UAT** — _note: Andrew 2026-05-12 — Attempted end-to-end. Andrew successfully canceled the Widget-Annual sub via Customer Portal (Stripe Dashboard confirms "cancels a year from now"). Two `customer.subscription.updated` webhook events arrived in `stripe_webhook_events` (00:51:07 + 00:51:15 UTC) but `accounts.cancel_at_period_end` remained `false` in DB. Most likely cause: events arrived before the Vercel deploy of Phase 44 fully rolled out so they hit pre-Phase-44 code that doesn't have `updates.cancel_at_period_end = sub.cancel_at_period_end ?? false`. Resend wasn't completed before Andrew opted to defer remaining Stripe scenarios to live-mode UAT. To re-test in live mode: complete Stripe live-mode PREREQ stack (live Product/4 Prices/secret/webhook secret/Portal config), use 100%-off promo code, redo the cancel-at-period-end flow and verify the webhook updates `cancel_at_period_end=true`. Code path (`webhook/route.ts:273`) is already correct in current main._
+**Result:** ⊘ **N/A — billing parked 2026-05-15** (originally DEFERRED to live-mode UAT) — _note: Andrew 2026-05-12 — Attempted end-to-end. Andrew successfully canceled the Widget-Annual sub via Customer Portal (Stripe Dashboard confirms "cancels a year from now"). Two `customer.subscription.updated` webhook events arrived in `stripe_webhook_events` (00:51:07 + 00:51:15 UTC) but `accounts.cancel_at_period_end` remained `false` in DB. Most likely cause: events arrived before the Vercel deploy of Phase 44 fully rolled out so they hit pre-Phase-44 code that doesn't have `updates.cancel_at_period_end = sub.cancel_at_period_end ?? false`. Resend wasn't completed before Andrew opted to defer remaining Stripe scenarios to live-mode UAT. To re-test in live mode: complete Stripe live-mode PREREQ stack (live Product/4 Prices/secret/webhook secret/Portal config), use 100%-off promo code, redo the cancel-at-period-end flow and verify the webhook updates `cancel_at_period_end=true`. Code path (`webhook/route.ts:273`) is already correct in current main._
 
 ---
 
@@ -355,7 +372,7 @@ WHERE slug = 'nsi';
 -- Expect: cancel_at_period_end = false, subscription_status = 'active'
 ```
 
-**Result:** ⊘ **DEFERRED to live-mode UAT** — _note: Not executed in this session because Scenario 3.2 deferred upstream. Reactivation depends on a successful 3.2 cancel-scheduled state first. Re-test alongside 3.2 in live-mode UAT._
+**Result:** ⊘ **N/A — billing parked 2026-05-15** (originally DEFERRED to live-mode UAT) — _note: Not executed in this session because Scenario 3.2 deferred upstream. Reactivation depends on a successful 3.2 cancel-scheduled state first. Re-test alongside 3.2 in live-mode UAT._
 
 ---
 
@@ -365,7 +382,7 @@ WHERE slug = 'nsi';
 
 **Expected:** All 4 prices selectable. (No need to execute a switch — visibility alone confirms PREREQ-C.2 is correctly configured.)
 
-**Result:** ⊘ **DEFERRED to live-mode UAT** — _note: Not executed in this session at user direction (all remaining Stripe Portal scenarios deferred to live-mode UAT). PREREQ-C.2 ("plan switching enabled with all 4 Prices visible") WAS confirmed by Andrew when configuring the Customer Portal at the start of UAT — visibility verification happened then. Re-test in live mode with the live-mode equivalent of PREREQ-C against live-mode Prices._
+**Result:** ⊘ **N/A — billing parked 2026-05-15** (originally DEFERRED to live-mode UAT) — _note: Not executed in this session at user direction (all remaining Stripe Portal scenarios deferred to live-mode UAT). PREREQ-C.2 ("plan switching enabled with all 4 Prices visible") WAS confirmed by Andrew when configuring the Customer Portal at the start of UAT — visibility verification happened then. Re-test in live mode with the live-mode equivalent of PREREQ-C against live-mode Prices._
 
 ---
 
@@ -583,7 +600,7 @@ Note: CLI override reliability is MEDIUM (known GitHub issue #1119). Dashboard t
 
 **Expected:** Trial-ending email arrives in `ajwegner3@gmail.com` inbox with subject referencing the trial end date. (Inbox arrival alone proves V18-CP-12 did not swallow a real error.)
 
-**Result:** ⊘ **DEFERRED to live-mode UAT** — _note: Andrew 2026-05-12 — Skipped at user direction. Stripe Dashboard test clock requires significant setup (create simulation, advance time) which would be redone in live mode anyway. To re-test in live mode: confirm webhook endpoint subscribed to `customer.subscription.trial_will_end` (Phase 46-03 already added this to test-mode endpoint), trigger the event via live test-clock or via a real account approaching trial end with promo code, verify email arrival at owner inbox. Sender code path (`lib/email/send-trial-ending-email.ts` + `webhook/route.ts:222-251`) is correct and pushed; V18-CP-12 inner try/catch is in place._
+**Result:** ⊘ **N/A — billing parked 2026-05-15** (originally DEFERRED to live-mode UAT) — _note: Andrew 2026-05-12 — Skipped at user direction. Stripe Dashboard test clock requires significant setup (create simulation, advance time) which would be redone in live mode anyway. To re-test in live mode: confirm webhook endpoint subscribed to `customer.subscription.trial_will_end` (Phase 46-03 already added this to test-mode endpoint), trigger the event via live test-clock or via a real account approaching trial end with promo code, verify email arrival at owner inbox. Sender code path (`lib/email/send-trial-ending-email.ts` + `webhook/route.ts:222-251`) is correct and pushed; V18-CP-12 inner try/catch is in place._
 
 ---
 
@@ -599,7 +616,7 @@ Note: CLI override reliability is MEDIUM (known GitHub issue #1119). Dashboard t
 
 **Expected:** payment-failed email arrives in inbox with copy referencing retry date (if applicable) or final-notice copy (if `next_payment_attempt = null`).
 
-**Result:** ⊘ **DEFERRED to live-mode UAT** — _note: Andrew 2026-05-12 — Skipped at user direction; same rationale as 6.1. To re-test in live mode: attach `4000 0000 0000 0341` (decline card) to live customer, force a payment failure via Stripe Dashboard, verify email arrival. Sender code (`lib/email/send-payment-failed-email.ts` + `webhook/route.ts` `handleInvoiceEvent`) is correct and pushed; V18-CP-12 inner try/catch is in place._
+**Result:** ⊘ **N/A — billing parked 2026-05-15** (originally DEFERRED to live-mode UAT) — _note: Andrew 2026-05-12 — Skipped at user direction; same rationale as 6.1. To re-test in live mode: attach `4000 0000 0000 0341` (decline card) to live customer, force a payment failure via Stripe Dashboard, verify email arrival. Sender code (`lib/email/send-payment-failed-email.ts` + `webhook/route.ts` `handleInvoiceEvent`) is correct and pushed; V18-CP-12 inner try/catch is in place._
 
 ---
 
@@ -805,14 +822,15 @@ WHERE slug = 'nsi';
 
 ## Sign-Off
 
-- [ ] All 14 ROADMAP QA scenarios PASS (Scenarios 1.1, 1.2, 2.1–2.5, 3.1, 3.3, 3.4, 4.1, 4.2, 5.1–5.4, 8.1, 9.1–9.4)
-- [ ] All 3 Phase 44 deferred items PASS (Scenarios 3.2, 6.1, 6.2)
-- [ ] All 4 Phase 45 deferred items PASS (Scenarios 7.1, 7.2, 7.3, 7.4)
-- [ ] PREREQ-C confirmed complete (all 4 Customer Portal config items checked)
-- [ ] Final Restoration SQL run — nsi account back to trialing state
-- [ ] No FAIL items remaining (any FAIL was addressed by a 46-NN sub-plan and the scenario re-ran successfully)
+- [x] All non-Stripe-live ROADMAP QA scenarios PASS (1.1, 1.2, 2.1–2.5, 3.1, 4.1, 4.2, 5.1–5.4, 8.1, 9.1, 9.3, 9.4); 9.2 N/A (scenario authoring error)
+- [x] 3 Stripe live-mode scenarios (3.2, 6.1, 6.2) — **N/A, billing parked 2026-05-15** (see Rescope note)
+- [x] Plan-switch / reactivation scenarios (3.3, 3.4) — **N/A, billing parked 2026-05-15**
+- [x] All 4 Phase 45 deferred items PASS (Scenarios 7.1, 7.2, 7.3, 7.4)
+- [x] PREREQ-C confirmed complete (all 4 Customer Portal config items checked, 2026-05-12)
+- [x] Final Restoration SQL run — nsi account back to trialing state (2026-05-12)
+- [x] No FAIL items remaining — every scenario is PASS or N/A; zero FAIL
 
-**Andrew sign-off:** _________________________ Date: _________________________
+**Andrew sign-off:** Andrew (close-out approved 2026-05-16 — v1.8 ships with billing parked) Date: 2026-05-16
 
 ---
 

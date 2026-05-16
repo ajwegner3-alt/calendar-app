@@ -355,3 +355,30 @@ UPDATE accounts SET resend_status = 'suspended' WHERE id = '...';
 ```
 
 All sends from that account refuse with `resend_send_refused: account_suspended` until you flip `resend_status` back to `'active'`.
+
+## v1.8 Stripe Paywall + Login UX Polish — Delta
+
+**Shipped:** 2026-05-16
+**Phases:** 41-46 + 42.5 + 42.6 (32 plans across 8 phases)
+
+> **Scope change — billing parked (2026-05-15):** The full Stripe paywall was built, shipped, and deployed. On 2026-05-15 Andrew decided to offer the app free for now. All Stripe billing code is preserved (nothing deleted) and gated behind a single kill-switch constant `BILLING_ENABLED` in `lib/stripe/billing-flag.ts` (currently `false`). While off: the paywall middleware gate is skipped, the widget tier gate is bypassed, the subscription banner renders nothing, and `/app/billing` shows a neutral "free to use" notice. v1.8 therefore ships with its paywall feature dormant-but-intact. See `.planning/BILLING_PARKED.md` for the full code inventory and re-enable checklist.
+
+### Known Limitations
+
+1. **Stripe paywall parked (BILLING_ENABLED=false):** The 3-tier paywall (Basic, Widget, Branding) is fully built but disabled behind the kill-switch. Re-enabling requires flipping the flag, completing the live-mode Stripe stack (live Product + 4 Prices, `sk_live_` secret, live webhook endpoint + secret, Customer Portal live config), and running the 5 live-mode UAT scenarios that were never executed (3.2 Portal cancel, 3.3 reactivation, 3.4 plan-switch, 6.1 trial-ending email, 6.2 payment-failed email).
+
+2. **Branding tier non-Stripe path (consult-only):** No `plan_tier = 'branding'` value exists in DB. The Branding card CTA links to `NSI_BRANDING_BOOKING_URL`. No in-app upgrade flow exists. v1.9+ scope.
+
+3. **BILL-24 partial (2/4 emails shipped):** The trial-ending and payment-failed emails shipped in Phase 44. The welcome-to-paid and account-locked emails were de-scoped per Phase 44 CONTEXT.md and deferred to v1.9.
+
+4. **PREREQ-03 Resend DNS activation deferred:** The Resend backend framework shipped in Phase 36. Live activation is gated on DNS verification (SPF/DKIM/DMARC via Namecheap) + Resend domain approval. See the Phase 36 activation-steps section above.
+
+5. **Stripe API version pin (LD-01):** `stripe@22.1.1` + `apiVersion: '2026-04-22.dahlia'` are pinned. Do NOT upgrade either without auditing structural changes — this API version moved `invoice.subscription` to `invoice.parent.subscription_details.subscription`, and the webhook handlers depend on that path.
+
+### Technical Debt
+
+- **Production email outage from unapplied migrations (DISCOVERED + FIXED 2026-05-16):** The Phase 36 (`accounts.email_provider`, `accounts.resend_status`, `email_send_log.provider`) and Phase 37 (`accounts.last_upgrade_request_at`) migration files existed in the repo but were never applied to production — Phase 46-01's migration repair registered only the Phase 41 row and SKIPPED 36/37. The Phase 36 application code shipped with v1.7 expecting those columns, so `getSenderForAccount`'s `SELECT ... email_provider, resend_status ...` errored against the missing columns and silently dropped every booking-confirmation email for roughly a week. Fixed 2026-05-16: both migrations applied to production via Supabase MCP `apply_migration` (idempotent `ADD COLUMN IF NOT EXISTS`, additive, all accounts backfilled), and `supabase_migrations.schema_migrations` reconciled so the repo file versions are registered. Lesson: when a migration-repair tool skips a migration, the application code depending on it must be checked for a hard dependency before shipping.
+
+- **schema_migrations now consistent (RESOLVED 2026-05-16):** After the 2026-05-16 fix, every repo migration file under `supabase/migrations/` is registered in production `supabase_migrations.schema_migrations`. Phase 41 was registered in Phase 46-01; Phases 36/37 were registered 2026-05-16.
+
+- **Pre-existing schema_migrations orphan rows (UNCHANGED — locked workaround):** Three orphan rows (`20251223162516`, `20260419144234`, `20260419144302`) remain in production from before Phase 9. The locked workaround for any future migration apply is to use Supabase MCP `apply_migration` rather than `supabase db push --linked`.
