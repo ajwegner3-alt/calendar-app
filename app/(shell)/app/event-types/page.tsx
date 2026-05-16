@@ -8,8 +8,9 @@ import { EventTypesTable } from "./_components/event-types-table";
 import { EmptyState } from "./_components/empty-state";
 import { ShowArchivedToggle } from "./_components/show-archived-toggle";
 
-// Fallback matches Plan 07-05 lock: production Vercel URL as last resort.
-const DEFAULT_APP_URL = "https://calendar-app-xi-smoky.vercel.app";
+// Fallback when NEXT_PUBLIC_APP_URL is unset — the canonical public booking
+// origin so copied booking links use the custom domain, not the Vercel URL.
+const DEFAULT_APP_URL = "https://booking.nsintegrations.com";
 
 // Next.js 16: searchParams is a Promise — must be awaited (RESEARCH Pitfall 4).
 export default async function EventTypesPage({
